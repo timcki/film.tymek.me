@@ -1,0 +1,30 @@
+[Unit]
+Description=Film Night
+Documentation=https://film.tymek.me
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=filmnight
+Group=filmnight
+WorkingDirectory=/opt/filmnight
+EnvironmentFile=/etc/filmnight.env
+ExecStart=/usr/bin/node build/index.js
+Restart=always
+RestartSec=3
+
+# the database and its WAL sidecars are the only state worth protecting
+StateDirectory=filmnight
+ReadWritePaths=/var/lib/filmnight
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+# append to /etc/caddy/Caddyfile
+#
+# while the app runs on chungus-1 itself:
+film.tymek.me {
+	encode zstd gzip
+	reverse_proxy localhost:3010
+}
+
+# when bigchungus comes back, move the service there and change one line:
+# film.tymek.me {
+# 	encode zstd gzip
+# 	reverse_proxy bigchungus:3010
+# }

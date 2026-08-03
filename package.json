@@ -1,0 +1,39 @@
+{
+	"name": "filmnight",
+	"private": true,
+	"version": "1.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"start": "node build/index.js",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"build:seed": "esbuild scripts/seed.ts --bundle --platform=node --format=esm --packages=external --outfile=.seed/seed.mjs",
+		"seed": "npm run build:seed && node .seed/seed.mjs"
+	},
+	"dependencies": {
+		"better-sqlite3": "^12.4.1",
+		"qrcode": "^1.5.4"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-node": "^5.4.0",
+		"@sveltejs/kit": "^2.63.0",
+		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"@types/better-sqlite3": "^7.6.13",
+		"@types/qrcode": "^1.5.5",
+		"esbuild": "^0.28.1",
+		"svelte": "^5.56.1",
+		"svelte-check": "^4.6.0",
+		"typescript": "^6.0.3",
+		"vite": "^8.0.16",
+		"vitest": "^3.2.4"
+	},
+	"allowScripts": {
+		"better-sqlite3@12.11.1": true,
+		"esbuild@0.28.1": true
+	}
+}

@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Film Night — prototype</title>
+<style>
+  :root{
+    --bg:#0d0c10; --panel:#16151b; --panel-2:#1d1c24; --line:#2a2833;
+    --ink:#eceaf2; --dim:#9d99ac; --dimmer:#6c6879;
+    --accent:#e8c34a; --accent-ink:#221c05; --ok:#5cc98b; --r:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 600px at 82% -10%, #241f36 0%, transparent 60%),
+      radial-gradient(900px 500px at 5% 0%, #1a2430 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font:15px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh; padding:0 0 90px;
+  }
+  .wrap{max-width:660px;margin:0 auto;padding:0 16px}
+
+  .proto{background:linear-gradient(180deg,#20202c,#191922);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:60;backdrop-filter:blur(8px)}
+  .proto .wrap{display:flex;gap:10px;align-items:center;padding:9px 16px;flex-wrap:wrap}
+  .proto .tag{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dimmer);border:1px solid var(--line);border-radius:99px;padding:3px 8px;white-space:nowrap}
+  .proto label{font-size:12px;color:var(--dim)}
+  select,.btn{font:inherit;font-size:13px;color:var(--ink);background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:6px 10px;cursor:pointer}
+  .btn:hover{border-color:#3d3a4d}
+  .btn.ghost{background:transparent}
+
+  header{padding:30px 0 16px}
+  h1{font-size:31px;margin:0 0 6px;letter-spacing:-.02em;font-weight:650}
+  h1 .dot{color:var(--accent)}
+  .sub{color:var(--dim);font-size:14px;margin:0}
+  .countdown{margin-top:16px;display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+  .countdown b{font-variant-numeric:tabular-nums;font-weight:600}
+  .pulse{width:8px;height:8px;border-radius:99px;background:var(--ok);animation:p 2.4s infinite}
+  @keyframes p{0%{box-shadow:0 0 0 0 rgba(92,201,139,.5)}70%{box-shadow:0 0 0 9px rgba(92,201,139,0)}100%{box-shadow:0 0 0 0 rgba(92,201,139,0)}}
+
+  .turn{margin-top:14px;border:1px solid var(--line);border-radius:var(--r);background:linear-gradient(180deg,var(--panel-2),var(--panel));padding:14px}
+  .turn-row{display:flex;align-items:center;gap:12px}
+  .turn-row + .turn-row{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+  .turn .lbl{font-size:13px;color:var(--dim);flex:1}
+  .turn .lbl strong{color:var(--ink);font-weight:600}
+  .chip{font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;padding:4px 9px;border-radius:99px;white-space:nowrap}
+  .chip.open{background:rgba(232,195,74,.14);color:var(--accent);border:1px solid rgba(232,195,74,.3)}
+  .chip.done{background:rgba(92,201,139,.12);color:var(--ok);border:1px solid rgba(92,201,139,.28)}
+
+  .sect{display:flex;align-items:baseline;justify-content:space-between;margin:30px 0 12px}
+  .sect h2{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--dimmer);margin:0;font-weight:600}
+  .sect .hint{font-size:12px;color:var(--dimmer)}
+
+  ul.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .movie{display:flex;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;transition:border-color .15s}
+  .movie.lead{border-color:rgba(232,195,74,.42);background:linear-gradient(180deg,rgba(232,195,74,.06),var(--panel))}
+  .movie.mine-vote{border-color:rgba(92,201,139,.4)}
+  .poster{width:48px;height:71px;flex:0 0 48px;border-radius:8px;display:grid;place-items:center;font-weight:700;font-size:15px;color:rgba(255,255,255,.92);overflow:hidden;position:relative}
+  .poster img{width:100%;height:100%;object-fit:cover;display:block}
+  .body{flex:1;min-width:0}
+  .title{font-weight:600;font-size:15px;letter-spacing:-.01em;display:flex;gap:7px;align-items:baseline;flex-wrap:wrap}
+  .year{color:var(--dimmer);font-weight:400;font-size:13px}
+  .meta{color:var(--dim);font-size:12.5px;margin-top:3px}
+  .blurb{color:var(--dimmer);font-size:12px;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .voters{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;align-items:center}
+  .av{width:21px;height:21px;border-radius:99px;display:grid;place-items:center;font-size:10px;font-weight:700;color:#0d0c10;outline:2px solid var(--panel)}
+  .badge{font-size:11px;border-radius:99px;padding:2px 7px;white-space:nowrap}
+  .badge.streak{color:var(--accent);background:rgba(232,195,74,.1);border:1px solid rgba(232,195,74,.22)}
+  .badge.fade{color:#c98f7a;background:rgba(201,143,122,.09);border:1px solid rgba(201,143,122,.22)}
+  .right{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex:0 0 62px}
+  .score{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;text-align:center}
+  .score small{display:block;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dimmer);font-weight:600;margin-top:3px}
+  .vote{width:100%;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:9px;padding:6px 0;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+  .vote:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+  .vote.cast{background:var(--ok);border-color:var(--ok);color:#07240f}
+  .vote.renom{font-size:11px;padding:5px 0}
+  .stepper{display:flex;align-items:center;gap:2px;width:100%;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel-2)}
+  .stepper button{flex:0 0 22px;border:0;background:transparent;color:var(--dim);font:inherit;font-size:15px;font-weight:700;padding:5px 0;cursor:pointer;line-height:1}
+  .stepper button:hover:not(:disabled){color:var(--accent)}
+  .stepper button:disabled{opacity:.22;cursor:not-allowed}
+  .stepper span{flex:1;text-align:center;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--dimmer)}
+  .stepper span.on{color:var(--ok)}
+
+  /* ---- add + autocomplete ---- */
+  .addbox{position:relative}
+  .add{display:flex;gap:8px}
+  .add input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:10px 12px;font:inherit;font-size:14px}
+  .add input:focus{outline:none;border-color:#3d3a4d}
+  .add button{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:0 16px;font:inherit;font-weight:650;font-size:14px;cursor:pointer}
+  .add button:disabled{opacity:.3;cursor:not-allowed}
+  .add input:disabled{opacity:.5}
+  .ac{position:absolute;left:0;right:0;top:calc(100% + 6px);background:#191820;border:1px solid var(--line);border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.55);overflow:hidden;z-index:40;display:none}
+  .ac.on{display:block}
+  .ac-item{display:flex;gap:10px;padding:9px 11px;cursor:pointer;align-items:center;border-bottom:1px solid rgba(255,255,255,.04)}
+  .ac-item:last-child{border-bottom:0}
+  .ac-item.sel,.ac-item:hover{background:rgba(232,195,74,.09)}
+  .ac-thumb{width:34px;height:50px;flex:0 0 34px;border-radius:5px;overflow:hidden;display:grid;place-items:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.85)}
+  .ac-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .ac-t{flex:1;min-width:0}
+  .ac-t b{display:block;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ac-t span{display:block;font-size:11.5px;color:var(--dimmer);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ac-note{padding:9px 12px;font-size:11.5px;color:var(--dimmer);background:rgba(255,255,255,.02)}
+  .picked{margin-top:8px;display:none;align-items:center;gap:10px;background:var(--panel);border:1px solid rgba(92,201,139,.35);border-radius:10px;padding:8px 10px;font-size:13px}
+  .picked.on{display:flex}
+  .picked .x{margin-left:auto;color:var(--dimmer);cursor:pointer;font-size:16px;padding:0 4px}
+
+  .hist{display:flex;flex-direction:column;gap:6px}
+  .hrow{display:flex;gap:10px;align-items:center;padding:9px 12px;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:10px;font-size:13.5px}
+  .hrow .w{color:var(--dimmer);font-size:11px;letter-spacing:.08em;text-transform:uppercase;flex:0 0 52px}
+  .hrow .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hrow .s{color:var(--dim);font-size:12px;font-variant-numeric:tabular-nums}
+
+  details.fold{margin-top:10px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+  details.fold summary{cursor:pointer;font-size:13px;color:var(--dim);font-weight:600;list-style:none}
+  details.fold summary::-webkit-details-marker{display:none}
+  details.fold summary::before{content:"▸ ";color:var(--dimmer)}
+  details.fold[open] summary::before{content:"▾ "}
+  details.fold ol{margin:12px 0 0;padding-left:18px;color:var(--dim);font-size:13.5px}
+  details.fold li{margin-bottom:7px}
+  details.fold strong{color:var(--ink)}
+  details.fold ul.list{margin-top:12px}
+  details.fold .movie{background:rgba(255,255,255,.015);opacity:.72}
+  details.fold .movie:hover{opacity:1}
+
+  /* ---- runoff ---- */
+  .scrim{position:fixed;inset:0;background:rgba(6,5,9,.82);backdrop-filter:blur(6px);z-index:80;display:none;overflow-y:auto;padding:20px 14px}
+  .scrim.on{display:block}
+  .modal{max-width:520px;margin:0 auto;background:#15141b;border:1px solid #35323f;border-radius:18px;padding:20px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+  .modal h3{margin:0 0 4px;font-size:22px;letter-spacing:-.02em}
+  .modal .lead{color:var(--dim);font-size:13.5px;margin:0 0 16px}
+  .qrbox{display:flex;gap:16px;align-items:center;background:#0f0e14;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:16px}
+  .qr{background:#fff;padding:9px;border-radius:9px;flex:0 0 auto;line-height:0}
+  .qr canvas{display:block;image-rendering:pixelated}
+  .qrinfo{font-size:12.5px;color:var(--dim);min-width:0}
+  .qrinfo .code{font:600 21px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;color:var(--accent);margin:2px 0 6px}
+  .qrinfo .url{font-size:11px;color:var(--dimmer);word-break:break-all}
+  .ballot{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:14px}
+  .brow{display:flex;align-items:center;gap:8px;padding:9px 11px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .brow:last-child{border-bottom:0}
+  .brow .nm{flex:1;min-width:88px;font-size:13.5px;display:flex;align-items:center;gap:7px}
+  .brow .nm i{width:8px;height:8px;border-radius:99px;display:inline-block;flex:0 0 8px}
+  .brow.here{background:rgba(92,201,139,.05)}
+  .brow.away .nm{color:var(--dimmer)}
+  .fb{border:1px solid var(--line);background:var(--panel-2);color:var(--dim);border-radius:8px;padding:5px 9px;font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fb:hover{border-color:#454152;color:var(--ink)}
+  .fb.on{background:var(--ok);border-color:var(--ok);color:#07240f}
+  .tally{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+  .trow{display:flex;align-items:center;gap:10px;font-size:13.5px}
+  .trow .bar{flex:1;height:8px;background:var(--panel-2);border-radius:99px;overflow:hidden}
+  .trow .bar b{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .25s}
+  .trow .n{font-variant-numeric:tabular-nums;font-weight:700;flex:0 0 20px;text-align:right}
+  .modal .actions{display:flex;gap:9px}
+  .modal .actions button{flex:1;border-radius:10px;padding:11px 0;font:inherit;font-size:14px;font-weight:650;cursor:pointer;border:1px solid var(--line);background:var(--panel-2);color:var(--ink)}
+  .modal .actions button.go{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .modal .actions button:disabled{opacity:.35;cursor:not-allowed}
+  .note{font-size:12px;color:var(--dimmer);margin:12px 0 0;line-height:1.5}
+
+  .toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);background:#f0eef7;color:#15141a;padding:10px 16px;border-radius:99px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:.25s;z-index:99;box-shadow:0 8px 30px rgba(0,0,0,.4);max-width:90vw;text-align:center}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+  .empty{color:var(--dimmer);font-size:13px;padding:14px;text-align:center;border:1px dashed var(--line);border-radius:var(--r)}
+</style>
+</head>
+<body>
+
+<div class="proto">
+  <div class="wrap">
+    <span class="tag">Prototype</span>
+    <label for="mode">Rules</label>
+    <select id="mode">
+      <option value="ledger">Ledger — ours</option>
+      <option value="rolling">Rolling — Piotr's</option>
+      <option value="banked">Banked — hybrid</option>
+    </select>
+    <label for="who">as</label>
+    <select id="who"></select>
+    <button class="btn" id="advance">▶ Run film night &amp; next week</button>
+    <button class="btn ghost" id="draw">⚖ Force a draw</button>
+    <button class="btn ghost" id="reset">Reset</button>
+    <span class="tag" id="src">catalogue: offline</span>
+  </div>
+</div>
+
+<div class="wrap">
+  <header>
+    <h1>Film Night<span class="dot">.</span></h1>
+    <p class="sub">Week <span id="weekno">4</span> · Thursdays, 20:00, at Tymek's</p>
+    <div class="countdown">
+      <span class="pulse"></span>
+      <div style="flex:1">Voting closes in <b id="clock">—</b></div>
+      <div style="color:var(--dim);font-size:12.5px" id="turnout"></div>
+    </div>
+  </header>
+
+  <div class="turn" id="turn"></div>
+
+  <div class="sect"><h2>The list</h2><span class="hint" id="sorthint"></span></div>
+  <ul class="list" id="list"></ul>
+
+  <details class="fold" id="gravewrap" style="display:none">
+    <summary id="gravesum"></summary>
+    <ul class="list" id="grave"></ul>
+    <p style="color:var(--dimmer);font-size:12px;margin:12px 0 0">Nothing is deleted — one vote pulls a film straight back onto the list.</p>
+  </details>
+
+  <div class="sect"><h2>Nominate a film</h2><span class="hint" id="addhint"></span></div>
+  <div class="addbox">
+    <div class="add">
+      <input id="t" placeholder="Start typing a title…" maxlength="70" autocomplete="off" spellcheck="false">
+      <button id="addbtn">Add</button>
+    </div>
+    <div class="ac" id="ac"></div>
+    <div class="picked" id="picked"></div>
+  </div>
+
+  <div class="sect"><h2>Already watched</h2><span class="hint">votes retired with the film</span></div>
+  <div class="hist" id="hist"></div>
+
+  <details class="fold" open>
+    <summary id="rulename">How this works</summary>
+    <ol id="rules"></ol>
+  </details>
+</div>
+
+<div class="scrim" id="scrim">
+  <div class="modal">
+    <h3>It's a draw</h3>
+    <p class="lead" id="rlead"></p>
+    <div class="qrbox">
+      <div class="qr" id="qr"></div>
+      <div class="qrinfo">
+        Scan to break the tie.<div class="code" id="rcode"></div>
+        Only people in the room can scan it, so only people in the room get a say.
+        <div class="url" id="rurl"></div>
+      </div>
+    </div>
+    <div class="ballot" id="ballot"></div>
+    <div class="tally" id="tally"></div>
+    <div class="actions">
+      <button id="rlock" class="go">Lock it in</button>
+    </div>
+    <p class="note">Prototype: tap a film next to someone's name to simulate them scanning in and voting. Flash votes are thrown away afterwards — the losing film keeps every vote it had and stays on the list.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================================================================
+     Minimal QR encoder — byte mode, ECC level L, versions 1-10.
+     Self-contained so the tie-breaker works with no network.
+     ================================================================ */
+  var QR = (function(){
+    var EXP=new Array(512), LOG=new Array(256), x=1, i;
+    for(i=0;i<255;i++){ EXP[i]=x; LOG[x]=i; x<<=1; if(x&0x100) x^=0x11d; }
+    for(i=255;i<512;i++) EXP[i]=EXP[i-255];
+    function mul(a,b){ return (a===0||b===0)?0:EXP[LOG[a]+LOG[b]]; }
+    function gen(n){
+      var g=[1];
+      for(var i=0;i<n;i++){
+        var ng=[]; for(var k=0;k<=g.length;k++) ng[k]=0;
+        for(var j=0;j<g.length;j++){ ng[j]^=g[j]; ng[j+1]^=mul(g[j],EXP[i]); }
+        g=ng;
+      }
+      return g;
+    }
+    function ecc(data,n){
+      var g=gen(n), r=data.slice(), j;
+      for(j=0;j<n;j++) r.push(0);
+      for(var i=0;i<data.length;i++){
+        var c=r[i]; if(!c) continue;
+        for(j=0;j<g.length;j++) r[i+j]^=mul(g[j],c);
+      }
+      return r.slice(data.length);
+    }
+    // [total codewords, ecc per block, blocks] for ECC L
+    var VER=[null,[26,7,1],[44,10,1],[70,15,1],[100,20,1],[134,26,1],
+             [172,18,2],[196,20,2],[242,24,2],[292,30,2],[346,18,4]];
+    var ALIGN=[null,[],[6,18],[6,22],[6,26],[6,30],[6,34],
+               [6,22,38],[6,24,42],[6,26,46],[6,28,50]];
+
+    function encode(text){
+      var bytes=[], i;
+      for(i=0;i<text.length;i++){
+        var c=text.charCodeAt(i);
+        if(c<128) bytes.push(c);
+        else if(c<2048){ bytes.push(192|(c>>6),128|(c&63)); }
+        else { bytes.push(224|(c>>12),128|((c>>6)&63),128|(c&63)); }
+      }
+      var ver=0;
+      for(i=1;i<=10;i++){
+        var cc = i<10?8:16;
+        var cap = VER[i][0]-VER[i][1]*VER[i][2];
+        if(Math.ceil((4+cc+8*bytes.length)/8) <= cap){ ver=i; break; }
+      }
+      if(!ver) throw new Error("too long for this encoder");
+      var ccBits = ver<10?8:16;
+      var totalData = VER[ver][0]-VER[ver][1]*VER[ver][2];
+
+      var bits=[];
+      function put(v,n){ for(var k=n-1;k>=0;k--) bits.push((v>>k)&1); }
+      put(4,4); put(bytes.length,ccBits);
+      for(i=0;i<bytes.length;i++) put(bytes[i],8);
+      for(i=0;i<4 && bits.length<totalData*8;i++) bits.push(0);
+      while(bits.length%8) bits.push(0);
+      var dat=[];
+      for(i=0;i<bits.length;i+=8){
+        var b=0; for(var k=0;k<8;k++) b=(b<<1)|bits[i+k];
+        dat.push(b);
+      }
+      var pad=[0xEC,0x11], pi=0;
+      while(dat.length<totalData) dat.push(pad[pi++%2]);
+
+      // split into blocks (short blocks first), compute ecc, interleave
+      var nb=VER[ver][2], ne=VER[ver][1];
+      var shortLen=Math.floor(totalData/nb), nLong=totalData%nb, blocks=[], eblocks=[], off=0;
+      for(i=0;i<nb;i++){
+        var len=shortLen+(i>=nb-nLong?1:0);
+        var blk=dat.slice(off,off+len); off+=len;
+        blocks.push(blk); eblocks.push(ecc(blk,ne));
+      }
+      var out=[], maxLen=shortLen+(nLong?1:0);
+      for(i=0;i<maxLen;i++) for(var b2=0;b2<nb;b2++) if(i<blocks[b2].length) out.push(blocks[b2][i]);
+      for(i=0;i<ne;i++) for(b2=0;b2<nb;b2++) out.push(eblocks[b2][i]);
+
+      /* ---- matrix ---- */
+      var size=17+4*ver, M=[], R=[], r, c;
+      for(r=0;r<size;r++){ M.push([]); R.push([]); for(c=0;c<size;c++){ M[r].push(0); R[r].push(0); } }
+      function set(r,c,v){ if(r>=0&&r<size&&c>=0&&c<size){ M[r][c]=v; R[r][c]=1; } }
+      function finder(fr,fc){
+        for(var dr=-1;dr<=7;dr++) for(var dc=-1;dc<=7;dc++){
+          var rr=fr+dr, cc=fc+dc;
+          if(rr<0||rr>=size||cc<0||cc>=size) continue;
+          var on = (dr>=0&&dr<=6&&(dc===0||dc===6)) || (dc>=0&&dc<=6&&(dr===0||dr===6)) ||
+                   (dr>=2&&dr<=4&&dc>=2&&dc<=4);
+          set(rr,cc,on?1:0);
+        }
+      }
+      finder(0,0); finder(0,size-7); finder(size-7,0);
+      for(i=8;i<size-8;i++){ set(6,i,i%2===0?1:0); set(i,6,i%2===0?1:0); }
+      var al=ALIGN[ver];
+      for(i=0;i<al.length;i++) for(var j=0;j<al.length;j++){
+        var ar=al[i], ac=al[j];
+        if((ar<8&&ac<8)||(ar<8&&ac>size-9)||(ar>size-9&&ac<8)) continue;
+        for(var dr=-2;dr<=2;dr++) for(var dc=-2;dc<=2;dc++)
+          set(ar+dr,ac+dc,(Math.max(Math.abs(dr),Math.abs(dc))!==1)?1:0);
+      }
+      set(size-8,8,1);                                    // dark module
+      for(i=0;i<9;i++){ if(!R[8][i])R[8][i]=1; if(!R[i][8])R[i][8]=1; }
+      for(i=0;i<8;i++){ R[8][size-1-i]=1; R[size-1-i][8]=1; }
+      if(ver>=7){
+        var vb=ver<<12, vv=ver<<12;
+        for(i=17;i>=12;i--) if((vb>>i)&1) vb^=0x1f25<<(i-12);
+        var vinfo=vv|vb;
+        for(i=0;i<18;i++){
+          var bit=(vinfo>>i)&1, rr=Math.floor(i/3), cc=size-11+i%3;
+          set(rr,cc,bit); set(cc,rr,bit);
+        }
+      }
+
+      // data placement
+      var reserved=[]; for(r=0;r<size;r++) reserved.push(R[r].slice());
+      var bitIdx=0, up=true, col=size-1, data=[];
+      for(i=0;i<out.length;i++) for(var k=7;k>=0;k--) data.push((out[i]>>k)&1);
+      while(col>0){
+        if(col===6) col--;
+        for(i=0;i<size;i++){
+          var row = up? size-1-i : i;
+          for(var s=0;s<2;s++){
+            var cc2=col-s;
+            if(!reserved[row][cc2]){ M[row][cc2] = bitIdx<data.length?data[bitIdx]:0; bitIdx++; }
+          }
+        }
+        col-=2; up=!up;
+      }
+
+      function maskFn(m,r,c){
+        switch(m){
+          case 0: return (r+c)%2===0;
+          case 1: return r%2===0;
+          case 2: return c%3===0;
+          case 3: return (r+c)%3===0;
+          case 4: return (Math.floor(r/2)+Math.floor(c/3))%2===0;
+          case 5: return ((r*c)%2)+((r*c)%3)===0;
+          case 6: return (((r*c)%2)+((r*c)%3))%2===0;
+          default:return (((r+c)%2)+((r*c)%3))%2===0;
+        }
+      }
+      function fmt(mask){
+        var d=(1<<3)|mask, v=d<<10;
+        for(var i=14;i>=10;i--) if((v>>i)&1) v^=0x537<<(i-10);
+        return ((d<<10)|v)^0x5412;
+      }
+      function penalty(G){
+        var p=0,r,c,i,run,dark=0;
+        for(r=0;r<size;r++){ run=1; for(c=1;c<size;c++){ if(G[r][c]===G[r][c-1]){run++;} else {if(run>=5)p+=3+run-5;run=1;} } if(run>=5)p+=3+run-5; }
+        for(c=0;c<size;c++){ run=1; for(r=1;r<size;r++){ if(G[r][c]===G[r-1][c]){run++;} else {if(run>=5)p+=3+run-5;run=1;} } if(run>=5)p+=3+run-5; }
+        for(r=0;r<size-1;r++) for(c=0;c<size-1;c++)
+          if(G[r][c]===G[r][c+1]&&G[r][c]===G[r+1][c]&&G[r][c]===G[r+1][c+1]) p+=3;
+        var pat=[1,0,1,1,1,0,1,0,0,0,0];
+        for(r=0;r<size;r++) for(c=0;c<=size-11;c++){
+          var f=true,g=true;
+          for(i=0;i<11;i++){ if(G[r][c+i]!==pat[i])f=false; if(G[c+i][r]!==pat[i])g=false; }
+          if(f)p+=40; if(g)p+=40;
+        }
+        for(r=0;r<size;r++) for(c=0;c<size;c++) if(G[r][c]) dark++;
+        p += Math.floor(Math.abs(dark*100/(size*size)-50)/5)*10;
+        return p;
+      }
+
+      var best=null, bestP=Infinity;
+      for(var mk=0;mk<8;mk++){
+        var G=[]; for(r=0;r<size;r++){ G.push([]); for(c=0;c<size;c++) G[r].push(M[r][c]); }
+        for(r=0;r<size;r++) for(c=0;c<size;c++) if(!reserved[r][c] && maskFn(mk,r,c)) G[r][c]^=1;
+        var f=fmt(mk);
+        // format info is written MSB-first, starting at (8,0) and at (size-1,8)
+        for(i=0;i<6;i++)  G[8][i]=(f>>(14-i))&1;
+        G[8][7]=(f>>8)&1; G[8][8]=(f>>7)&1; G[7][8]=(f>>6)&1;
+        for(i=9;i<15;i++) G[14-i][8]=(f>>(14-i))&1;
+        for(i=0;i<7;i++)  G[size-1-i][8]=(f>>(14-i))&1;
+        for(i=7;i<15;i++) G[8][size-15+i]=(f>>(14-i))&1;
+        G[size-8][8]=1;                                   // dark module
+        var p=penalty(G);
+        if(p<bestP){ bestP=p; best=G; }
+      }
+      return best;
+    }
+    return {encode:encode};
+  })();
+
+  function drawQR(node, text, scale){
+    node.innerHTML="";
+    var G, q=4;
+    try{ G=QR.encode(text); }catch(e){ node.textContent="QR failed"; return; }
+    var n=G.length, s=scale||4, cv=document.createElement("canvas");
+    cv.width=cv.height=(n+q*2)*s;
+    cv.style.width=cv.style.height=((n+q*2)*s)+"px";
+    var g=cv.getContext("2d");
+    g.fillStyle="#fff"; g.fillRect(0,0,cv.width,cv.height);
+    g.fillStyle="#000";
+    for(var r=0;r<n;r++) for(var c=0;c<n;c++) if(G[r][c]) g.fillRect((c+q)*s,(r+q)*s,s,s);
+    node.appendChild(cv);
+  }
+
+  /* ================================================================
+     CONFIG — paste a TMDB key here and the search goes live.
+     Free, self-serve, instant: themoviedb.org → Settings → API.
+     Leave blank and it falls back to the bundled offline catalogue
+     so the prototype still works with no setup.
+     ================================================================ */
+  var TMDB_KEY   = "";                       // <-- your key here
+  var IMG        = "https://image.tmdb.org/t/p/";
+  var ZERO_VOTE_EXPIRY = 8;                  // weeks at 0 votes before archiving
+
+  /* ============ people ============ */
+  var PEOPLE = [
+    {id:"tymek", name:"Tymek", c:"#e8c34a"},
+    {id:"kuba",  name:"Kuba",  c:"#7aa7ff"},
+    {id:"ola",   name:"Ola",   c:"#f08fb6"},
+    {id:"marta", name:"Marta", c:"#5cc98b"},
+    {id:"jonas", name:"Jonas", c:"#c99bf0"},
+    {id:"ines",  name:"Inés",  c:"#8fd8e0"}
+  ];
+  function person(id){ for(var i=0;i<PEOPLE.length;i++) if(PEOPLE[i].id===id) return PEOPLE[i]; return null; }
+
+  /* ================================================================
+     THE THREE RULE SETS
+     ================================================================ */
+  var MODES = {
+    ledger: {
+      label:"Ledger (ours)",
+      perWeek:1, banking:false, cap:0, archiveAfter:8,
+      score:  function(mv,S){ return total(mv); },
+      drop:   function(mv,S){ return false; },                       // never dropped
+      hidden: function(mv,S){ return total(mv)===0 && S.week-mv.addedWeek>=8; },
+      warn:   function(mv,S){ var l=8-(S.week-mv.addedWeek); return (total(mv)===0&&l<=3&&l>0)?"fades in "+l+" wk":null; },
+      rules:[
+        ["One nomination each per week.","Use it or lose it — it doesn't bank."],
+        ["One vote each per week.","Move it freely until Thursday 20:00, then it sets."],
+        ["Votes never expire.","A film's score is every vote ever placed on it. Nothing decays."],
+        ["Patience beats enthusiasm.","One person voting the same film every week will eventually out-last a crowd's passing mood."],
+        ["Ignored films fade.","Eight weeks at zero and a film folds into the archive — one vote brings it back."]
+      ],
+      note:"Accumulates on the film. Protects a stubborn minority, but the list grows long."
+    },
+    rolling: {
+      label:"Rolling (Piotr's)",
+      perWeek:5, banking:false, cap:0, archiveAfter:0,
+      score:  function(mv,S){ return pts(mv,S.week) + 0.5*pts(mv,S.week-1); },
+      drop:   function(mv,S){ return pts(mv,S.week)===0; },          // a week with no votes = gone
+      hidden: function(mv,S){ return false; },
+      warn:   function(mv,S){ return pts(mv,S.week)===0 ? "drops tonight unless someone votes" : null; },
+      rules:[
+        ["Five points each per week.","Put them all on one film or spread them around — your call, and putting all five on one thing is a real strategy."],
+        ["One free nomination each per week.",""],
+        ["Score = this week's points + half of last week's.","Enthusiasm fades fast; nothing accumulates for long."],
+        ["A week with no points at all and the film is dropped.","Keeps the list short and the queue from forming."],
+        ["Nothing is owed to anyone.","A film only ever wins by being popular right now."]
+      ],
+      note:"Accumulates on nothing. Short fresh list, but one person can never out-wait four."
+    },
+    banked: {
+      label:"Banked (hybrid)",
+      perWeek:2, banking:true, cap:12, archiveAfter:0,
+      score:  function(mv,S){ return total(mv); },
+      drop:   function(mv,S){ return pts(mv,S.week)===0 && pts(mv,S.week-1)===0; },
+      hidden: function(mv,S){ return false; },
+      warn:   function(mv,S){ return (pts(mv,S.week)===0 && pts(mv,S.week-1)>0) ? "drops tonight unless someone spends" : null; },
+      rules:[
+        ["Two points each per week, and unspent points bank.","Save up to 12. Nothing is wasted by sitting out a week."],
+        ["Spend as many as you like, whenever you like.","Drip one a week to keep a film alive, or dump eight at once to force it through."],
+        ["Points stay on the film once spent.","A film's score is everything ever spent on it."],
+        ["Two weeks with nothing spent and the film is dropped.","So the list stays short — but your savings survive."],
+        ["Patience is stored in you, not in the list.","Sit out a month, then win a night outright. Then you're broke and it's someone else's turn."]
+      ],
+      note:"Accumulates on the person. Short list and freshness, minority still gets served."
+    }
+  };
+  function M(){ return MODES[S.mode]; }
+
+  /* ============ offline catalogue (fallback) ============ */
+  var CATALOGUE = [
+    ["Stalker",1979,"Andrei Tarkovsky"],["Solaris",1972,"Andrei Tarkovsky"],["Mirror",1975,"Andrei Tarkovsky"],
+    ["Sorcerer",1977,"William Friedkin"],["Perfect Blue",1997,"Satoshi Kon"],["Millennium Actress",2001,"Satoshi Kon"],
+    ["Paprika",2006,"Satoshi Kon"],["In the Mood for Love",2000,"Wong Kar-wai"],["Chungking Express",1994,"Wong Kar-wai"],
+    ["Fallen Angels",1995,"Wong Kar-wai"],["Happy Together",1997,"Wong Kar-wai"],["Mulholland Drive",2001,"David Lynch"],
+    ["Blue Velvet",1986,"David Lynch"],["Eraserhead",1977,"David Lynch"],["Anatomy of a Fall",2023,"Justine Triet"],
+    ["Aftersun",2022,"Charlotte Wells"],["Come and See",1985,"Elem Klimov"],["Nosferatu",2024,"Robert Eggers"],
+    ["The Lighthouse",2019,"Robert Eggers"],["The Witch",2015,"Robert Eggers"],["Pan's Labyrinth",2006,"Guillermo del Toro"],
+    ["Volver",2006,"Pedro Almodóvar"],["Talk to Her",2002,"Pedro Almodóvar"],["All About My Mother",1999,"Pedro Almodóvar"],
+    ["Paddington 2",2017,"Paul King"],["The Substance",2024,"Coralie Fargeat"],["Sátántangó",1994,"Béla Tarr"],
+    ["The Turin Horse",2011,"Béla Tarr"],["Memories of Murder",2003,"Bong Joon-ho"],["Parasite",2019,"Bong Joon-ho"],
+    ["Mother",2009,"Bong Joon-ho"],["Oldboy",2003,"Park Chan-wook"],["The Handmaiden",2016,"Park Chan-wook"],
+    ["Decision to Leave",2022,"Park Chan-wook"],["The Thing",1982,"John Carpenter"],["Escape from New York",1981,"John Carpenter"],
+    ["Cléo from 5 to 7",1962,"Agnès Varda"],["Vagabond",1985,"Agnès Varda"],["The Gleaners and I",2000,"Agnès Varda"],
+    ["Hard Boiled",1992,"John Woo"],["Petite Maman",2021,"Céline Sciamma"],["Portrait of a Lady on Fire",2019,"Céline Sciamma"],
+    ["Naked Lunch",1991,"David Cronenberg"],["Videodrome",1983,"David Cronenberg"],["Crash",1996,"David Cronenberg"],
+    ["Possession",1981,"Andrzej Żuławski"],["On the Silver Globe",1988,"Andrzej Żuławski"],["Ida",2013,"Paweł Pawlikowski"],
+    ["Cold War",2018,"Paweł Pawlikowski"],["The Double Life of Véronique",1991,"Krzysztof Kieślowski"],
+    ["Three Colours: Blue",1993,"Krzysztof Kieślowski"],["Dekalog",1989,"Krzysztof Kieślowski"],
+    ["Tampopo",1985,"Jūzō Itami"],["Tokyo Story",1953,"Yasujirō Ozu"],["Seven Samurai",1954,"Akira Kurosawa"],
+    ["High and Low",1963,"Akira Kurosawa"],["Y tu mamá también",2001,"Alfonso Cuarón"],["Roma",2018,"Alfonso Cuarón"],
+    ["Children of Men",2006,"Alfonso Cuarón"],["El Sur",1983,"Víctor Erice"],["The Spirit of the Beehive",1973,"Víctor Erice"],
+    ["Close-Up",1990,"Abbas Kiarostami"],["Taste of Cherry",1997,"Abbas Kiarostami"],["Zama",2017,"Lucrecia Martel"],
+    ["Beau Travail",1999,"Claire Denis"],["Playtime",1967,"Jacques Tati"],["Le Samouraï",1967,"Jean-Pierre Melville"],
+    ["Army of Shadows",1969,"Jean-Pierre Melville"],["Andrei Rublev",1966,"Andrei Tarkovsky"],
+    ["Wings of Desire",1987,"Wim Wenders"],["Paris, Texas",1984,"Wim Wenders"],["Barry Lyndon",1975,"Stanley Kubrick"],
+    ["Killer of Sheep",1978,"Charles Burnett"],["Do the Right Thing",1989,"Spike Lee"],["Fitzcarraldo",1982,"Werner Herzog"],
+    ["Aguirre, the Wrath of God",1972,"Werner Herzog"],["Jeanne Dielman",1975,"Chantal Akerman"],
+    ["Flow",2024,"Gints Zilbalodis"],["Sinners",2025,"Ryan Coogler"],["Past Lives",2023,"Celine Song"],
+    ["Drive My Car",2021,"Ryusuke Hamaguchi"],["Evil Does Not Exist",2023,"Ryusuke Hamaguchi"],
+    ["First Cow",2019,"Kelly Reichardt"],["Uncut Gems",2019,"Josh & Benny Safdie"],["Good Time",2017,"Josh & Benny Safdie"]
+  ].map(function(f,i){ return {id:"c"+i, title:f[0], year:f[1], director:f[2], poster:null, overview:null}; });
+
+  /* ============ state ============ */
+  function m(id,title,year,addedBy,addedWeek,votes,director){
+    return {id:id,title:title,year:year,director:director||null,poster:null,overview:null,
+      addedBy:addedBy,addedWeek:addedWeek,
+      votes:votes.map(function(v){return {by:v[0],week:v[1],n:v[2]||1};})};
+  }
+  function seed(mode){
+    var bank={};
+    PEOPLE.forEach(function(p){ bank[p.id]=MODES[mode].banking?4:0; });
+    return {
+      mode:mode, week:4, me:"tymek", nextId:100, bank:bank,
+      movies:[
+        m(1,"Stalker",1979,"kuba",1,[["kuba",1],["kuba",2],["kuba",3]],"Andrei Tarkovsky"),
+        m(2,"Sorcerer",1977,"tymek",1,[["tymek",1],["tymek",3]],"William Friedkin"),
+        m(3,"Come and See",1985,"jonas",2,[["jonas",2],["jonas",4]],"Elem Klimov"),
+        m(4,"Perfect Blue",1997,"ola",1,[["marta",4]],"Satoshi Kon"),
+        m(5,"Nosferatu",2024,"jonas",1,[["jonas",1]],"Robert Eggers"),
+        m(6,"Pan's Labyrinth",2006,"ines",1,[],"Guillermo del Toro"),
+        m(7,"Aftersun",2022,"ola",2,[],"Charlotte Wells"),
+        m(8,"Volver",2006,"ines",2,[],"Pedro Almodóvar"),
+        m(9,"Paddington 2",2017,"ola",3,[],"Paul King"),
+        m(10,"Chungking Express",1994,"tymek",3,[],"Wong Kar-wai"),
+        m(11,"The Substance",2024,"marta",4,[],"Coralie Fargeat")
+      ],
+      dropped:[],
+      watched:[
+        {title:"In the Mood for Love",year:2000,week:1,score:3},
+        {title:"Mulholland Drive",year:2001,week:2,score:4},
+        {title:"Anatomy of a Fall",year:2023,week:3,score:4}
+      ]
+    };
+  }
+
+  var S = seed("ledger"), pick = null;
+  var els = {};
+  ["mode","who","advance","reset","src","weekno","clock","turnout","turn","list","grave","gravewrap",
+   "gravesum","sorthint","hist","addhint","t","addbtn","toast","ac","picked","rules","rulename",
+   "scrim","rlead","qr","rcode","rurl","ballot","tally","rlock","draw"].forEach(function(k){ els[k]=document.getElementById(k); });
+
+  /* ============ point arithmetic ============ */
+  function pts(mv,wk){ var n=0; mv.votes.forEach(function(v){ if(v.week===wk) n+=v.n; }); return n; }
+  function total(mv){ var n=0; mv.votes.forEach(function(v){ n+=v.n; }); return n; }
+  function myPts(mv,pid,wk){ var n=0; mv.votes.forEach(function(v){ if(v.by===pid&&(wk===undefined||v.week===wk)) n+=v.n; }); return n; }
+  function score(mv){ return M().score(mv,S); }
+  function fmtScore(x){ return (Math.round(x*10)%10) ? x.toFixed(1) : String(Math.round(x)); }
+
+  function spentThisWeek(pid){
+    var n=0; S.movies.forEach(function(mv){ n+=myPts(mv,pid,S.week); }); return n;
+  }
+  function budget(pid){ return M().banking ? S.bank[pid] : M().perWeek; }
+  function remaining(pid){ return budget(pid) - spentThisWeek(pid); }
+
+  function addedThisWeek(pid){
+    for(var i=0;i<S.movies.length;i++) if(S.movies[i].addedBy===pid && S.movies[i].addedWeek===S.week) return S.movies[i];
+    return null;
+  }
+  function hidden(mv){ return M().hidden(mv,S); }
+  function cmp(a,b){ return score(b)-score(a) || a.addedWeek-b.addedWeek || (String(a.id)>String(b.id)?1:-1); }
+  function active(){ return S.movies.filter(function(mv){return !hidden(mv);}).sort(cmp); }
+  function shelved(){ return S.movies.filter(hidden).sort(function(a,b){return a.addedWeek-b.addedWeek;}); }
+
+  function streak(mv){
+    var best=0,who=null;
+    PEOPLE.forEach(function(p){
+      var ws = mv.votes.filter(function(v){return v.by===p.id;}).map(function(v){return v.week;}).sort(function(a,b){return a-b;});
+      var run=0,cur=0,prev=null;
+      ws.forEach(function(w){ cur=(prev!==null&&w===prev+1)?cur+1:1; prev=w; if(cur>run) run=cur; });
+      if(run>best){best=run;who=p;}
+    });
+    return best>=3?{n:best,who:who}:null;
+  }
+
+  function setPoints(pid, movieId, delta){
+    var mv = S.movies.filter(function(x){return String(x.id)===String(movieId);})[0];
+    if(!mv) return null;
+    var cur = myPts(mv,pid,S.week);
+    if(delta>0 && remaining(pid)<=0) return "broke";
+    if(delta<0 && cur<=0) return null;
+    var wasHidden = hidden(mv);
+    mv.votes = mv.votes.filter(function(v){ return !(v.by===pid && v.week===S.week); });
+    var n = cur + delta;
+    if(n>0) mv.votes.push({by:pid, week:S.week, n:n});
+    return wasHidden && n>0 ? "revived" : (n>0 ? "up" : "down");
+  }
+
+  /* ============ film metadata lookup ============ */
+  var LIVE = !!TMDB_KEY;
+  els.src.textContent = "catalogue: " + (LIVE ? "TMDB (live)" : "offline");
+
+  function searchOffline(q){
+    q = q.toLowerCase().trim();
+    if(q.length<2) return Promise.resolve([]);
+    var hit = CATALOGUE.filter(function(f){
+      return f.title.toLowerCase().indexOf(q)>=0 || (f.director||"").toLowerCase().indexOf(q)>=0;
+    }).sort(function(a,b){
+      var ai=a.title.toLowerCase().indexOf(q), bi=b.title.toLowerCase().indexOf(q);
+      return (ai<0?9:ai)-(bi<0?9:bi) || b.year-a.year;
+    }).slice(0,7);
+    return Promise.resolve(hit);
+  }
+  function searchTMDB(q){
+    if(q.trim().length<2) return Promise.resolve([]);
+    var u = "https://api.themoviedb.org/3/search/movie?api_key="+encodeURIComponent(TMDB_KEY)+
+            "&include_adult=false&query="+encodeURIComponent(q);
+    return fetch(u).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(d){
+        return (d.results||[]).slice(0,7).map(function(r){
+          return {id:"t"+r.id, title:r.title, year:parseInt((r.release_date||"").slice(0,4),10)||null,
+                  director:null, overview:r.overview||null,
+                  poster:r.poster_path?IMG+"w154"+r.poster_path:null,
+                  thumb:r.poster_path?IMG+"w92"+r.poster_path:null};
+        });
+      })
+      .catch(function(){ els.src.textContent="catalogue: offline (TMDB failed)"; LIVE=false; return searchOffline(q); });
+  }
+  function lookup(q){ return LIVE ? searchTMDB(q) : searchOffline(q); }
+
+  /* ============ rendering ============ */
+  function hue(s){ var h=0; for(var i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))%360; return h; }
+  function grad(t){ var h=hue(t); return "background:linear-gradient(150deg,hsl("+h+",42%,38%),hsl("+((h+42)%360)+",38%,22%))"; }
+  function initials(t){
+    var w=t.replace(/^(the|a|an|le|la)\s+/i,"").split(/\s+/).filter(Boolean);
+    return ((w[0]||"?")[0]+((w[1]||"")[0]||"")).toUpperCase();
+  }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+  function posterHTML(mv,cls){
+    return '<div class="'+(cls||"poster")+'" style="'+grad(mv.title)+'">'+
+      (mv.poster?'<img src="'+esc(mv.poster)+'" alt="" loading="lazy" onerror="this.remove()">':"")+
+      (mv.poster?"":esc(initials(mv.title)))+'</div>';
+  }
+
+  function render(){
+    els.weekno.textContent = S.week;
+    els.mode.value = S.mode;
+    els.who.innerHTML = PEOPLE.map(function(p){
+      return '<option value="'+p.id+'"'+(p.id===S.me?" selected":"")+">"+esc(p.name)+(p.id==="tymek"?" (you)":"")+"</option>";
+    }).join("");
+    els.turnout.textContent = PEOPLE.filter(function(p){return spentThisWeek(p.id)>0;}).length+"/"+PEOPLE.length+" voted";
+
+    els.sorthint.textContent = S.mode==="rolling" ? "this week + half of last week"
+                             : S.mode==="banked"  ? "total points ever spent"
+                             :                      "sorted by all-time votes";
+    els.rulename.textContent = "How this works — "+M().label;
+    els.rules.innerHTML = M().rules.map(function(r){
+      return "<li><strong>"+r[0]+"</strong> "+r[1]+"</li>";
+    }).join("") +
+    '<li><strong>A draw is settled in the room.</strong> Level at 20:00 and a QR code goes up — only people who turned up get a flash vote, and it decides the night only. Still level and the older film wins.</li>'+
+    '<li style="color:var(--dimmer);list-style:none;margin-left:-18px;padding-top:6px">'+esc(M().note)+'</li>';
+
+    renderTurn();
+    renderRows(els.list, active(), true);
+
+    var g = shelved().concat(S.dropped);
+    els.gravewrap.style.display = g.length ? "block" : "none";
+    els.gravesum.textContent = S.mode==="ledger"
+      ? "Archive — "+g.length+" film"+(g.length===1?"":"s")+" nobody has voted for in 8+ weeks"
+      : "Dropped — "+g.length+" film"+(g.length===1?"":"s")+" that ran out of votes";
+    renderRows(els.grave, g, false);
+
+    renderHist();
+
+    var added = addedThisWeek(S.me);
+    els.addbtn.disabled = !!added;
+    els.t.disabled = !!added;
+    els.addhint.textContent = added ? "you nominated "+added.title+" this week" : (LIVE?"search powered by TMDB":"one per person per week");
+    if(added){ closeAC(); clearPick(); }
+  }
+
+  function renderTurn(){
+    var me=person(S.me), a=addedThisWeek(S.me), left=remaining(S.me), spent=spentThisWeek(S.me);
+    var where = S.movies.filter(function(mv){ return myPts(mv,S.me,S.week)>0; })
+                 .map(function(mv){ return esc(mv.title)+(M().perWeek>1||M().banking?" ("+myPts(mv,S.me,S.week)+")":""); });
+    var line;
+    if(!spent) line = "<strong>nothing spent yet</strong>. "+(M().banking?"Spend as much of your bank as you like.":"Tap a film below.");
+    else line = "on "+where.join(", ");
+
+    var budgetLine;
+    if(M().banking){
+      budgetLine = "Your bank: <strong>"+S.bank[S.me]+"</strong> point"+(S.bank[S.me]===1?"":"s")+
+        " · <strong>"+left+"</strong> still unspent this week · +"+M().perWeek+"/week, capped at "+M().cap;
+    } else {
+      budgetLine = "<strong>"+left+"</strong> of "+M().perWeek+" point"+(M().perWeek===1?"":"s")+" left this week";
+    }
+
+    els.turn.innerHTML =
+      '<div class="turn-row"><div class="lbl">Week '+S.week+' — '+line+'</div>'+
+        '<span class="chip '+(spent?"done":"open")+'">'+(spent?"spent":"open")+'</span></div>'+
+      '<div class="turn-row"><div class="lbl">'+budgetLine+'</div>'+
+        '<span class="chip '+(left>0?"open":"done")+'">'+(left>0?left+" left":"all in")+'</span></div>'+
+      '<div class="turn-row"><div class="lbl">Your nomination — '+
+        (a?'<strong>'+esc(a.title)+'</strong>':'<strong>unused</strong>. Expires Thursday.')+
+      '</div><span class="chip '+(a?"done":"open")+'">'+(a?"used":"open")+'</span></div>'+
+      '<div class="turn-row"><div class="lbl" style="color:var(--dimmer)">Signed in as <strong style="color:'+me.c+
+        '">'+esc(me.name)+'</strong> via your personal link</div></div>';
+  }
+
+  function renderRows(node, arr, isMain){
+    if(!arr.length){ node.innerHTML = isMain?'<div class="empty">Nothing on the list. Nominate something.</div>':''; return; }
+    node.innerHTML = arr.map(function(mv,i){
+      var sc=score(mv), st=streak(mv), mine=myPts(mv,S.me,S.week), w=isMain?M().warn(mv,S):null;
+      var isDropped = S.dropped.indexOf(mv)>=0;
+      var byPerson={}; mv.votes.forEach(function(v){ byPerson[v.by]=(byPerson[v.by]||0)+v.n; });
+      var avs = Object.keys(byPerson).map(function(pid){
+        var p=person(pid);
+        return '<span class="av" style="background:'+p.c+'" title="'+esc(p.name)+' × '+byPerson[pid]+'">'+
+          esc(p.name[0])+(byPerson[pid]>1?'<sup style="font-size:7px;top:-.4em">'+byPerson[pid]+'</sup>':'')+'</span>';
+      }).join("");
+      var adder=person(mv.addedBy);
+      var badges = (st?'<span class="badge streak">'+esc(st.who.name)+"'s "+st.n+'-week campaign</span>':'')+
+                   (w?'<span class="badge fade">'+esc(w)+'</span>':'');
+
+      var control;
+      if(isDropped){
+        control = '<button class="vote renom" data-id="'+mv.id+'">Re-nominate</button>';
+      } else if(M().perWeek===1 && !M().banking){
+        control = '<button class="vote'+(mine?" cast":"")+'" data-id="'+mv.id+'" data-d="'+(mine?-1:1)+'">'+
+                  (mine?"✓ yours":"Vote")+'</button>';
+      } else {
+        control = '<div class="stepper"><button data-id="'+mv.id+'" data-d="-1"'+(mine?"":" disabled")+'>−</button>'+
+                  '<span class="'+(mine?"on":"")+'">'+mine+'</span>'+
+                  '<button data-id="'+mv.id+'" data-d="1"'+(remaining(S.me)>0?"":" disabled")+'>+</button></div>';
+      }
+
+      return '<li class="movie'+(isMain&&i===0&&sc>0?" lead":"")+(mine?" mine-vote":"")+'">'+
+        posterHTML(mv)+
+        '<div class="body"><div class="title">'+esc(mv.title)+' <span class="year">'+(mv.year||"")+'</span>'+badges+'</div>'+
+        '<div class="meta">'+(mv.director?esc(mv.director)+' · ':'')+'added by '+esc(adder.name)+' · week '+mv.addedWeek+'</div>'+
+        (mv.overview?'<div class="blurb">'+esc(mv.overview)+'</div>':'')+
+        (avs?'<div class="voters">'+avs+'</div>':'')+
+        '</div><div class="right"><div class="score">'+fmtScore(sc)+'<small>'+(M().perWeek>1||M().banking?"points":"votes")+'</small></div>'+
+        control+'</div></li>';
+    }).join("");
+
+    Array.prototype.forEach.call(node.querySelectorAll("[data-id]"), function(b){
+      b.addEventListener("click", function(){
+        var id=b.dataset.id;
+        if(b.classList.contains("renom")) return renominate(id);
+        var r = setPoints(S.me, id, +b.dataset.d);
+        var mv = S.movies.filter(function(x){return String(x.id)===String(id);})[0];
+        if(r==="broke") toast(M().banking?"Your bank is empty":"No points left this week");
+        else if(r==="revived") toast("↑ "+mv.title+" is back on the list");
+        else if(r==="down" && myPts(mv,S.me,S.week)===0) toast("Pulled your points off "+mv.title);
+        render();
+      });
+    });
+  }
+
+  function renominate(id){
+    if(addedThisWeek(S.me)) return toast("You've already nominated this week");
+    var i, old=null;
+    for(i=0;i<S.dropped.length;i++) if(String(S.dropped[i].id)===String(id)) old=S.dropped.splice(i,1)[0];
+    if(!old) return;
+    var mv = m(S.nextId++, old.title, old.year, S.me, S.week, [], old.director);
+    mv.poster=old.poster; mv.overview=old.overview;
+    S.movies.push(mv);
+    toast("Re-nominated "+old.title+" — starts from zero");
+    render();
+  }
+
+  function renderHist(){
+    els.hist.innerHTML = S.watched.length ? S.watched.slice().reverse().map(function(h){
+      return '<div class="hrow"><span class="w">wk '+h.week+'</span><span class="t">'+esc(h.title)+
+             ' <span class="year">'+h.year+'</span></span><span class="s">'+fmtScore(h.score)+'</span></div>';
+    }).join("") : '<div class="empty">No film nights yet.</div>';
+  }
+
+  /* ============ autocomplete ============ */
+  var acItems=[], acSel=-1, acTimer=null, acSeq=0, blurTimer=null;
+  function closeAC(){ els.ac.classList.remove("on"); els.ac.innerHTML=""; acItems=[]; acSel=-1; }
+  function clearPick(){ pick=null; els.picked.classList.remove("on"); els.picked.innerHTML=""; }
+
+  function showAC(items,q){
+    acItems=items; acSel=-1;
+    if(!items.length){
+      els.ac.innerHTML = '<div class="ac-note">No match — press Add to nominate “'+esc(q)+'” anyway.</div>';
+      els.ac.classList.add("on"); return;
+    }
+    els.ac.innerHTML = items.map(function(f,i){
+      var dup = S.movies.some(function(mv){ return mv.title.toLowerCase()===f.title.toLowerCase(); });
+      return '<div class="ac-item" data-i="'+i+'">'+
+        '<div class="ac-thumb" style="'+grad(f.title)+'">'+
+          (f.thumb?'<img src="'+esc(f.thumb)+'" alt="" onerror="this.remove()">':esc(initials(f.title)))+'</div>'+
+        '<div class="ac-t"><b>'+esc(f.title)+'</b><span>'+(f.year||"—")+
+          (f.director?" · "+esc(f.director):"")+(dup?" · already on the list":"")+'</span></div></div>';
+    }).join("") + '<div class="ac-note">↑↓ to move · enter to pick</div>';
+    els.ac.classList.add("on");
+    Array.prototype.forEach.call(els.ac.querySelectorAll(".ac-item"), function(d){
+      d.addEventListener("mousedown", function(e){ e.preventDefault(); choose(+d.dataset.i); });
+    });
+  }
+  function highlight(){
+    Array.prototype.forEach.call(els.ac.querySelectorAll(".ac-item"), function(d,i){ d.classList.toggle("sel", i===acSel); });
+  }
+  function choose(i){
+    var f = acItems[i]; if(!f) return;
+    pick = f; closeAC(); els.t.value = f.title;
+    els.picked.className = "picked on";
+    els.picked.innerHTML =
+      '<div class="ac-thumb" style="'+grad(f.title)+'">'+
+        (f.thumb?'<img src="'+esc(f.thumb)+'" alt="" onerror="this.remove()">':esc(initials(f.title)))+'</div>'+
+      '<div class="ac-t"><b>'+esc(f.title)+'</b><span>'+(f.year||"—")+(f.director?" · "+esc(f.director):"")+'</span></div>'+
+      '<span class="x" title="clear">✕</span>';
+    els.picked.querySelector(".x").addEventListener("click", function(){ clearPick(); els.t.value=""; els.t.focus(); });
+  }
+
+  els.t.addEventListener("input", function(){
+    clearPick(); clearTimeout(blurTimer);
+    var q = els.t.value;
+    clearTimeout(acTimer);
+    if(q.trim().length<2){ closeAC(); return; }
+    var my = ++acSeq;
+    acTimer = setTimeout(function(){ lookup(q).then(function(res){ if(my===acSeq) showAC(res,q); }); }, LIVE?260:90);
+  });
+  els.t.addEventListener("keydown", function(e){
+    if(els.ac.classList.contains("on") && acItems.length){
+      if(e.key==="ArrowDown"){ e.preventDefault(); acSel=(acSel+1)%acItems.length; highlight(); return; }
+      if(e.key==="ArrowUp"){ e.preventDefault(); acSel=(acSel-1+acItems.length)%acItems.length; highlight(); return; }
+      if(e.key==="Enter" && acSel>=0){ e.preventDefault(); choose(acSel); return; }
+      if(e.key==="Escape"){ closeAC(); return; }
+    }
+    if(e.key==="Enter") els.addbtn.click();
+  });
+  els.t.addEventListener("blur", function(){ clearTimeout(blurTimer); blurTimer=setTimeout(closeAC,120); });
+  els.t.addEventListener("focus", function(){ clearTimeout(blurTimer); });
+
+  els.addbtn.addEventListener("click", function(){
+    var title = pick ? pick.title : els.t.value.trim();
+    if(!title) return toast("Needs a title");
+    if(addedThisWeek(S.me)) return toast("You've already nominated this week");
+    if(S.movies.some(function(mv){ return mv.title.toLowerCase()===title.toLowerCase(); })) return toast(title+" is already on the list");
+    if(S.watched.some(function(h){ return h.title.toLowerCase()===title.toLowerCase(); })) return toast("We already watched "+title);
+    var mv = m(S.nextId++, title, pick?pick.year:null, S.me, S.week, [], pick?pick.director:null);
+    if(pick){ mv.poster=pick.poster||null; mv.overview=pick.overview||null; }
+    S.movies.push(mv);
+    els.t.value=""; clearPick(); closeAC();
+    toast("Nominated "+title);
+    render();
+  });
+
+  /* ============ tie-break: flash vote in the room ============ */
+  var RO = null;
+  function roomCode(){
+    var A="ACDEFGHJKLMNPQRTUVWXY3479", s="";
+    for(var i=0;i<6;i++) s+=A[Math.floor(Math.random()*A.length)];
+    return s;
+  }
+  function openRunoff(tied){
+    RO = {films:tied, code:roomCode(), present:{}};
+    var level = tied.every(function(f){ return score(f)===score(tied[0]); });
+    els.rlead.textContent = level
+      ? tied.length+" films finished level on "+fmtScore(score(tied[0]))+". Whoever's here decides."
+      : "Simulated draw between the top "+tied.length+" films, so you can see how it plays out.";
+    els.rcode.textContent = RO.code;
+    var url = "https://filmnight.xyz/f/"+RO.code;
+    els.rurl.textContent = url;
+    drawQR(els.qr, url, 4);
+    renderRunoff();
+    els.scrim.classList.add("on");
+  }
+  function renderRunoff(){
+    if(!RO) return;
+    els.ballot.innerHTML = PEOPLE.map(function(p){
+      var v = RO.present[p.id];
+      return '<div class="brow '+(v?"here":"away")+'">'+
+        '<span class="nm"><i style="background:'+p.c+'"></i>'+esc(p.name)+'</span>'+
+        RO.films.map(function(f){
+          return '<button class="fb'+(v===String(f.id)?" on":"")+'" data-p="'+p.id+'" data-f="'+f.id+'">'+esc(f.title)+'</button>';
+        }).join("")+'</div>';
+    }).join("");
+    Array.prototype.forEach.call(els.ballot.querySelectorAll(".fb"), function(b){
+      b.addEventListener("click", function(){
+        var pid=b.dataset.p, fid=b.dataset.f;
+        if(RO.present[pid]===fid) delete RO.present[pid]; else RO.present[pid]=fid;
+        renderRunoff();
+      });
+    });
+    var counts = flashCounts(), turnout = Object.keys(RO.present).length;
+    var max = Math.max(1, Math.max.apply(null, RO.films.map(function(f){return counts[f.id]||0;})));
+    els.tally.innerHTML = RO.films.map(function(f){
+      var n = counts[f.id]||0;
+      return '<div class="trow"><span style="flex:0 0 42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+
+        esc(f.title)+'</span><span class="bar"><b style="width:'+Math.round(n/max*100)+'%"></b></span>'+
+        '<span class="n">'+n+'</span></div>';
+    }).join("") + '<div style="font-size:12px;color:var(--dimmer);margin-top:2px">'+turnout+' of '+PEOPLE.length+' scanned in</div>';
+    els.rlock.textContent = turnout ? "Lock it in" : "Nobody scanned — fall back to the older film";
+  }
+  function flashCounts(){
+    var c={};
+    Object.keys(RO.present).forEach(function(pid){ var f=RO.present[pid]; c[f]=(c[f]||0)+1; });
+    return c;
+  }
+  function resolveRunoff(){
+    var counts = flashCounts();
+    var win = RO.films.slice().sort(function(a,b){
+      return (counts[b.id]||0)-(counts[a.id]||0) || a.addedWeek-b.addedWeek;
+    })[0];
+    var n = counts[win.id]||0;
+    els.scrim.classList.remove("on");
+    RO = null;
+    watch(win, n ? "🎬 Flash vote: "+win.title+" wins the room" : "🎬 No-one scanned — "+win.title+" wins on seniority");
+    nextWeek();
+  }
+
+  /* ============ simulation of the other five ============ */
+  function hash(s){ var h=2166136261; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return (h>>>0); }
+  // stable pseudo-taste so people's preferences don't flip week to week
+  function taste(pid,mv){
+    var t = (hash(pid+"|"+mv.title)%1000)/1000;
+    if(pid==="kuba") t = (mv.title==="Stalker" || myPts(mv,"kuba")>0) ? 1.6 : t*0.6;   // Kuba is loyal
+    return t;
+  }
+  function botTurn(){
+    var list = active();
+    if(!list.length) return;
+    PEOPLE.forEach(function(p){
+      if(p.id===S.me || spentThisWeek(p.id)>0) return;
+      var ranked = list.slice().sort(function(a,b){ return taste(p.id,b)-taste(p.id,a); });
+      if(M().banking){
+        var fav = ranked[0];
+        var lead = Math.max.apply(null, list.map(function(f){ return f===fav?0:score(f); }));
+        var need = Math.ceil(lead - score(fav)) + 1;
+        var spend = (need>0 && need<=S.bank[p.id]) ? need
+                  : (S.bank[p.id] >= M().cap ? S.bank[p.id] : 1);
+        spend = Math.max(1, Math.min(spend, S.bank[p.id]));
+        if(spend>0) setPoints(p.id, fav.id, spend);
+      } else if(M().perWeek>1){
+        // Kuba concentrates; everyone else spreads over their top three
+        if(p.id==="kuba"){ setPoints(p.id, ranked[0].id, M().perWeek); return; }
+        var top = ranked.slice(0,3), w = top.map(function(f){ return Math.pow(taste(p.id,f),3)+0.01; });
+        var tot = w.reduce(function(a,b){return a+b;},0), left = M().perWeek;
+        top.forEach(function(f,i){
+          var n = (i===top.length-1) ? left : Math.min(left, Math.round(M().perWeek*w[i]/tot));
+          if(n>0){ setPoints(p.id, f.id, n); left-=n; }
+        });
+      } else {
+        setPoints(p.id, ranked[0].id, 1);
+      }
+    });
+  }
+  function botNominations(){
+    PEOPLE.forEach(function(p){
+      if(p.id===S.me || addedThisWeek(p.id) || Math.random()<0.45) return;
+      var f = CATALOGUE[Math.floor(Math.random()*CATALOGUE.length)];
+      if(S.movies.some(function(mv){return mv.title===f.title;})) return;
+      if(S.watched.some(function(h){return h.title===f.title;})) return;
+      S.movies.push(m(S.nextId++, f.title, f.year, p.id, S.week, [], f.director));
+    });
+  }
+
+  function watch(win, msg){
+    S.watched.push({title:win.title,year:win.year,week:S.week,score:score(win)});
+    S.movies = S.movies.filter(function(mv){ return String(mv.id)!==String(win.id); });
+    toast(msg || ("🎬 Week "+S.week+": watching "+win.title));
+  }
+  function nextWeek(){
+    // films that ran out of support
+    var keep=[], gone=[];
+    S.movies.forEach(function(mv){ (M().drop(mv,S)?gone:keep).push(mv); });
+    if(gone.length){ S.movies=keep; S.dropped = gone.concat(S.dropped).slice(0,40); }
+    // banked points accrue
+    if(M().banking) PEOPLE.forEach(function(p){
+      S.bank[p.id] = Math.min(M().cap, S.bank[p.id] - spentThisWeek(p.id) + M().perWeek);
+    });
+    S.week++;
+    botNominations();
+    render();
+  }
+  function advance(){
+    if(RO) return;
+    botTurn();
+    var order = active(), top = order[0];
+    if(!top || score(top)<=0){ toast("Nobody voted — nothing gets watched"); nextWeek(); return; }
+    var tied = order.filter(function(mv){ return score(mv)===score(top); });
+    if(tied.length>1){ openRunoff(tied); return; }
+    watch(top);
+    nextWeek();
+  }
+
+  /* ============ misc ============ */
+  var tid;
+  function toast(msg){
+    els.toast.textContent=msg; els.toast.classList.add("on");
+    clearTimeout(tid); tid=setTimeout(function(){ els.toast.classList.remove("on"); },2600);
+  }
+  function tick(){
+    var now=new Date(), d=new Date(now.getFullYear(),now.getMonth(),now.getDate(),20,0,0);
+    d.setDate(d.getDate() + ((4-d.getDay()+7)%7));   // Thursday
+    if(d<=now) d.setDate(d.getDate()+7);
+    var s=Math.floor((d-now)/1000), dd=Math.floor(s/86400), hh=Math.floor(s%86400/3600),
+        mm=Math.floor(s%3600/60), ss=s%60;
+    els.clock.textContent=(dd?dd+"d ":"")+hh+"h "+String(mm).padStart(2,"0")+"m "+String(ss).padStart(2,"0")+"s";
+  }
+  function reset(mode){
+    RO=null; els.scrim.classList.remove("on");
+    S=seed(mode||S.mode); clearPick(); closeAC(); els.t.value=""; render();
+  }
+  els.mode.addEventListener("change", function(){ reset(els.mode.value); toast("Switched to "+M().label+" — same week 4, rescored"); });
+  els.who.addEventListener("change", function(){ S.me=els.who.value; render(); });
+  els.advance.addEventListener("click", advance);
+  els.reset.addEventListener("click", function(){ reset(); toast("Back to week 4"); });
+  els.rlock.addEventListener("click", resolveRunoff);
+  els.draw.addEventListener("click", function(){
+    if(RO) return;
+    var top = active().slice(0,2);
+    if(top.length<2) return toast("Need two films on the list");
+    openRunoff(top);
+  });
+
+  render(); tick(); setInterval(tick,1000);
+
+  /* ============ self-test ============ */
+  window.__selftest = function(rounds, mode){
+    if(mode) reset(mode);
+    var ok=true, log=[], maxList=0, draws=0, start=S.week;
+    for(var r=0;r<(rounds||40);r++){
+      var before=S.week;
+      botTurn();
+      PEOPLE.forEach(function(p){
+        if(spentThisWeek(p.id) > budget(p.id)){ ok=false; log.push("wk"+S.week+" "+p.name+" overspent "+spentThisWeek(p.id)+"/"+budget(p.id)); }
+        var a=S.movies.filter(function(mv){return mv.addedBy===p.id&&mv.addedWeek===S.week;}).length;
+        if(a>1){ ok=false; log.push("wk"+S.week+" "+p.name+" nominated "+a); }
+        if(M().banking && S.bank[p.id]<0){ ok=false; log.push(p.name+" bank went negative"); }
+        if(M().banking && S.bank[p.id]>M().cap){ ok=false; log.push(p.name+" bank over cap"); }
+      });
+      maxList = Math.max(maxList, active().length);
+      advance();
+      if(RO){
+        draws++;
+        PEOPLE.forEach(function(p){
+          if(Math.random()<0.35) return;
+          RO.present[p.id] = String(RO.films[Math.floor(Math.random()*RO.films.length)].id);
+        });
+        var w0=S.watched.length;
+        resolveRunoff();
+        if(S.watched.length!==w0+1){ ok=false; log.push("runoff produced no winner"); }
+        if(RO){ ok=false; log.push("runoff left open"); }
+      }
+      if(S.week!==before+1){ ok=false; log.push("week stuck at "+S.week); }
+    }
+    return {mode:S.mode,ok:ok,problems:log,weeksRun:S.week-start,visible:active().length,
+            dropped:S.dropped.length,peakVisible:maxList,watched:S.watched.length,draws:draws,
+            banks:PEOPLE.map(function(p){return S.bank[p.id];})};
+  };
+})();
+</script>
+</body>
+</html>
