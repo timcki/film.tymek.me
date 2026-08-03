@@ -1276,3 +1276,271 @@ details[open] > .iconbtn {
 .banner a {
 	font-weight: 650;
 }
+
+/* ------------------------------------------------------------------ admin -- */
+/* a back office for two people: dense, plain, and deliberately duller than the
+   members' side so there is never any doubt which one you are looking at */
+.ah {
+	font-size: 19px;
+	letter-spacing: -0.02em;
+	margin: 4px 0 6px;
+}
+.ahint {
+	font-size: 12px;
+	color: var(--dim);
+	line-height: 1.5;
+	margin: 6px 0 4px;
+}
+.tap.go {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--accent-ink);
+}
+.tap.bad {
+	color: var(--bad);
+	border-color: color-mix(in srgb, var(--bad) 34%, transparent);
+}
+.badge {
+	display: inline-block;
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	padding: 2px 7px;
+	border-radius: 99px;
+	color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 12%, transparent);
+	border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+	vertical-align: middle;
+}
+.badge.soft {
+	color: var(--dim);
+	background: var(--card2);
+	border-color: var(--line2);
+}
+.badge.warn {
+	color: var(--warn);
+	background: color-mix(in srgb, var(--warn) 12%, transparent);
+	border-color: color-mix(in srgb, var(--warn) 30%, transparent);
+}
+.badge.off {
+	color: var(--dimmer);
+	background: none;
+	border-color: var(--line2);
+}
+.badge.cut {
+	color: var(--cut);
+	background: color-mix(in srgb, var(--cut) 12%, transparent);
+	border-color: color-mix(in srgb, var(--cut) 28%, transparent);
+}
+.nextcard {
+	display: flex;
+	align-items: baseline;
+	gap: 9px;
+	flex-wrap: wrap;
+	background: var(--card);
+	border: 1px solid var(--line);
+	border-radius: var(--r);
+	padding: 12px 14px;
+	margin-top: 10px;
+}
+.nextcard .lbl {
+	font-size: 11px;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--dimmer);
+	font-weight: 600;
+}
+.nextcard b {
+	font-size: 16px;
+	font-weight: 700;
+}
+.nextcard .tag {
+	font-size: 10.5px;
+	color: var(--accent);
+	font-weight: 650;
+}
+.nextcard .tag.soft {
+	color: var(--dimmer);
+}
+.addnight,
+.edit,
+.fedit {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: flex-end;
+}
+.addnight label,
+.fedit label,
+.edit label {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	font-size: 11px;
+	color: var(--dim);
+	flex: 1 1 150px;
+}
+.addnight input,
+.addnight select,
+.edit input,
+.edit select,
+.fedit input,
+.fedit select,
+.bankin input,
+.acts select {
+	background: var(--card2);
+	border: 1px solid var(--line2);
+	color: var(--ink);
+	border-radius: 9px;
+	padding: 8px 10px;
+	font: inherit;
+	font-size: 13px;
+	min-width: 0;
+}
+.bankin {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 11px;
+	color: var(--dim);
+}
+.bankin input {
+	width: 62px;
+	padding: 6px 8px;
+}
+.acts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+	margin-top: 8px;
+}
+.acts form {
+	display: inline-flex;
+	gap: 6px;
+	align-items: center;
+}
+.nrow,
+.prow,
+.frow,
+.arow {
+	background: var(--card);
+	border: 1px solid var(--line);
+	border-radius: var(--r);
+	padding: 11px 13px;
+	margin-bottom: 8px;
+}
+.nrow.driving {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.nrow.off,
+.prow.off,
+.frow.off,
+.nrow.done {
+	opacity: 0.62;
+}
+.nmain b {
+	font-size: 15px;
+	font-weight: 650;
+}
+.nmeta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 7px;
+	align-items: center;
+	margin-top: 5px;
+	font-size: 11.5px;
+	color: var(--dim);
+}
+.nnote,
+.nconseq {
+	font-size: 11.5px;
+	color: var(--dim);
+}
+.nconseq {
+	display: block;
+	margin-top: 5px;
+	color: var(--dimmer);
+}
+.pwho {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+.pnames b {
+	font-size: 15px;
+	font-weight: 650;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+.pmeta {
+	display: block;
+	font-size: 11.5px;
+	color: var(--dimmer);
+	margin-top: 2px;
+}
+.linkcard {
+	background: var(--card);
+	border: 1px solid var(--accent);
+	border-radius: var(--r);
+	padding: 12px 14px;
+	margin-bottom: 12px;
+	font-size: 13px;
+}
+.frow {
+	display: flex;
+	gap: 11px;
+}
+.fth {
+	width: 46px;
+	flex: 0 0 46px;
+	aspect-ratio: 2/3;
+	border-radius: 6px;
+	overflow: hidden;
+	background: #1a1d21;
+}
+.fbody {
+	flex: 1;
+	min-width: 0;
+}
+.fhead {
+	display: flex;
+	gap: 10px;
+	align-items: baseline;
+}
+.fhead b {
+	flex: 1;
+	min-width: 0;
+	font-size: 14.5px;
+	font-weight: 650;
+}
+.fscore {
+	font-size: 16px;
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+}
+.fmeta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+	margin-top: 4px;
+	font-size: 11.5px;
+	color: var(--dim);
+}
+.arow {
+	display: flex;
+	justify-content: space-between;
+	gap: 10px;
+	font-size: 12px;
+	color: var(--dim);
+	padding: 8px 12px;
+}
+.arow i {
+	font-style: normal;
+	color: var(--dimmer);
+	white-space: nowrap;
+}

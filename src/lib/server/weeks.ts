@@ -4,7 +4,8 @@ import type { Film, Week } from './types.js';
 import { RuleError } from './types.js';
 import type { RuleSet } from './rules.js';
 import { accrue, orderFilms } from './rules.js';
-import { iso, nextDeadline } from './time.js';
+import { iso } from './time.js';
+import { markNightUsed, nextNight } from './schedule.js';
 import { pointsInWindow, rescoreAll, scoreFor, totalPoints } from './scoring.js';
 import { newCode } from './tokens.js';
 
@@ -36,8 +37,22 @@ export function openWeek(db: DB, number: number, now: Date = new Date()): Week {
 	if (existing) return existing;
 	db.prepare(
 		`INSERT INTO week (number, opens_at, closes_at, status) VALUES (?, ?, ?, 'open')`
-	).run(number, iso(now), iso(nextDeadline(now)));
+	).run(number, iso(now), iso(nextNight(db, now)));
 	return weekByNumber(db, number) as Week;
+}
+
+/**
+ * Points the open round at whatever the calendar now says. Called after every
+ * calendar edit and on every scheduler tick, so moving a night moves everybody's
+ * countdown at once and the calendar stays the single source of truth.
+ */
+export function syncOpenWeek(db: DB): Week | undefined {
+	const week = currentWeek(db);
+	if (!week || week.status !== 'open') return week;
+	const closesAt = iso(nextNight(db, new Date(week.opens_at)));
+	if (closesAt === week.closes_at) return week;
+	db.prepare('UPDATE week SET closes_at = ? WHERE number = ?').run(closesAt, week.number);
+	return weekByNumber(db, week.number);
 }
 
 /** ordered active films, per §3.2, with their scores as of `week` */
@@ -145,6 +160,7 @@ export function finish(
 	// deleted the same night for the cut
 	applyAttrition(db, rules, week.number);
 	accrueBanks(db, rules, week.number);
+	markNightUsed(db, week.number, week.closes_at);
 	const next = openWeek(db, week.number + 1, now);
 	rescoreAll(db, rules, next.number);
 }
@@ -156,6 +172,7 @@ function closeWithoutWinner(db: DB, rules: RuleSet, week: Week, now: Date): void
 	);
 	applyAttrition(db, rules, week.number);
 	accrueBanks(db, rules, week.number);
+	markNightUsed(db, week.number, week.closes_at);
 	const next = openWeek(db, week.number + 1, now);
 	rescoreAll(db, rules, next.number);
 }

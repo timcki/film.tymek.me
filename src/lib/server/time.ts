@@ -1,4 +1,6 @@
-export const TIMEZONE = 'Europe/Warsaw';
+import { TIMEZONE } from '../datetime.js';
+
+export { TIMEZONE };
 export const DEADLINE_HOUR = 20;
 const THURSDAY = 4;
 
@@ -98,6 +100,27 @@ export function nextDeadline(from: Date, tz: string = TIMEZONE): Date {
 
 export function iso(date: Date = new Date()): string {
 	return date.toISOString();
+}
+
+const LOCAL_INPUT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/;
+
+/**
+ * Reads back what a datetime-local input produced. The value carries no zone, and
+ * the admin typing it means Warsaw time, so it is resolved against that and not
+ * against whatever clock the server happens to keep.
+ */
+export function fromLocalInput(value: string, tz: string = TIMEZONE): Date {
+	const match = LOCAL_INPUT.exec(value.trim());
+	if (!match) throw new Error(`not a local date and time: ${value}`);
+	const [, year, month, day, hour, minute] = match;
+	return wallClockToUtc(
+		Number(year),
+		Number(month),
+		Number(day),
+		Number(hour),
+		Number(minute),
+		tz
+	);
 }
 
 export function formatLocal(instant: Date | string, tz: string = TIMEZONE): string {

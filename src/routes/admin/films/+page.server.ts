@@ -1,0 +1,133 @@
+import type { Actions, PageServerLoad } from './$types';
+import { getDb } from '$lib/server/db';
+import { activeRules } from '$lib/server/config';
+import { logAdmin, requireAdmin } from '$lib/server/admin';
+import {
+	clearPenalty,
+	deleteFilm,
+	editFilm,
+	managedFilms,
+	markWatched,
+	reassignFilm,
+	setFilmStatus
+} from '$lib/server/manage';
+import { allPeople } from '$lib/server/people';
+import { currentWeek } from '$lib/server/weeks';
+import { ruleFail } from '$lib/server/respond';
+import type { FilmStatus } from '$lib/server/types';
+
+const SETTABLE: FilmStatus[] = ['active', 'archived', 'dropped'];
+
+export const load: PageServerLoad = async ({ locals }) => {
+	requireAdmin(locals.person);
+	const db = getDb();
+	const week = currentWeek(db);
+	return {
+		films: managedFilms(db),
+		people: allPeople(db).map((p) => ({ id: p.id, name: p.name })),
+		weekNumber: week?.number ?? 1
+	};
+};
+
+/** the week the score cache should be rebuilt against after any edit */
+function nowWeek(): number {
+	return currentWeek(getDb())?.number ?? 1;
+}
+
+export const actions: Actions = {
+	status: async ({ request, locals }) => {
+		const person = requireAdmin(locals.person);
+		const form = await request.formData();
+		const id = Number(form.get('id'));
+		const status = String(form.get('status') ?? '') as FilmStatus;
+		if (!SETTABLE.includes(status)) {
+			return ruleFail(new Error(`refusing to set status ${status}`));
+		}
+		try {
+			setFilmStatus(getDb(), activeRules(), id, status, nowWeek());
+			logAdmin(getDb(), person.id, `film.${status}`, String(id));
+			return { saved: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	edit: async ({ request, locals }) => {
+		const person = requireAdmin(locals.person);
+		const form = await request.formData();
+		const id = Number(form.get('id'));
+		const number = (key: string) => {
+			const raw = String(form.get(key) ?? '').trim();
+			return raw ? Number(raw) : null;
+		};
+		try {
+			editFilm(getDb(), id, {
+				title: String(form.get('title') ?? ''),
+				year: number('year'),
+				director: String(form.get('director') ?? ''),
+				genre: String(form.get('genre') ?? ''),
+				runtime: number('runtime'),
+				posterUrl: String(form.get('poster') ?? ''),
+				note: String(form.get('note') ?? '')
+			});
+			logAdmin(getDb(), person.id, 'film.edit', String(id), String(form.get('title') ?? ''));
+			return { saved: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	watched: async ({ request, locals }) => {
+		const person = requireAdmin(locals.person);
+		const form = await request.formData();
+		const id = Number(form.get('id'));
+		const week = Number(form.get('week'));
+		try {
+			markWatched(getDb(), activeRules(), id, week, nowWeek());
+			logAdmin(getDb(), person.id, 'film.watched', String(id), `week ${week}`);
+			return { saved: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	reassign: async ({ request, locals }) => {
+		const person = requireAdmin(locals.person);
+		const form = await request.formData();
+		const id = Number(form.get('id'));
+		const to = String(form.get('personId') ?? '');
+		try {
+			reassignFilm(getDb(), id, to);
+			logAdmin(getDb(), person.id, 'film.reassign', String(id), to);
+			return { saved: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	penalty: async ({ request, locals }) => {
+		const person = requireAdmin(locals.person);
+		const form = await request.formData();
+		const id = Number(form.get('id'));
+		try {
+			clearPenalty(getDb(), activeRules(), id, nowWeek());
+			logAdmin(getDb(), person.id, 'film.clear_penalty', String(id));
+			return { saved: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	remove: async ({ request, locals }) => {
+		const person = requireAdmin(locals.person);
+		const form = await request.formData();
+		const id = Number(form.get('id'));
+		try {
+			deleteFilm(getDb(), id);
+			logAdmin(getDb(), person.id, 'film.delete', String(id));
+			return { saved: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	}
+};

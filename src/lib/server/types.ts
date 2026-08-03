@@ -8,6 +8,20 @@ export type Person = {
 	avatar: Uint8Array | null;
 	avatar_mime: string | null;
 	avatar_updated_at: string | null;
+	is_admin: number;
+};
+
+export type NightStatus = 'planned' | 'skipped' | 'used';
+
+/** one film night: the instant voting closes and the room picks */
+export type Night = {
+	id: number;
+	at: string;
+	status: NightStatus;
+	/** the round that actually closed on this night, set when it does */
+	week_number: number | null;
+	note: string | null;
+	created_at: string;
 };
 
 /** everything a face needs: a picture if there is one, initials and a colour if not */

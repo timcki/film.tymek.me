@@ -1,7 +1,7 @@
 import { getDb, type DB } from './db.js';
 import { activeRules } from './config.js';
 import type { RuleSet } from './rules.js';
-import { closeWeek, currentWeek, openWeek } from './weeks.js';
+import { closeWeek, currentWeek, openWeek, syncOpenWeek } from './weeks.js';
 import { closeExpiredRunoffs } from './runoffs.js';
 import { rescoreAll } from './scoring.js';
 import { iso } from './time.js';
@@ -25,12 +25,13 @@ function noteRuleSet(db: DB, rules: RuleSet, week: number, now: Date): void {
 }
 
 /** §6.1: wakes every minute, closes any week whose deadline has passed */
-export function tick(now: Date = new Date()): void {
-	const db = getDb();
+export function tick(now: Date = new Date(), db: DB = getDb()): void {
 	const rules = activeRules();
 	closeExpiredRunoffs(db, rules, now);
 
-	const week = currentWeek(db) ?? openWeek(db, 1, now);
+	// the calendar is the single source of truth for the deadline, so pick up any
+	// change to it before deciding whether the round is over
+	const week = syncOpenWeek(db) ?? currentWeek(db) ?? openWeek(db, 1, now);
 	noteRuleSet(db, rules, week.number, now);
 
 	if (week.status === 'open' && new Date(week.closes_at).getTime() <= now.getTime()) {

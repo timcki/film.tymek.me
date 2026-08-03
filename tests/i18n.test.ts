@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DICT, dictFor, isVotes, langOf, LANGS, type Dict, type RulesView } from '../src/lib/i18n.js';
+import { ADMIN_DICT, type AdminDict } from '../src/lib/i18n.admin.js';
 import { RULE_SETS } from '../src/lib/server/rules.js';
 
 const view = (id: keyof typeof RULE_SETS): RulesView => RULE_SETS[id];
@@ -15,6 +16,11 @@ describe('language selection', () => {
 	it('defines every key in both languages', () => {
 		const keys = (d: Dict) => Object.keys(d).sort();
 		expect(keys(DICT.pl)).toEqual(keys(DICT.en));
+	});
+
+	it('does the same for the back office', () => {
+		const keys = (d: AdminDict) => Object.keys(d).sort();
+		expect(keys(ADMIN_DICT.pl)).toEqual(keys(ADMIN_DICT.en));
 	});
 });
 
@@ -44,6 +50,21 @@ describe('the rules text follows the active rule set', () => {
 		const raised = { ...view('banked'), bankCap: 9 };
 		expect(flat(raised)).toContain('9');
 		expect(flat(raised)).not.toContain('6');
+	});
+
+	it('names the real deadline rather than a fixed weekday', () => {
+		const flat = (T: Dict, closesAt?: string) =>
+			T.rules(view('banked'), closesAt).map((r) => `${r.head} ${r.body}`).join(' ');
+
+		// a Wednesday, since the whole point is that it need not be Thursday
+		const wednesday = '2026-08-05T18:00:00.000Z';
+		expect(flat(DICT.pl, wednesday)).toContain('śr');
+		expect(flat(DICT.en, wednesday)).toContain('Wed');
+		for (const T of LANGS.map((l) => DICT[l])) {
+			expect(flat(T, wednesday)).not.toMatch(/czwart|Thursday/);
+			// with no round open the sentence still has to stand on its own
+			expect(flat(T)).not.toMatch(/undefined|null/);
+		}
 	});
 
 	it('quotes the real shortlist size', () => {

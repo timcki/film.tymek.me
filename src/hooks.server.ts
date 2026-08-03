@@ -1,5 +1,6 @@
 import type { Handle } from '@sveltejs/kit';
 import { getDb } from '$lib/server/db';
+import { isAdmin, seedAdmins } from '$lib/server/admin';
 import { personByToken } from '$lib/server/people';
 import { startScheduler } from '$lib/server/scheduler';
 
@@ -9,6 +10,13 @@ export const LANG_COOKIE = 'fn_lang';
 /** the browser cap; re-set on every request so regular visitors never expire */
 export const COOKIE_MAX_AGE = 400 * 24 * 60 * 60;
 
+// the build imports this module to analyse the routes, with no database to open,
+// which is the same reason startScheduler swallows its own first failure
+try {
+	seedAdmins(getDb());
+} catch (error) {
+	console.error('[admin] could not seed the admin flags', error);
+}
 startScheduler();
 
 /** the runoff is reachable without a personal link: being in the room is the credential */
@@ -53,6 +61,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 			status: 401,
 			headers: { 'content-type': 'text/html; charset=utf-8' }
 		});
+	}
+
+	// nobody else needs to learn that /admin is a page; each route checks again
+	if (event.url.pathname.startsWith('/admin') && !isAdmin(person)) {
+		return new Response('Not found', { status: 404 });
 	}
 
 	return resolve(event);

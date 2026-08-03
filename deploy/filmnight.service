@@ -13,6 +13,9 @@ EnvironmentFile=/etc/filmnight.env
 # adapter-node defaults to 512K, which a phone photo blows through before the
 # browser has had a chance to shrink it; setAvatar still refuses anything over 2 MB
 Environment=BODY_SIZE_LIMIT=3M
+# seeds /admin access at boot; grants only, so revoking in the UI sticks across
+# deploys and a restart can never hand the flag back to someone it was taken from
+Environment=ADMINS=tymek-chmielecki,piotr-cenda
 ExecStart=/usr/bin/node build/index.js
 Restart=always
 RestartSec=3

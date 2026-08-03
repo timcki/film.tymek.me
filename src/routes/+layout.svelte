@@ -2,6 +2,7 @@
 	import '../app.css';
 	import { page } from '$app/state';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import { formatNight } from '$lib/datetime';
 	import { dictFor, isVotes, LANGS } from '$lib/i18n';
 	import { toast } from '$lib/toast.svelte';
 	import type { LayoutServerData } from './$types';
@@ -10,8 +11,9 @@
 
 	const T = $derived(dictFor(data.lang));
 	const path = $derived(page.url.pathname);
-	// the room vote is its own world: no tabs, no budget, possibly no account
-	const bare = $derived(path.startsWith('/f/'));
+	// the room vote and the back office are each their own world: no tabs, no
+	// budget, and in the room's case possibly no account
+	const bare = $derived(path.startsWith('/f/') || path.startsWith('/admin'));
 
 	let now = $state(Date.now());
 	$effect(() => {
@@ -73,6 +75,8 @@
 						{T.week(data.week.number)} ·
 						{#if data.week.status === 'open' && countdown}
 							{T.closesIn} <b>{countdown}</b>
+							<!-- the date is no longer always a Thursday, so it is worth saying -->
+							· {formatNight(data.week.closesAt, data.lang)}
 						{:else if data.week.status === 'runoff'}
 							{T.roomPicking(data.runoffCode ?? '')}
 						{:else}
@@ -164,6 +168,26 @@
 									</span>
 									{T.tabYou}
 								</a>
+								{#if data.person.isAdmin}
+									<a href="/admin" class:on={path.startsWith('/admin')}>
+										<span class="ic">
+											<svg
+												width="17"
+												height="17"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="1.9"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												><rect x="3" y="4.5" width="18" height="15" rx="2.5" /><path
+													d="M3 9.5h18M8 4.5v15"
+												/></svg
+											>
+										</span>
+										{T.tabAdmin}
+									</a>
+								{/if}
 							</div>
 						</details>
 					{/if}

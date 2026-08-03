@@ -10,7 +10,9 @@ CREATE TABLE IF NOT EXISTS person (
   -- and it keeps the whole app one file to back up
   avatar            BLOB,
   avatar_mime       TEXT,
-  avatar_updated_at TEXT
+  avatar_updated_at TEXT,
+  -- may reach /admin; seeded from the ADMINS environment variable at boot
+  is_admin          INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS week (
@@ -103,6 +105,31 @@ CREATE TABLE IF NOT EXISTS tmdb_cache (
   fetched_at TEXT NOT NULL
 );
 
+-- the film nights themselves. A week's closes_at is taken from the next planned
+-- night, so moving or skipping one moves the whole round; with no rows at all the
+-- app falls back to next Thursday 20:00 and behaves exactly as it did before
+CREATE TABLE IF NOT EXISTS night (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  at          TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'planned',
+  week_number INTEGER REFERENCES week(number),
+  note        TEXT,
+  created_at  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS night_at ON night(at);
+CREATE INDEX IF NOT EXISTS night_status ON night(status);
+
+-- every admin action, so a surprising change can be traced to whoever made it
+CREATE TABLE IF NOT EXISTS audit (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  person_id  TEXT NOT NULL REFERENCES person(id),
+  action     TEXT NOT NULL,
+  target     TEXT,
+  detail     TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS audit_created ON audit(created_at);
+
 -- records a rule-set change so the list page can announce it for one week
 CREATE TABLE IF NOT EXISTS rules_change (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -122,6 +149,7 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	['person', 'avatar', 'BLOB'],
 	['person', 'avatar_mime', 'TEXT'],
 	['person', 'avatar_updated_at', 'TEXT'],
+	['person', 'is_admin', 'INTEGER NOT NULL DEFAULT 0'],
 	['film', 'genre', 'TEXT'],
 	['film', 'runtime', 'INTEGER'],
 	['film', 'note', 'TEXT'],

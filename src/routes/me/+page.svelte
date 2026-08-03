@@ -173,7 +173,7 @@
 
 <div class="sec">{T.youRules}</div>
 <ol style="padding-left:18px;margin:0;font-size:13.5px;color:var(--dim);line-height:1.6">
-	{#each T.rules(data.rules) as rule (rule.head)}
+	{#each T.rules(data.rules, data.week?.closesAt) as rule (rule.head)}
 		<li style="margin-bottom:9px">
 			<b style="color:var(--ink)">{rule.head}</b>
 			{rule.body}

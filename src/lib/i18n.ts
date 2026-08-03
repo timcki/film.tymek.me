@@ -3,6 +3,8 @@
  * gives us. Everything the app says about itself lives here, in both languages,
  * so a copy change is one edit in one file.
  */
+import { formatNight } from './datetime.js';
+
 export type Lang = 'pl' | 'en';
 
 export const LANGS: Lang[] = ['pl', 'en'];
@@ -72,6 +74,7 @@ export type Dict = {
 	close: string;
 	tabSeen: string;
 	tabYou: string;
+	tabAdmin: string;
 
 	week: (n: number) => string;
 	closesIn: string;
@@ -167,7 +170,8 @@ export type Dict = {
 	rotateBtn: string;
 	rotateNote: string;
 	rotated: string;
-	rules: (rules: RulesView) => Rule[];
+	/** closesAt is the current round's deadline, so the rules can name the real date */
+	rules: (rules: RulesView, closesAt?: string | null) => Rule[];
 
 	hostH: string;
 	hostIdle: string;
@@ -210,7 +214,7 @@ export type Dict = {
  * set that is actually running. Switching RULES rewrites this text, so it cannot
  * drift from what the engine does.
  */
-const plRules = (r: RulesView): Rule[] => {
+const plRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 	const out: Rule[] = [];
 	const votes = isVotes(r);
 
@@ -230,12 +234,12 @@ const plRules = (r: RulesView): Rule[] => {
 	} else if (votes) {
 		out.push({
 			head: 'Masz jeden głos tygodniowo.',
-			body: 'Możesz go przenosić do czwartku 20:00, potem się zamyka.'
+			body: 'Możesz go przenosić do zamknięcia głosowania, potem się zamyka.'
 		});
 	} else {
 		out.push({
 			head: `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} tygodniowo.`,
-			body: 'Niewykorzystane przepadają w czwartek, nic się nie kumuluje.'
+			body: 'Niewykorzystane przepadają po wieczorku, nic się nie kumuluje.'
 		});
 	}
 
@@ -262,8 +266,11 @@ const plRules = (r: RulesView): Rule[] => {
 	});
 
 	out.push({
-		head: 'Wieczorki działają w trybie cyklicznym, a głosowanie zamyka się co czwartek o 20:00.',
+		head: closesAt
+			? `Głosowanie zamyka się w dniu wieczorku: ${formatNight(closesAt, 'pl')}.`
+			: 'Głosowanie zamyka się w dniu wieczorku.',
 		body:
+			`Terminy ustala kalendarz, więc wieczorek może wypaść w inny dzień niż zwykle. ` +
 			`${r.shortlistSize} ${plFilms(r.shortlistSize)} z największą liczbą punktów trafiają do głosowania. ` +
 			'Kod QR pojawia się na ekranie i głos mają tylko ci, którzy przyszli. ' +
 			'Jeśli nikt nie zagłosuje, wygrywa najwyższy wynik.'
@@ -285,6 +292,7 @@ const pl: Dict = {
 	close: 'zamknij',
 	tabSeen: 'Obejrzane',
 	tabYou: 'Ty',
+	tabAdmin: 'Panel',
 
 	week: (n) => `Tydzień ${n}`,
 	closesIn: 'głosowanie zamyka się za',
@@ -301,14 +309,14 @@ const pl: Dict = {
 		if (r.banking) {
 			return `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} co tydzień. Niewydane punkty akumulują się co tydzień, maksymalnie do ${r.bankCap}.`;
 		}
-		if (isVotes(r)) return 'Masz jeden głos tygodniowo. Możesz go przenosić do czwartku 20:00.';
-		return `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} na tydzień. Niewykorzystane przepadają w czwartek.`;
+		if (isVotes(r)) return 'Masz jeden głos tygodniowo. Możesz go przenosić do zamknięcia głosowania.';
+		return `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} na tydzień. Niewykorzystane przepadają po wieczorku.`;
 	},
 	rulesChanged: (label) =>
 		`Zasady zmieniły się na „${label}” w tym tygodniu. Wszystkie wyniki przeliczono od nowa z głosów; nic nie przepadło.`,
 
 	shortlistHead: (n) => (n === 3 ? 'Trójka na dziś' : `Czołowe ${n} na dziś`),
-	shortlistNote: (n) => `W czwartek sala wybiera jeden z tych ${n} ${plFilms(n)}`,
+	shortlistNote: (n) => `Na wieczorku sala wybiera jeden z tych ${n} ${plFilms(n)}`,
 	restHead: 'Reszta listy',
 	unit: (n, votes) => (votes ? plVotes(n) : 'pkt'),
 	noBackers: '0 głosów',
@@ -360,7 +368,7 @@ const pl: Dict = {
 	noteSig: (name) => name,
 
 	nomH: 'Zgłoś film',
-	nomHint: 'Jedno zgłoszenie na osobę tygodniowo. Za darmo.',
+	nomHint: 'Jedno zgłoszenie na osobę w tygodniu.',
 	nomPh: 'Szukaj po tytule…',
 	nomSearching: 'szukam…',
 	nomNone: (q) => `Nic nie znaleziono dla „${q}”.`,
@@ -490,7 +498,7 @@ const pl: Dict = {
 
 /* -------------------------------------------------------------- english -- */
 
-const enRules = (r: RulesView): Rule[] => {
+const enRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 	const out: Rule[] = [];
 	const votes = isVotes(r);
 
@@ -510,12 +518,12 @@ const enRules = (r: RulesView): Rule[] => {
 	} else if (votes) {
 		out.push({
 			head: 'One vote a week.',
-			body: 'Move it freely until Thursday 20:00, then it sets.'
+			body: 'Move it freely until voting closes, then it sets.'
 		});
 	} else {
 		out.push({
 			head: `You get ${r.pointsPerWeek} points a week.`,
-			body: 'Anything unspent is gone on Thursday; nothing carries over.'
+			body: 'Anything unspent is gone after the night; nothing carries over.'
 		});
 	}
 
@@ -540,8 +548,11 @@ const enRules = (r: RulesView): Rule[] => {
 	});
 
 	out.push({
-		head: 'Film night runs on a cycle, and voting closes every Thursday at 20:00.',
+		head: closesAt
+			? `Voting closes on the night itself: ${formatNight(closesAt, 'en')}.`
+			: 'Voting closes on the night itself.',
 		body:
+			'The dates come from the calendar, so a film night can land on a different day than usual. ' +
 			`The ${r.shortlistSize} films with the most points go to the vote. ` +
 			'A QR goes up on the screen and only the people who turned up get a say. ' +
 			'If nobody votes, the highest score wins.'
@@ -563,6 +574,7 @@ const en: Dict = {
 	close: 'close',
 	tabSeen: 'Watched',
 	tabYou: 'You',
+	tabAdmin: 'Admin',
 
 	week: (n) => `Week ${n}`,
 	closesIn: 'voting closes in',
@@ -577,14 +589,14 @@ const en: Dict = {
 		if (r.banking) {
 			return `You get ${r.pointsPerWeek} points every week. Unspent points accumulate week to week, up to ${r.bankCap}.`;
 		}
-		if (isVotes(r)) return 'One vote a week. Move it freely until Thursday 20:00.';
-		return `You get ${r.pointsPerWeek} points a week. Anything unspent is gone on Thursday.`;
+		if (isVotes(r)) return 'One vote a week. Move it freely until voting closes.';
+		return `You get ${r.pointsPerWeek} points a week. Anything unspent is gone after the night.`;
 	},
 	rulesChanged: (label) =>
 		`The rules changed to “${label}” this week. Every score was recomputed from the ballots; nothing was lost.`,
 
 	shortlistHead: (n) => (n === 3 ? "Tonight's three" : `Tonight's top ${n}`),
-	shortlistNote: (n) => `On Thursday the room picks one of these ${n}`,
+	shortlistNote: (n) => `On the night the room picks one of these ${n}`,
 	restHead: 'The rest',
 	unit: (n, votes) => (votes ? en2(n, 'vote', 'votes') : 'pts'),
 	noBackers: '0 votes',
@@ -634,7 +646,7 @@ const en: Dict = {
 	noteSig: (name) => name,
 
 	nomH: 'Nominate a film',
-	nomHint: 'One per person per week. Free.',
+	nomHint: 'One nomination per person per week.',
 	nomPh: 'Search by title…',
 	nomSearching: 'searching…',
 	nomNone: (q) => `Nothing found for “${q}”.`,
