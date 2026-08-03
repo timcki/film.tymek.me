@@ -8,8 +8,10 @@
 	--ink: #eef0f3;
 	--dim: #8b909a;
 	--dimmer: #666b74;
-	--mint: #6ee7a8;
-	--mint-ink: #06301c;
+	/* complement of --warn: same hue wheel, opposite side, so "leading" and
+	   "about to drop" can never be mistaken for one another */
+	--accent: #92bbe8;
+	--accent-ink: #06203a;
 	--warn: #e0a15f;
 	--bad: #e0715f;
 	--r: 14px;
@@ -35,7 +37,7 @@ button {
 	font: inherit;
 }
 a {
-	color: var(--mint);
+	color: var(--accent);
 }
 .wrap {
 	max-width: 620px;
@@ -78,7 +80,7 @@ header .sub b {
 	cursor: help;
 }
 .pill b {
-	color: var(--mint);
+	color: var(--accent);
 	font-variant-numeric: tabular-nums;
 }
 .hr {
@@ -106,8 +108,8 @@ header .sub b {
 	cursor: pointer;
 }
 .lang button.on {
-	background: var(--mint);
-	color: var(--mint-ink);
+	background: var(--accent);
+	color: var(--accent-ink);
 }
 
 /* the budget explainer: hover with a mouse, tap on a phone */
@@ -158,9 +160,9 @@ header .sub b {
 	transition: border-color 0.15s;
 }
 .film.lead {
-	border-color: var(--mint);
-	background: linear-gradient(180deg, rgba(110, 231, 168, 0.055), var(--card));
-	box-shadow: 0 0 0 1px rgba(110, 231, 168, 0.16);
+	border-color: var(--accent);
+	background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, transparent), var(--card));
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 .film.fading {
 	border-color: rgba(224, 161, 95, 0.34);
@@ -226,7 +228,7 @@ header .sub b {
 	font-variant-numeric: tabular-nums;
 }
 .film.lead .sc b {
-	color: var(--mint);
+	color: var(--accent);
 }
 .sc i {
 	display: block;
@@ -308,7 +310,7 @@ header .sub b {
 	margin: 14px 0 0;
 	padding: 11px 13px;
 	background: var(--card2);
-	border-left: 3px solid var(--mint);
+	border-left: 3px solid var(--accent);
 	border-radius: 0 10px 10px 0;
 }
 .dnote .sig {
@@ -323,7 +325,7 @@ header .sub b {
 	margin-top: 9px;
 	background: none;
 	border: 0;
-	color: var(--mint);
+	color: var(--accent);
 	font-size: 12px;
 	font-weight: 650;
 	cursor: pointer;
@@ -372,9 +374,9 @@ header .sub b {
 }
 .cbtns button.go {
 	flex: 2;
-	background: var(--mint);
-	border-color: var(--mint);
-	color: var(--mint-ink);
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--accent-ink);
 }
 .cbtns button:disabled {
 	opacity: 0.45;
@@ -452,9 +454,9 @@ header .sub b {
 	flex: 0 0 auto;
 }
 .tap.on {
-	background: var(--mint);
-	border-color: var(--mint);
-	color: var(--mint-ink);
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--accent-ink);
 }
 .tap:disabled {
 	opacity: 0.4;
@@ -502,7 +504,7 @@ header .sub b {
 	color: var(--dimmer);
 }
 .shortlist-head {
-	color: var(--mint);
+	color: var(--accent);
 	margin-top: 8px;
 }
 .shortlist-head::after,
@@ -513,7 +515,7 @@ header .sub b {
 	background: var(--line2);
 }
 .shortlist-head::after {
-	background: rgba(110, 231, 168, 0.3);
+	background: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 .shortlist-note {
 	font-size: 11.5px;
@@ -549,7 +551,7 @@ header .sub b {
 	display: none;
 }
 details[open] > .iconbtn {
-	border-color: var(--mint);
+	border-color: var(--accent);
 }
 .menu-backdrop {
 	position: fixed;
@@ -602,14 +604,14 @@ details[open] > .iconbtn {
 	background: var(--card2);
 }
 .menu a.on {
-	color: var(--mint);
+	color: var(--accent);
 }
 .menu a .ic {
 	line-height: 0;
 	color: var(--dimmer);
 }
 .menu a.on .ic {
-	color: var(--mint);
+	color: var(--accent);
 }
 
 /* ---------- sheets ---------- */
@@ -781,7 +783,7 @@ details[open] > .iconbtn {
 	font-variant-numeric: tabular-nums;
 }
 .step span.on {
-	color: var(--mint);
+	color: var(--accent);
 }
 
 /* search sheet */
@@ -1043,7 +1045,7 @@ details[open] > .iconbtn {
 .code {
 	font: 800 30px/1 ui-monospace, Menlo, monospace;
 	letter-spacing: 0.2em;
-	color: var(--mint);
+	color: var(--accent);
 	margin: 14px 0 6px;
 }
 .tkfilms {
@@ -1084,10 +1086,10 @@ details[open] > .iconbtn {
 	padding: 0 8px;
 }
 .tkfilm.win {
-	border-color: var(--mint);
+	border-color: var(--accent);
 }
 .tkfilm.win .n {
-	color: var(--mint);
+	color: var(--accent);
 }
 .brow {
 	display: flex;
@@ -1120,15 +1122,15 @@ details[open] > .iconbtn {
 	white-space: nowrap;
 }
 .fb.on {
-	background: var(--mint);
-	border-color: var(--mint);
-	color: var(--mint-ink);
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--accent-ink);
 }
 .bigbtn {
 	width: 100%;
 	margin-top: 18px;
-	background: var(--mint);
-	color: var(--mint-ink);
+	background: var(--accent);
+	color: var(--accent-ink);
 	border: 0;
 	border-radius: 12px;
 	padding: 14px 0;
@@ -1163,8 +1165,8 @@ details[open] > .iconbtn {
 	cursor: pointer;
 }
 .pickbtn.on {
-	border-color: var(--mint);
-	box-shadow: 0 0 0 1px rgba(110, 231, 168, 0.2);
+	border-color: var(--accent);
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 .pickbtn .th {
 	width: 44px;
@@ -1211,9 +1213,9 @@ details[open] > .iconbtn {
 	gap: 8px;
 }
 .namebtn.on {
-	background: var(--mint);
-	border-color: var(--mint);
-	color: var(--mint-ink);
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--accent-ink);
 }
 
 .toast {
@@ -1254,8 +1256,8 @@ details[open] > .iconbtn {
 	line-height: 1.5;
 	margin-top: 12px;
 }
-.banner.mint {
-	border-color: rgba(110, 231, 168, 0.4);
+.banner.accent {
+	border-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 .banner a {
 	font-weight: 650;

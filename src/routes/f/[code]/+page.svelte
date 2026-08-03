@@ -45,7 +45,7 @@
 </header>
 
 {#if data.decided}
-	<p class="banner mint">{T.roomDecided}</p>
+	<p class="banner accent">{T.roomDecided}</p>
 	{#each data.tally as row (row.film.id)}
 		<div class="pickbtn" class:on={row.film.id === data.winnerFilmId}>
 			<div class="th"><Poster title={row.film.title} url={row.film.poster_url} /></div>

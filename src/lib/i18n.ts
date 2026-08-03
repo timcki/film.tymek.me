@@ -204,70 +204,68 @@ export type Dict = {
 
 /* --------------------------------------------------------------- polish -- */
 
+/**
+ * The six rules as the group states them, with every number read from the rule
+ * set that is actually running. Switching RULES rewrites this text, so it cannot
+ * drift from what the engine does.
+ */
 const plRules = (r: RulesView): Rule[] => {
 	const out: Rule[] = [];
 	const votes = isVotes(r);
 
+	if (r.attrition.kind === 'drop') {
+		const n = r.attrition.afterWeeksWithoutPoints;
+		out.push({ head: `${n} ${plWeeks(n)} bez punktów i film wypada.`, body: '' });
+	} else {
+		const n = r.attrition.afterWeeksAtZero;
+		out.push({ head: `${n} ${plWeeks(n)} bez głosu i film trafia do archiwum.`, body: '' });
+	}
+
 	if (r.banking) {
 		out.push({
-			head: `${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} tygodniowo, i się kumulują.`,
-			body: `Możesz odłożyć do ${r.bankCap}, więc tydzień bez głosowania nic nie kosztuje.`
-		});
-		out.push({
-			head: 'Wydajesz ile chcesz i kiedy chcesz.',
-			body: 'Po jednym co tydzień, żeby film nie wypadł, albo wszystko naraz, żeby go przepchnąć.'
+			head: `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} tygodniowo i kumulują się, jeśli nie wydasz ich w danym tygodniu.`,
+			body: `Maksymalnie możesz mieć ${r.bankCap} (jeśli masz ${r.bankCap} i nie zagłosujesz, te ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} przepadają).`
 		});
 	} else if (votes) {
 		out.push({
-			head: 'Jeden głos tygodniowo.',
+			head: 'Masz jeden głos tygodniowo.',
 			body: 'Możesz go przenosić do czwartku 20:00, potem się zamyka.'
 		});
 	} else {
 		out.push({
-			head: `${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} tygodniowo.`,
-			body: 'Wszystkie na jeden film albo po trochu. Niewykorzystane przepadają w czwartek.'
-		});
-	}
-
-	if (r.scoring === 'total') {
-		out.push({
-			head: votes ? 'Głosy nigdy nie wygasają.' : 'Punkty zostają na filmie.',
-			body: votes
-				? 'Wynik to każdy głos, jaki kiedykolwiek padł. Cierpliwość wygrywa z zapałem.'
-				: 'Wynik to wszystko, co kiedykolwiek na niego poszło.'
-		});
-	} else {
-		out.push({
-			head: `Wynik = ten tydzień + ${r.decayFactor} poprzedniego.`,
-			body: 'Nic nie kumuluje się na długo, więc liczy się to, co jest popularne teraz.'
-		});
-	}
-
-	if (r.attrition.kind === 'archive') {
-		const n = r.attrition.afterWeeksAtZero;
-		out.push({
-			head: `${n} ${plWeeks(n)} bez głosu i film trafia do archiwum.`,
-			body: 'Jeden głos go stamtąd przywraca.'
-		});
-	} else {
-		const n = r.attrition.afterWeeksWithoutPoints;
-		out.push({
-			head: `${n} ${plWeeks(n)} bez punktów i film wypada.`,
-			body: 'Bank zostaje, film nie. Możesz go zgłosić ponownie, ale zaczyna od zera.'
+			head: `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} tygodniowo.`,
+			body: 'Niewykorzystane przepadają w czwartek, nic się nie kumuluje.'
 		});
 	}
 
 	out.push({
-		head: `${r.nominationsPerWeek === 1 ? 'Jedno' : r.nominationsPerWeek} darmowe zgłoszenie tygodniowo.`,
-		body: 'Wykorzystaj albo przepada. Zgłoszenie nic nie kosztuje.'
+		head: votes
+			? 'Twój głos idzie na jeden film.'
+			: 'Gdy głosujesz na film, możesz zużyć tyle punktów, ile masz dostępnych.',
+		body: votes
+			? 'Możesz go przenieść na inny, dopóki tydzień jest otwarty.'
+			: 'Po jednym co tydzień, żeby film nie odpadł z listy, albo wszystko naraz, żeby go przepchnąć.'
 	});
 
 	out.push({
-		head: `W czwartek o 20:00 ${r.shortlistSize} najlepsze filmy trafiają do sali.`,
+		head:
+			r.scoring === 'total'
+				? `${votes ? 'Głosy' : 'Punkty'} kumulują się na filmie co tydzień.`
+				: `Wynik to ten tydzień plus ${r.decayFactor} poprzedniego.`,
+		body: r.scoring === 'total' ? '' : 'Nic nie kumuluje się na długo.'
+	});
+
+	out.push({
+		head: `${r.nominationsPerWeek === 1 ? 'Jedno' : r.nominationsPerWeek} zgłoszenie tygodniowo.`,
+		body: 'Wykorzystaj w danym tygodniu albo przepada.'
+	});
+
+	out.push({
+		head: 'Wieczorki działają w trybie cyklicznym, a głosowanie zamyka się co czwartek o 20:00.',
 		body:
-			'Kod QR pojawia się na ekranie i głos błyskawiczny mają tylko ci, którzy przyszli. ' +
-			'Punkty decydują, kto kandyduje; obecność decyduje, co oglądamy. Jeśli nikt nie zagłosuje, ' +
-			'wygrywa najwyższy wynik.'
+			`${r.shortlistSize} ${plFilms(r.shortlistSize)} z największą liczbą punktów trafiają do głosowania. ` +
+			'Kod QR pojawia się na ekranie i głos mają tylko ci, którzy przyszli. ' +
+			'Jeśli nikt nie zagłosuje, wygrywa najwyższy wynik.'
 	});
 
 	return out;
@@ -331,7 +329,7 @@ const pl: Dict = {
 	dNobody: 'nikt',
 	dEmpty: 'brak',
 	dNone: (n, votes) =>
-		`Nie głosowałeś jeszcze na ten film, ${pl3(n, 'został', 'zostały', 'zostało')} ci ${n} ${
+		`Nie ma tu jeszcze twojego głosu, ${pl3(n, 'został', 'zostały', 'zostało')} ci ${n} ${
 			votes ? plVotes(n) : plPoints(n)
 		}`,
 	dYours: (n, votes) =>
@@ -388,11 +386,10 @@ const pl: Dict = {
 	avatarPick: 'Wybierz zdjęcie',
 	avatarChange: 'Zmień zdjęcie',
 	avatarRemove: 'Usuń',
-	avatarHint: 'Widoczne przy twoich głosach. Kwadrat wygląda najlepiej.',
+	avatarHint: 'Widoczne przy twoich głosach',
 	rotateH: 'Zgubiłeś link?',
 	rotateBtn: 'Wygeneruj nowy link',
-	rotateNote:
-		'Użyj, jeśli twój link wyciekł. Stary przestaje działać od razu, a twoje inne urządzenia muszą zeskanować nowy kod.',
+	rotateNote: 'Możesz użyć, jeśli chcesz zresetować swój link, stary przestaje wtedy działać',
 	rotated: 'Nowy link gotowy. Każde twoje inne urządzenie musi zeskanować kod jeszcze raz.',
 	rules: plRules,
 
@@ -490,14 +487,18 @@ const enRules = (r: RulesView): Rule[] => {
 	const out: Rule[] = [];
 	const votes = isVotes(r);
 
+	if (r.attrition.kind === 'drop') {
+		const n = r.attrition.afterWeeksWithoutPoints;
+		out.push({ head: `${n} silent ${en2(n, 'week', 'weeks')} and a film drops.`, body: '' });
+	} else {
+		const n = r.attrition.afterWeeksAtZero;
+		out.push({ head: `${n} silent ${en2(n, 'week', 'weeks')} and a film is archived.`, body: '' });
+	}
+
 	if (r.banking) {
 		out.push({
-			head: `${r.pointsPerWeek} points a week, and they bank.`,
-			body: `Save up to ${r.bankCap}, so a week you sit out costs you nothing.`
-		});
-		out.push({
-			head: 'Spend as many as you like, whenever.',
-			body: 'Drip one a week to keep a film alive, or dump the lot to force it through.'
+			head: `You get ${r.pointsPerWeek} points a week, and they carry over if you do not spend them.`,
+			body: `You can hold ${r.bankCap} at most (on ${r.bankCap} already, a week without voting loses that week's ${r.pointsPerWeek}).`
 		});
 	} else if (votes) {
 		out.push({
@@ -506,49 +507,37 @@ const enRules = (r: RulesView): Rule[] => {
 		});
 	} else {
 		out.push({
-			head: `${r.pointsPerWeek} points a week.`,
-			body: 'All on one film or spread around. Anything unspent is gone on Thursday.'
-		});
-	}
-
-	if (r.scoring === 'total') {
-		out.push({
-			head: votes ? 'Votes never expire.' : 'Points stay on the film.',
-			body: votes
-				? 'A score is every vote ever placed. Patience beats enthusiasm.'
-				: 'A score is everything ever spent on it.'
-		});
-	} else {
-		out.push({
-			head: `Score = this week plus ${r.decayFactor} of last week.`,
-			body: 'Nothing accumulates for long, so a film wins by being popular right now.'
-		});
-	}
-
-	if (r.attrition.kind === 'archive') {
-		const n = r.attrition.afterWeeksAtZero;
-		out.push({
-			head: `${n} silent ${en2(n, 'week', 'weeks')} and a film is archived.`,
-			body: 'One vote brings it back.'
-		});
-	} else {
-		const n = r.attrition.afterWeeksWithoutPoints;
-		out.push({
-			head: `${n} silent ${en2(n, 'week', 'weeks')} and a film drops.`,
-			body: 'Your bank survives; the film does not. Re-nominating it starts it from zero.'
+			head: `You get ${r.pointsPerWeek} points a week.`,
+			body: 'Anything unspent is gone on Thursday; nothing carries over.'
 		});
 	}
 
 	out.push({
-		head: `${r.nominationsPerWeek === 1 ? 'One' : r.nominationsPerWeek} free nomination a week.`,
-		body: 'Use it or lose it. Nominating costs nothing.'
+		head: votes ? 'Your vote goes on one film.' : 'You can spend as many points on a film as you have.',
+		body: votes
+			? 'Move it to another while the week is still open.'
+			: 'One a week to keep a film on the list, or the lot at once to force it through.'
 	});
 
 	out.push({
-		head: `At 20:00 on Thursday the top ${r.shortlistSize} go to the room.`,
+		head:
+			r.scoring === 'total'
+				? `${votes ? 'Votes' : 'Points'} accumulate on a film week after week.`
+				: `A score is this week plus ${r.decayFactor} of last week.`,
+		body: r.scoring === 'total' ? '' : 'Nothing accumulates for long.'
+	});
+
+	out.push({
+		head: `${r.nominationsPerWeek === 1 ? 'One' : r.nominationsPerWeek} nomination a week.`,
+		body: 'Use it that week or lose it.'
+	});
+
+	out.push({
+		head: 'Film night runs on a cycle, and voting closes every Thursday at 20:00.',
 		body:
-			'A QR goes up and only the people who turned up get a flash vote. Points decide who the ' +
-			'candidates are; being there decides what we watch. If nobody votes, the highest score wins.'
+			`The ${r.shortlistSize} films with the most points go to the vote. ` +
+			'A QR goes up on the screen and only the people who turned up get a say. ' +
+			'If nobody votes, the highest score wins.'
 	});
 
 	return out;
@@ -666,11 +655,10 @@ const en: Dict = {
 	avatarPick: 'Choose a picture',
 	avatarChange: 'Change picture',
 	avatarRemove: 'Remove',
-	avatarHint: 'Shown next to your votes. A square one looks best.',
+	avatarHint: 'Shown next to your votes',
 	rotateH: 'Lost the link?',
 	rotateBtn: 'Issue a new link',
-	rotateNote:
-		'Use this if your link leaked. The old one stops working immediately, and your other devices need to scan the new QR.',
+	rotateNote: 'Use this if you want to reset your link; the old one then stops working',
 	rotated: 'New link issued. Every other device of yours needs to scan again.',
 	rules: enRules,
 

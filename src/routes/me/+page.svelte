@@ -183,7 +183,7 @@
 
 <div class="sec">{T.rotateH}</div>
 {#if form && 'rotated' in form && form.rotated}
-	<p class="banner mint">{T.rotated}</p>
+	<p class="banner accent">{T.rotated}</p>
 {/if}
 <form method="POST" action="?/rotate" use:enhance={submit}>
 	<button class="tap">{T.rotateBtn}</button>

@@ -32,10 +32,18 @@ describe('Polish plurals', () => {
 
 /** the rules screen has to describe the rules that are actually running */
 describe('the rules text follows the active rule set', () => {
-	it('quotes the real bank cap, not the one the spec assumed', () => {
-		const text = DICT.pl.rules(view('banked')).map((r) => `${r.head} ${r.body}`).join(' ');
-		expect(text).toContain('do 6');
-		expect(text).not.toContain('do 12');
+	it('reads the bank cap off the rule set instead of hardcoding it', () => {
+		const flat = (r: RulesView) =>
+			DICT.pl.rules(r).map((rule) => `${rule.head} ${rule.body}`).join(' ');
+
+		// the cap we actually run, never the 12 the spec assumed
+		expect(flat(view('banked'))).toContain('6');
+		expect(flat(view('banked'))).not.toContain('12');
+
+		// change the cap and the sentence changes with it
+		const raised = { ...view('banked'), bankCap: 9 };
+		expect(flat(raised)).toContain('9');
+		expect(flat(raised)).not.toContain('6');
 	});
 
 	it('quotes the real shortlist size', () => {
@@ -71,10 +79,10 @@ describe('the rules text follows the active rule set', () => {
 describe('the spend bar on a film nobody has backed', () => {
 	it('agrees the verb and the noun with what is left', () => {
 		const T = DICT.pl;
-		expect(T.dNone(1, false)).toBe('Nie głosowałeś jeszcze na ten film, został ci 1 punkt');
-		expect(T.dNone(2, false)).toBe('Nie głosowałeś jeszcze na ten film, zostały ci 2 punkty');
-		expect(T.dNone(6, false)).toBe('Nie głosowałeś jeszcze na ten film, zostało ci 6 punktów');
-		expect(T.dNone(0, false)).toBe('Nie głosowałeś jeszcze na ten film, zostało ci 0 punktów');
+		expect(T.dNone(1, false)).toBe('Nie ma tu jeszcze twojego głosu, został ci 1 punkt');
+		expect(T.dNone(2, false)).toBe('Nie ma tu jeszcze twojego głosu, zostały ci 2 punkty');
+		expect(T.dNone(6, false)).toBe('Nie ma tu jeszcze twojego głosu, zostało ci 6 punktów');
+		expect(T.dNone(0, false)).toBe('Nie ma tu jeszcze twojego głosu, zostało ci 0 punktów');
 	});
 
 	it('counts votes rather than points when that is the currency', () => {

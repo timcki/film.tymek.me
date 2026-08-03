@@ -188,11 +188,11 @@
 		</header>
 
 		{#if data.rulesJustChanged}
-			<p class="banner mint">{T.rulesChanged(data.rules.label)}</p>
+			<p class="banner accent">{T.rulesChanged(data.rules.label)}</p>
 		{/if}
 
 		{#if data.week?.status === 'runoff' && data.runoffCode && !path.startsWith('/host')}
-			<p class="banner mint">
+			<p class="banner accent">
 				<a href="/f/{data.runoffCode}">{T.openRoom}</a>
 			</p>
 		{/if}
