@@ -32,6 +32,49 @@
 	};
 
 	type Film = PageData['films'][number];
+	type Backer = Film['backers'][number];
+
+	/* ------------------------------------------------------------ backers -- */
+
+	/** width of .bkpop; the clamp needs it before the popup has been laid out */
+	const POP_W = 156;
+	/** roughly its height, only ever used to decide whether it still fits above */
+	const POP_H = 190;
+
+	let peek = $state<{ backer: Backer; x: number; y: number; below: boolean; tap: boolean } | null>(
+		null
+	);
+	let closing: ReturnType<typeof setTimeout>;
+	// a mouse opens on hover and a finger on tap. A touchscreen laptop does both,
+	// so go by the pointer that actually arrived rather than what the screen can do
+	let mousing = false;
+
+	function peekAt(pill: EventTarget | null, backer: Backer, tap: boolean) {
+		clearTimeout(closing);
+		if (!(pill instanceof HTMLElement)) return;
+		const box = pill.getBoundingClientRect();
+		const half = POP_W / 2;
+		const below = box.top < POP_H;
+		peek = {
+			backer,
+			// clamped, or the pills at either end of the row get sliced by the viewport
+			x: Math.min(Math.max(box.left + box.width / 2, half + 8), window.innerWidth - half - 8),
+			y: below ? box.bottom : box.top,
+			below,
+			tap
+		};
+	}
+
+	function unpeek() {
+		clearTimeout(closing);
+		peek = null;
+	}
+
+	// a beat of grace, so crossing the gap between two pills does not flicker
+	function unpeekSoon() {
+		clearTimeout(closing);
+		closing = setTimeout(() => (peek = null), 80);
+	}
 
 	/* ------------------------------------------------------------- sheets -- */
 
@@ -47,6 +90,7 @@
 	const anySheet = $derived(detail !== null || searchOpen);
 
 	function closeSheets() {
+		unpeek();
 		detailId = null;
 		noteEdit = false;
 		searchOpen = false;
@@ -129,16 +173,34 @@
 	<span class="backers">
 		{#if film.backers.length}
 			{#each film.backers as backer (backer.person_id)}
-				<span class="bk">
+				<!-- a 16px face says nothing on a phone, so the pill opens a readable one -->
+				<button
+					class="bk"
+					type="button"
+					aria-label={backer.name}
+					onpointerenter={(event) => {
+						mousing = event.pointerType === 'mouse';
+						if (mousing) peekAt(event.currentTarget, backer, false);
+					}}
+					onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+					onclick={(event) => !mousing && peekAt(event.currentTarget, backer, true)}
+					onfocus={(event) => {
+						// a tap focuses too, and would fight the click handler for the same pill
+						if (event.currentTarget.matches(':focus-visible'))
+							peekAt(event.currentTarget, backer, false);
+					}}
+					onblur={unpeek}
+				>
 					<Avatar
 						name={backer.name}
 						colour={backer.colour}
 						avatar={backer.avatar}
 						size={16}
 						font={8}
+						titled={false}
 					/>
 					<b>{backer.points}</b>
-				</span>
+				</button>
 			{/each}
 		{:else}
 			<span class="nobk">{T.noBackers}</span>
@@ -157,7 +219,14 @@
 
 {#snippet row(film: Film, lead: boolean, shelf: boolean)}
 	<div class="film" class:lead class:fading={film.atRisk && !shelf} class:shelf>
-		<button class="p" onclick={() => (detailId = film.id)} aria-label={film.title}>
+		<button
+			class="p"
+			onclick={() => {
+				unpeek();
+				detailId = film.id;
+			}}
+			aria-label={film.title}
+		>
 			<Poster title={film.title} url={film.poster_url} />
 		</button>
 		<div class="b">
@@ -453,3 +522,31 @@
 		{/if}
 	</div>
 </div>
+
+<!-- ----------------------------------------------------------- backers -- -->
+
+{#if peek}
+	{#if peek.tap}
+		<!-- only a tap needs one; on a hover pointer it would swallow the pointerleave -->
+		<button class="menu-backdrop" aria-label={T.close} onclick={unpeek}></button>
+	{/if}
+	<div class="bkpop" class:below={peek.below} style="left:{peek.x}px;top:{peek.y}px" role="tooltip">
+		<Avatar
+			name={peek.backer.name}
+			colour={peek.backer.colour}
+			avatar={peek.backer.avatar}
+			size={116}
+			font={40}
+			titled={false}
+		/>
+		<b>{peek.backer.name}</b>
+		<span>{peek.backer.points} {T.unit(peek.backer.points, votes)}</span>
+	</div>
+{/if}
+
+<!-- it is placed from a rect, so anything that moves the pill has to close it -->
+<svelte:window
+	onscroll={unpeek}
+	onresize={unpeek}
+	onkeydown={(event) => event.key === 'Escape' && unpeek()}
+/>

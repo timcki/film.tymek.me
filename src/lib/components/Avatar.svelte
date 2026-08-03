@@ -5,13 +5,16 @@
 		colour,
 		avatar = null,
 		size = 19,
-		font = 9
+		font = 9,
+		titled = true
 	}: {
 		name: string;
 		colour: string;
 		avatar?: string | null;
 		size?: number;
 		font?: number;
+		/** off where something else already names the face, so the two do not stack up */
+		titled?: boolean;
 	} = $props();
 
 	const initials = $derived(
@@ -28,7 +31,7 @@
 <span
 	class="av"
 	style="background:{colour};width:{size}px;height:{size}px;flex-basis:{size}px;font-size:{font}px"
-	title={name}
+	title={titled ? name : undefined}
 >
 	{#if avatar}
 		<img src={avatar} alt="" loading="lazy" />

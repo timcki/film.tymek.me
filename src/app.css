@@ -276,6 +276,13 @@ header .sub b {
 	padding: 2px 7px 2px 3px;
 	font-size: 10.5px;
 	color: #c2c7cf;
+	line-height: 1;
+	cursor: pointer;
+	transition: border-color 0.15s;
+}
+.bk:hover,
+.bk:focus-visible {
+	border-color: var(--line2);
 }
 .bk .av {
 	width: 16px;
@@ -286,6 +293,57 @@ header .sub b {
 .bk b {
 	font-variant-numeric: tabular-nums;
 	font-weight: 700;
+}
+/* placed from the pill's rect, so it is fixed and clamped rather than nested */
+.bkpop {
+	position: fixed;
+	z-index: 50;
+	width: 156px;
+	transform: translate(-50%, calc(-100% - 9px));
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 7px;
+	padding: 11px;
+	background: var(--card2);
+	border: 1px solid var(--line2);
+	border-radius: var(--r);
+	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+	pointer-events: none;
+	animation: bkpop 0.12s ease-out;
+}
+.bkpop.below {
+	transform: translate(-50%, 9px);
+	animation-name: bkpopdown;
+}
+.bkpop b {
+	font-size: 13px;
+	font-weight: 650;
+	text-align: center;
+	line-height: 1.25;
+	overflow-wrap: anywhere;
+}
+.bkpop span {
+	font-size: 10.5px;
+	color: var(--dim);
+	font-variant-numeric: tabular-nums;
+}
+@keyframes bkpop {
+	from {
+		opacity: 0;
+		transform: translate(-50%, calc(-100% - 6px));
+	}
+}
+@keyframes bkpopdown {
+	from {
+		opacity: 0;
+		transform: translate(-50%, 12px);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.bkpop {
+		animation: none;
+	}
 }
 .nobk {
 	font-size: 11px;
