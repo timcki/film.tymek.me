@@ -25,19 +25,44 @@ export function pointsByFilm(db: DB): Map<number, Map<number, number>> {
  */
 export function rescoreAll(db: DB, rules: RuleSet, currentWeek: number): Map<number, number> {
 	const points = pointsByFilm(db);
-	const ids = (db.prepare('SELECT id FROM film').all() as { id: number }[]).map((r) => r.id);
+	const films = db.prepare('SELECT id, penalty FROM film').all() as {
+		id: number;
+		penalty: number;
+	}[];
 	const update = db.prepare('UPDATE film SET score = ? WHERE id = ?');
 	const scores = new Map<number, number>();
-	for (const id of ids) {
-		const value = scoreOf(rules, points.get(id) ?? new Map(), currentWeek);
-		scores.set(id, value);
-		update.run(value, id);
+	for (const film of films) {
+		const value = withPenalty(
+			scoreOf(rules, points.get(film.id) ?? new Map(), currentWeek),
+			film.penalty
+		);
+		scores.set(film.id, value);
+		update.run(value, film.id);
 	}
 	return scores;
 }
 
+/**
+ * §3.5: a film's ballots less what pass-overs have taken off it. Under 'total'
+ * scoring the halving's own floor keeps this above zero; the clamp is here for
+ * 'decay', where the two-week window can fall below a penalty banked earlier.
+ */
+export function withPenalty(raw: number, penalty: number): number {
+	return Math.max(0, raw - penalty);
+}
+
+export function penaltyOf(db: DB, filmId: number): number {
+	const row = db.prepare('SELECT penalty FROM film WHERE id = ?').get(filmId) as
+		| { penalty: number }
+		| undefined;
+	return row?.penalty ?? 0;
+}
+
 export function scoreFor(db: DB, rules: RuleSet, filmId: number, currentWeek: number): number {
-	return scoreOf(rules, pointsByFilm(db).get(filmId) ?? new Map(), currentWeek);
+	return withPenalty(
+		scoreOf(rules, pointsByFilm(db).get(filmId) ?? new Map(), currentWeek),
+		penaltyOf(db, filmId)
+	);
 }
 
 /** points a film received across a window of `weeks` weeks ending at `week`, inclusive */

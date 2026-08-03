@@ -97,10 +97,10 @@ describe('the weekly shortlist', () => {
 		const result = closeRunoff(db, rules, runoff.id);
 		expect(result.kind === 'winner' && result.film.id).toBe(inTheRoom);
 
-		// the film that led on points keeps its points and stays on the list
+		// the film that led on points stays on the list, but §3.5 halves it
 		const kept = filmById(db, onPoints)!;
 		expect(kept.status).toBe('active');
-		expect(kept.score).toBe(4);
+		expect(kept.score).toBe(2);
 	});
 
 	it('an empty room still watches the highest-scoring film', () => {

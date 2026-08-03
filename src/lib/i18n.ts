@@ -95,6 +95,7 @@ export type Dict = {
 	btnRenominate: string;
 	warnDrops: string;
 	warnFades: (n: number) => string;
+	cutChip: (n: number, votes: boolean) => string;
 	campaign: (n: number) => string;
 	addedBy: (name: string, week: number) => string;
 	nomCta: string;
@@ -268,6 +269,11 @@ const plRules = (r: RulesView): Rule[] => {
 			'Jeśli nikt nie zagłosuje, wygrywa najwyższy wynik.'
 	});
 
+	out.push({
+		head: `Filmy z top ${r.shortlistSize}, których sala nie wybrała, tracą połowę wyniku.`,
+		body: 'Zaokrąglamy w dół, minimum 1, więc sama kara nigdy nie usunie filmu z listy. Wygrany nie traci nic.'
+	});
+
 	return out;
 };
 
@@ -313,6 +319,7 @@ const pl: Dict = {
 	btnRenominate: 'Zgłoś ponownie',
 	warnDrops: 'odpada w tym tyg, jeśli nie dostanie głosów',
 	warnFades: (n) => `znika za ${n} ${plWeeks(n)}`,
+	cutChip: (n, votes) => `−${n} ${votes ? plVotes(n) : 'pkt'} · przegrał w top 3`,
 	campaign: (n) => `${n}. tydzień kampanii`,
 	addedBy: (name, week) => `${name}, tydzień ${week}`,
 	nomCta: '+ Zgłoś film',
@@ -540,6 +547,11 @@ const enRules = (r: RulesView): Rule[] => {
 			'If nobody votes, the highest score wins.'
 	});
 
+	out.push({
+		head: 'A shortlisted film the room passes over keeps half its score.',
+		body: 'Rounded down, never below one, so the cut alone can never take a film off the list. The winner loses nothing.'
+	});
+
 	return out;
 };
 
@@ -583,6 +595,7 @@ const en: Dict = {
 	btnRenominate: 'Re-nominate',
 	warnDrops: 'drops this week unless it gets votes',
 	warnFades: (n) => `fades in ${n} ${en2(n, 'week', 'weeks')}`,
+	cutChip: (n, votes) => `−${n} ${votes ? en2(n, 'vote', 'votes') : 'pts'} · lost the room vote`,
 	campaign: (n) => `week ${n} of this campaign`,
 	addedBy: (name, week) => `${name}, week ${week}`,
 	nomCta: '+ Nominate a film',

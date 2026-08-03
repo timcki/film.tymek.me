@@ -16,6 +16,12 @@
 	const open = $derived(data.week?.status === 'open');
 	const nominated = $derived(data.nominatedThisWeek);
 
+	// a cut is worth showing for exactly one week: it happened at the film night
+	// that opened the week we are in now
+	function cutLastNight(film: { last_penalty: number; last_penalty_week: number | null }): boolean {
+		return film.last_penalty > 0 && film.last_penalty_week === (data.week?.number ?? 0) - 1;
+	}
+
 	type Result = {
 		tmdbId: number | null;
 		title: string;
@@ -159,6 +165,9 @@
 				<div class="ttl">{film.title}</div>
 				<div class="sc"><b>{film.score}</b><i>{T.unit(film.score, votes)}</i></div>
 			</div>
+			{#if cutLastNight(film)}
+				<div class="cutchip">{T.cutChip(film.last_penalty, votes)}</div>
+			{/if}
 			<div class="meta">
 				{film.year ?? ''}{#if film.year && film.director}<span class="dot"> · </span>{/if}{film.director ??
 					''}
@@ -292,6 +301,9 @@
 						<b>{detail.score}</b>
 						<small>{T.unit(detail.score, votes)} · {T.sortLabel(rules)}</small>
 					</div>
+					{#if cutLastNight(detail)}
+						<div class="cutchip">{T.cutChip(detail.last_penalty, votes)}</div>
+					{/if}
 				</div>
 			</div>
 

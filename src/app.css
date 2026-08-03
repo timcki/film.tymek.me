@@ -13,6 +13,9 @@
 	--accent: #92bbe8;
 	--accent-ink: #06203a;
 	--warn: #e0a15f;
+	/* split-complement of --accent, a third of the wheel from --warn: a passed-over
+	   film and an about-to-drop film are different states and never read alike */
+	--cut: #ec939a;
 	--bad: #e0715f;
 	--r: 14px;
 }
@@ -423,6 +426,17 @@ header .sub b {
 	color: var(--warn);
 	font-size: 10.5px;
 	font-weight: 650;
+}
+.cutchip {
+	align-self: flex-start;
+	margin-top: 6px;
+	padding: 2px 8px;
+	border-radius: 99px;
+	font-size: 10.5px;
+	font-weight: 650;
+	color: var(--cut);
+	background: color-mix(in srgb, var(--cut) 11%, transparent);
+	border: 1px solid color-mix(in srgb, var(--cut) 26%, transparent);
 }
 .av {
 	width: 19px;

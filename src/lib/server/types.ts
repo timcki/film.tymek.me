@@ -46,6 +46,11 @@ export type Film = {
 	final_score: number | null;
 	/** cache of the current score, rebuilt by rescoreAll() */
 	score: number;
+	/** §3.5: everything this film has lost to pass-overs, subtracted from its ballots */
+	penalty: number;
+	/** the size of the most recent cut, kept so the card can show it for one week */
+	last_penalty: number;
+	last_penalty_week: number | null;
 	created_at: string;
 };
 
