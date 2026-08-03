@@ -20,8 +20,10 @@
 			{/if}
 			<div class="lb">
 				<b>{film.title}</b>
-				{T.week(film.watched_week)} · {film.final_score}
-				{T.unit(film.final_score, votes)}
+				{T.week(film.watched_week)}{#if film.final_score !== null}
+					· {film.final_score}
+					{T.unit(film.final_score, votes)}
+				{/if}
 			</div>
 		</div>
 	{:else}

@@ -144,6 +144,21 @@ private, and rotate from `/me` if one leaks.
 
 The links themselves live in `data/identity-links.md`, which git never sees.
 
+### The archive
+
+Weeks 1 to 46 are the film nights that happened before the app existed, loaded by
+`scripts/backfill.ts` in August 2026. They are credited to `archiwum`, a person row with
+`active = 0`, which keeps them out of the room vote, the host list and the fairness table
+while still satisfying `film.added_by`. Their `final_score` is NULL, because nobody spent
+anything on them, and the watched grid omits the score rather than showing a zero.
+
+`rules_change` stays on week 1 on purpose. The backfill renumbers the then-only week from
+1 to 47 to make room for history, and carrying that row forward would have made the app
+announce a rule change that never happened.
+
+The script is a one-off and refuses to run against a database that does not have exactly
+one week numbered 1, so it cannot be applied twice.
+
 ### Changing the rules
 
 Edit `RULES` in `/etc/filmnight.env` (`ledger`, `rolling`, or `banked`) and restart. Every

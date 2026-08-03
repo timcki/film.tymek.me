@@ -68,6 +68,23 @@ describe('the rules text follows the active rule set', () => {
 	});
 });
 
+describe('the spend bar on a film nobody has backed', () => {
+	it('agrees the verb and the noun with what is left', () => {
+		const T = DICT.pl;
+		expect(T.dNone(1, false)).toBe('Nie głosowałeś jeszcze na ten film, został ci 1 punkt');
+		expect(T.dNone(2, false)).toBe('Nie głosowałeś jeszcze na ten film, zostały ci 2 punkty');
+		expect(T.dNone(6, false)).toBe('Nie głosowałeś jeszcze na ten film, zostało ci 6 punktów');
+		expect(T.dNone(0, false)).toBe('Nie głosowałeś jeszcze na ten film, zostało ci 0 punktów');
+	});
+
+	it('counts votes rather than points when that is the currency', () => {
+		expect(DICT.pl.dNone(1, true)).toContain('1 głos');
+		expect(DICT.pl.dNone(3, true)).toContain('3 głosy');
+		expect(DICT.en.dNone(1, true)).toContain('1 vote left');
+		expect(DICT.en.dNone(2, false)).toContain('2 points left');
+	});
+});
+
 describe('the budget explainer', () => {
 	it('quotes the weekly grant and the cap it is capped at', () => {
 		const help = DICT.pl.budgetHelp(view('banked'));

@@ -13,7 +13,8 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"build:seed": "esbuild scripts/seed.ts --bundle --platform=node --format=esm --packages=external --outfile=.seed/seed.mjs",
-		"seed": "npm run build:seed && node .seed/seed.mjs"
+		"seed": "npm run build:seed && node .seed/seed.mjs",
+		"backfill": "esbuild scripts/backfill.ts --bundle --platform=node --format=esm --packages=external --outfile=.seed/backfill.mjs && node .seed/backfill.mjs"
 	},
 	"dependencies": {
 		"better-sqlite3": "^12.4.1",

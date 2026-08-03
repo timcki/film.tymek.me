@@ -68,6 +68,8 @@ export type Dict = {
 	lang: Lang;
 	appTitle: string;
 	tabList: string;
+	menu: string;
+	close: string;
 	tabSeen: string;
 	tabYou: string;
 
@@ -108,7 +110,7 @@ export type Dict = {
 	dBacked: string;
 	dNobody: string;
 	dEmpty: string;
-	dNone: string;
+	dNone: (left: number, votes: boolean) => string;
 	dYours: (n: number, votes: boolean) => string;
 	dBankLeft: (n: number) => string;
 	dWeekLeft: (n: number, budget: number) => string;
@@ -275,11 +277,13 @@ const pl: Dict = {
 	lang: 'pl',
 	appTitle: 'Wieczorki filmowe',
 	tabList: 'Lista',
+	menu: 'Menu',
+	close: 'zamknij',
 	tabSeen: 'Obejrzane',
 	tabYou: 'Ty',
 
 	week: (n) => `Tydzień ${n}`,
-	closesIn: 'zamknięcie za',
+	closesIn: 'głosowanie zamyka się za',
 	clock: (d, h, m, s) => {
 		const hms = `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 		return d ? `${d} ${pl3(d, 'dzień', 'dni', 'dni')} ${hms}` : hms;
@@ -291,7 +295,7 @@ const pl: Dict = {
 		votes ? `${left}/${budget} ${plVotes(budget)}` : `${left}/${budget} pkt`,
 	budgetHelp: (r) => {
 		if (r.banking) {
-			return `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} co tydzień. Niewydane zostają w banku, maksymalnie ${r.bankCap}.`;
+			return `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} co tydzień. Niewydane punkty akumulują się co tydzień, maksymalnie do ${r.bankCap}.`;
 		}
 		if (isVotes(r)) return 'Masz jeden głos tygodniowo. Możesz go przenosić do czwartku 20:00.';
 		return `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} na tydzień. Niewykorzystane przepadają w czwartek.`;
@@ -314,7 +318,7 @@ const pl: Dict = {
 	campaign: (n) => `${n}. tydzień kampanii`,
 	addedBy: (name, week) => `${name}, tydzień ${week}`,
 	nomCta: '+ Zgłoś film',
-	nomCtaSub: 'jedno na osobę tygodniowo, za darmo',
+	nomCtaSub: 'jedno zgłoszenie na osobę w tygodniu',
 	nomDone: (title) => `Twoje zgłoszenie w tym tygodniu: ${title}`,
 	listEmpty: 'Lista jest pusta. Zgłoś coś.',
 	shelfArchive: (n) => `Archiwum · ${n} ${plFilms(n)} bez głosów`,
@@ -326,7 +330,10 @@ const pl: Dict = {
 	dBacked: 'Wsparcie',
 	dNobody: 'nikt',
 	dEmpty: 'brak',
-	dNone: 'Nie masz tu punktów',
+	dNone: (n, votes) =>
+		`Nie głosowałeś jeszcze na ten film, ${pl3(n, 'został', 'zostały', 'zostało')} ci ${n} ${
+			votes ? plVotes(n) : plPoints(n)
+		}`,
 	dYours: (n, votes) =>
 		votes ? `${n} ${plVotes(n)} od ciebie` : `${n} ${plPoints(n)} od ciebie`,
 	dBankLeft: (n) => `${n} ${plPoints(n)} w banku`,
@@ -551,11 +558,13 @@ const en: Dict = {
 	lang: 'en',
 	appTitle: 'Film Night',
 	tabList: 'List',
+	menu: 'Menu',
+	close: 'close',
 	tabSeen: 'Watched',
 	tabYou: 'You',
 
 	week: (n) => `Week ${n}`,
-	closesIn: 'closes in',
+	closesIn: 'voting closes in',
 	clock: (d, h, m, s) =>
 		`${d ? `${d}d ` : ''}${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`,
 	votingClosed: 'voting is closed',
@@ -565,7 +574,7 @@ const en: Dict = {
 		votes ? `${left}/${budget} ${en2(budget, 'vote', 'votes')}` : `${left}/${budget} pts`,
 	budgetHelp: (r) => {
 		if (r.banking) {
-			return `You get ${r.pointsPerWeek} points every week. Anything unspent banks, up to ${r.bankCap}.`;
+			return `You get ${r.pointsPerWeek} points every week. Unspent points accumulate week to week, up to ${r.bankCap}.`;
 		}
 		if (isVotes(r)) return 'One vote a week. Move it freely until Thursday 20:00.';
 		return `You get ${r.pointsPerWeek} points a week. Anything unspent is gone on Thursday.`;
@@ -588,7 +597,7 @@ const en: Dict = {
 	campaign: (n) => `week ${n} of this campaign`,
 	addedBy: (name, week) => `${name}, week ${week}`,
 	nomCta: '+ Nominate a film',
-	nomCtaSub: 'one per person per week, free',
+	nomCtaSub: 'one nomination per person per week',
 	nomDone: (title) => `You nominated ${title} this week`,
 	listEmpty: 'Nothing on the list. Nominate something.',
 	shelfArchive: (n) => `Archive · ${n} ${en2(n, 'film', 'films')} nobody has voted for`,
@@ -600,7 +609,8 @@ const en: Dict = {
 	dBacked: 'Backed by',
 	dNobody: 'nobody yet',
 	dEmpty: 'unknown',
-	dNone: "You haven't backed this",
+	dNone: (n, votes) =>
+		`You haven't backed this yet, you have ${n} ${votes ? en2(n, 'vote', 'votes') : en2(n, 'point', 'points')} left`,
 	dYours: (n, votes) =>
 		`${n} ${votes ? en2(n, 'vote', 'votes') : en2(n, 'point', 'points')} from you`,
 	dBankLeft: (n) => `${n} left in your bank`,

@@ -346,8 +346,12 @@
 
 			<div class="spendbar">
 				<div class="lab">
-					<b>{detail.myPoints ? T.dYours(detail.myPoints, votes) : T.dNone}</b>
-					{rules.banking ? T.dBankLeft(left) : T.dWeekLeft(left, data.person?.budget ?? 0)}
+					{#if detail.myPoints}
+						<b>{T.dYours(detail.myPoints, votes)}</b>
+						{rules.banking ? T.dBankLeft(left) : T.dWeekLeft(left, data.person?.budget ?? 0)}
+					{:else}
+						<b>{T.dNone(left, votes)}</b>
+					{/if}
 				</div>
 				<div class="step">
 					<form method="POST" action="?/setPoints" use:enhance={submit()}>

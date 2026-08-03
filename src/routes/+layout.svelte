@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/state';
+	import Avatar from '$lib/components/Avatar.svelte';
 	import { dictFor, isVotes, LANGS } from '$lib/i18n';
 	import { toast } from '$lib/toast.svelte';
 	import type { LayoutServerData } from './$types';
@@ -40,6 +41,13 @@
 	const showPill = $derived(Boolean(data.person) && (path === '/' || path.startsWith('/me')));
 
 	let tipOpen = $state(false);
+	let menuOpen = $state(false);
+
+	// a menu that survived navigation would hang over the page you just opened
+	$effect(() => {
+		path;
+		menuOpen = false;
+	});
 
 	// toasts fade themselves out; keyed on seq so the same text twice still shows
 	let visible = $state(false);
@@ -75,14 +83,90 @@
 			</div>
 
 			<div class="hr">
-				<div class="lang">
-					{#each LANGS as code (code)}
-						<form method="POST" action="/lang?/set">
-							<input type="hidden" name="lang" value={code} />
-							<input type="hidden" name="to" value={path} />
-							<button class:on={data.lang === code}>{code.toUpperCase()}</button>
-						</form>
-					{/each}
+				<div class="top">
+					<div class="lang">
+						{#each LANGS as code (code)}
+							<form method="POST" action="/lang?/set">
+								<input type="hidden" name="lang" value={code} />
+								<input type="hidden" name="to" value={path} />
+								<button class:on={data.lang === code}>{code.toUpperCase()}</button>
+							</form>
+						{/each}
+					</div>
+
+					{#if data.person}
+						<!-- details, not a button, so the only navigation still works without JS -->
+						<details class="menuwrap" bind:open={menuOpen}>
+							<summary class="iconbtn" aria-label={T.menu}>
+								<Avatar
+									name={data.person.name}
+									colour={data.person.colour}
+									avatar={data.person.avatar}
+									size={28}
+									font={11}
+								/>
+							</summary>
+
+							<div class="menu">
+								<div class="who">
+									<Avatar
+										name={data.person.name}
+										colour={data.person.colour}
+										avatar={data.person.avatar}
+										size={26}
+										font={11}
+									/>
+									<b>{data.person.name}</b>
+								</div>
+								<a href="/" class:on={path === '/'}>
+									<span class="ic">
+										<svg
+											width="17"
+											height="17"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="1.9"
+											stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg
+										>
+									</span>
+									{T.tabList}
+								</a>
+								<a href="/history" class:on={path.startsWith('/history')}>
+									<span class="ic">
+										<svg
+											width="17"
+											height="17"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="1.9"
+											stroke-linecap="round"
+											stroke-linejoin="round"><path d="M20 6.5 9.5 17 4 11.5" /></svg
+										>
+									</span>
+									{T.tabSeen}
+								</a>
+								<a href="/me" class:on={path.startsWith('/me')}>
+									<span class="ic">
+										<svg
+											width="17"
+											height="17"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="1.9"
+											stroke-linecap="round"
+											><circle cx="12" cy="8" r="3.6" /><path
+												d="M4.5 20c1.4-3.6 4.2-5.4 7.5-5.4s6.1 1.8 7.5 5.4"
+											/></svg
+										>
+									</span>
+									{T.tabYou}
+								</a>
+							</div>
+						</details>
+					{/if}
 				</div>
 
 				{#if showPill && data.person}
@@ -116,58 +200,13 @@
 		{@render children()}
 	</div>
 
-	{#if data.person}
-		<nav class="tabs">
-			<div class="inner">
-				<a href="/" class:on={path === '/'}>
-					<span class="ic">
-						<svg
-							width="19"
-							height="19"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.9"
-							stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg
-						>
-					</span>
-					<span>{T.tabList}</span>
-				</a>
-				<a href="/history" class:on={path.startsWith('/history')}>
-					<span class="ic">
-						<svg
-							width="19"
-							height="19"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.9"
-							stroke-linecap="round"
-							stroke-linejoin="round"><path d="M20 6.5 9.5 17 4 11.5" /></svg
-						>
-					</span>
-					<span>{T.tabSeen}</span>
-				</a>
-				<a href="/me" class:on={path.startsWith('/me')}>
-					<span class="ic">
-						<svg
-							width="19"
-							height="19"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.9"
-							stroke-linecap="round"
-							><circle cx="12" cy="8" r="3.6" /><path
-								d="M4.5 20c1.4-3.6 4.2-5.4 7.5-5.4s6.1 1.8 7.5 5.4"
-							/></svg
-						>
-					</span>
-					<span>{T.tabYou}</span>
-				</a>
-			</div>
-		</nav>
-	{/if}
 {/if}
+
+{#if menuOpen}
+	<!-- a tap anywhere else dismisses the menu -->
+	<button class="menu-backdrop" aria-label={T.close} onclick={() => (menuOpen = false)}></button>
+{/if}
+
+<svelte:window onkeydown={(event) => event.key === 'Escape' && (menuOpen = false)} />
 
 <div class="toast" class:on={visible} class:bad={toast.bad}>{toast.text}</div>

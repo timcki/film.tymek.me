@@ -9,7 +9,8 @@ type WatchedRow = {
 	director: string | null;
 	poster_url: string | null;
 	watched_week: number;
-	final_score: number;
+	/** null for the nights that predate the app, where nobody spent anything */
+	final_score: number | null;
 	added_by_name: string;
 };
 
