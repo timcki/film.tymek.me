@@ -21,12 +21,13 @@
 	});
 </script>
 
-<h1>Runoff {data.code}</h1>
+<h1>Tonight's shortlist</h1>
+<p class="notice">room code {data.code}</p>
 
 {#if form?.message}<p class="toast">{form.message}</p>{/if}
 
 {#if data.decided}
-	<p class="card">This runoff is decided.</p>
+	<p class="card">Tonight is decided.</p>
 	{#each data.tally as row (row.film.id)}
 		<div class="card">
 			<strong>{row.film.title}</strong>: {row.votes} vote{row.votes === 1 ? '' : 's'}

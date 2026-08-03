@@ -81,7 +81,8 @@
 
 {#if data.week?.status === 'runoff'}
 	<p class="card">
-		The week ended in a tie. Open <a href="/f/{data.runoffCode}">the runoff</a> to break it.
+		Voting is closed and the shortlist is with the room.
+		<a href="/f/{data.runoffCode}">Pick tonight's film</a> if you are here.
 	</p>
 {/if}
 
@@ -263,7 +264,11 @@
 				nomination nobody voted for. Re-nominating costs your nomination for that week.
 			</li>
 		{/if}
-		<li>One nomination each per week. The highest score on Thursday at 20:00 is what we watch.</li>
-		<li>A tie is broken in the room, by whoever turned up.</li>
+		<li>One nomination each per week. Voting closes Thursday at 20:00.</li>
+		<li>
+			The top {rules.shortlistSize} films then go to the room, and whoever turned up picks one of
+			them. Points decide who the candidates are; being there decides what we watch. If nobody
+			votes in the room, the highest score wins.
+		</li>
 	</ul>
 </details>

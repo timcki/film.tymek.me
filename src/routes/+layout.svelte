@@ -41,7 +41,7 @@
 			{#if data.week.status === 'open'}
 				closes in <strong>{countdown}</strong>
 			{:else if data.week.status === 'runoff'}
-				runoff in progress, code <strong>{data.runoffCode}</strong>
+				the room is picking, code <strong>{data.runoffCode}</strong>
 			{:else}
 				closed
 			{/if}

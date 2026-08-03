@@ -34,6 +34,38 @@ typechecks.
 | `src/lib/server/scheduler.ts` | the minute tick that closes weeks and expired runoffs |
 | `src/hooks.server.ts` | cookie identity; everything but `/u/:token` and `/f/:code` needs it |
 
+### Where this differs from the spec
+
+The spec was written for six friends who nearly all turn up. The real group is 22 with a
+dedicated core of about seven, which breaks two of its assumptions.
+
+**The room picks from a shortlist every week, not only on ties.** §6.1 sends a week to a
+runoff only when the top scores are equal. Here the top `shortlistSize` films (3) always go
+to the room, and whoever is there picks one. Points decide who the candidates are; being
+there decides what gets watched.
+
+This is §7's own reasoning extended: "being in the room breaks a tie, it does not buy
+influence" becomes "points buy candidacy, presence buys the choice." Nobody is punished for
+being away, which is what §14 objects to. An absent person still nominates, still spends
+every point, still campaigns, and still decides what is a candidate. They just do not pick
+the film for a room they are not in.
+
+It degrades safely. Zero flash votes falls back to the §3.2 ordering, which picks the
+highest-scoring film, exactly as before. If nobody opens `/host`, the room vote expires
+three hours later and the scheduler resolves it the same way. The shortlist is the strict
+top N of the §3.2 ordering, so a film never loses a slot to a coin flip.
+
+It is also how we find out who actually comes: before this, attendance was only recorded
+during a tie, so there was no data to reason about.
+
+**`bankCap` is 6, not 12.** With 22 people issuing 44 points a week and a core spending
+maybe 14 of them, a full 12-point bank let one person who never comes outvote everything
+the room did that week. Halving the cap keeps patient campaigning possible while limiting
+the stockpile. If it still distorts things, `RULES=rolling` removes banking entirely.
+
+Both are one-line changes in `src/lib/server/rules.ts`, and revisiting them after about
+eight weeks with `/history` open is the plan.
+
 Two invariants worth keeping in mind when changing anything:
 
 1. **Scores are derived, never accumulated.** `film.score` is a cache, and `rescoreAll()`
@@ -101,8 +133,12 @@ when the rule set does not bank, and the change is announced on the page for tha
 
 - The scheduler is in-process and wakes every minute. Closing a week is idempotent and
   guarded by `BEGIN IMMEDIATE`, so a restart mid-close cannot double-resolve.
-- A tie leaves the week in `status='runoff'` and the next week does *not* open until the
-  runoff closes, either from `/host` or automatically three hours after it was created.
+- Closing a week leaves it in `status='runoff'` while the room picks, and the next week
+  does *not* open until that resolves, either from `/host` or automatically three hours
+  later. Voting and nominating are blocked for those three hours, by design: it is film
+  night.
+- On Thursday someone should open `/host` and project the QR. Nothing breaks if nobody
+  does; the highest-scoring film simply wins at 23:00.
 - `journalctl -u filmnight -f` for logs.
 - Restoring a backup: stop the service, copy the dated file over
   `/var/lib/filmnight/filmnight.db`, delete any `-wal`/`-shm` beside it, start again.

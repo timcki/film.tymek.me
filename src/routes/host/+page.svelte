@@ -59,17 +59,17 @@
 	{/if}
 
 	<form method="POST" action="?/closeRunoff" use:enhance style="margin-top:20px">
-		<button class="primary">close the runoff and start the film</button>
+		<button class="primary">lock it in and start the film</button>
 	</form>
 {:else}
 	<p class="notice">
-		No runoff is open. The week is {data.weekStatus ?? 'not started'}.
+		The room is not voting yet. The week is {data.weekStatus ?? 'not started'}.
 	</p>
 	<form method="POST" action="?/close" use:enhance>
 		<button class="primary">close the week now</button>
 	</form>
 	<p class="notice">
-		Closing early is fine, anyone can do it. If the top two are tied, this opens a runoff and gives
-		you a room QR.
+		Closing early is fine, anyone can do it. This puts the top films in front of the room and
+		gives you a QR to project.
 	</p>
 {/if}

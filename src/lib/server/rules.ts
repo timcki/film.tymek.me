@@ -20,6 +20,13 @@ export type RuleSet = {
 	/** what happens to films nobody is voting for */
 	attrition: Attrition;
 	nominationsPerWeek: number;
+	/**
+	 * How many films go to the room on Thursday. Points decide which films are
+	 * candidates; the people who turned up decide which one gets watched. The
+	 * shortlist is the strict top N of the §3.2 ordering, which is total, so a
+	 * film never loses a slot to a coin flip.
+	 */
+	shortlistSize: number;
 };
 
 export const RULE_SETS: Record<RuleSetId, RuleSet> = {
@@ -32,7 +39,8 @@ export const RULE_SETS: Record<RuleSetId, RuleSet> = {
 		scoring: 'total',
 		decayFactor: 0,
 		attrition: { kind: 'archive', afterWeeksAtZero: 8 },
-		nominationsPerWeek: 1
+		nominationsPerWeek: 1,
+		shortlistSize: 3
 	},
 	rolling: {
 		id: 'rolling',
@@ -43,18 +51,20 @@ export const RULE_SETS: Record<RuleSetId, RuleSet> = {
 		scoring: 'decay',
 		decayFactor: 0.5,
 		attrition: { kind: 'drop', afterWeeksWithoutPoints: 1 },
-		nominationsPerWeek: 1
+		nominationsPerWeek: 1,
+		shortlistSize: 3
 	},
 	banked: {
 		id: 'banked',
 		label: 'Banked',
 		pointsPerWeek: 2,
 		banking: true,
-		bankCap: 12,
+		bankCap: 6,
 		scoring: 'total',
 		decayFactor: 0,
 		attrition: { kind: 'drop', afterWeeksWithoutPoints: 2 },
-		nominationsPerWeek: 1
+		nominationsPerWeek: 1,
+		shortlistSize: 3
 	}
 };
 

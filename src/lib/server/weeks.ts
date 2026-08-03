@@ -142,8 +142,9 @@ export function closeWeek(db: DB, rules: RuleSet, now: Date = new Date()): Close
 			return { kind: 'no-winner' } as CloseResult;
 		}
 
-		const tied = ranked.filter((f) => f.score === ranked[0].score);
-		if (tied.length > 1) {
+		// points decide who the candidates are; the room decides which one we watch
+		const shortlist = ranked.filter((f) => f.score > 0).slice(0, rules.shortlistSize);
+		if (shortlist.length > 1) {
 			const code = uniqueCode(db);
 			const result = db
 				.prepare(
@@ -152,10 +153,10 @@ export function closeWeek(db: DB, rules: RuleSet, now: Date = new Date()): Close
 				.run(week.number, code, iso(now), iso(new Date(now.getTime() + 3 * 60 * 60 * 1000)));
 			const runoffId = Number(result.lastInsertRowid);
 			const link = db.prepare('INSERT INTO runoff_film (runoff_id, film_id) VALUES (?, ?)');
-			for (const film of tied) link.run(runoffId, film.id);
+			for (const film of shortlist) link.run(runoffId, film.id);
 			db.prepare(`UPDATE week SET status = 'runoff' WHERE number = ?`).run(week.number);
-			// the week stays unresolved until the runoff closes
-			return { kind: 'runoff', code, films: tied } as CloseResult;
+			// the week stays unresolved until the room vote closes, or until it expires
+			return { kind: 'runoff', code, films: shortlist } as CloseResult;
 		}
 
 		finish(db, rules, week, ranked[0], now);
