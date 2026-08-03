@@ -1,12 +1,31 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import type { SubmitFunction } from '@sveltejs/kit';
+	import Avatar from '$lib/components/Avatar.svelte';
+	import Poster from '$lib/components/Poster.svelte';
+	import { dictFor } from '$lib/i18n';
+	import { say } from '$lib/toast.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
+	const T = $derived(dictFor(data.lang));
+	const best = $derived(Math.max(0, ...(data.runoff?.tally ?? []).map((row) => row.votes)));
+
 	let castingFor = $state('');
 
+	const submit: SubmitFunction = () => async ({ result, update }) => {
+		if (result.type === 'failure') {
+			const body = result.data as
+				| { code?: string; params?: Record<string, string | number>; message?: string }
+				| undefined;
+			say(T.error(body?.code ?? '', body?.params ?? {}, body?.message ?? ''), true);
+		}
+		await update({ reset: false });
+	};
+
+	// the projector should show the room filling up without anyone touching it
 	$effect(() => {
 		if (!data.runoff) return;
 		const timer = setInterval(() => invalidateAll(), 4000);
@@ -14,62 +33,76 @@
 	});
 </script>
 
-<h1>Host</h1>
-
-{#if form?.message}<p class="toast">{form.message}</p>{/if}
-
 {#if data.runoff}
-	<h2>Room QR (safe to project)</h2>
-	<div class="qr">
-		<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-		{@html data.runoff.qr}
-	</div>
-	<p class="code">{data.runoff.code}</p>
-	<p class="notice">{data.runoff.link}</p>
+	<div class="tk" style="padding-left:0;padding-right:0">
+		<p class="lead">{T.shortlistNote(data.runoff.tally.length)}</p>
 
-	<h2>Live tally</h2>
-	{#each data.runoff.tally as row (row.film.id)}
-		<div class="card">
-			<strong>{row.film.title}</strong>
-			{#if row.film.year}<span class="meta"> ({row.film.year})</span>{/if}
-			<span class="score" style="float:right">{row.votes}</span>
+		<div style="text-align:center">
+			<div class="tkqr">
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+				{@html data.runoff.qr}
+			</div>
+			<div class="code">{data.runoff.code}</div>
+			<div style="font-size:11.5px;color:var(--dimmer)">{data.runoff.link}</div>
 		</div>
-	{/each}
 
-	<h2>Cast for someone whose phone is dead</h2>
-	<div class="grid-names">
-		{#each data.people as person (person.id)}
-			<button
-				class:primary={castingFor === person.id}
-				onclick={() => (castingFor = castingFor === person.id ? '' : person.id)}
-			>
-				{person.name}
-			</button>
-		{/each}
+		<div class="tkfilms">
+			{#each data.runoff.tally as row (row.film.id)}
+				<div class="tkfilm" class:win={row.votes === best && row.votes > 0}>
+					{#if row.film.poster_url}
+						<img src={row.film.poster_url} alt="" />
+					{:else}
+						<div class="noimg"></div>
+					{/if}
+					<div class="n">{row.votes}</div>
+					<div class="l">{row.film.title}</div>
+				</div>
+			{/each}
+		</div>
+
+		<div style="font-size:12px;color:var(--dimmer);margin-top:14px">
+			{T.turnout(data.runoff.turnout)}
+		</div>
+
+		<div class="sec">{T.hostCastH}</div>
+		<div class="namegrid">
+			{#each data.people as person (person.id)}
+				<button
+					class="namebtn"
+					class:on={castingFor === person.id}
+					onclick={() => (castingFor = castingFor === person.id ? '' : person.id)}
+				>
+					<Avatar name={person.name} colour={person.colour} avatar={person.avatar} />
+					{person.name}{person.voted ? ' ✓' : ''}
+				</button>
+			{/each}
+		</div>
+
+		{#if castingFor}
+			<p class="hintline">{T.hostCastPick}</p>
+			{#each data.runoff.tally as row (row.film.id)}
+				<form method="POST" action="?/voteFor" use:enhance={submit}>
+					<input type="hidden" name="personId" value={castingFor} />
+					<input type="hidden" name="filmId" value={row.film.id} />
+					<button class="pickbtn">
+						<div class="th"><Poster title={row.film.title} url={row.film.poster_url} /></div>
+						<div>
+							<b>{row.film.title}</b>
+							<span>{T.votes(row.votes)}</span>
+						</div>
+					</button>
+				</form>
+			{/each}
+		{/if}
+
+		<form method="POST" action="?/closeRunoff" use:enhance={submit}>
+			<button class="bigbtn">{T.hostLock}</button>
+		</form>
 	</div>
-	{#if castingFor}
-		<p class="notice">now pick their film</p>
-		{#each data.runoff.tally as row (row.film.id)}
-			<form method="POST" action="?/voteFor" use:enhance>
-				<input type="hidden" name="personId" value={castingFor} />
-				<input type="hidden" name="filmId" value={row.film.id} />
-				<button class="big-choice">{row.film.title}</button>
-			</form>
-		{/each}
-	{/if}
-
-	<form method="POST" action="?/closeRunoff" use:enhance style="margin-top:20px">
-		<button class="primary">lock it in and start the film</button>
-	</form>
 {:else}
-	<p class="notice">
-		The room is not voting yet. The week is {data.weekStatus ?? 'not started'}.
-	</p>
-	<form method="POST" action="?/close" use:enhance>
-		<button class="primary">close the week now</button>
+	<p class="banner">{T.hostIdle}</p>
+	<form method="POST" action="?/close" use:enhance={submit}>
+		<button class="bigbtn">{T.hostClose}</button>
 	</form>
-	<p class="notice">
-		Closing early is fine, anyone can do it. This puts the top films in front of the room and
-		gives you a QR to project.
-	</p>
+	<p class="hintline">{T.hostCloseNote}</p>
 {/if}

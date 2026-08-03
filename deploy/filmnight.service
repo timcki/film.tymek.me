@@ -10,6 +10,9 @@ User=filmnight
 Group=filmnight
 WorkingDirectory=/opt/filmnight
 EnvironmentFile=/etc/filmnight.env
+# adapter-node defaults to 512K, which a phone photo blows through before the
+# browser has had a chance to shrink it; setAvatar still refuses anything over 2 MB
+Environment=BODY_SIZE_LIMIT=3M
 ExecStart=/usr/bin/node build/index.js
 Restart=always
 RestartSec=3

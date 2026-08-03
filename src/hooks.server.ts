@@ -5,6 +5,7 @@ import { startScheduler } from '$lib/server/scheduler';
 
 export const PERSON_COOKIE = 'fn_person';
 export const DEVICE_COOKIE = 'fn_device';
+export const LANG_COOKIE = 'fn_lang';
 /** the browser cap; re-set on every request so regular visitors never expire */
 export const COOKIE_MAX_AGE = 400 * 24 * 60 * 60;
 
@@ -16,17 +17,18 @@ function isOpenRoute(pathname: string): boolean {
 }
 
 const LOCKED_OUT = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
+<html lang="pl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Film Night</title>
+<title>Wieczorki filmowe</title>
 <style>
- body{background:#0d0c10;color:#eceaf2;font:16px/1.6 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+ body{background:#0f1012;color:#eef0f3;font:16px/1.6 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
       display:flex;min-height:100vh;margin:0;align-items:center;justify-content:center;padding:24px}
- main{max-width:34rem} h1{font-size:1.6rem;margin:0 0 .6rem} p{color:#9d99ac;margin:0}
+ main{max-width:34rem} h1{font-size:1.6rem;margin:0 0 .6rem} p{color:#8b909a;margin:0 0 .4rem}
 </style></head>
 <body><main>
-<h1>Film Night</h1>
-<p>Open your personal link to get in. Ask Tymek if you have lost it.</p>
+<h1>Wieczorki filmowe</h1>
+<p>Otwórz swój prywatny link, żeby wejść. Jeśli go zgubiłeś, napisz do Tymka.</p>
+<p>Open your personal link to get in.</p>
 </main></body></html>`;
 
 export const handle: Handle = async ({ event, resolve }) => {

@@ -1,52 +1,48 @@
 <script lang="ts">
+	import Avatar from '$lib/components/Avatar.svelte';
+	import { dictFor, isVotes } from '$lib/i18n';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
+
+	const T = $derived(dictFor(data.lang));
+	const votes = $derived(isVotes(data.rules));
+	const total = $derived(Math.max(1, data.watched.length));
 </script>
 
-<h1>History</h1>
-
-{#each data.watched as film (film.id)}
-	<div class="card film">
-		{#if film.poster_url}<img src={film.poster_url} alt="" />{/if}
-		<div class="body">
-			<div class="title">
-				{film.title}{#if film.year}<span class="meta"> ({film.year})</span>{/if}
-			</div>
-			<div class="meta">
-				week {film.watched_week} · nominated by {film.added_by_name}
-				{#if film.director} · {film.director}{/if}
+<div class="wgrid">
+	{#each data.watched as film (film.id)}
+		<div class="wcard">
+			{#if film.poster_url}
+				<img src={film.poster_url} alt="" loading="lazy" />
+			{:else}
+				<div class="noimg"></div>
+			{/if}
+			<div class="lb">
+				<b>{film.title}</b>
+				{T.week(film.watched_week)} · {film.final_score}
+				{T.unit(film.final_score, votes)}
 			</div>
 		</div>
-		<div class="score">{film.final_score}</div>
-	</div>
-{:else}
-	<p class="notice">Nothing watched yet.</p>
-{/each}
+	{:else}
+		<div class="empty" style="grid-column:1/-1">{T.seenEmpty}</div>
+	{/each}
+</div>
 
 {#if data.weeksWithoutWinner}
-	<p class="notice">
-		{data.weeksWithoutWinner} week{data.weeksWithoutWinner === 1 ? '' : 's'} closed with nobody voting,
-		so nothing was watched.
-	</p>
+	<p class="banner">{T.noWinners(data.weeksWithoutWinner)}</p>
 {/if}
 
-<h2>Whose nominations get watched</h2>
-<table>
-	<thead>
-		<tr><th>Person</th><th>Nominated</th><th>Watched</th></tr>
-	</thead>
-	<tbody>
-		{#each data.perPerson as person (person.id)}
-			<tr>
-				<td>{person.name}</td>
-				<td>{person.nominated}</td>
-				<td>{person.watched}</td>
-			</tr>
-		{/each}
-	</tbody>
-</table>
-<p class="notice">
-	This table is the group's check on whether the active rule set is being fair. Worth a look after
-	about eight weeks.
-</p>
+<div class="sec">{T.fairH}</div>
+{#each data.perPerson as person (person.id)}
+	<div class="stat">
+		<span>
+			<Avatar name={person.name} colour={person.colour} avatar={person.avatar} />
+			{person.name}
+		</span>
+		<b>
+			{person.watched}
+			<span class="pct">({Math.round((person.watched / total) * 100)}%)</span>
+		</b>
+	</div>
+{/each}

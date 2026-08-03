@@ -89,16 +89,34 @@ export async function search(db: DB, query: string): Promise<SearchResponse> {
 	}
 }
 
-/** fetched only when a film is actually nominated, not once per keystroke */
-export async function directorOf(tmdbId: number): Promise<string | null> {
+export type Details = { director: string | null; genre: string | null; runtime: number | null };
+
+/**
+ * §8.2: fetched once, when a film is actually nominated, not per keystroke.
+ * append_to_response folds the credits into the same request. Failure is not
+ * fatal: the film goes on the list with a title and nothing else.
+ */
+export async function detailsOf(tmdbId: number): Promise<Details> {
+	const empty: Details = { director: null, genre: null, runtime: null };
 	try {
-		const credits = (await tmdbFetch(`/movie/${tmdbId}/credits`)) as {
-			crew?: { job?: string; name?: string }[];
+		const movie = (await tmdbFetch(`/movie/${tmdbId}?append_to_response=credits`)) as {
+			runtime?: number | null;
+			genres?: { name?: string }[];
+			credits?: { crew?: { job?: string; name?: string }[] };
 		};
-		const director = credits.crew?.find((member) => member.job === 'Director');
-		return director?.name ?? null;
+		const director = movie.credits?.crew?.find((member) => member.job === 'Director');
+		const genre = (movie.genres ?? [])
+			.slice(0, 2)
+			.map((g) => g.name)
+			.filter(Boolean)
+			.join(' / ');
+		return {
+			director: director?.name ?? null,
+			genre: genre || null,
+			runtime: movie.runtime ?? null
+		};
 	} catch (error) {
-		console.warn('[tmdb] credits failed:', (error as Error).message);
-		return null;
+		console.warn('[tmdb] details failed:', (error as Error).message);
+		return empty;
 	}
 }

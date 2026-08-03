@@ -1,9 +1,15 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import type { SubmitFunction } from '@sveltejs/kit';
+	import Poster from '$lib/components/Poster.svelte';
+	import { dictFor } from '$lib/i18n';
+	import { say } from '$lib/toast.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	const T = $derived(dictFor(data.lang));
 
 	// assume a dim room and someone holding a beer: pick your name once, then tap a film
 	let who = $state('');
@@ -13,6 +19,16 @@
 		data.people.filter((p) => p.name.toLowerCase().includes(filter.trim().toLowerCase()))
 	);
 
+	const submit: SubmitFunction = () => async ({ result, update }) => {
+		if (result.type === 'failure') {
+			const body = result.data as
+				| { code?: string; params?: Record<string, string | number>; message?: string }
+				| undefined;
+			say(T.error(body?.code ?? '', body?.params ?? {}, body?.message ?? ''), true);
+		}
+		await update({ reset: false });
+	};
+
 	// keep the tally live for everyone looking at the page
 	$effect(() => {
 		if (data.decided) return;
@@ -21,43 +37,52 @@
 	});
 </script>
 
-<h1>Tonight's shortlist</h1>
-<p class="notice">room code {data.code}</p>
-
-{#if form?.message}<p class="toast">{form.message}</p>{/if}
+<header>
+	<div>
+		<h1>{T.roomH}</h1>
+		<div class="sub">{T.roomCode} <b>{data.code}</b></div>
+	</div>
+</header>
 
 {#if data.decided}
-	<p class="card">Tonight is decided.</p>
+	<p class="banner mint">{T.roomDecided}</p>
 	{#each data.tally as row (row.film.id)}
-		<div class="card">
-			<strong>{row.film.title}</strong>: {row.votes} vote{row.votes === 1 ? '' : 's'}
-			{#if row.film.id === data.winnerFilmId}<span class="badge ok">winner</span>{/if}
+		<div class="pickbtn" class:on={row.film.id === data.winnerFilmId}>
+			<div class="th"><Poster title={row.film.title} url={row.film.poster_url} /></div>
+			<div>
+				<b>{row.film.title}</b>
+				<span>
+					{T.votes(row.votes)}{row.film.id === data.winnerFilmId ? ` · ${T.roomWinner}` : ''}
+				</span>
+			</div>
 		</div>
 	{/each}
 {:else if needsName}
-	<h2>Who are you?</h2>
-	<input placeholder="type to filter" bind:value={filter} autocomplete="off" />
-	<div class="grid-names" style="margin-top:10px">
+	<div class="sec">{T.roomWho}</div>
+	<input class="sinput" placeholder={T.roomFilter} bind:value={filter} autocomplete="off" />
+	<div class="namegrid">
 		{#each shown as person (person.id)}
-			<button onclick={() => (who = person.id)}>{person.name}</button>
+			<button class="namebtn" onclick={() => (who = person.id)}>{person.name}</button>
 		{/each}
 	</div>
-	<p class="notice">Not on the list? Vote as a guest; it still counts in the room.</p>
-	<button onclick={() => (who = 'guest')}>I'm a guest</button>
+	<p class="hintline">{T.roomGuestNote}</p>
+	<button class="ghostbtn" onclick={() => (who = 'guest')}>{T.roomGuest}</button>
 {:else}
-	<p class="notice">
-		voting as {data.identified ?? data.people.find((p) => p.id === who)?.name ?? 'a guest'}
+	<p class="hintline">
+		{T.roomVotingAs(data.identified ?? data.people.find((p) => p.id === who)?.name ?? T.roomGuest)}
 	</p>
 	{#each data.tally as row (row.film.id)}
-		<form method="POST" action="?/flashVote" use:enhance>
+		<form method="POST" action="?/flashVote" use:enhance={submit}>
 			<input type="hidden" name="filmId" value={row.film.id} />
 			<input type="hidden" name="personId" value={who === 'guest' ? '' : who} />
-			<button class="big-choice" class:primary={data.myVote === row.film.id}>
-				<strong>{row.film.title}</strong>
-				{#if row.film.year}<span class="meta"> ({row.film.year})</span>{/if}
-				<div class="meta">{row.votes} vote{row.votes === 1 ? '' : 's'}</div>
+			<button class="pickbtn" class:on={data.myVote === row.film.id}>
+				<div class="th"><Poster title={row.film.title} url={row.film.poster_url} /></div>
+				<div>
+					<b>{row.film.title}</b>
+					<span>{row.film.year ?? ''} · {T.votes(row.votes)}</span>
+				</div>
 			</button>
 		</form>
 	{/each}
-	<p class="notice">Tap again to change your mind. Only the last tap counts.</p>
+	<p class="hintline">{T.roomChange}</p>
 {/if}

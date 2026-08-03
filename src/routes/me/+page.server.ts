@@ -1,8 +1,11 @@
 import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import { activeRules, origin } from '$lib/server/config';
-import { bankBalance, rotateToken } from '$lib/server/people';
+import { bankBalance, clearAvatar, rotateToken, setAvatar } from '$lib/server/people';
+import { currentWeek } from '$lib/server/weeks';
 import { qrSvg } from '$lib/server/qr';
+import { ruleFail } from '$lib/server/respond';
+import { RuleError } from '$lib/server/types';
 import { COOKIE_MAX_AGE, PERSON_COOKIE } from '../../hooks.server';
 
 function personalLink(token: string): string {
@@ -13,6 +16,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const db = getDb();
 	const person = locals.person!;
 	const rules = activeRules();
+	const week = currentWeek(db);
 
 	const spent = (
 		db
@@ -22,11 +26,17 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const nominatedWatched = (
 		db
-			.prepare(
-				`SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND status = 'watched'`
-			)
+			.prepare(`SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND status = 'watched'`)
 			.get(person.id) as { n: number }
 	).n;
+
+	const nominatedThisWeek = week
+		? Boolean(
+				db
+					.prepare('SELECT 1 FROM film WHERE added_by = ? AND added_week = ?')
+					.get(person.id, week.number)
+			)
+		: false;
 
 	// the longest run of consecutive weeks this person kept points on one film
 	const rows = db
@@ -54,6 +64,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			spent,
 			nominatedWatched,
 			longestCampaign,
+			nominatedThisWeek,
 			bank: rules.banking ? bankBalance(db, person.id) : null
 		}
 	};
@@ -71,5 +82,22 @@ export const actions: Actions = {
 			maxAge: COOKIE_MAX_AGE
 		});
 		return { rotated: true };
+	},
+
+	avatar: async ({ request, locals }) => {
+		const form = await request.formData();
+		const file = form.get('picture');
+		try {
+			if (!(file instanceof File)) throw new RuleError('empty_file', 'no file was sent');
+			setAvatar(getDb(), locals.person!.id, new Uint8Array(await file.arrayBuffer()));
+			return { avatarSaved: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	removeAvatar: async ({ locals }) => {
+		clearAvatar(getDb(), locals.person!.id);
+		return { avatarRemoved: true };
 	}
 };

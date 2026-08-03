@@ -1,10 +1,10 @@
-# Film Night
+# Wieczorki filmowe
 
 A private weekly film-voting site. One nomination each per week, a budget of voting
-points each per week, highest-scoring film gets watched on Thursday, ties are broken by
-the people who actually turned up.
+points each per week, and on Thursday the top three go to whoever turned up.
 
-Implements `filmnight-spec.md`. SvelteKit 2 + Svelte 5 runes + better-sqlite3, served by
+Implements `filmnight-spec.md`; the interface follows `filmnight-v2.html`. Polish by
+default with an English toggle. SvelteKit 2 + Svelte 5 runes + better-sqlite3, served by
 adapter-node behind Caddy.
 
 Live at **https://film.tymek.me**
@@ -19,8 +19,8 @@ npm run seed                # creates the roster, opens week 1, prints the links
 npm run dev
 ```
 
-`npm test` runs the acceptance suite (§11 of the spec, 54 tests). `npm run check`
-typechecks.
+`npm test` runs the acceptance suite (§11 of the spec, plus notes, avatars and copy: 85
+tests). `npm run check` typechecks.
 
 ## How it fits together
 
@@ -33,6 +33,26 @@ typechecks.
 | `src/lib/server/films.ts` | `setPoints`, `nominate`, `renominate`, standings |
 | `src/lib/server/scheduler.ts` | the minute tick that closes weeks and expired runoffs |
 | `src/hooks.server.ts` | cookie identity; everything but `/u/:token` and `/f/:code` needs it |
+| `src/lib/i18n.ts` | every string the app says about itself, in Polish and English |
+| `src/app.css` | the v2 look, ported from `filmnight-v2.html` |
+
+### The interface
+
+Three tabs on a bottom bar: **Lista** (`/`), **Obejrzane** (`/history`), **Ty** (`/me`).
+`/host` is the projector view for Thursday and `/f/:code` is what the room scans.
+
+Copy lives in `src/lib/i18n.ts` and nowhere else, in two typed dictionaries that a test
+holds to the same set of keys. The rules screen is generated from the active `RuleSet`,
+so changing `RULES` or a cap rewrites what the app tells people about itself; there is no
+prose to forget to update. Rule violations travel to the browser as a code plus its
+parameters, and get said in the reader's language, falling back to the English message
+for a code the dictionary has not learnt yet.
+
+Profile pictures are optional and stored in the database as a BLOB. The browser squares
+and shrinks them to 512px before upload; the server ignores the claimed content type and
+sniffs the magic bytes, capping at 2 MB. `/avatar/:id?v=` is cache-busted by the upload
+timestamp and stays behind the personal-link gate, because a face with a name on it is
+exactly the sort of thing that should not be public.
 
 ### Where this differs from the spec
 
@@ -64,7 +84,8 @@ the room did that week. Halving the cap keeps patient campaigning possible while
 the stockpile. If it still distorts things, `RULES=rolling` removes banking entirely.
 
 Both are one-line changes in `src/lib/server/rules.ts`, and revisiting them after about
-eight weeks with `/history` open is the plan.
+eight weeks with `/history` open is the plan. The rules screen reads its numbers from the
+active rule set, so it will follow either change without an edit.
 
 Two invariants worth keeping in mind when changing anything:
 
@@ -139,6 +160,11 @@ when the rule set does not bank, and the change is announced on the page for tha
   night.
 - On Thursday someone should open `/host` and project the QR. Nothing breaks if nobody
   does; the highest-scoring film simply wins at 23:00.
+- Uploads need `BODY_SIZE_LIMIT` above adapter-node's 512K default; the unit sets 3M.
+  If you reinstall the service file, run `sudo systemctl daemon-reload`.
+- Columns added after the first deploy are listed in `ADDED_COLUMNS` and applied on every
+  open, guarded on `PRAGMA table_info`. Adding a column is the only migration shape that
+  is supported; anything else needs doing by hand, so back up first.
 - `journalctl -u filmnight -f` for logs.
 - Restoring a backup: stop the service, copy the dated file over
   `/var/lib/filmnight/filmnight.db`, delete any `-wal`/`-shm` beside it, start again.

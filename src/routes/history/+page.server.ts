@@ -1,5 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
+import { avatarUrl } from '$lib/server/people';
 
 type WatchedRow = {
 	id: number;
@@ -12,7 +13,14 @@ type WatchedRow = {
 	added_by_name: string;
 };
 
-type PersonRow = { id: string; name: string; colour: string; watched: number; nominated: number };
+type PersonRow = {
+	id: string;
+	name: string;
+	colour: string;
+	avatar_updated_at: string | null;
+	watched: number;
+	nominated: number;
+};
 
 export const load: PageServerLoad = async () => {
 	const db = getDb();
@@ -28,9 +36,9 @@ export const load: PageServerLoad = async () => {
 		.all() as WatchedRow[];
 
 	// the group's own check on whether the active rule set is being fair
-	const perPerson = db
+	const rows = db
 		.prepare(
-			`SELECT p.id, p.name, p.colour,
+			`SELECT p.id, p.name, p.colour, p.avatar_updated_at,
 			        COUNT(f.id) FILTER (WHERE f.status = 'watched') AS watched,
 			        COUNT(f.id) AS nominated
 			 FROM person p LEFT JOIN film f ON f.added_by = p.id
@@ -40,11 +48,14 @@ export const load: PageServerLoad = async () => {
 		)
 		.all() as PersonRow[];
 
+	const perPerson = rows.map(({ avatar_updated_at, ...person }) => ({
+		...person,
+		avatar: avatarUrl(person.id, avatar_updated_at)
+	}));
+
 	const weeksWithoutWinner = (
 		db
-			.prepare(
-				`SELECT COUNT(*) AS n FROM week WHERE status = 'closed' AND winner_film_id IS NULL`
-			)
+			.prepare(`SELECT COUNT(*) AS n FROM week WHERE status = 'closed' AND winner_film_id IS NULL`)
 			.get() as { n: number }
 	).n;
 

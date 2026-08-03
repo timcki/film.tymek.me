@@ -3,12 +3,16 @@ import { getDb } from '$lib/server/db';
 import { activeRules } from '$lib/server/config';
 import { currentWeek } from '$lib/server/weeks';
 import { openRunoff } from '$lib/server/runoffs';
+import { avatarUrl, bankBalance, spentInWeek } from '$lib/server/people';
+import { langOf } from '$lib/i18n';
+import { LANG_COOKIE } from '../hooks.server';
 
-export const load: LayoutServerLoad = async ({ locals }) => {
+export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	const db = getDb();
 	const rules = activeRules();
 	const week = currentWeek(db);
 	const runoff = openRunoff(db);
+	const person = locals.person;
 
 	// §10: a rule-set change is announced for the week it happened in
 	const lastChange = db
@@ -18,10 +22,23 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		lastChange && week && lastChange.week_number === week.number && lastChange.week_number > 1
 	);
 
+	const balance = person ? bankBalance(db, person.id) : 0;
+	const spent = person && week ? spentInWeek(db, person.id, week.number) : 0;
+	const budget = rules.banking ? balance : rules.pointsPerWeek;
+
 	return {
+		lang: langOf(cookies.get(LANG_COOKIE)),
 		rulesJustChanged,
-		person: locals.person
-			? { id: locals.person.id, name: locals.person.name, colour: locals.person.colour }
+		person: person
+			? {
+					id: person.id,
+					name: person.name,
+					colour: person.colour,
+					avatar: avatarUrl(person.id, person.avatar_updated_at),
+					budget,
+					spent,
+					left: budget - spent
+				}
 			: null,
 		rules: {
 			id: rules.id,

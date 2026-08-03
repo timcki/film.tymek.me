@@ -68,14 +68,14 @@ export function flashVote(
 		const runoff = db.prepare('SELECT * FROM runoff WHERE id = ?').get(runoffId) as
 			| Runoff
 			| undefined;
-		if (!runoff) throw new RuleError('no such runoff');
-		if (runoff.closed_at) throw new RuleError('this runoff is already decided');
-		if (isExpired(runoff, now)) throw new RuleError('this runoff has expired');
+		if (!runoff) throw new RuleError('no_runoff', 'no such runoff');
+		if (runoff.closed_at) throw new RuleError('runoff_decided', 'this runoff is already decided');
+		if (isExpired(runoff, now)) throw new RuleError('runoff_expired', 'this runoff has expired');
 
 		const inRunoff = db
 			.prepare('SELECT 1 FROM runoff_film WHERE runoff_id = ? AND film_id = ?')
 			.get(runoffId, filmId);
-		if (!inRunoff) throw new RuleError('that film is not in this runoff');
+		if (!inRunoff) throw new RuleError('film_not_in_runoff', 'that film is not in this runoff');
 
 		db.prepare(
 			`INSERT INTO runoff_ballot (runoff_id, voter_key, person_id, film_id, created_at)

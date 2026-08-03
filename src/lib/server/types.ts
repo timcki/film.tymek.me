@@ -5,7 +5,13 @@ export type Person = {
 	token: string;
 	active: number;
 	created_at: string;
+	avatar: Uint8Array | null;
+	avatar_mime: string | null;
+	avatar_updated_at: string | null;
 };
+
+/** everything a face needs: a picture if there is one, initials and a colour if not */
+export type Face = { id: string; name: string; colour: string; avatar: string | null };
 
 export type WeekStatus = 'open' | 'runoff' | 'closed';
 
@@ -26,9 +32,13 @@ export type Film = {
 	title_key: string;
 	year: number | null;
 	director: string | null;
+	genre: string | null;
+	runtime: number | null;
 	tmdb_id: number | null;
 	poster_url: string | null;
 	overview: string | null;
+	/** the nominator's pitch; only they can edit it */
+	note: string | null;
 	added_by: string;
 	added_week: number;
 	status: FilmStatus;
@@ -57,7 +67,13 @@ export type Runoff = {
 	winner_film_id: number | null;
 };
 
-export type Backer = { person_id: string; name: string; colour: string; points: number };
+export type Backer = {
+	person_id: string;
+	name: string;
+	colour: string;
+	points: number;
+	avatar: string | null;
+};
 
 export type Standing = Film & {
 	score: number;
@@ -70,10 +86,20 @@ export type Standing = Film & {
 	atRisk: boolean;
 };
 
-/** a mutation rejected by the rules; surfaced to the client as a 409 */
+export type ErrorParams = Record<string, string | number>;
+
+/**
+ * A mutation rejected by the rules; surfaced to the client as a 409. Carries a
+ * code and its parameters so the page can say it in the reader's language; the
+ * message is the English fallback and what ends up in the logs.
+ */
 export class RuleError extends Error {
 	readonly status = 409;
-	constructor(message: string) {
+	constructor(
+		readonly code: string,
+		message: string,
+		readonly params: ErrorParams = {}
+	) {
 		super(message);
 		this.name = 'RuleError';
 	}

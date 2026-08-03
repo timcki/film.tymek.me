@@ -1,15 +1,23 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import type { SubmitFunction } from '@sveltejs/kit';
+	import Avatar from '$lib/components/Avatar.svelte';
+	import Poster from '$lib/components/Poster.svelte';
+	import { dictFor, isVotes } from '$lib/i18n';
+	import { say } from '$lib/toast.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
+	const T = $derived(dictFor(data.lang));
 	const rules = $derived(data.rules);
-	const single = $derived(rules.pointsPerWeek === 1 && !rules.banking);
-	const left = $derived(data.me ? data.me.budget - data.me.spent : 0);
+	const votes = $derived(isVotes(rules));
+	const left = $derived(data.person?.left ?? 0);
+	const open = $derived(data.week?.status === 'open');
+	const nominated = $derived(data.nominatedThisWeek);
 
 	type Result = {
-		tmdbId: number;
+		tmdbId: number | null;
 		title: string;
 		year: number | null;
 		thumb: string | null;
@@ -17,23 +25,47 @@
 		overview: string;
 	};
 
+	type Film = PageData['films'][number];
+
+	/* ------------------------------------------------------------- sheets -- */
+
+	let detailId = $state<number | null>(null);
+	let noteEdit = $state(false);
+	let searchOpen = $state(false);
+
+	const detail = $derived(
+		detailId === null
+			? null
+			: ([...data.films, ...data.archived].find((f) => f.id === detailId) ?? null)
+	);
+	const anySheet = $derived(detail !== null || searchOpen);
+
+	function closeSheets() {
+		detailId = null;
+		noteEdit = false;
+		searchOpen = false;
+		picked = null;
+	}
+
+	/* ------------------------------------------------------------- search -- */
+
 	let query = $state('');
 	let results = $state<Result[]>([]);
 	let degraded = $state(false);
 	let searching = $state(false);
 	let picked = $state<Result | null>(null);
-
 	let timer: ReturnType<typeof setTimeout>;
+
 	function onQuery() {
 		clearTimeout(timer);
-		picked = null;
 		const q = query.trim();
 		if (q.length < 2) {
 			results = [];
+			searching = false;
 			return;
 		}
+		searching = true;
 		timer = setTimeout(async () => {
-			searching = true;
 			try {
 				const response = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
 				const body = await response.json();
@@ -48,227 +80,360 @@
 		}, 250);
 	}
 
-	function initials(name: string) {
-		return name
-			.split(' ')
-			.map((part) => part[0])
-			.join('')
-			.slice(0, 2);
+	const known = $derived(
+		new Set([...data.films, ...data.archived].map((f) => f.title.toLowerCase()))
+	);
+
+	function byHand(): Result {
+		return {
+			tmdbId: null,
+			title: query.trim(),
+			year: null,
+			thumb: null,
+			poster: null,
+			overview: ''
+		};
 	}
+
+	/* -------------------------------------------------------------- forms -- */
+
+	function submit(onOk?: () => void): SubmitFunction {
+		return () =>
+			async ({ result, update }) => {
+				if (result.type === 'failure') {
+					const body = result.data as
+						| { code?: string; params?: Record<string, string | number>; message?: string }
+						| undefined;
+					say(T.error(body?.code ?? '', body?.params ?? {}, body?.message ?? ''), true);
+				}
+				if (result.type === 'success') onOk?.();
+				await update({ reset: false });
+			};
+	}
+
+	$effect(() => {
+		if (!form) return;
+		if ('nominated' in form && form.nominated) say(T.tNominated(form.nominated));
+		if ('renominated' in form && form.renominated) say(T.tRenominated(form.renominated));
+		if ('noteSaved' in form && form.noteSaved) say(T.tNoteSaved);
+	});
 </script>
 
-<h1>The list</h1>
+{#snippet backerRow(film: Film)}
+	<span class="backers">
+		{#if film.backers.length}
+			{#each film.backers as backer (backer.person_id)}
+				<span class="bk">
+					<Avatar
+						name={backer.name}
+						colour={backer.colour}
+						avatar={backer.avatar}
+						size={16}
+						font={8}
+					/>
+					<b>{backer.points}</b>
+				</span>
+			{/each}
+		{:else}
+			<span class="nobk">{T.noBackers}</span>
+		{/if}
+		{#if film.atRisk && data.week}
+			<span class="warnchip">
+				{rules.attrition.kind === 'archive'
+					? T.warnFades(
+							Math.max(1, rules.attrition.afterWeeksAtZero - (data.week.number - film.added_week))
+						)
+					: T.warnDrops}
+			</span>
+		{/if}
+	</span>
+{/snippet}
 
-{#if form?.message}
-	<p class="toast">{form.message}</p>
-{/if}
-
-{#if data.me}
-	<div class="card">
-		<div>
-			<strong>{left}</strong> of {data.me.budget} points left
-			{#if rules.banking}<span class="notice">(bank, cap {rules.bankCap})</span>{/if}
-		</div>
-		<div class="meta">
-			{#if data.me.nominatedThisWeek}
-				nomination used on <strong>{data.me.nominatedThisWeek.title}</strong>
-			{:else}
-				you still have a nomination this week
-			{/if}
-		</div>
-	</div>
-{/if}
-
-{#if data.week?.status === 'runoff'}
-	<p class="card">
-		Voting is closed and the shortlist is with the room.
-		<a href="/f/{data.runoffCode}">Pick tonight's film</a> if you are here.
-	</p>
-{/if}
-
-{#each data.films as film (film.id)}
-	<div class="card film">
-		{#if film.poster_url}<img src={film.poster_url} alt="" />{/if}
-		<div class="body">
-			<div class="title">
-				{film.title}{#if film.year}<span class="meta"> ({film.year})</span>{/if}
+{#snippet row(film: Film, lead: boolean, shelf: boolean)}
+	<div class="film" class:lead class:fading={film.atRisk && !shelf} class:shelf>
+		<button class="p" onclick={() => (detailId = film.id)} aria-label={film.title}>
+			<Poster title={film.title} url={film.poster_url} />
+		</button>
+		<div class="b">
+			<div class="hd">
+				<div class="ttl">{film.title}</div>
+				<div class="sc"><b>{film.score}</b><i>{T.unit(film.score, votes)}</i></div>
 			</div>
 			<div class="meta">
-				{#if film.director}{film.director} · {/if}added by {film.addedByName} in week {film.added_week}
+				{film.year ?? ''}{#if film.year && film.director}<span class="dot"> · </span>{/if}{film.director ??
+					''}
 			</div>
-
-			{#if film.campaignWeeks >= 3}
-				<span class="badge">{film.campaignWeeks}-week campaign</span>
-			{/if}
-			{#if film.atRisk}
-				<span class="badge warn">
-					{rules.attrition.kind === 'archive' ? 'fades soon' : 'drops on Thursday'}
-				</span>
-			{/if}
-
-			{#if film.backers.length}
-				<div class="avatars">
-					{#each film.backers as backer (backer.person_id)}
-						<span
-							class="avatar"
-							style="background:{backer.colour}"
-							title="{backer.name}: {backer.points}">{initials(backer.name)}</span
+			<div class="meta2">
+				{[
+					film.genre,
+					film.runtime ? T.minutes(film.runtime) : null,
+					T.addedBy(film.addedByName, film.added_week)
+				]
+					.filter(Boolean)
+					.join(' · ')}
+			</div>
+			{#if film.note}<div class="note">{film.note}</div>{/if}
+			<div class="ft">
+				{@render backerRow(film)}
+				<form method="POST" action="?/setPoints" use:enhance={submit()}>
+					<input type="hidden" name="filmId" value={film.id} />
+					{#if votes}
+						<button
+							class="tap"
+							class:on={film.myPoints > 0}
+							name="points"
+							value={film.myPoints > 0 ? 0 : 1}
+							disabled={!open || (film.myPoints === 0 && left < 1)}
 						>
-					{/each}
-				</div>
-			{/if}
-
-			<form method="POST" action="?/setPoints" use:enhance class="stepper">
-				<input type="hidden" name="filmId" value={film.id} />
-				{#if single}
-					<button
-						class:primary={!film.myPoints}
-						name="points"
-						value={film.myPoints ? 0 : 1}
-						disabled={data.week?.status !== 'open' || (!film.myPoints && left < 1)}
-					>
-						{film.myPoints ? 'take my vote back' : 'vote'}
-					</button>
-				{:else}
-					<button name="points" value={Math.max(0, film.myPoints - 1)} disabled={!film.myPoints}
-						>−</button
-					>
-					<strong style="min-width:1.5rem;text-align:center">{film.myPoints}</strong>
-					<button
-						name="points"
-						value={film.myPoints + 1}
-						disabled={data.week?.status !== 'open' || left < 1}>+</button
-					>
-				{/if}
-			</form>
+							{film.myPoints > 0 ? T.btnVoted : T.btnVote}
+						</button>
+					{:else}
+						<button
+							class="tap"
+							class:on={film.myPoints > 0}
+							name="points"
+							value={film.myPoints + 1}
+							disabled={!open || left < 1}
+						>
+							{film.myPoints > 0 ? T.btnSpent(film.myPoints) : T.btnAddPoint}
+						</button>
+					{/if}
+				</form>
+			</div>
 		</div>
-		<div class="score">{film.score}</div>
 	</div>
-{:else}
-	<p class="notice">Nothing on the list yet. Nominate something.</p>
-{/each}
+{/snippet}
 
-<h2>Nominate</h2>
-{#if data.me?.nominatedThisWeek}
-	<p class="notice">You have used your nomination this week.</p>
-{:else}
-	<div class="card">
-		<input
-			placeholder="search TMDB, or just type a title"
-			bind:value={query}
-			oninput={onQuery}
-			autocomplete="off"
-		/>
-		{#if searching}<p class="notice">searching…</p>{/if}
-		{#if degraded}
-			<p class="notice">couldn't reach TMDB, but you can still type a title by hand</p>
+<div class="list">
+	{#each data.films as film, i (film.id)}
+		{#if data.shortlistCount && i === 0}
+			<div class="shortlist-head">{T.shortlistHead(data.shortlistCount)}</div>
+			<p class="shortlist-note">{T.shortlistNote(data.shortlistCount)}</p>
 		{/if}
+		{#if data.shortlistCount && i === data.shortlistCount}
+			<div class="rest-head">{T.restHead}</div>
+		{/if}
+		{@render row(film, i < data.shortlistCount, false)}
+	{:else}
+		<div class="empty">{T.listEmpty}</div>
+	{/each}
+</div>
 
-		{#each results as result (result.tmdbId)}
-			<button
-				class="big-choice"
-				style="margin-top:8px"
-				onclick={() => {
-					picked = result;
-					query = result.title;
-					results = [];
-				}}
-			>
-				{result.title}{#if result.year} ({result.year}){/if}
-			</button>
-		{/each}
-
-		<form method="POST" action="?/nominate" use:enhance style="margin-top:10px">
-			<input type="hidden" name="title" value={picked?.title ?? query} />
-			<input type="hidden" name="tmdbId" value={picked?.tmdbId ?? ''} />
-			<input type="hidden" name="year" value={picked?.year ?? ''} />
-			<input type="hidden" name="poster" value={picked?.poster ?? ''} />
-			<input type="hidden" name="overview" value={picked?.overview ?? ''} />
-			<button class="primary" disabled={!query.trim() || data.week?.status !== 'open'}>
-				nominate {picked ? picked.title : query.trim()}
-			</button>
-		</form>
-	</div>
-{/if}
+<button
+	class="addcard"
+	disabled={Boolean(nominated) || !open}
+	onclick={() => {
+		searchOpen = true;
+		query = '';
+		results = [];
+		picked = null;
+	}}
+>
+	{#if nominated}
+		{T.nomDone(nominated.title)}
+	{:else}
+		<b>{T.nomCta}</b><br /><span style="font-size:11.5px">{T.nomCtaSub}</span>
+	{/if}
+</button>
 
 {#if data.archived.length || data.dropped.length}
-	<details>
-		<summary>Archived and dropped ({data.archived.length + data.dropped.length})</summary>
+	<div class="sec">
+		{rules.attrition.kind === 'archive'
+			? T.shelfArchive(data.archived.length)
+			: T.shelfDropped(data.dropped.length)}
+	</div>
+	<div class="list">
 		{#each data.archived as film (film.id)}
-			<div class="card film">
-				<div class="body">
-					<div class="title">{film.title}</div>
-					<div class="meta">archived; a single vote brings it back</div>
-					<form method="POST" action="?/setPoints" use:enhance class="stepper">
-						<input type="hidden" name="filmId" value={film.id} />
-						<button name="points" value="1" disabled={left < 1}>revive with a point</button>
-					</form>
-				</div>
-			</div>
+			{@render row(film, false, true)}
 		{/each}
 		{#each data.dropped as film (film.id)}
-			<div class="card film">
-				<div class="body">
-					<div class="title">{film.title}</div>
-					<div class="meta">dropped after week {film.added_week}</div>
-					<form method="POST" action="?/renominate" use:enhance class="stepper">
-						<input type="hidden" name="filmId" value={film.id} />
-						<button disabled={Boolean(data.me?.nominatedThisWeek)}>re-nominate</button>
-					</form>
+			<div class="film shelf">
+				<div class="p"><Poster title={film.title} url={film.poster_url} /></div>
+				<div class="b">
+					<div class="hd"><div class="ttl">{film.title}</div></div>
+					<div class="meta">{film.year ?? ''}</div>
+					<div class="ft">
+						<span class="backers"></span>
+						<form method="POST" action="?/renominate" use:enhance={submit()}>
+							<input type="hidden" name="filmId" value={film.id} />
+							<input type="hidden" name="title" value={film.title} />
+							<button class="tap" disabled={Boolean(nominated) || !open}>{T.btnRenominate}</button>
+						</form>
+					</div>
 				</div>
 			</div>
 		{/each}
-	</details>
+	</div>
 {/if}
 
-{#if data.watched.length}
-	<details>
-		<summary>Recently watched</summary>
-		{#each data.watched as film}
-			<div class="card">
-				<strong>{film.title}</strong>
-				<span class="meta">week {film.watched_week} · final score {film.final_score}</span>
+<!-- ------------------------------------------------------------ sheets -- -->
+
+<button
+	class="scrim"
+	class:on={anySheet}
+	aria-label="close"
+	tabindex={anySheet ? 0 : -1}
+	onclick={closeSheets}
+></button>
+
+<div class="sheet" class:on={detail !== null}>
+	<button class="handle" aria-label="close" onclick={closeSheets}></button>
+	<div class="inner">
+		{#if detail}
+			<div class="dhero">
+				<div class="p"><Poster title={detail.title} url={detail.poster_url} /></div>
+				<div style="flex:1;min-width:0">
+					<h2>{detail.title}</h2>
+					<div class="yr">
+						{detail.year ?? ''}{#if detail.year && detail.director}
+							· {/if}{detail.director ?? ''}
+					</div>
+					<div class="sc">
+						<b>{detail.score}</b>
+						<small>{T.unit(detail.score, votes)} · {T.sortLabel(rules)}</small>
+					</div>
+				</div>
 			</div>
-		{/each}
-		<p><a href="/history">full history</a></p>
-	</details>
-{/if}
 
-<details>
-	<summary>How this works ({rules.label})</summary>
-	<ul class="notice">
-		<li>Everyone gets {rules.pointsPerWeek} point{rules.pointsPerWeek === 1 ? '' : 's'} a week.</li>
-		{#if rules.banking}
-			<li>Unspent points bank, up to {rules.bankCap}.</li>
-		{:else}
-			<li>Points do not carry over.</li>
+			{#if noteEdit && detail.added_by === data.person?.id}
+				<form method="POST" action="?/setNote" use:enhance={submit(() => (noteEdit = false))}>
+					<input type="hidden" name="filmId" value={detail.id} />
+					<textarea
+						class="nin"
+						name="note"
+						rows="3"
+						maxlength="160"
+						placeholder={T.notePh}
+						value={detail.note ?? ''}
+					></textarea>
+					<div class="cbtns">
+						<button type="button" onclick={() => (noteEdit = false)}>{T.noteCancel}</button>
+						<button class="go">{T.noteSave}</button>
+					</div>
+				</form>
+			{:else}
+				{#if detail.note}
+					<div class="dnote">
+						“{detail.note}”<span class="sig">{T.noteSig(detail.addedByName)}</span>
+					</div>
+				{/if}
+				{#if detail.added_by === data.person?.id}
+					<button class="nedit" onclick={() => (noteEdit = true)}>
+						{detail.note ? T.noteEdit : T.noteAdd}
+					</button>
+				{/if}
+			{/if}
+
+			{#if detail.overview}<p class="over">{detail.overview}</p>{/if}
+
+			<div class="facts">
+				<div class="fact"><span>{T.dGenre}</span><b>{detail.genre ?? T.dEmpty}</b></div>
+				<div class="fact">
+					<span>{T.dRuntime}</span><b>{detail.runtime ? T.minutes(detail.runtime) : T.dEmpty}</b>
+				</div>
+				<div class="fact">
+					<span>{T.dAdded}</span><b>{T.addedBy(detail.addedByName, detail.added_week)}</b>
+				</div>
+				<div class="fact">
+					<span>{T.dBacked}</span>
+					<b>
+						{detail.backers.length
+							? detail.backers.map((b) => `${b.name} (${b.points})`).join(', ')
+							: T.dNobody}
+					</b>
+				</div>
+			</div>
+
+			<div class="spendbar">
+				<div class="lab">
+					<b>{detail.myPoints ? T.dYours(detail.myPoints, votes) : T.dNone}</b>
+					{rules.banking ? T.dBankLeft(left) : T.dWeekLeft(left, data.person?.budget ?? 0)}
+				</div>
+				<div class="step">
+					<form method="POST" action="?/setPoints" use:enhance={submit()}>
+						<input type="hidden" name="filmId" value={detail.id} />
+						<button
+							name="points"
+							value={Math.max(0, detail.myPoints - 1)}
+							disabled={!open || !detail.myPoints}>−</button
+						>
+					</form>
+					<span class:on={detail.myPoints > 0}>{detail.myPoints}</span>
+					<form method="POST" action="?/setPoints" use:enhance={submit()}>
+						<input type="hidden" name="filmId" value={detail.id} />
+						<button name="points" value={detail.myPoints + 1} disabled={!open || left < 1}>+</button>
+					</form>
+				</div>
+			</div>
 		{/if}
-		{#if rules.scoring === 'total'}
-			<li>A film's score is every point ever placed on it.</li>
+	</div>
+</div>
+
+<div class="sheet" class:on={searchOpen}>
+	<button class="handle" aria-label="close" onclick={closeSheets}></button>
+	<div class="inner">
+		<h2 style="margin:8px 0 2px;font-size:19px;letter-spacing:-.02em">{T.nomH}</h2>
+
+		{#if picked}
+			<form
+				method="POST"
+				action="?/nominate"
+				use:enhance={submit(() => closeSheets())}
+				style="padding-bottom:8px"
+			>
+				<input type="hidden" name="title" value={picked.title} />
+				<input type="hidden" name="tmdbId" value={picked.tmdbId ?? ''} />
+				<input type="hidden" name="year" value={picked.year ?? ''} />
+				<input type="hidden" name="poster" value={picked.poster ?? ''} />
+				<input type="hidden" name="overview" value={picked.overview} />
+				<div class="crow">
+					<div class="th"><Poster title={picked.title} url={picked.thumb} /></div>
+					<div>
+						<b>{picked.title}</b>
+						<span>{picked.year ?? T.dEmpty}</span>
+					</div>
+				</div>
+				<div class="nlabel">{T.noteQ}</div>
+				<textarea class="nin" name="note" rows="3" maxlength="160" placeholder={T.notePh}></textarea>
+				<div class="cbtns">
+					<button type="button" onclick={() => (picked = null)}>{T.noteBack}</button>
+					<button class="go">{T.noteConfirm}</button>
+				</div>
+			</form>
 		{:else}
-			<li>
-				A film's score is this week's points plus {rules.decayFactor} of last week's. Older points count
-				for nothing, so the list keeps moving. Point supply shrinks when fewer people vote, which lets
-				last week's leader win by inertia. Known, and accepted.
-			</li>
+			<div class="hintline">{degraded ? T.nomOffline : T.nomHint}</div>
+			<input
+				class="sinput"
+				bind:value={query}
+				oninput={onQuery}
+				placeholder={T.nomPh}
+				autocomplete="off"
+				spellcheck="false"
+			/>
+			<div class="sres">
+				{#if searching}
+					<div class="hintline">{T.nomSearching}</div>
+				{:else}
+					{#each results as result (result.tmdbId)}
+						{@const dup = known.has(result.title.toLowerCase())}
+						<button class="r" disabled={dup} onclick={() => (picked = result)}>
+							<div class="th"><Poster title={result.title} url={result.thumb} /></div>
+							<div class="m">
+								<b>{result.title}</b>
+								<span>{result.year ?? T.dEmpty}{dup ? ` · ${T.nomDup}` : ''}</span>
+							</div>
+						</button>
+					{/each}
+					{#if query.trim().length >= 2 && !results.length}
+						<div class="hintline">{T.nomNone(query.trim())}</div>
+					{/if}
+					{#if query.trim().length >= 2}
+						<button class="ghostbtn" onclick={() => (picked = byHand())}>
+							{T.nomByHand(query.trim())}
+						</button>
+					{/if}
+				{/if}
+			</div>
 		{/if}
-		{#if rules.attrition.kind === 'archive'}
-			<li>
-				A film with no points for {rules.attrition.afterWeeksAtZero} weeks is archived. One vote brings
-				it back.
-			</li>
-		{:else}
-			<li>
-				A film with no points for {rules.attrition.afterWeeksWithoutPoints}
-				week{rules.attrition.afterWeeksWithoutPoints === 1 ? '' : 's'} is dropped, including a brand-new
-				nomination nobody voted for. Re-nominating costs your nomination for that week.
-			</li>
-		{/if}
-		<li>One nomination each per week. Voting closes Thursday at 20:00.</li>
-		<li>
-			The top {rules.shortlistSize} films then go to the room, and whoever turned up picks one of
-			them. Points decide who the candidates are; being there decides what we watch. If nobody
-			votes in the room, the highest score wins.
-		</li>
-	</ul>
-</details>
+	</div>
+</div>

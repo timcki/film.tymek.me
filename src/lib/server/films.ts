@@ -5,7 +5,7 @@ import { RuleError } from './types.js';
 import type { RuleSet } from './rules.js';
 import { orderFilms, titleKey } from './rules.js';
 import { iso } from './time.js';
-import { bankBalance, spentInWeek } from './people.js';
+import { avatarUrl, bankBalance, spentInWeek } from './people.js';
 import { campaignWeeks, pointsInWindow, rescoreAll, totalPoints } from './scoring.js';
 import { requireOpenWeek } from './weeks.js';
 
@@ -26,16 +26,20 @@ function backersOf(db: DB, rules: RuleSet, filmId: number, currentWeek: number):
 	const weeks = scoringWeeks(rules, currentWeek);
 	const clause = weeks ? `AND b.week_number IN (${weeks.map(() => '?').join(',')})` : '';
 	const params: (number | string)[] = weeks ? [filmId, ...weeks] : [filmId];
-	return db
+	const rows = db
 		.prepare(
-			`SELECT b.person_id, p.name, p.colour, SUM(b.points) AS points
+			`SELECT b.person_id, p.name, p.colour, p.avatar_updated_at, SUM(b.points) AS points
 			 FROM ballot b JOIN person p ON p.id = b.person_id
 			 WHERE b.film_id = ? ${clause}
 			 GROUP BY b.person_id
 			 HAVING points > 0
 			 ORDER BY points DESC, p.name COLLATE NOCASE`
 		)
-		.all(...params) as Backer[];
+		.all(...params) as (Omit<Backer, 'avatar'> & { avatar_updated_at: string | null })[];
+	return rows.map(({ avatar_updated_at, ...backer }) => ({
+		...backer,
+		avatar: avatarUrl(backer.person_id, avatar_updated_at)
+	}));
 }
 
 /** would this film disappear if the current week closed right now? */
@@ -85,21 +89,44 @@ export type NominationInput = {
 	title: string;
 	year?: number | null;
 	director?: string | null;
+	genre?: string | null;
+	runtime?: number | null;
 	tmdbId?: number | null;
 	posterUrl?: string | null;
 	overview?: string | null;
+	note?: string | null;
 };
 
-function duplicateMessage(clash: Film): string {
-	if (clash.status === 'watched') return `we watched ${clash.title} in week ${clash.watched_week}`;
-	if (clash.status === 'archived') return `${clash.title} is archived; a vote brings it back`;
-	return `${clash.title} is already on the list`;
+export const NOTE_MAX = 160;
+
+export function cleanNote(note: string | null | undefined): string | null {
+	const trimmed = (note ?? '').trim().replace(/\s+/g, ' ');
+	if (!trimmed) return null;
+	if (trimmed.length > NOTE_MAX) throw new RuleError('note_too_long', `keep the note under ${NOTE_MAX} characters`, { max: NOTE_MAX });
+	return trimmed;
+}
+
+function duplicate(clash: Film): RuleError {
+	if (clash.status === 'watched') {
+		return new RuleError('dup_watched', `we watched ${clash.title} in week ${clash.watched_week}`, {
+			title: clash.title,
+			week: clash.watched_week ?? 0
+		});
+	}
+	if (clash.status === 'archived') {
+		return new RuleError('dup_archived', `${clash.title} is archived; a vote brings it back`, {
+			title: clash.title
+		});
+	}
+	return new RuleError('dup_active', `${clash.title} is already on the list`, {
+		title: clash.title
+	});
 }
 
 /** §4.1: a dropped film does not block, that is what Re-nominate is for */
 function assertNotDuplicate(db: DB, input: NominationInput): void {
 	const key = titleKey(input.title);
-	if (!key) throw new RuleError('give the film a title');
+	if (!key) throw new RuleError('no_title', 'give the film a title');
 
 	if (input.tmdbId) {
 		const clash = db
@@ -107,7 +134,7 @@ function assertNotDuplicate(db: DB, input: NominationInput): void {
 				`SELECT * FROM film WHERE tmdb_id = ? AND status IN ('active','archived','watched') LIMIT 1`
 			)
 			.get(input.tmdbId) as Film | undefined;
-		if (clash) throw new RuleError(duplicateMessage(clash));
+		if (clash) throw duplicate(clash);
 	}
 
 	const byTitle = db
@@ -115,7 +142,7 @@ function assertNotDuplicate(db: DB, input: NominationInput): void {
 			`SELECT * FROM film WHERE title_key = ? AND status IN ('active','archived','watched') LIMIT 1`
 		)
 		.get(key) as Film | undefined;
-	if (byTitle) throw new RuleError(duplicateMessage(byTitle));
+	if (byTitle) throw duplicate(byTitle);
 }
 
 function assertNominationSlot(db: DB, rules: RuleSet, personId: string, week: number): void {
@@ -123,30 +150,45 @@ function assertNominationSlot(db: DB, rules: RuleSet, personId: string, week: nu
 		.prepare('SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND added_week = ?')
 		.get(personId, week) as { n: number };
 	if (row.n >= rules.nominationsPerWeek) {
-		throw new RuleError('you have already nominated a film this week');
+		throw new RuleError('already_nominated', 'you have already nominated a film this week');
 	}
 }
 
 function insertFilm(db: DB, input: NominationInput, personId: string, week: number): number {
 	const result = db
 		.prepare(
-			`INSERT INTO film (title, title_key, year, director, tmdb_id, poster_url, overview,
-			                   added_by, added_week, status, score, created_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0, ?)`
+			`INSERT INTO film (title, title_key, year, director, genre, runtime, tmdb_id, poster_url,
+			                   overview, note, added_by, added_week, status, score, created_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0, ?)`
 		)
 		.run(
 			input.title.trim(),
 			titleKey(input.title),
 			input.year ?? null,
 			input.director ?? null,
+			input.genre ?? null,
+			input.runtime ?? null,
 			input.tmdbId ?? null,
 			input.posterUrl ?? null,
 			input.overview ?? null,
+			cleanNote(input.note),
 			personId,
 			week,
 			iso()
 		);
 	return Number(result.lastInsertRowid);
+}
+
+/** §9: the pitch belongs to whoever nominated the film, and only to them */
+export function setNote(db: DB, personId: string, filmId: number, note: string): void {
+	immediate(db, () => {
+		const film = filmById(db, filmId);
+		if (!film) throw new RuleError('no_film', 'no such film');
+		if (film.added_by !== personId) {
+			throw new RuleError('not_your_note', 'only the person who nominated it can edit the note');
+		}
+		db.prepare('UPDATE film SET note = ? WHERE id = ?').run(cleanNote(note), filmId);
+	});
 }
 
 export function nominate(db: DB, rules: RuleSet, personId: string, input: NominationInput): number {
@@ -165,16 +207,19 @@ export function renominate(db: DB, rules: RuleSet, personId: string, filmId: num
 	return immediate(db, () => {
 		const week = requireOpenWeek(db);
 		const old = filmById(db, filmId);
-		if (!old) throw new RuleError('no such film');
-		if (old.status !== 'dropped') throw new RuleError('that film has not been dropped');
+		if (!old) throw new RuleError('no_film', 'no such film');
+		if (old.status !== 'dropped') throw new RuleError('not_dropped', 'that film has not been dropped');
 		assertNominationSlot(db, rules, personId, week.number);
 		const input: NominationInput = {
 			title: old.title,
 			year: old.year,
 			director: old.director,
+			genre: old.genre,
+			runtime: old.runtime,
 			tmdbId: old.tmdb_id,
 			posterUrl: old.poster_url,
-			overview: old.overview
+			overview: old.overview,
+			note: old.note
 		};
 		assertNotDuplicate(db, input);
 		const id = insertFilm(db, input, personId, week.number);
@@ -204,13 +249,19 @@ export function setPoints(
 	immediate(db, () => {
 		const week = requireOpenWeek(db);
 		if (!Number.isInteger(points) || points < 0) {
-			throw new RuleError('points must be a whole number');
+			throw new RuleError('bad_points', 'points must be a whole number');
 		}
 
 		const film = filmById(db, filmId);
-		if (!film) throw new RuleError('no such film');
-		if (film.status === 'watched') throw new RuleError(`we already watched ${film.title}`);
-		if (film.status === 'dropped') throw new RuleError(`${film.title} was dropped; re-nominate it`);
+		if (!film) throw new RuleError('no_film', 'no such film');
+		if (film.status === 'watched') {
+			throw new RuleError('watched_already', `we already watched ${film.title}`, { title: film.title });
+		}
+		if (film.status === 'dropped') {
+			throw new RuleError('film_dropped', `${film.title} was dropped; re-nominate it`, {
+				title: film.title
+			});
+		}
 
 		const spentElsewhere =
 			spentInWeek(db, personId, week.number) - currentPoints(db, personId, filmId, week.number);
@@ -218,7 +269,9 @@ export function setPoints(
 		if (spentElsewhere + points > allowance) {
 			const left = allowance - spentElsewhere;
 			throw new RuleError(
-				`you have ${left} of ${allowance} points left, so ${points} is too many`
+				'not_enough_points',
+				`you have ${left} of ${allowance} points left, so ${points} is too many`,
+				{ left, allowance, points }
 			);
 		}
 

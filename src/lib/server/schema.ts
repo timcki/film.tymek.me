@@ -5,7 +5,12 @@ CREATE TABLE IF NOT EXISTS person (
   colour      TEXT NOT NULL,
   token       TEXT NOT NULL UNIQUE,
   active      INTEGER NOT NULL DEFAULT 1,
-  created_at  TEXT NOT NULL
+  created_at  TEXT NOT NULL,
+  -- profile picture, stored inline: 22 people times a few tens of kB is nothing,
+  -- and it keeps the whole app one file to back up
+  avatar            BLOB,
+  avatar_mime       TEXT,
+  avatar_updated_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS week (
@@ -23,9 +28,13 @@ CREATE TABLE IF NOT EXISTS film (
   title_key    TEXT NOT NULL,
   year         INTEGER,
   director     TEXT,
+  genre        TEXT,
+  runtime      INTEGER,
   tmdb_id      INTEGER,
   poster_url   TEXT,
   overview     TEXT,
+  -- the nominator's pitch, editable by them alone
+  note         TEXT,
   added_by     TEXT NOT NULL REFERENCES person(id),
   added_week   INTEGER NOT NULL REFERENCES week(number),
   status       TEXT NOT NULL DEFAULT 'active',
@@ -97,3 +106,18 @@ CREATE TABLE IF NOT EXISTS rules_change (
   created_at  TEXT NOT NULL
 );
 `;
+
+/**
+ * Columns added after the first deployment. CREATE TABLE IF NOT EXISTS leaves an
+ * existing table alone, so a database created before these columns existed needs
+ * them added by hand. Applied on every open; adding a column is idempotent here
+ * because it is guarded on PRAGMA table_info.
+ */
+export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
+	['person', 'avatar', 'BLOB'],
+	['person', 'avatar_mime', 'TEXT'],
+	['person', 'avatar_updated_at', 'TEXT'],
+	['film', 'genre', 'TEXT'],
+	['film', 'runtime', 'INTEGER'],
+	['film', 'note', 'TEXT']
+];

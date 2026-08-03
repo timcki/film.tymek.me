@@ -1,0 +1,706 @@
+/**
+ * Polish is the default; film titles, genres and synopses stay in whatever TMDB
+ * gives us. Everything the app says about itself lives here, in both languages,
+ * so a copy change is one edit in one file.
+ */
+export type Lang = 'pl' | 'en';
+
+export const LANGS: Lang[] = ['pl', 'en'];
+
+export function isLang(value: string | undefined | null): value is Lang {
+	return value === 'pl' || value === 'en';
+}
+
+export function langOf(value: string | undefined | null): Lang {
+	return isLang(value) ? value : 'pl';
+}
+
+/**
+ * The shape `+layout.server.ts` sends to the browser. Deliberately not the
+ * server's RuleSet: `$lib/server` may not be imported from client code.
+ */
+export type RulesView = {
+	id: string;
+	label: string;
+	pointsPerWeek: number;
+	banking: boolean;
+	bankCap: number;
+	scoring: 'total' | 'decay';
+	decayFactor: number;
+	attrition:
+		| { kind: 'archive'; afterWeeksAtZero: number }
+		| { kind: 'drop'; afterWeeksWithoutPoints: number };
+	nominationsPerWeek: number;
+	shortlistSize: number;
+};
+
+/** one point a week and no banking means the currency reads as votes, not points */
+export function isVotes(rules: RulesView): boolean {
+	return rules.pointsPerWeek === 1 && !rules.banking;
+}
+
+export type Rule = { head: string; body: string };
+
+export type ErrorParams = Record<string, string | number>;
+
+/* ---------------------------------------------------------------- plurals -- */
+
+/** Polish has three forms: 1 / 2-4 / 5+, with 12-14 falling back to the last */
+function pl3(n: number, one: string, few: string, many: string): string {
+	if (n === 1) return one;
+	const unit = n % 10;
+	const hundred = n % 100;
+	return unit >= 2 && unit <= 4 && !(hundred >= 12 && hundred <= 14) ? few : many;
+}
+
+function en2(n: number, one: string, many: string): string {
+	return n === 1 ? one : many;
+}
+
+const plWeeks = (n: number) => pl3(n, 'tydzień', 'tygodnie', 'tygodni');
+const plPoints = (n: number) => pl3(n, 'punkt', 'punkty', 'punktów');
+const plVotes = (n: number) => pl3(n, 'głos', 'głosy', 'głosów');
+const plFilms = (n: number) => pl3(n, 'film', 'filmy', 'filmów');
+
+/* ------------------------------------------------------------------- dict -- */
+
+export type Dict = {
+	lang: Lang;
+	appTitle: string;
+	tabList: string;
+	tabSeen: string;
+	tabYou: string;
+
+	week: (n: number) => string;
+	closesIn: string;
+	clock: (d: number, h: number, m: number, s: number) => string;
+	votingClosed: string;
+	roomPicking: (code: string) => string;
+	openRoom: string;
+	budgetPill: (left: number, budget: number, votes: boolean) => string;
+	budgetHelp: (rules: RulesView) => string;
+	rulesChanged: (label: string) => string;
+
+	shortlistHead: (n: number) => string;
+	shortlistNote: (n: number) => string;
+	restHead: string;
+	unit: (n: number, votes: boolean) => string;
+	noBackers: string;
+	btnAddPoint: string;
+	btnSpent: (n: number) => string;
+	btnVote: string;
+	btnVoted: string;
+	btnRenominate: string;
+	warnDrops: string;
+	warnFades: (n: number) => string;
+	campaign: (n: number) => string;
+	addedBy: (name: string, week: number) => string;
+	nomCta: string;
+	nomCtaSub: string;
+	nomDone: (title: string) => string;
+	listEmpty: string;
+	shelfArchive: (n: number) => string;
+	shelfDropped: (n: number) => string;
+
+	dGenre: string;
+	dRuntime: string;
+	dAdded: string;
+	dBacked: string;
+	dNobody: string;
+	dEmpty: string;
+	dNone: string;
+	dYours: (n: number, votes: boolean) => string;
+	dBankLeft: (n: number) => string;
+	dWeekLeft: (n: number, budget: number) => string;
+	sortLabel: (rules: RulesView) => string;
+	minutes: (n: number) => string;
+
+	noteQ: string;
+	notePh: string;
+	noteConfirm: string;
+	noteBack: string;
+	noteEdit: string;
+	noteAdd: string;
+	noteSave: string;
+	noteCancel: string;
+	noteSig: (name: string) => string;
+
+	nomH: string;
+	nomHint: string;
+	nomPh: string;
+	nomSearching: string;
+	nomNone: (q: string) => string;
+	nomDup: string;
+	nomOffline: string;
+	nomByHand: (title: string) => string;
+
+	watchedH: string;
+	fairH: string;
+	seenEmpty: string;
+	thPerson: string;
+	thNominated: string;
+	thWatched: string;
+	noWinners: (n: number) => string;
+
+	youLang: string;
+	youPhoto: string;
+	youPhone: string;
+	qrBody: string;
+	youStats: string;
+	youRules: string;
+	statPoints: string;
+	statWatched: string;
+	statCampaign: string;
+	statNom: string;
+	statBank: string;
+	statRules: string;
+	vUsed: string;
+	vOpen: string;
+	avatarPick: string;
+	avatarChange: string;
+	avatarRemove: string;
+	avatarHint: string;
+	rotateH: string;
+	rotateBtn: string;
+	rotateNote: string;
+	rotated: string;
+	rules: (rules: RulesView) => Rule[];
+
+	hostH: string;
+	hostIdle: string;
+	hostClose: string;
+	hostCloseNote: string;
+	hostQrH: string;
+	hostTallyH: string;
+	hostCastH: string;
+	hostCastPick: string;
+	hostLock: string;
+	roomH: string;
+	roomCode: string;
+	roomWho: string;
+	roomFilter: string;
+	roomGuest: string;
+	roomGuestNote: string;
+	roomVotingAs: (name: string) => string;
+	roomChange: string;
+	roomDecided: string;
+	roomWinner: string;
+	votes: (n: number) => string;
+	turnout: (n: number) => string;
+
+	tNominated: (title: string) => string;
+	tVoted: (title: string) => string;
+	tUnvoted: string;
+	tNoteSaved: string;
+	tRenominated: (title: string) => string;
+	tRevived: (title: string) => string;
+	tAvatarSaved: string;
+	tAvatarRemoved: string;
+
+	error: (code: string, params: ErrorParams, fallback: string) => string;
+};
+
+/* --------------------------------------------------------------- polish -- */
+
+const plRules = (r: RulesView): Rule[] => {
+	const out: Rule[] = [];
+	const votes = isVotes(r);
+
+	if (r.banking) {
+		out.push({
+			head: `${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} tygodniowo, i się kumulują.`,
+			body: `Możesz odłożyć do ${r.bankCap}, więc tydzień bez głosowania nic nie kosztuje.`
+		});
+		out.push({
+			head: 'Wydajesz ile chcesz i kiedy chcesz.',
+			body: 'Po jednym co tydzień, żeby film nie wypadł, albo wszystko naraz, żeby go przepchnąć.'
+		});
+	} else if (votes) {
+		out.push({
+			head: 'Jeden głos tygodniowo.',
+			body: 'Możesz go przenosić do czwartku 20:00, potem się zamyka.'
+		});
+	} else {
+		out.push({
+			head: `${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} tygodniowo.`,
+			body: 'Wszystkie na jeden film albo po trochu. Niewykorzystane przepadają w czwartek.'
+		});
+	}
+
+	if (r.scoring === 'total') {
+		out.push({
+			head: votes ? 'Głosy nigdy nie wygasają.' : 'Punkty zostają na filmie.',
+			body: votes
+				? 'Wynik to każdy głos, jaki kiedykolwiek padł. Cierpliwość wygrywa z zapałem.'
+				: 'Wynik to wszystko, co kiedykolwiek na niego poszło.'
+		});
+	} else {
+		out.push({
+			head: `Wynik = ten tydzień + ${r.decayFactor} poprzedniego.`,
+			body: 'Nic nie kumuluje się na długo, więc liczy się to, co jest popularne teraz.'
+		});
+	}
+
+	if (r.attrition.kind === 'archive') {
+		const n = r.attrition.afterWeeksAtZero;
+		out.push({
+			head: `${n} ${plWeeks(n)} bez głosu i film trafia do archiwum.`,
+			body: 'Jeden głos go stamtąd przywraca.'
+		});
+	} else {
+		const n = r.attrition.afterWeeksWithoutPoints;
+		out.push({
+			head: `${n} ${plWeeks(n)} bez punktów i film wypada.`,
+			body: 'Bank zostaje, film nie. Możesz go zgłosić ponownie, ale zaczyna od zera.'
+		});
+	}
+
+	out.push({
+		head: `${r.nominationsPerWeek === 1 ? 'Jedno' : r.nominationsPerWeek} darmowe zgłoszenie tygodniowo.`,
+		body: 'Wykorzystaj albo przepada. Zgłoszenie nic nie kosztuje.'
+	});
+
+	out.push({
+		head: `W czwartek o 20:00 ${r.shortlistSize} najlepsze filmy trafiają do sali.`,
+		body:
+			'Kod QR pojawia się na ekranie i głos błyskawiczny mają tylko ci, którzy przyszli. ' +
+			'Punkty decydują, kto kandyduje; obecność decyduje, co oglądamy. Jeśli nikt nie zagłosuje, ' +
+			'wygrywa najwyższy wynik.'
+	});
+
+	return out;
+};
+
+const pl: Dict = {
+	lang: 'pl',
+	appTitle: 'Wieczorki filmowe',
+	tabList: 'Lista',
+	tabSeen: 'Obejrzane',
+	tabYou: 'Ty',
+
+	week: (n) => `Tydzień ${n}`,
+	closesIn: 'zamknięcie za',
+	clock: (d, h, m, s) => {
+		const hms = `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+		return d ? `${d} ${pl3(d, 'dzień', 'dni', 'dni')} ${hms}` : hms;
+	},
+	votingClosed: 'głosowanie zamknięte',
+	roomPicking: (code) => `sala wybiera, kod ${code}`,
+	openRoom: 'Wybierz film na dziś',
+	budgetPill: (left, budget, votes) =>
+		votes ? `${left}/${budget} ${plVotes(budget)}` : `${left}/${budget} pkt`,
+	budgetHelp: (r) => {
+		if (r.banking) {
+			return `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} co tydzień. Niewydane zostają w banku, maksymalnie ${r.bankCap}.`;
+		}
+		if (isVotes(r)) return 'Masz jeden głos tygodniowo. Możesz go przenosić do czwartku 20:00.';
+		return `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} na tydzień. Niewykorzystane przepadają w czwartek.`;
+	},
+	rulesChanged: (label) =>
+		`Zasady zmieniły się na „${label}” w tym tygodniu. Wszystkie wyniki przeliczono od nowa z głosów; nic nie przepadło.`,
+
+	shortlistHead: (n) => (n === 3 ? 'Trójka na dziś' : `Czołowe ${n} na dziś`),
+	shortlistNote: (n) => `W czwartek sala wybiera jeden z tych ${n} ${plFilms(n)}`,
+	restHead: 'Reszta listy',
+	unit: (n, votes) => (votes ? plVotes(n) : 'pkt'),
+	noBackers: '0 głosów',
+	btnAddPoint: '+1 pkt',
+	btnSpent: (n) => `✓ ${n} pkt`,
+	btnVote: 'Głosuj',
+	btnVoted: '✓ twój głos',
+	btnRenominate: 'Zgłoś ponownie',
+	warnDrops: 'odpada w tym tyg, jeśli nie dostanie głosów',
+	warnFades: (n) => `znika za ${n} ${plWeeks(n)}`,
+	campaign: (n) => `${n}. tydzień kampanii`,
+	addedBy: (name, week) => `${name}, tydzień ${week}`,
+	nomCta: '+ Zgłoś film',
+	nomCtaSub: 'jedno na osobę tygodniowo, za darmo',
+	nomDone: (title) => `Twoje zgłoszenie w tym tygodniu: ${title}`,
+	listEmpty: 'Lista jest pusta. Zgłoś coś.',
+	shelfArchive: (n) => `Archiwum · ${n} ${plFilms(n)} bez głosów`,
+	shelfDropped: (n) => `Wypadły · ${n} ${plFilms(n)} bez wsparcia`,
+
+	dGenre: 'Gatunek',
+	dRuntime: 'Czas',
+	dAdded: 'Zgłosił',
+	dBacked: 'Wsparcie',
+	dNobody: 'nikt',
+	dEmpty: 'brak',
+	dNone: 'Nie masz tu punktów',
+	dYours: (n, votes) =>
+		votes ? `${n} ${plVotes(n)} od ciebie` : `${n} ${plPoints(n)} od ciebie`,
+	dBankLeft: (n) => `${n} ${plPoints(n)} w banku`,
+	dWeekLeft: (n, budget) => `${n} z ${budget} w tym tygodniu`,
+	sortLabel: (r) => {
+		if (r.scoring === 'decay') return `ten tydzień + ${r.decayFactor} poprzedniego`;
+		return isVotes(r) ? 'wszystkie głosy od początku' : 'suma wszystkich wydanych punktów';
+	},
+	minutes: (n) => `${n} min`,
+
+	noteQ: 'Dlaczego ten film? (opcjonalnie)',
+	notePh: 'Krótka notka dla reszty…',
+	noteConfirm: 'Zgłoś film',
+	noteBack: '← wróć',
+	noteEdit: 'Edytuj notkę',
+	noteAdd: 'Dodaj notkę',
+	noteSave: 'Zapisz',
+	noteCancel: 'Anuluj',
+	noteSig: (name) => name,
+
+	nomH: 'Zgłoś film',
+	nomHint: 'Jedno zgłoszenie na osobę tygodniowo. Za darmo.',
+	nomPh: 'Szukaj po tytule…',
+	nomSearching: 'szukam…',
+	nomNone: (q) => `Nic nie znaleziono dla „${q}”.`,
+	nomDup: 'już jest',
+	nomOffline: 'Brak połączenia z TMDB, ale możesz wpisać tytuł ręcznie.',
+	nomByHand: (title) => `Zgłoś „${title}” bez danych z TMDB`,
+
+	watchedH: 'Obejrzane',
+	fairH: 'Czyje filmy oglądamy',
+	seenEmpty: 'Jeszcze żadnego wieczoru.',
+	thPerson: 'Osoba',
+	thNominated: 'Zgłoszone',
+	thWatched: 'Obejrzane',
+	noWinners: (n) => `${n} ${plWeeks(n)} zamknięto bez głosów, więc nic nie oglądaliśmy.`,
+
+	youLang: 'Język',
+	youPhoto: 'Zdjęcie profilowe',
+	youPhone: 'Dodaj telefon',
+	qrBody: 'Otwiera twój prywatny link na innym urządzeniu (np. telefonie)',
+	youStats: 'Statystyki',
+	youRules: 'Zasady',
+	statPoints: 'Punkty wydane od początku',
+	statWatched: 'Twoje filmy, które obejrzeliśmy',
+	statCampaign: 'Najdłuższa kampania',
+	statNom: 'Zgłoszenie w tym tygodniu',
+	statBank: 'Bank',
+	statRules: 'Zasady',
+	vUsed: 'wykorzystane',
+	vOpen: 'wolne',
+	avatarPick: 'Wybierz zdjęcie',
+	avatarChange: 'Zmień zdjęcie',
+	avatarRemove: 'Usuń',
+	avatarHint: 'Widoczne przy twoich głosach. Kwadrat wygląda najlepiej.',
+	rotateH: 'Zgubiłeś link?',
+	rotateBtn: 'Wygeneruj nowy link',
+	rotateNote:
+		'Użyj, jeśli twój link wyciekł. Stary przestaje działać od razu, a twoje inne urządzenia muszą zeskanować nowy kod.',
+	rotated: 'Nowy link gotowy. Każde twoje inne urządzenie musi zeskanować kod jeszcze raz.',
+	rules: plRules,
+
+	hostH: 'Prowadzący',
+	hostIdle: 'Sala jeszcze nie głosuje.',
+	hostClose: 'Zamknij tydzień teraz',
+	hostCloseNote:
+		'Zamknięcie wcześniej jest w porządku, każdy może to zrobić. Wtedy najlepsze filmy trafiają przed salę, a ty dostajesz kod QR do wyświetlenia.',
+	hostQrH: 'Kod dla sali (można wyświetlić)',
+	hostTallyH: 'Na żywo',
+	hostCastH: 'Zagłosuj za kogoś, komu padł telefon',
+	hostCastPick: 'teraz wybierz jego film',
+	hostLock: 'Zatwierdź i puszczaj film',
+	roomH: 'Dzisiejsza trójka',
+	roomCode: 'kod sali',
+	roomWho: 'Kto ty jesteś?',
+	roomFilter: 'zacznij pisać imię',
+	roomGuest: 'Jestem gościem',
+	roomGuestNote: 'Nie ma cię na liście? Zagłosuj jako gość, w sali też się liczy.',
+	roomVotingAs: (name) => `głosujesz jako ${name}`,
+	roomChange: 'Dotknij jeszcze raz, żeby zmienić zdanie. Liczy się ostatni wybór.',
+	roomDecided: 'Dzisiejszy wieczór rozstrzygnięty.',
+	roomWinner: 'wygrywa',
+	votes: (n) => `${n} ${plVotes(n)}`,
+	turnout: (n) => `${n} ${pl3(n, 'osoba zagłosowała', 'osoby zagłosowały', 'osób zagłosowało')}`,
+
+	tNominated: (title) => `Zgłoszono: ${title}`,
+	tVoted: (title) => `Głos na: ${title}`,
+	tUnvoted: 'Głos wycofany',
+	tNoteSaved: 'Notka zapisana',
+	tRenominated: (title) => `Zgłoszono ponownie: ${title}, start od zera`,
+	tRevived: (title) => `${title} wraca na listę`,
+	tAvatarSaved: 'Zdjęcie zapisane',
+	tAvatarRemoved: 'Zdjęcie usunięte',
+
+	error: (code, p, fallback) => {
+		switch (code) {
+			case 'no_week':
+				return 'Żaden tydzień nie jest jeszcze otwarty.';
+			case 'room_picking':
+				return 'Głosowanie zamknięte, sala właśnie wybiera film.';
+			case 'week_closed':
+				return 'Głosowanie w tym tygodniu jest zamknięte.';
+			case 'deadline_passed':
+				return 'Głosowanie zamknęło się o 20:00, film się zaczyna.';
+			case 'already_nominated':
+				return 'Masz już zgłoszenie w tym tygodniu.';
+			case 'no_title':
+				return 'Podaj tytuł filmu.';
+			case 'dup_watched':
+				return `${p.title} oglądaliśmy w tygodniu ${p.week}.`;
+			case 'dup_archived':
+				return `${p.title} jest w archiwum; jeden głos go przywraca.`;
+			case 'dup_active':
+				return `${p.title} jest już na liście.`;
+			case 'no_film':
+				return 'Nie ma takiego filmu.';
+			case 'not_dropped':
+				return 'Ten film nie wypadł z listy.';
+			case 'watched_already':
+				return `${p.title} już oglądaliśmy.`;
+			case 'film_dropped':
+				return `${p.title} wypadł z listy; zgłoś go ponownie.`;
+			case 'bad_points':
+				return 'Punkty muszą być liczbą całkowitą.';
+			case 'not_enough_points':
+				return `Zostało ci ${p.left} z ${p.allowance}, więc ${p.points} to za dużo.`;
+			case 'note_too_long':
+				return `Notka może mieć najwyżej ${p.max} znaków.`;
+			case 'not_your_note':
+				return 'Notkę zmienia tylko ten, kto zgłosił film.';
+			case 'empty_file':
+				return 'Pusty plik.';
+			case 'avatar_too_big':
+				return `Zdjęcie jest za duże, maksymalnie ${p.mb} MB.`;
+			case 'avatar_not_image':
+				return 'To nie jest JPEG, PNG ani WebP.';
+			case 'no_runoff':
+				return 'Sala nie głosuje.';
+			case 'runoff_decided':
+				return 'Ten wieczór jest już rozstrzygnięty.';
+			case 'runoff_expired':
+				return 'Głosowanie w sali wygasło.';
+			case 'film_not_in_runoff':
+				return 'Tego filmu nie ma w dzisiejszej trójce.';
+			default:
+				return fallback;
+		}
+	}
+};
+
+/* -------------------------------------------------------------- english -- */
+
+const enRules = (r: RulesView): Rule[] => {
+	const out: Rule[] = [];
+	const votes = isVotes(r);
+
+	if (r.banking) {
+		out.push({
+			head: `${r.pointsPerWeek} points a week, and they bank.`,
+			body: `Save up to ${r.bankCap}, so a week you sit out costs you nothing.`
+		});
+		out.push({
+			head: 'Spend as many as you like, whenever.',
+			body: 'Drip one a week to keep a film alive, or dump the lot to force it through.'
+		});
+	} else if (votes) {
+		out.push({
+			head: 'One vote a week.',
+			body: 'Move it freely until Thursday 20:00, then it sets.'
+		});
+	} else {
+		out.push({
+			head: `${r.pointsPerWeek} points a week.`,
+			body: 'All on one film or spread around. Anything unspent is gone on Thursday.'
+		});
+	}
+
+	if (r.scoring === 'total') {
+		out.push({
+			head: votes ? 'Votes never expire.' : 'Points stay on the film.',
+			body: votes
+				? 'A score is every vote ever placed. Patience beats enthusiasm.'
+				: 'A score is everything ever spent on it.'
+		});
+	} else {
+		out.push({
+			head: `Score = this week plus ${r.decayFactor} of last week.`,
+			body: 'Nothing accumulates for long, so a film wins by being popular right now.'
+		});
+	}
+
+	if (r.attrition.kind === 'archive') {
+		const n = r.attrition.afterWeeksAtZero;
+		out.push({
+			head: `${n} silent ${en2(n, 'week', 'weeks')} and a film is archived.`,
+			body: 'One vote brings it back.'
+		});
+	} else {
+		const n = r.attrition.afterWeeksWithoutPoints;
+		out.push({
+			head: `${n} silent ${en2(n, 'week', 'weeks')} and a film drops.`,
+			body: 'Your bank survives; the film does not. Re-nominating it starts it from zero.'
+		});
+	}
+
+	out.push({
+		head: `${r.nominationsPerWeek === 1 ? 'One' : r.nominationsPerWeek} free nomination a week.`,
+		body: 'Use it or lose it. Nominating costs nothing.'
+	});
+
+	out.push({
+		head: `At 20:00 on Thursday the top ${r.shortlistSize} go to the room.`,
+		body:
+			'A QR goes up and only the people who turned up get a flash vote. Points decide who the ' +
+			'candidates are; being there decides what we watch. If nobody votes, the highest score wins.'
+	});
+
+	return out;
+};
+
+const en: Dict = {
+	lang: 'en',
+	appTitle: 'Film Night',
+	tabList: 'List',
+	tabSeen: 'Watched',
+	tabYou: 'You',
+
+	week: (n) => `Week ${n}`,
+	closesIn: 'closes in',
+	clock: (d, h, m, s) =>
+		`${d ? `${d}d ` : ''}${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`,
+	votingClosed: 'voting is closed',
+	roomPicking: (code) => `the room is picking, code ${code}`,
+	openRoom: "Pick tonight's film",
+	budgetPill: (left, budget, votes) =>
+		votes ? `${left}/${budget} ${en2(budget, 'vote', 'votes')}` : `${left}/${budget} pts`,
+	budgetHelp: (r) => {
+		if (r.banking) {
+			return `You get ${r.pointsPerWeek} points every week. Anything unspent banks, up to ${r.bankCap}.`;
+		}
+		if (isVotes(r)) return 'One vote a week. Move it freely until Thursday 20:00.';
+		return `You get ${r.pointsPerWeek} points a week. Anything unspent is gone on Thursday.`;
+	},
+	rulesChanged: (label) =>
+		`The rules changed to “${label}” this week. Every score was recomputed from the ballots; nothing was lost.`,
+
+	shortlistHead: (n) => (n === 3 ? "Tonight's three" : `Tonight's top ${n}`),
+	shortlistNote: (n) => `On Thursday the room picks one of these ${n}`,
+	restHead: 'The rest',
+	unit: (n, votes) => (votes ? en2(n, 'vote', 'votes') : 'pts'),
+	noBackers: '0 votes',
+	btnAddPoint: '+1 point',
+	btnSpent: (n) => `✓ ${n} spent`,
+	btnVote: 'Vote',
+	btnVoted: '✓ your vote',
+	btnRenominate: 'Re-nominate',
+	warnDrops: 'drops this week unless it gets votes',
+	warnFades: (n) => `fades in ${n} ${en2(n, 'week', 'weeks')}`,
+	campaign: (n) => `week ${n} of this campaign`,
+	addedBy: (name, week) => `${name}, week ${week}`,
+	nomCta: '+ Nominate a film',
+	nomCtaSub: 'one per person per week, free',
+	nomDone: (title) => `You nominated ${title} this week`,
+	listEmpty: 'Nothing on the list. Nominate something.',
+	shelfArchive: (n) => `Archive · ${n} ${en2(n, 'film', 'films')} nobody has voted for`,
+	shelfDropped: (n) => `Dropped · ${n} ${en2(n, 'film', 'films')} that ran out of support`,
+
+	dGenre: 'Genre',
+	dRuntime: 'Runtime',
+	dAdded: 'Nominated by',
+	dBacked: 'Backed by',
+	dNobody: 'nobody yet',
+	dEmpty: 'unknown',
+	dNone: "You haven't backed this",
+	dYours: (n, votes) =>
+		`${n} ${votes ? en2(n, 'vote', 'votes') : en2(n, 'point', 'points')} from you`,
+	dBankLeft: (n) => `${n} left in your bank`,
+	dWeekLeft: (n, budget) => `${n} of ${budget} left this week`,
+	sortLabel: (r) => {
+		if (r.scoring === 'decay') return `this week plus ${r.decayFactor} of last week`;
+		return isVotes(r) ? 'all-time votes' : 'total points ever spent';
+	},
+	minutes: (n) => `${n} min`,
+
+	noteQ: 'Why this one? (optional)',
+	notePh: 'A short note for the others…',
+	noteConfirm: 'Nominate',
+	noteBack: '← back',
+	noteEdit: 'Edit note',
+	noteAdd: 'Add a note',
+	noteSave: 'Save',
+	noteCancel: 'Cancel',
+	noteSig: (name) => name,
+
+	nomH: 'Nominate a film',
+	nomHint: 'One per person per week. Free.',
+	nomPh: 'Search by title…',
+	nomSearching: 'searching…',
+	nomNone: (q) => `Nothing found for “${q}”.`,
+	nomDup: 'already here',
+	nomOffline: "Couldn't reach TMDB, but you can still type a title by hand.",
+	nomByHand: (title) => `Nominate “${title}” with no TMDB data`,
+
+	watchedH: 'Watched',
+	fairH: 'Who gets their films watched',
+	seenEmpty: 'No film nights yet.',
+	thPerson: 'Person',
+	thNominated: 'Nominated',
+	thWatched: 'Watched',
+	noWinners: (n) =>
+		`${n} ${en2(n, 'week', 'weeks')} closed with nobody voting, so nothing was watched.`,
+
+	youLang: 'Language',
+	youPhoto: 'Profile picture',
+	youPhone: 'Add your phone',
+	qrBody: 'Opens your personal link on another device (your phone, say)',
+	youStats: 'Statistics',
+	youRules: 'The rules',
+	statPoints: 'Points spent, all time',
+	statWatched: 'Your nominations we watched',
+	statCampaign: 'Longest campaign',
+	statNom: 'Nomination this week',
+	statBank: 'Bank',
+	statRules: 'Rule set',
+	vUsed: 'used',
+	vOpen: 'open',
+	avatarPick: 'Choose a picture',
+	avatarChange: 'Change picture',
+	avatarRemove: 'Remove',
+	avatarHint: 'Shown next to your votes. A square one looks best.',
+	rotateH: 'Lost the link?',
+	rotateBtn: 'Issue a new link',
+	rotateNote:
+		'Use this if your link leaked. The old one stops working immediately, and your other devices need to scan the new QR.',
+	rotated: 'New link issued. Every other device of yours needs to scan again.',
+	rules: enRules,
+
+	hostH: 'Host',
+	hostIdle: 'The room is not voting yet.',
+	hostClose: 'Close the week now',
+	hostCloseNote:
+		'Closing early is fine, anyone can do it. It puts the top films in front of the room and gives you a QR to project.',
+	hostQrH: 'Room QR (safe to project)',
+	hostTallyH: 'Live tally',
+	hostCastH: 'Cast for someone whose phone is dead',
+	hostCastPick: 'now pick their film',
+	hostLock: 'Lock it in and start the film',
+	roomH: "Tonight's three",
+	roomCode: 'room code',
+	roomWho: 'Who are you?',
+	roomFilter: 'type to filter',
+	roomGuest: "I'm a guest",
+	roomGuestNote: 'Not on the list? Vote as a guest; it still counts in the room.',
+	roomVotingAs: (name) => `voting as ${name}`,
+	roomChange: 'Tap again to change your mind. Only the last tap counts.',
+	roomDecided: 'Tonight is decided.',
+	roomWinner: 'winner',
+	votes: (n) => `${n} ${en2(n, 'vote', 'votes')}`,
+	turnout: (n) => `${n} ${en2(n, 'person', 'people')} voted`,
+
+	tNominated: (title) => `Nominated ${title}`,
+	tVoted: (title) => `Voted for ${title}`,
+	tUnvoted: 'Vote pulled back',
+	tNoteSaved: 'Note saved',
+	tRenominated: (title) => `Re-nominated ${title}, starting from zero`,
+	tRevived: (title) => `${title} is back on the list`,
+	tAvatarSaved: 'Picture saved',
+	tAvatarRemoved: 'Picture removed',
+
+	error: (_code, _params, fallback) => fallback
+};
+
+export const DICT: Record<Lang, Dict> = { pl, en };
+
+export function dictFor(lang: string | undefined | null): Dict {
+	return DICT[langOf(lang)];
+}
