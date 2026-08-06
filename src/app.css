@@ -193,6 +193,12 @@ header .sub b {
 	gap: 10px;
 	margin-top: 6px;
 }
+/* one wrapper per film so the reorder flip has a single element to move */
+.fwrap {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
 .film {
 	display: flex;
 	gap: 12px;
@@ -1269,59 +1275,29 @@ details[open] > .iconbtn {
 .tdot.free {
 	border: 1.5px dashed var(--line2);
 }
-.tdot svg {
-	position: absolute;
-	inset: -4px;
-	transform: rotate(-90deg);
+/* the bowstring drawn: one more tap makes it count */
+.tdot.free.armed {
+	border: 1.5px solid var(--accent);
+	animation: armpulse 0.9s ease-in-out infinite;
 }
-.tdot .ringtrack {
-	fill: none;
-	stroke: var(--line2);
-	stroke-width: 3;
+.tri.armed {
+	border-color: var(--accent);
 }
-.tdot .ring {
-	fill: none;
-	stroke: var(--accent);
-	stroke-width: 3;
-	stroke-linecap: round;
-	stroke-dasharray: 100.5;
-	stroke-dashoffset: 0;
+@keyframes armpulse {
+	0%,
+	100% {
+		transform: scale(1);
+		box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent);
+	}
+	50% {
+		transform: scale(1.18);
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+	}
 }
-.tdot.urgent .ring {
-	stroke: var(--warn);
-}
-/* the escape hatch on the dot's shoulder; dissolves when the point cures */
-.vundo {
-	position: absolute;
-	top: -7px;
-	right: -8px;
-	z-index: 2;
-	width: 19px;
-	height: 19px;
-	padding: 0;
-	border-radius: 50%;
-	border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
-	background: var(--card2);
-	color: var(--warn);
-	cursor: pointer;
-}
-/* two bars centred by geometry, immune to any font's idea of an × */
-.vundo::before,
-.vundo::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	margin: auto;
-	width: 9px;
-	height: 1.5px;
-	border-radius: 1px;
-	background: currentColor;
-}
-.vundo::before {
-	transform: rotate(45deg);
-}
-.vundo::after {
-	transform: rotate(-45deg);
+@media (prefers-reduced-motion: reduce) {
+	.tdot.free.armed {
+		animation: none;
+	}
 }
 @keyframes ringdrain {
 	to {

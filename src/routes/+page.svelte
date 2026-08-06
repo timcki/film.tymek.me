@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { flip } from 'svelte/animate';
 	import { scale } from 'svelte/transition';
 	import { backOut } from 'svelte/easing';
 	import type { SubmitFunction } from '@sveltejs/kit';
@@ -41,6 +42,40 @@
 	}
 
 	const undoSeconds = (film: Graceful) => Math.ceil(graceLeftMs(film) / 1000);
+
+	/* ---------------------------------------------------- arming a vote -- */
+
+	// the card votes in two taps: the first arms a dot, the second casts for
+	// real. An armed dot not confirmed in time relaxes and earns the hint
+	let armed = $state<{ filmId: number } | null>(null);
+	let armTimer: ReturnType<typeof setTimeout>;
+
+	function arm(filmId: number) {
+		clearTimeout(armTimer);
+		armed = { filmId };
+		armTimer = setTimeout(() => {
+			armed = null;
+			say(T.armHint);
+		}, 4000);
+	}
+
+	function disarm() {
+		clearTimeout(armTimer);
+		armed = null;
+	}
+
+	// a tap anywhere that is not the armed pill quietly relaxes the bowstring
+	function disarmElsewhere(event: PointerEvent) {
+		if (!armed) return;
+		const pill = event.target instanceof Element ? event.target.closest('.tri') : null;
+		if (!(pill instanceof HTMLElement) || pill.dataset.film !== String(armed.filmId)) disarm();
+	}
+
+	// the reorder glide after a confirmed vote; instant for reduced motion
+	const flipMs =
+		typeof matchMedia === 'undefined' || matchMedia('(prefers-reduced-motion: reduce)').matches
+			? 0
+			: 450;
 
 	/**
 	 * Starts the drain ring exactly once per mount. An action rather than a style
@@ -361,39 +396,42 @@
 
 {#snippet triDots(film: Film)}
 	<!-- always the full budget, film-relative: a check is yours here, a dim dot
-	     is busy on another film, a dashed one is still free -->
+	     is busy on another film, a dashed one is still free. An armed dot is
+	     the bowstring drawn: one more tap makes it count -->
 	{#each Array(film.myPoints) as _, i (i)}
-		{#if i === film.myPoints - 1 && canUndo(film)}
-			<span class="tdot set" class:urgent={graceLeftMs(film) < 6000}>
-				{@render graceRing(film)}
-				<i>✓</i>
-			</span>
-		{:else}
-			<span class="tdot set" in:scale={{ duration: 260, start: 0.3, easing: backOut }}><i>✓</i></span>
-		{/if}
+		<span class="tdot set" in:scale={{ duration: 260, start: 0.3, easing: backOut }}><i>✓</i></span>
 	{/each}
 	{#each Array(Math.max(0, (data.person?.budget ?? 0) - left - film.myPoints)) as _, i (i)}
 		<span class="tdot busy"></span>
 	{/each}
 	{#each Array(Math.max(0, left)) as _, i (i)}
-		<span class="tdot free"></span>
+		<span class="tdot free" class:armed={i === 0 && armed?.filmId === film.id}></span>
 	{/each}
 {/snippet}
 
 {#snippet voteTri(film: Film)}
-	<!-- the card's vote control: one pill, one tap target, the whole weekly
-	     budget as three dots. A tap casts here while anything is free; spent
-	     out, it opens the sheet. The × on its shoulder undoes during grace. -->
+	<!-- the card's vote control: one pill, the whole weekly budget as three
+	     dots, and a two-tap cast: the first tap arms, the second is the vote,
+	     final on the spot. Spent out, the pill opens the sheet. -->
 	<div class="vd">
 		{#if left > 0}
-			<form method="POST" action="?/setPoints" use:enhance={submit()}>
+			<form method="POST" action="?/setPoints" use:enhance={submit(disarm)}>
 				<input type="hidden" name="filmId" value={film.id} />
 				<button
 					class="tri"
+					class:armed={armed?.filmId === film.id}
+					data-film={film.id}
+					type={armed?.filmId === film.id ? 'submit' : 'button'}
 					name="points"
 					value={film.myPoints + 1}
 					disabled={!open}
 					aria-label={T.btnAddPoint}
+					onclick={(event) => {
+						if (armed?.filmId !== film.id) {
+							event.preventDefault();
+							arm(film.id);
+						}
+					}}
 				>
 					{@render triDots(film)}
 				</button>
@@ -410,19 +448,6 @@
 			>
 				{@render triDots(film)}
 			</button>
-		{/if}
-		{#if canUndo(film)}
-			<form method="POST" action="?/setPoints" use:enhance={submit()}>
-				<input type="hidden" name="filmId" value={film.id} />
-				<!-- the cross is drawn, not typed: a glyph never sits dead centre -->
-				<button
-					class="vundo"
-					name="points"
-					value={film.myPoints - 1}
-					aria-label={T.btnUndo(undoSeconds(film))}
-					transition:scale={{ duration: 200, start: 0.4, easing: backOut }}
-				></button>
-			</form>
 		{/if}
 	</div>
 {/snippet}
@@ -534,12 +559,16 @@
 {/snippet}
 
 <div class="list">
-	<!-- no banner over the trójka: the lead glow and the reszta divider say it -->
+	<!-- no banner over the trójka: the lead glow and the reszta divider say it.
+	     The wrapper exists for the flip: confirmed votes glide cards to their
+	     new seats instead of teleporting them -->
 	{#each data.films as film, i (film.id)}
-		{#if data.shortlistCount && i === data.shortlistCount}
-			<div class="rest-head">{T.restHead}</div>
-		{/if}
-		{@render row(film, i < data.shortlistCount, false)}
+		<div class="fwrap" animate:flip={{ duration: flipMs }}>
+			{#if data.shortlistCount && i === data.shortlistCount}
+				<div class="rest-head">{T.restHead}</div>
+			{/if}
+			{@render row(film, i < data.shortlistCount, false)}
+		</div>
 	{:else}
 		<div class="empty">{T.listEmpty}</div>
 	{/each}
@@ -801,4 +830,5 @@
 	onscroll={unpeek}
 	onresize={unpeek}
 	onkeydown={(event) => event.key === 'Escape' && unpeek()}
+	onpointerdown={disarmElsewhere}
 />

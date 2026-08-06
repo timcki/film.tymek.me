@@ -107,6 +107,7 @@ export type Dict = {
 	btnVote: string;
 	btnVoted: string;
 	btnUndo: (s: number) => string;
+	armHint: string;
 	btnRenominate: string;
 	warnDrops: string;
 	warnFades: (n: number) => string;
@@ -356,6 +357,7 @@ const pl: Dict = {
 	btnVote: 'Głosuj',
 	btnVoted: '✓ twój głos',
 	btnUndo: (s) => `Cofnij · ${s} s`,
+	armHint: 'Kliknij drugi raz, żeby potwierdzić głos',
 	btnRenominate: 'Zgłoś ponownie',
 	warnDrops: 'odpada w tym tyg, jeśli nie dostanie głosów',
 	warnFades: (n) => `znika za ${n} ${plWeeks(n)}`,
@@ -671,6 +673,7 @@ const en: Dict = {
 	btnVote: 'Vote',
 	btnVoted: '✓ your vote',
 	btnUndo: (s) => `Undo · ${s} s`,
+	armHint: 'Tap again to confirm your vote',
 	btnRenominate: 'Re-nominate',
 	warnDrops: 'drops this week unless it gets votes',
 	warnFades: (n) => `fades in ${n} ${en2(n, 'week', 'weeks')}`,

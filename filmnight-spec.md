@@ -587,10 +587,13 @@ signed), then one footer row that never wraps — the top four backer pills by p
 a `+N` pill folding the rest (it opens the detail sheet), and the vote pill (or a Vote
 button when `pointsPerWeek === 1`). The pill is one tap target showing the whole weekly
 budget as three small dots, film-relative: a check is a point of yours on this film, a
-dim dot is a point busy on another film, a dashed dot is still free. Tapping casts here
-while anything is free; spent out, the pill opens the sheet. During the grace window a
-mini drain ring wraps the freshest check and an `×` satellite on the pill's shoulder
-undoes it; the full three-pip dock lives only in the detail sheet.
+dim dot is a point busy on another film, a dashed dot is still free. Casting takes two
+taps: the first arms the next free dot (a pulsing accent circle; it relaxes after ~4s
+or on a tap elsewhere, and an abandoned arm earns a one-line toast hint), the second
+casts — final on the spot, and the list glides into its new order with a FLIP animation
+(motion echoing explicit intent). The card shows no undo; the §8.3 grace window still
+applies server-side and the detail sheet's three-pip dock keeps the ticking undo pip
+as the quiet escape hatch. Spent out, the pill opens the sheet.
 Below: the nomination box with TMDB autocomplete, the archived/dropped fold-out, watched
 history, and a "how this works" fold showing the *active* rule set's rules.
 
