@@ -6,6 +6,7 @@
 #   ./deploy/test-local.sh              # fresh snapshot, then vite dev on it
 #   SNAPSHOT=0 ./deploy/test-local.sh   # reuse the last snapshot
 #   HOST=bigchungus ./deploy/test-local.sh
+#   LOCAL_ORIGIN=http://mymac.tailnet:5173 ./deploy/test-local.sh   # phone testing
 set -euo pipefail
 
 HOST=${HOST:-chungus-1}
@@ -13,6 +14,9 @@ REMOTE_DB=${REMOTE_DB:-/var/lib/filmnight/filmnight.db}
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 LOCAL_DB=${LOCAL_DB:-$HERE/data/prod-copy.db}
 SNAPSHOT=${SNAPSHOT:-1}
+# what the printed links and the in-app QR codes point at; override with your
+# tailscale name to test from a phone
+LOCAL_ORIGIN=${LOCAL_ORIGIN:-http://localhost:5173}
 
 if [[ "$SNAPSHOT" == 1 ]]; then
 	echo "==> snapshotting $HOST:$REMOTE_DB"
@@ -31,8 +35,8 @@ else
 fi
 
 echo "==> personal links on the local copy:"
-sqlite3 "$LOCAL_DB" "SELECT '    ' || name || '  http://localhost:5173/u/' || token FROM person WHERE active = 1 ORDER BY name"
+sqlite3 "$LOCAL_DB" "SELECT '    ' || name || '  $LOCAL_ORIGIN/u/' || token FROM person WHERE active = 1 ORDER BY name"
 
-echo "==> starting vite dev on the prod copy (ctrl-c to stop)"
+echo "==> starting vite dev on the prod copy, bound to 0.0.0.0 (ctrl-c to stop)"
 cd "$HERE"
-DATABASE_PATH="$LOCAL_DB" npm run dev
+ORIGIN="$LOCAL_ORIGIN" DATABASE_PATH="$LOCAL_DB" npm run dev -- --host
