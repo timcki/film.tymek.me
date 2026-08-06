@@ -192,6 +192,30 @@
 			</div>
 		{/if}
 	{/each}
+
+	<div class="lheader">{T.xpLadder}</div>
+	<div class="ladder">
+		{#each T.levels as name, i (name)}
+			<div class="lrow" class:now={i === level} class:todo={i > level}>
+				{#if i === level}
+					<!-- your own face sits on your rung, wearing the ring it earned -->
+					<Avatar
+						name={person.name}
+						colour={person.colour}
+						avatar={person.avatar}
+						size={26}
+						font={10}
+						titled={false}
+						xp={data.xp.total}
+					/>
+				{:else}
+					<span class="av swatch lv{i}"></span>
+				{/if}
+				<b class="lname lv{i}">{name}</b>
+				<span class="lxp">{LEVELS[i]} XP</span>
+			</div>
+		{/each}
+	</div>
 </div>
 
 <div class="sec">{T.youStats}</div>

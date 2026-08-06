@@ -1298,6 +1298,65 @@ details[open] > .iconbtn {
 	font-size: 11.5px;
 	color: var(--dimmer);
 }
+.lheader {
+	margin: 16px 0 4px;
+	font-size: 10px;
+	letter-spacing: 0.09em;
+	text-transform: uppercase;
+	color: var(--dimmer);
+	font-weight: 700;
+}
+.ladder {
+	display: flex;
+	flex-direction: column;
+}
+.lrow {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 2px;
+}
+/* a bare disc so the rung shows off nothing but its frame */
+.lrow .swatch {
+	width: 26px;
+	height: 26px;
+	flex: 0 0 26px;
+	background: #22262c;
+}
+.lrow .lname {
+	flex: 1;
+	font-size: 13.5px;
+	font-weight: 650;
+}
+.lrow .lxp {
+	font-size: 11.5px;
+	color: var(--dimmer);
+	font-variant-numeric: tabular-nums;
+}
+.lrow.now {
+	background: color-mix(in srgb, var(--accent) 7%, transparent);
+	border-radius: 10px;
+	padding-left: 8px;
+	padding-right: 8px;
+	margin: 0 -6px;
+}
+/* the rungs above you keep their full shine; only the names step back, so the
+   frames themselves stay the advertisement */
+.lrow.todo .lname,
+.lrow.todo .lxp {
+	opacity: 0.6;
+}
+.lname.lv0 { color: var(--tier0); }
+.lname.lv1 { color: var(--tier1); }
+.lname.lv2 { color: var(--tier2); }
+.lname.lv3 { color: var(--tier3); }
+.lname.lv4 { color: var(--tier4); }
+.lname.lv5 { color: var(--tier5); }
+.lname.lv6 { color: var(--tier6); }
+.lname.lv7 { color: var(--tier7); }
+.lrow .lname[class*='lv'] {
+	text-shadow: 0 0 9px color-mix(in srgb, currentColor 65%, transparent);
+}
 .stat span {
 	color: var(--dim);
 	display: flex;

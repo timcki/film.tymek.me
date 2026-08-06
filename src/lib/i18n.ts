@@ -191,6 +191,7 @@ export type Dict = {
 	xpRowNominate: string;
 	xpRowWatched: string;
 	xpRowBacked: string;
+	xpLadder: string;
 	chlogH: string;
 	chlogOk: string;
 	/** closesAt is the current round's deadline, so the rules can name the real date */
@@ -446,6 +447,7 @@ const pl: Dict = {
 	xpRowNominate: 'Zgłoszenia',
 	xpRowWatched: 'Twoje filmy obejrzane',
 	xpRowBacked: 'Trafieni zwycięzcy',
+	xpLadder: 'Wszystkie poziomy',
 	chlogH: 'Changelog',
 	chlogOk: 'OK',
 	rules: plRules,
@@ -746,6 +748,7 @@ const en: Dict = {
 	xpRowNominate: 'Nominations',
 	xpRowWatched: 'Your films watched',
 	xpRowBacked: 'Winners backed',
+	xpLadder: 'All levels',
 	chlogH: "What's new",
 	chlogOk: 'Got it',
 	rules: enRules,
