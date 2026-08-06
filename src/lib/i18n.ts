@@ -132,6 +132,7 @@ export type Dict = {
 	dWeekLeft: (n: number, budget: number) => string;
 	sortLabel: (rules: RulesView) => string;
 	minutes: (n: number) => string;
+	fadeNote: (rules: RulesView) => string;
 
 	noteQ: string;
 	notePh: string;
@@ -389,6 +390,7 @@ const pl: Dict = {
 		return isVotes(r) ? 'wszystkie głosy od początku' : 'suma wszystkich wydanych punktów';
 	},
 	minutes: (n) => `${n} min`,
+	fadeNote: (r) => `Punkty tracą ${fadePercent(r)}% wartości co tydzień`,
 
 	noteQ: 'Dlaczego ten film? (opcjonalnie)',
 	notePh: 'Krótka notka dla reszty…',
@@ -702,6 +704,7 @@ const en: Dict = {
 		return isVotes(r) ? 'all-time votes' : 'total points ever spent';
 	},
 	minutes: (n) => `${n} min`,
+	fadeNote: (r) => `Points lose ${fadePercent(r)}% of their value each week`,
 
 	noteQ: 'Why this one? (optional)',
 	notePh: 'A short note for the others…',

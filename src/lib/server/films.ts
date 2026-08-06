@@ -101,6 +101,12 @@ export function standings(
 			}[]
 		).map((p) => [p.id, p])
 	);
+	const byWeek = db.prepare(
+		`SELECT week_number AS week, SUM(points) AS points FROM ballot
+		 WHERE film_id = ? AND week_number <= ?
+		 GROUP BY week_number HAVING points > 0
+		 ORDER BY week_number DESC`
+	);
 	const enriched = films.map((film) => {
 		const nom = people.get(film.added_by);
 		return {
@@ -110,6 +116,7 @@ export function standings(
 			myFloor: mine.get(film.id)?.floor ?? 0,
 			myGraceUntil: mine.get(film.id)?.graceUntil ?? null,
 			addedByName: nom?.name ?? film.added_by,
+			weeklyPoints: byWeek.all(film.id, currentWeek) as { week: number; points: number }[],
 			nominator: {
 				person_id: film.added_by,
 				name: nom?.name ?? film.added_by,

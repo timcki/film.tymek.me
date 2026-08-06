@@ -582,7 +582,10 @@ version of its rank ring; tapping it opens the same popup as a backer pill, with
 "nominated in week N" as its caption), and a colour system with one meaning per hue:
 accent blue is reserved for the viewer's own votes, the top-3 highlight is a neutral
 silver elevation, the score sits hue-free in a circular "coin" (the vote dots' big
-sibling; its ring brightens on a top-3 card), and tier colours mark rank. Then a
+sibling; its ring brightens on a top-3 card), and tier colours mark rank. Tapping the
+coin (or the sheet's score) opens a quick popup with the fade arithmetic: one row per
+week with points — `week · points × multiplier ≈ contribution` — under a one-line
+reminder that points lose 25% of their value each week. Then a
 text-only title line — title, year, runtime — that wraps cleanly. Director, genre and
 the week number live only in the detail sheet. Below the title line: the nominator's
 note clamped to one line (tapping it opens the full pitch in a quick popup, quoted and

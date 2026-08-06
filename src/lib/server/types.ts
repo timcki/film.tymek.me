@@ -114,6 +114,8 @@ export type Standing = Film & {
 	addedByName: string;
 	/** the nominator as a face, for the pill in the card's title line */
 	nominator: Omit<Backer, 'points'>;
+	/** per-week point totals, oldest last, for the score-breakdown popup */
+	weeklyPoints: { week: number; points: number }[];
 	/** consecutive weeks a single person has backed this film, §9 badge */
 	campaignWeeks: number;
 	/** true when this film is one pointless week away from attrition */

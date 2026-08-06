@@ -127,6 +127,14 @@
 		below: boolean;
 		tap: boolean;
 	} | null>(null);
+	type ScoreRow = { week: number; points: number; mult: number; contrib: number };
+	let scorePop = $state<{
+		rows: ScoreRow[];
+		x: number;
+		y: number;
+		below: boolean;
+		tap: boolean;
+	} | null>(null);
 	let closing: ReturnType<typeof setTimeout>;
 	// a mouse opens on hover and a finger on tap. A touchscreen laptop does both,
 	// so go by the pointer that actually arrived rather than what the screen can do
@@ -149,6 +157,7 @@
 		clearTimeout(closing);
 		if (!(pill instanceof HTMLElement)) return;
 		notePop = null;
+		scorePop = null;
 		peek = { face, sub, tap, ...anchorAt(pill, POP_W, POP_H) };
 	}
 
@@ -156,13 +165,30 @@
 		clearTimeout(closing);
 		if (!(el instanceof HTMLElement) || !film.note) return;
 		peek = null;
+		scorePop = null;
 		notePop = { text: film.note, sig: T.noteSig(film.addedByName), tap, ...anchorAt(el, NPOP_W, NPOP_H) };
+	}
+
+	/** the fade arithmetic behind a score, one row per week with points */
+	function scoreAt(el: EventTarget | null, film: Film, tap: boolean) {
+		clearTimeout(closing);
+		const weekNow = data.week?.number;
+		if (!(el instanceof HTMLElement) || rules.scoring !== 'fade' || !weekNow) return;
+		if (!film.weeklyPoints.length) return;
+		peek = null;
+		notePop = null;
+		const rows = film.weeklyPoints.map((row) => {
+			const mult = rules.decayFactor ** (weekNow - row.week);
+			return { ...row, mult, contrib: row.points * mult };
+		});
+		scorePop = { rows, tap, ...anchorAt(el, NPOP_W, NPOP_H) };
 	}
 
 	function unpeek() {
 		clearTimeout(closing);
 		peek = null;
 		notePop = null;
+		scorePop = null;
 	}
 
 	// a beat of grace, so crossing the gap between two pills does not flicker
@@ -171,6 +197,7 @@
 		closing = setTimeout(() => {
 			peek = null;
 			notePop = null;
+			scorePop = null;
 		}, 80);
 	}
 
@@ -511,7 +538,20 @@
 						</span>
 					{/if}
 				</div>
-				<div class="coin"><b>{fmtScore(film.score)}</b><i>{T.unit(film.score, votes)}</i></div>
+				<!-- tapping the coin explains the fade arithmetic behind the number -->
+				<button
+					class="coin"
+					type="button"
+					onpointerenter={(event) => {
+						mousing = event.pointerType === 'mouse';
+						if (mousing) scoreAt(event.currentTarget, film, false);
+					}}
+					onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+					onclick={(event) => !mousing && scoreAt(event.currentTarget, film, true)}
+					onblur={unpeek}
+				>
+					<b>{fmtScore(film.score)}</b><i>{T.unit(film.score, votes)}</i>
+				</button>
 			</div>
 			{#if film.note}
 				<!-- one line on the card; the full pitch opens in a quick popup -->
@@ -647,10 +687,20 @@
 						{detail.year ?? ''}{#if detail.year && detail.director}
 							· {/if}{detail.director ?? ''}
 					</div>
-					<div class="sc">
+					<button
+						class="sc"
+						type="button"
+						onpointerenter={(event) => {
+							mousing = event.pointerType === 'mouse';
+							if (mousing) scoreAt(event.currentTarget, detail, false);
+						}}
+						onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+						onclick={(event) => !mousing && scoreAt(event.currentTarget, detail, true)}
+						onblur={unpeek}
+					>
 						<b>{fmtScore(detail.score)}</b>
 						<small>{T.unit(detail.score, votes)} · {T.sortLabel(rules)}</small>
-					</div>
+					</button>
 				</div>
 			</div>
 
@@ -822,6 +872,30 @@
 	>
 		<p>“{notePop.text}”</p>
 		<span class="sig">{notePop.sig}</span>
+	</div>
+{/if}
+
+{#if scorePop}
+	{#if scorePop.tap}
+		<button class="menu-backdrop" aria-label={T.close} onclick={unpeek}></button>
+	{/if}
+	<div
+		class="bkpop scpop"
+		class:below={scorePop.below}
+		style="left:{scorePop.x}px;top:{scorePop.y}px"
+		role="tooltip"
+	>
+		{#each scorePop.rows as row (row.week)}
+			<div class="srow">
+				<span>{T.week(row.week)}</span>
+				<b>
+					{row.points} × {row.mult.toFixed(2)}
+					{row.mult === 1 ? '=' : '≈'}
+					{fmtScore(row.contrib)}
+				</b>
+			</div>
+		{/each}
+		<span class="sig">{T.fadeNote(rules)}</span>
 	</div>
 {/if}
 
