@@ -304,7 +304,7 @@
 				<button
 					class="bk"
 					type="button"
-					style="--bkring:{backer.colour}"
+					style="--bkring:var(--tier{levelOf(backer.xp)})"
 					aria-label={backer.name}
 					onpointerenter={(event) => {
 						mousing = event.pointerType === 'mouse';
@@ -435,7 +435,12 @@
 	{/each}
 	{#each Array(Math.max(0, left)) as _, i (i)}
 		<span class="tdot free" class:armed={i === 0 && armed?.filmId === film.id}>
-			{#if i === 0 && open && armed?.filmId !== film.id}<i>+</i>{/if}
+			<!-- ring and plus are drawn, not borrowed from a border or a font:
+			     even dashes, a dead-centre cross -->
+			<svg viewBox="0 0 12 12" aria-hidden="true">
+				<circle cx="6" cy="6" r="5.25" pathLength="12" />
+				{#if i === 0 && open}<path d="M6 3.9v4.2M3.9 6h4.2" />{/if}
+			</svg>
 		</span>
 	{/each}
 {/snippet}
