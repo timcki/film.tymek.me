@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import type { SubmitFunction } from '@sveltejs/kit';
+	import Avatar from '$lib/components/Avatar.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import { adminDict } from '$lib/i18n.admin';
 	import { say } from '$lib/toast.svelte';
@@ -32,7 +33,8 @@
 	);
 </script>
 
-<h2 class="ah">{A.filH}</h2>
+<h2 class="ah">{A.rndH}</h2>
+<p class="ahint">{A.rndIntro}</p>
 
 <input class="sinput" placeholder={A.filH} bind:value={filter} autocomplete="off" />
 
@@ -48,8 +50,14 @@
 			<div class="fmeta">
 				<span class="badge soft">{A.filStatus(film.status)}</span>
 				{A.filBy(film.added_by_name, film.added_week)} · {A.filBallots(film.ballots)}
-				{#if film.watched_week}<span class="badge">{A.filWeek} {film.watched_week}</span>{/if}
 			</div>
+			{#if film.backers.length}
+				<div class="backers">
+					{#each film.backers as backer (backer.id)}
+						<Avatar name={backer.name} colour={backer.colour} avatar={backer.avatar} />
+					{/each}
+				</div>
+			{/if}
 
 			{#if editing === film.id}
 				<form class="fedit" method="POST" action="?/edit" use:enhance={submit(() => (editing = null))}>
@@ -92,16 +100,14 @@
 						{/if}
 					{/each}
 
-					{#if film.status !== 'watched'}
-						<form method="POST" action="?/watched" use:enhance={submit()}>
-							<input type="hidden" name="id" value={film.id} />
-							<label class="bankin">
-								{A.filWeek}
-								<input type="number" name="week" value={data.weekNumber} min="1" />
-							</label>
-							<button class="tap">{A.filMarkWatched}</button>
-						</form>
-					{/if}
+					<form method="POST" action="?/watched" use:enhance={submit()}>
+						<input type="hidden" name="id" value={film.id} />
+						<label class="bankin">
+							{A.filWeek}
+							<input type="number" name="week" value={data.weekNumber} min="1" />
+						</label>
+						<button class="tap">{A.filMarkWatched}</button>
+					</form>
 
 					<form method="POST" action="?/reassign" use:enhance={submit()}>
 						<input type="hidden" name="id" value={film.id} />
@@ -115,7 +121,7 @@
 						<button class="tap">{A.filReassign}</button>
 					</form>
 
-					{#if film.ballots === 0 && film.status !== 'watched'}
+					{#if film.ballots === 0}
 						<form method="POST" action="?/remove" use:enhance={submit()}>
 							<input type="hidden" name="id" value={film.id} />
 							<button class="tap bad">{A.filDelete}</button>

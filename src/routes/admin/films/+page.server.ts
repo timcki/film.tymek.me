@@ -5,9 +5,9 @@ import { logAdmin, requireAdmin } from '$lib/server/admin';
 import {
 	deleteFilm,
 	editFilm,
-	managedFilms,
 	markWatched,
 	reassignFilm,
+	roundFilms,
 	setFilmStatus
 } from '$lib/server/manage';
 import { allPeople } from '$lib/server/people';
@@ -22,9 +22,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const db = getDb();
 	const week = currentWeek(db);
 	return {
-		films: managedFilms(db),
+		// watched films and the written record live on /admin/archive
+		films: roundFilms(db),
 		people: allPeople(db).map((p) => ({ id: p.id, name: p.name })),
-		weekNumber: week?.number ?? 1
+		weekNumber: week?.number ?? 1,
+		closesAt: week?.closes_at ?? null
 	};
 };
 

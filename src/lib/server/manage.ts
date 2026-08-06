@@ -1,6 +1,6 @@
 import type { DB } from './db.js';
 import { immediate } from './db.js';
-import type { Film, FilmStatus } from './types.js';
+import type { Face, Film, FilmStatus } from './types.js';
 import { RuleError } from './types.js';
 import type { RuleSet } from './rules.js';
 import { titleKey } from './rules.js';
@@ -147,22 +147,151 @@ export function setBank(db: DB, rules: RuleSet, id: string, balance: number): vo
 
 export type ManagedFilm = Film & {
 	added_by_name: string;
+	added_by_face: Face;
+	/**
+	 * false while a film is still credited to somebody off the roster. The year of
+	 * nights that predate the app all landed on one inactive stand-in account, and
+	 * this is what counts down as they are handed back to the people who chose them
+	 */
+	attributed: boolean;
 	ballots: number;
 	raw_points: number;
 };
 
-export function managedFilms(db: DB): ManagedFilm[] {
-	return db
+type FilmRow = Omit<ManagedFilm, 'added_by_face' | 'attributed'> & {
+	added_by_colour: string | null;
+	added_by_avatar_at: string | null;
+	added_by_active: number | null;
+};
+
+/** every column the two admin screens read, with the face already joined on */
+const FILM_SELECT = `SELECT f.*, COALESCE(p.name, f.added_by) AS added_by_name,
+        p.colour AS added_by_colour, p.avatar_updated_at AS added_by_avatar_at,
+        p.active AS added_by_active,
+        (SELECT COUNT(*) FROM ballot b WHERE b.film_id = f.id) AS ballots,
+        (SELECT COALESCE(SUM(b.points), 0) FROM ballot b WHERE b.film_id = f.id) AS raw_points
+ FROM film f LEFT JOIN person p ON p.id = f.added_by`;
+
+function toManaged(row: FilmRow): ManagedFilm {
+	const { added_by_colour, added_by_avatar_at, added_by_active, ...film } = row;
+	return {
+		...film,
+		added_by_face: {
+			id: film.added_by,
+			name: film.added_by_name,
+			colour: added_by_colour ?? '#6c7079',
+			avatar: avatarUrl(film.added_by, added_by_avatar_at)
+		},
+		attributed: added_by_active === 1
+	};
+}
+
+export type RoundFilm = ManagedFilm & { backers: Face[] };
+
+/** the films in play: what the room is voting on, and what has fallen out of it */
+export function roundFilms(db: DB): RoundFilm[] {
+	const rows = db
 		.prepare(
-			`SELECT f.*, COALESCE(p.name, f.added_by) AS added_by_name,
-			        (SELECT COUNT(*) FROM ballot b WHERE b.film_id = f.id) AS ballots,
-			        (SELECT COALESCE(SUM(b.points), 0) FROM ballot b WHERE b.film_id = f.id) AS raw_points
-			 FROM film f LEFT JOIN person p ON p.id = f.added_by
-			 ORDER BY CASE f.status WHEN 'active' THEN 0 WHEN 'archived' THEN 1
-			                        WHEN 'dropped' THEN 2 ELSE 3 END,
+			`${FILM_SELECT}
+			 WHERE f.archival = 0 AND f.status != 'watched'
+			 ORDER BY CASE f.status WHEN 'active' THEN 0 WHEN 'archived' THEN 1 ELSE 2 END,
 			          f.score DESC, f.title COLLATE NOCASE`
 		)
-		.all() as ManagedFilm[];
+		.all() as FilmRow[];
+	const backers = backersFor(
+		db,
+		rows.map((row) => row.id)
+	);
+	return rows.map((row) => ({ ...toManaged(row), backers: backers.get(row.id) ?? [] }));
+}
+
+/** who is holding each of these films up, heaviest backer first */
+function backersFor(db: DB, filmIds: number[]): Map<number, Face[]> {
+	const faces = new Map<number, Face[]>();
+	if (!filmIds.length) return faces;
+	const rows = db
+		.prepare(
+			`SELECT b.film_id, p.id, p.name, p.colour, p.avatar_updated_at, SUM(b.points) AS points
+			 FROM ballot b JOIN person p ON p.id = b.person_id
+			 WHERE b.film_id IN (${filmIds.map(() => '?').join(',')})
+			 GROUP BY b.film_id, p.id
+			 HAVING points > 0
+			 ORDER BY points DESC, p.name COLLATE NOCASE`
+		)
+		.all(...filmIds) as {
+		film_id: number;
+		id: string;
+		name: string;
+		colour: string;
+		avatar_updated_at: string | null;
+	}[];
+	for (const row of rows) {
+		const face: Face = {
+			id: row.id,
+			name: row.name,
+			colour: row.colour,
+			avatar: avatarUrl(row.id, row.avatar_updated_at)
+		};
+		faces.set(row.film_id, [...(faces.get(row.film_id) ?? []), face]);
+	}
+	return faces;
+}
+
+export type ArchiveWeek = {
+	number: number;
+	closes_at: string;
+	/** the film the room watched that night, if the record knows one */
+	winner: ManagedFilm | null;
+	/** everything else written down against that night, never watched */
+	proposed: ManagedFilm[];
+};
+
+/**
+ * The record, a night at a time, newest first. Every week gets a card even with
+ * nothing against it: a night nobody wrote down is exactly what the screen is
+ * there to make visible.
+ */
+export function archiveByWeek(db: DB): ArchiveWeek[] {
+	const weeks = db
+		.prepare('SELECT number, closes_at FROM week ORDER BY number DESC')
+		.all() as { number: number; closes_at: string }[];
+	const rows = db
+		.prepare(
+			`${FILM_SELECT}
+			 WHERE f.status = 'watched' OR f.archival = 1
+			 ORDER BY f.title COLLATE NOCASE`
+		)
+		.all() as FilmRow[];
+
+	const byNight = new Map<number, ManagedFilm[]>();
+	for (const row of rows) {
+		const film = toManaged(row);
+		const night = nightOf(film);
+		byNight.set(night, [...(byNight.get(night) ?? []), film]);
+	}
+
+	return weeks.map((week) => {
+		const films = byNight.get(week.number) ?? [];
+		return {
+			number: week.number,
+			closes_at: week.closes_at,
+			winner: films.find((film) => film.status === 'watched') ?? null,
+			proposed: films.filter((film) => film.status !== 'watched')
+		};
+	});
+}
+
+/** how much of the record is still sitting on a stand-in account */
+export function unattributedCount(db: DB): { done: number; total: number } {
+	const row = db
+		.prepare(
+			`SELECT COUNT(*) AS total,
+			        COUNT(*) FILTER (WHERE p.active = 1) AS done
+			 FROM film f LEFT JOIN person p ON p.id = f.added_by
+			 WHERE f.status = 'watched' OR f.archival = 1`
+		)
+		.get() as { total: number; done: number };
+	return row;
 }
 
 function filmOr404(db: DB, id: number): Film {
@@ -429,7 +558,11 @@ export function addArchivalFilm(db: DB, film: ArchivalFilm): number {
 export function deleteFilm(db: DB, id: number): void {
 	immediate(db, () => {
 		const film = filmOr404(db, id);
-		if (film.status === 'watched') throw new RuleError('film_watched', 'we watched that one');
+		// an archival row is a written record, and a record typed wrong has to be
+		// removable; what it can never have is ballots, which the checks below cover
+		if (film.status === 'watched' && !film.archival) {
+			throw new RuleError('film_watched', 'we watched that one');
+		}
 		const votes = db.prepare('SELECT COUNT(*) AS n FROM ballot WHERE film_id = ?').get(id) as {
 			n: number;
 		};
@@ -438,6 +571,8 @@ export function deleteFilm(db: DB, id: number): void {
 			n: number;
 		};
 		if (shown.n) throw new RuleError('film_has_ballots', 'the room has seen it; archive it instead');
+		// let go of the night first, or the week is left pointing at nothing
+		db.prepare('UPDATE week SET winner_film_id = NULL WHERE winner_film_id = ?').run(id);
 		db.prepare('DELETE FROM film WHERE id = ?').run(id);
 		rexpAll(db);
 	});

@@ -4,7 +4,7 @@ import {
 	createPerson,
 	deleteFilm,
 	editFilm,
-	managedFilms,
+	roundFilms,
 	managedPeople,
 	markWatched,
 	reassignFilm,
@@ -185,7 +185,7 @@ describe('curating the films', () => {
 		const two = addFilm(db, 'Two', 'bartek', 1);
 		db.prepare(`UPDATE film SET status = 'dropped' WHERE id = ?`).run(two);
 
-		expect(managedFilms(db).map((f) => f.title).sort()).toEqual(['One', 'Two']);
+		expect(roundFilms(db).map((f) => f.title).sort()).toEqual(['One', 'Two']);
 	});
 });
 

@@ -10,6 +10,7 @@ export type AdminDict = {
 	navCalendar: string;
 	navPeople: string;
 	navFilms: string;
+	navArchive: string;
 	navHost: string;
 	navBack: string;
 
@@ -91,6 +92,33 @@ export type AdminDict = {
 	filReassign: string;
 	filEmpty: string;
 
+	/* the round in play */
+	rndH: string;
+	rndIntro: string;
+
+	/* the archive */
+	arcH: string;
+	arcIntro: string;
+	arcProgress: (done: number, total: number) => string;
+	arcOnlyUnattributed: string;
+	arcAllNights: string;
+	arcWinner: string;
+	arcNothing: string;
+	arcWho: string;
+	arcAddOpen: string;
+	arcAddH: (week: number) => string;
+	arcSearchPh: string;
+	arcNoResults: string;
+	arcByHand: string;
+	arcWasWatched: string;
+	arcWasProposed: string;
+	arcAdd: string;
+	arcAddAnyway: string;
+	arcCancel: string;
+	arcMoveH: string;
+	arcMove: string;
+	arcEmpty: string;
+
 	/* audit */
 	audH: string;
 	audEmpty: string;
@@ -99,9 +127,12 @@ export type AdminDict = {
 	error: (code: string, params: Record<string, string | number>, fallback: string) => string;
 };
 
+// 'archived' is not the archive: it means the film ran out of votes and left the
+// list, and a single vote brings it back. Calling both the same thing is how a
+// film ends up in the wrong one
 const STATUS_PL: Record<string, string> = {
 	active: 'na liście',
-	archived: 'w archiwum',
+	archived: 'poza listą',
 	dropped: 'wypadł',
 	watched: 'obejrzany'
 };
@@ -111,6 +142,7 @@ const pl: AdminDict = {
 	navCalendar: 'Kalendarz',
 	navPeople: 'Ludzie',
 	navFilms: 'Filmy',
+	navArchive: 'Archiwum',
 	navHost: 'Prowadzący',
 	navBack: '← Wróć do aplikacji',
 
@@ -180,7 +212,7 @@ const pl: AdminDict = {
 	filPoster: 'Plakat (URL)',
 	filNote: 'Notka',
 	filActivate: 'Na listę',
-	filArchive: 'Do archiwum',
+	filArchive: 'Poza listę',
 	filDrop: 'Wyrzuć',
 	filDelete: 'Usuń na zawsze',
 	filDeleteNote: 'Tylko dla filmów bez ani jednego głosu.',
@@ -190,6 +222,32 @@ const pl: AdminDict = {
 	filReassignH: 'Zgłaszający',
 	filReassign: 'Przepisz',
 	filEmpty: 'Brak filmów.',
+
+	rndH: 'Bieżąca runda',
+	rndIntro: 'Filmy, na które teraz się głosuje. Obejrzane trafiają do archiwum.',
+
+	arcH: 'Archiwum',
+	arcIntro:
+		'Zapis tego, co już się wydarzyło, wieczór po wieczorze. Nic tutaj nie trafia na listę do głosowania.',
+	arcProgress: (done, total) => `${done} z ${total} filmów przypisanych`,
+	arcOnlyUnattributed: 'Tylko nieprzypisane',
+	arcAllNights: 'Wszystkie wieczory',
+	arcWinner: 'Obejrzany',
+	arcNothing: 'Nic nie zapisano.',
+	arcWho: 'Kto zaproponował',
+	arcAddOpen: '+ Dopisz film',
+	arcAddH: (week) => `Dopisz film do tygodnia ${week}`,
+	arcSearchPh: 'Szukaj w TMDB…',
+	arcNoResults: 'Nic nie znaleziono.',
+	arcByHand: 'Wpisz ręcznie',
+	arcWasWatched: 'Obejrzeliśmy go tego wieczoru',
+	arcWasProposed: 'Tylko zaproponowany',
+	arcAdd: 'Dopisz',
+	arcAddAnyway: 'Dopisz mimo to',
+	arcCancel: 'Anuluj',
+	arcMoveH: 'Wieczór',
+	arcMove: 'Przenieś',
+	arcEmpty: 'Archiwum jest puste.',
 
 	audH: 'Ostatnie zmiany',
 	audEmpty: 'Jeszcze nic.',
@@ -237,6 +295,12 @@ const pl: AdminDict = {
 				return 'Podaj tytuł.';
 			case 'dup_active':
 				return `${p.title} jest już na liście.`;
+			case 'week_has_winner':
+				return `W tygodniu ${p.week} oglądaliśmy już ${p.title}.`;
+			case 'dup_archival':
+				return `${p.title} jest już zapisany (tydzień ${p.week}).`;
+			case 'film_archival':
+				return `${p.title} to zapis dawnego wieczoru, nie można na niego głosować.`;
 			default:
 				return fallback;
 		}
@@ -255,6 +319,7 @@ const en: AdminDict = {
 	navCalendar: 'Calendar',
 	navPeople: 'People',
 	navFilms: 'Films',
+	navArchive: 'Archive',
 	navHost: 'Host',
 	navBack: '← Back to the app',
 
@@ -324,7 +389,7 @@ const en: AdminDict = {
 	filPoster: 'Poster (URL)',
 	filNote: 'Note',
 	filActivate: 'Put on the list',
-	filArchive: 'Archive',
+	filArchive: 'Take off the list',
 	filDrop: 'Drop',
 	filDelete: 'Delete for good',
 	filDeleteNote: 'Only for films nobody has voted for.',
@@ -334,6 +399,32 @@ const en: AdminDict = {
 	filReassignH: 'Nominated by',
 	filReassign: 'Reassign',
 	filEmpty: 'No films.',
+
+	rndH: 'Current round',
+	rndIntro: 'What the room is voting on now. Watched films move to the archive.',
+
+	arcH: 'Archive',
+	arcIntro:
+		'The record of what already happened, a night at a time. Nothing here reaches the voting list.',
+	arcProgress: (done, total) => `${done} of ${total} films attributed`,
+	arcOnlyUnattributed: 'Unattributed only',
+	arcAllNights: 'All nights',
+	arcWinner: 'Watched',
+	arcNothing: 'Nothing written down.',
+	arcWho: 'Suggested by',
+	arcAddOpen: '+ Add a film',
+	arcAddH: (week) => `Add a film to week ${week}`,
+	arcSearchPh: 'Search TMDB…',
+	arcNoResults: 'Nothing found.',
+	arcByHand: 'Type it by hand',
+	arcWasWatched: 'We watched it that night',
+	arcWasProposed: 'Only proposed',
+	arcAdd: 'Add',
+	arcAddAnyway: 'Add anyway',
+	arcCancel: 'Cancel',
+	arcMoveH: 'Night',
+	arcMove: 'Move',
+	arcEmpty: 'The archive is empty.',
 
 	audH: 'Recent changes',
 	audEmpty: 'Nothing yet.',
