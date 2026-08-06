@@ -104,7 +104,6 @@ export type Dict = {
 	unit: (n: number, votes: boolean) => string;
 	noBackers: string;
 	btnAddPoint: string;
-	btnSpent: (n: number) => string;
 	btnVote: string;
 	btnVoted: string;
 	btnUndo: (s: number) => string;
@@ -354,7 +353,6 @@ const pl: Dict = {
 	unit: (n, votes) => (votes ? plVotes(n) : 'pkt'),
 	noBackers: '0 głosów',
 	btnAddPoint: '+1 pkt',
-	btnSpent: (n) => `✓ ${n} pkt`,
 	btnVote: 'Głosuj',
 	btnVoted: '✓ twój głos',
 	btnUndo: (s) => `Cofnij · ${s} s`,
@@ -657,7 +655,6 @@ const en: Dict = {
 	unit: (n, votes) => (votes ? en2(n, 'vote', 'votes') : 'pts'),
 	noBackers: '0 votes',
 	btnAddPoint: '+1 point',
-	btnSpent: (n) => `✓ ${n} spent`,
 	btnVote: 'Vote',
 	btnVoted: '✓ your vote',
 	btnUndo: (s) => `Undo · ${s} s`,

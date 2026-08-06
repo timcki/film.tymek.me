@@ -247,6 +247,54 @@
 	</span>
 {/snippet}
 
+{#snippet pipDock(film: Film)}
+	<!-- the one voting control, card and sheet alike: your points as pips, your
+	     remaining budget as tappable slots. The freshest pip wears its countdown
+	     ring and a tap takes it back; a slot casts. -->
+	<div class="pips">
+		{#each Array(film.myPoints) as _, i (i)}
+			{#if i === film.myPoints - 1 && canUndo(film)}
+				<form method="POST" action="?/setPoints" use:enhance={submit()}>
+					<input type="hidden" name="filmId" value={film.id} />
+					<button
+						class="pip live"
+						name="points"
+						value={film.myPoints - 1}
+						aria-label={T.btnUndo(undoSeconds(film))}
+						in:scale={{ duration: 260, start: 0.3, easing: backOut }}
+					>
+						<svg viewBox="0 0 36 36" aria-hidden="true">
+							<circle class="ringtrack" cx="18" cy="18" r="16" />
+							<circle
+								class="ring"
+								cx="18"
+								cy="18"
+								r="16"
+								use:drain={{ until: film.myGraceUntil ?? '', total: rules.voteGraceSeconds }}
+							/>
+						</svg>
+						<i></i>
+					</button>
+				</form>
+			{:else}
+				<span class="pip set"><i></i></span>
+			{/if}
+		{/each}
+		{#each Array(Math.max(0, left)) as _, i (i)}
+			<form method="POST" action="?/setPoints" use:enhance={submit()}>
+				<input type="hidden" name="filmId" value={film.id} />
+				<button
+					class="pip empty"
+					name="points"
+					value={film.myPoints + 1}
+					disabled={!open}
+					aria-label={T.btnAddPoint}
+				></button>
+			</form>
+		{/each}
+	</div>
+{/snippet}
+
 {#snippet row(film: Film, lead: boolean, shelf: boolean)}
 	<div class="film" class:lead class:fading={film.atRisk && !shelf} class:shelf>
 		<button
@@ -295,11 +343,10 @@
 							{film.myPoints > 0 ? T.btnVoted : T.btnVote}
 						</button>
 					</form>
-				{:else}
-					<div class="votecluster">
-						{#if film.myPoints > 0}
-							<span class="minechip" class:live={canUndo(film)}>✓ {film.myPoints} pkt</span>
-						{/if}
+				{:else if film.myPoints + left > 0}
+					<!-- no dock at all when there is nothing to do here: no dead UI -->
+					<div class="dockwrap">
+						{@render pipDock(film)}
 						{#if canUndo(film)}
 							<form method="POST" action="?/setPoints" use:enhance={submit()}>
 								<input type="hidden" name="filmId" value={film.id} />
@@ -314,12 +361,6 @@
 								</button>
 							</form>
 						{/if}
-						<form method="POST" action="?/setPoints" use:enhance={submit()}>
-							<input type="hidden" name="filmId" value={film.id} />
-							<button class="tap" name="points" value={film.myPoints + 1} disabled={!open || left < 1}>
-								{T.btnAddPoint}
-							</button>
-						</form>
 					</div>
 				{/if}
 			</div>
@@ -480,50 +521,7 @@
 						<b>{T.dNone(left, votes)}</b>
 					{/if}
 				</div>
-				<div class="pips">
-					{#each Array(detail.myPoints) as _, i (i)}
-						{#if i === detail.myPoints - 1 && canUndo(detail)}
-							<!-- the freshest point: still soft, wearing its countdown; tap takes it back -->
-							<form method="POST" action="?/setPoints" use:enhance={submit()}>
-								<input type="hidden" name="filmId" value={detail.id} />
-								<button
-									class="pip live"
-									name="points"
-									value={detail.myPoints - 1}
-									aria-label={T.btnUndo(undoSeconds(detail))}
-									in:scale={{ duration: 260, start: 0.3, easing: backOut }}
-								>
-									<svg viewBox="0 0 36 36" aria-hidden="true">
-										<circle class="ringtrack" cx="18" cy="18" r="16" />
-										<circle
-											class="ring"
-											cx="18"
-											cy="18"
-											r="16"
-											use:drain={{ until: detail.myGraceUntil ?? '', total: rules.voteGraceSeconds }}
-										/>
-									</svg>
-									<i></i>
-								</button>
-							</form>
-						{:else}
-							<span class="pip set"><i></i></span>
-						{/if}
-					{/each}
-					{#each Array(Math.max(0, left)) as _, i (i)}
-						<!-- an empty slot is also the cast button: tap it and the point moves in -->
-						<form method="POST" action="?/setPoints" use:enhance={submit()}>
-							<input type="hidden" name="filmId" value={detail.id} />
-							<button
-								class="pip empty"
-								name="points"
-								value={detail.myPoints + 1}
-								disabled={!open}
-								aria-label={T.btnAddPoint}
-							></button>
-						</form>
-					{/each}
-				</div>
+				{@render pipDock(detail)}
 			</div>
 		{/if}
 	</div>

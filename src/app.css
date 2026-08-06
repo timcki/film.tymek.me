@@ -916,11 +916,24 @@ details[open] > .iconbtn {
 	stroke-dasharray: 100.5;
 	stroke-dashoffset: 0;
 }
-/* an empty slot doubles as the cast button */
+/* an empty slot doubles as the cast button; the plus is its whole manual */
 .pip.empty {
 	border: 1.5px dashed var(--line2);
 	cursor: pointer;
-	transition: border-color 140ms, transform 140ms;
+	color: var(--dimmer);
+	transition:
+		border-color 140ms,
+		color 140ms,
+		transform 140ms;
+}
+.pip.empty::before {
+	content: '+';
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 1;
+}
+.pip.empty:not(:disabled):hover {
+	color: var(--accent);
 }
 .pip.empty:not(:disabled):active {
 	transform: scale(0.88);
@@ -963,19 +976,11 @@ details[open] > .iconbtn {
 .graceline.set {
 	color: var(--accent);
 }
-.votecluster {
+.dockwrap {
 	display: flex;
-	align-items: center;
-	gap: 7px;
-}
-.minechip {
-	font-size: 11.5px;
-	font-weight: 650;
-	color: var(--accent);
-	white-space: nowrap;
-}
-.minechip.live {
-	animation: pipbreathe 1.6s ease-in-out infinite;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 4px;
 }
 .undochip {
 	border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
@@ -1005,7 +1010,6 @@ details[open] > .iconbtn {
 @media (prefers-reduced-motion: reduce) {
 	.pip.set i,
 	.pip.live i,
-	.minechip.live,
 	.undochip.urgent {
 		animation: none;
 	}
