@@ -3,6 +3,7 @@ import type { DB } from '../src/lib/server/db.js';
 import { applySchema } from '../src/lib/server/db.js';
 import { XP, rexpAll, xpBreakdown } from '../src/lib/server/xp.js';
 import { LEVELS, levelOf, nextLevelAt } from '../src/lib/levels.js';
+import { dictFor, LANGS } from '../src/lib/i18n.js';
 import { checkIn } from '../src/lib/server/attendance.js';
 import { setPoints } from '../src/lib/server/films.js';
 import { closeRunoff, flashVote, openRunoff } from '../src/lib/server/runoffs.js';
@@ -106,17 +107,24 @@ describe('the person.xp cache', () => {
 
 describe('the ladder', () => {
 	it('climbs at the published thresholds', () => {
+		expect(LEVELS).toHaveLength(12);
 		expect(levelOf(0)).toBe(0);
-		expect(levelOf(29)).toBe(0);
-		expect(levelOf(30)).toBe(1);
-		expect(levelOf(849)).toBe(LEVELS.length - 2);
-		expect(levelOf(850)).toBe(LEVELS.length - 1);
+		expect(levelOf(24)).toBe(0);
+		expect(levelOf(25)).toBe(1);
+		expect(levelOf(999)).toBe(LEVELS.length - 2);
+		expect(levelOf(1000)).toBe(LEVELS.length - 1);
 		expect(levelOf(10_000)).toBe(LEVELS.length - 1);
 	});
 
 	it('knows what to chase next, and when there is nothing left', () => {
-		expect(nextLevelAt(0)).toBe(30);
-		expect(nextLevelAt(849)).toBe(850);
-		expect(nextLevelAt(850)).toBeNull();
+		expect(nextLevelAt(0)).toBe(25);
+		expect(nextLevelAt(999)).toBe(1000);
+		expect(nextLevelAt(1000)).toBeNull();
+	});
+
+	it('has a name for every rung in both languages', () => {
+		for (const lang of LANGS) {
+			expect(dictFor(lang).levels).toHaveLength(LEVELS.length);
+		}
 	});
 });

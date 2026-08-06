@@ -23,10 +23,14 @@
 	--tier1: #7fd39b;
 	--tier2: #6cd8d2;
 	--tier3: #92bbe8;
-	--tier4: #b79df2;
-	--tier5: #ea9cd4;
-	--tier6: #e0a15f;
-	--tier7: #f0c163;
+	--tier4: #99a0f5;
+	--tier5: #b79df2;
+	--tier6: #ea9cd4;
+	--tier7: #f08c9a;
+	--tier8: #f09d68;
+	--tier9: #ecb054;
+	--tier10: #f0c163;
+	--tier11: #f7d98c;
 }
 
 * {
@@ -312,6 +316,10 @@ header .sub b {
 .bk b.lv5 { color: var(--tier5); }
 .bk b.lv6 { color: var(--tier6); }
 .bk b.lv7 { color: var(--tier7); }
+.bk b.lv8 { color: var(--tier8); }
+.bk b.lv9 { color: var(--tier9); }
+.bk b.lv10 { color: var(--tier10); }
+.bk b.lv11 { color: var(--tier11); }
 .bk b[class*='lv'] {
 	text-shadow: 0 0 7px color-mix(in srgb, currentColor 75%, transparent);
 }
@@ -363,6 +371,10 @@ header .sub b {
 .bkpop .bktitle.lv5 { color: var(--tier5); }
 .bkpop .bktitle.lv6 { color: var(--tier6); }
 .bkpop .bktitle.lv7 { color: var(--tier7); }
+.bkpop .bktitle.lv8 { color: var(--tier8); }
+.bkpop .bktitle.lv9 { color: var(--tier9); }
+.bkpop .bktitle.lv10 { color: var(--tier10); }
+.bkpop .bktitle.lv11 { color: var(--tier11); }
 @keyframes bkpop {
 	from {
 		opacity: 0;
@@ -538,96 +550,112 @@ header .sub b {
 	display: block;
 }
 /* the rank ring: a face wears its level, and even the first rung gets a
-   proper frame. The ramp climbs the rarity rainbow: steel, green, teal,
-   accent blue, violet, rose, and gold at the summit. A dark gap keeps every
-   ring reading as a frame on any surface */
-.av:is(.lv0, .lv1, .lv2, .lv3, .lv4, .lv5, .lv6, .lv7) {
+   proper frame. Twelve rungs climb the rarity rainbow from steel to radiant
+   gold; the glow follows the ring colour and grows with the rank. A dark gap
+   keeps every ring reading as a frame on any surface */
+.av[class*='lv'] {
+	--glowc: color-mix(in srgb, var(--ringc) 65%, transparent);
 	box-shadow:
 		0 0 0 var(--gapw, 1.5px) #0f1012,
 		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
-		0 0 var(--glowr, 0px) calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) var(--glowc, transparent);
+		0 0 var(--glowr, 0px) calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px)
+			var(--glowc, transparent);
 }
 .av.lv0 {
 	--ringc: var(--tier0);
 	--glowr: 6px;
-	--glowc: rgba(138, 147, 161, 0.4);
 }
 .av.lv1 {
 	--ringc: var(--tier1);
-	--glowr: 10px;
-	--glowc: rgba(127, 211, 155, 0.55);
+	--glowr: 7px;
 }
 .av.lv2 {
 	--ringc: var(--tier2);
-	--glowr: 12px;
-	--glowc: rgba(108, 216, 210, 0.6);
+	--glowr: 8px;
 }
 .av.lv3 {
 	--ringc: var(--tier3);
-	--glowr: 14px;
-	--glowc: color-mix(in srgb, var(--accent) 65%, transparent);
+	--glowr: 9px;
 }
 .av.lv4 {
 	--ringc: var(--tier4);
-	--glowr: 16px;
-	--glowc: rgba(183, 157, 242, 0.65);
+	--glowr: 10px;
 }
 .av.lv5 {
 	--ringc: var(--tier5);
-	--glowr: 18px;
-	--glowc: rgba(234, 156, 212, 0.7);
+	--glowr: 11px;
 }
 .av.lv6 {
 	--ringc: var(--tier6);
-	--glowr: 20px;
-	--glowc: color-mix(in srgb, var(--warn) 75%, transparent);
-	animation: ringpulse6 2.6s ease-in-out infinite;
+	--glowr: 12px;
 }
-/* the summit: brighter gold, a white sparkle hairline, and a breathing aura */
 .av.lv7 {
 	--ringc: var(--tier7);
+	--glowr: 13px;
+}
+.av.lv8 {
+	--ringc: var(--tier8);
+	--glowr: 14px;
+}
+.av.lv9 {
+	--ringc: var(--tier9);
+	--glowr: 15px;
+}
+/* the last two rungs breathe, and the summit adds a white sparkle hairline */
+.av.lv10 {
+	--ringc: var(--tier10);
+	--glowr: 18px;
+	animation: ringpulse 2.6s ease-in-out infinite;
+}
+.av.lv11 {
+	--ringc: var(--tier11);
 	box-shadow:
 		0 0 0 var(--gapw, 1.5px) #0f1012,
 		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
-		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) rgba(255, 244, 214, 0.85),
-		0 0 22px calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 2px) rgba(240, 193, 99, 0.85);
-	animation: ringpulse7 2.6s ease-in-out infinite;
+		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) rgba(255, 248, 226, 0.9),
+		0 0 22px calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 2px)
+			color-mix(in srgb, var(--ringc) 85%, transparent);
+	animation: ringlegend 2.6s ease-in-out infinite;
 }
-@keyframes ringpulse6 {
+@keyframes ringpulse {
 	0%,
 	100% {
 		box-shadow:
 			0 0 0 var(--gapw, 1.5px) #0f1012,
 			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
-			0 0 14px calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) color-mix(in srgb, var(--warn) 60%, transparent);
+			0 0 12px calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px)
+				color-mix(in srgb, var(--ringc) 55%, transparent);
 	}
 	50% {
 		box-shadow:
 			0 0 0 var(--gapw, 1.5px) #0f1012,
 			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
-			0 0 24px calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 2px) color-mix(in srgb, var(--warn) 85%, transparent);
+			0 0 22px calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 2px)
+				color-mix(in srgb, var(--ringc) 85%, transparent);
 	}
 }
-@keyframes ringpulse7 {
+@keyframes ringlegend {
 	0%,
 	100% {
 		box-shadow:
 			0 0 0 var(--gapw, 1.5px) #0f1012,
 			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
-			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) rgba(255, 244, 214, 0.85),
-			0 0 15px calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) rgba(240, 193, 99, 0.65);
+			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) rgba(255, 248, 226, 0.9),
+			0 0 15px calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px)
+				color-mix(in srgb, var(--ringc) 65%, transparent);
 	}
 	50% {
 		box-shadow:
 			0 0 0 var(--gapw, 1.5px) #0f1012,
 			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
-			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) rgba(255, 250, 235, 1),
-			0 0 28px calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 3px) rgba(240, 193, 99, 1);
+			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) rgba(255, 252, 240, 1),
+			0 0 28px calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 3px)
+				color-mix(in srgb, var(--ringc) 100%, transparent);
 	}
 }
 @media (prefers-reduced-motion: reduce) {
-	.av.lv6,
-	.av.lv7 {
+	.av.lv10,
+	.av.lv11 {
 		animation: none;
 	}
 }
@@ -1354,6 +1382,10 @@ details[open] > .iconbtn {
 .lname.lv5 { color: var(--tier5); }
 .lname.lv6 { color: var(--tier6); }
 .lname.lv7 { color: var(--tier7); }
+.lname.lv8 { color: var(--tier8); }
+.lname.lv9 { color: var(--tier9); }
+.lname.lv10 { color: var(--tier10); }
+.lname.lv11 { color: var(--tier11); }
 .lrow .lname[class*='lv'] {
 	text-shadow: 0 0 9px color-mix(in srgb, currentColor 65%, transparent);
 }

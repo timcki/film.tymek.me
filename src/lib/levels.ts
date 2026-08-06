@@ -3,7 +3,7 @@
  * dictionaries under `levels`, one per rung, so both files must stay the same
  * length (a test holds them to it).
  */
-export const LEVELS = [0, 30, 75, 150, 250, 400, 600, 850];
+export const LEVELS = [0, 25, 60, 110, 175, 255, 350, 460, 585, 720, 860, 1000];
 
 /** 0-based rung for a given XP total */
 export function levelOf(xp: number): number {

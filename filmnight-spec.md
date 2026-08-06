@@ -615,11 +615,14 @@ Attendance dominates by design. The nomination reward is token-sized so the list
 be farmed; the watched-nomination jackpot rewards nominating things *other people* end
 up wanting.
 
-Eight named ranks, thresholds in `src/lib/levels.ts`, names in both dictionaries:
-Widz 0, Bywalec 30, Kinofil 75, Kinoman 150, Koneser 250, Krytyk 400, Kurator 600,
-Legenda kina 850. A weekly attendee reaches the top in a bit over a year; a vote-only
-homebody makes Kinofil in about nine months. That 4:1 pace gap *is* the attendance
-reward, expressed in prestige.
+Twelve named ranks, thresholds in `src/lib/levels.ts`, names in both dictionaries:
+Widz 0, Bywalec 25, Zapaleniec 60, Kinofil 110, Kinoman 175, Maniak kina 255,
+Znawca 350, Koneser 460, Krytyk 585, Kurator 720, Ikona 860, Legenda kina 1000.
+The rungs are dense at the bottom on purpose: the first promotion lands after about
+two attended nights, so the ladder hooks people immediately, while the top takes a
+regular about a year and a half. A vote-only homebody climbs at roughly a quarter of
+an attendee's pace; that gap *is* the attendance reward, expressed in prestige. Each
+rank has a tier colour worn as a glowing ring on the face and on the rank title.
 
 `person.xp` is a cache in the mould of `film.score`: rebuilt wholesale by `rexpAll()`,
 the column's only writer, inside every mutating transaction that touches its inputs
