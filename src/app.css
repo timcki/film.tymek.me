@@ -1307,7 +1307,12 @@ details[open] > .iconbtn {
 	padding: 0 10px;
 	border: 1px solid var(--line2);
 	border-radius: 99px;
-	background: var(--card2);
+	/* a shade above the card and softly shadowed: the one chip in the row
+	   that reads as pressable, where the backer chips lie flat */
+	background: color-mix(in srgb, var(--card2) 92%, white);
+	box-shadow:
+		0 1px 2px rgba(0, 0, 0, 0.35),
+		inset 0 1px 0 rgba(255, 255, 255, 0.045);
 	cursor: pointer;
 	transition:
 		border-color 140ms,
@@ -1322,6 +1327,8 @@ details[open] > .iconbtn {
 .tri:disabled {
 	opacity: 0.35;
 	cursor: default;
+	/* a closed week lies flat again */
+	box-shadow: none;
 }
 .tdot {
 	position: relative;
@@ -1347,6 +1354,18 @@ details[open] > .iconbtn {
 }
 .tdot.free {
 	border: 1.5px dashed var(--line2);
+	color: var(--dimmer);
+}
+/* the plus is the slot's whole manual, the same word the sheet's big pips use */
+.tdot.free i {
+	font-style: normal;
+	font-size: 9px;
+	font-weight: 700;
+	line-height: 1;
+}
+.tri:not(:disabled):hover .tdot.free {
+	border-color: var(--accent);
+	color: var(--accent);
 }
 /* the bowstring drawn: one more tap makes it count */
 .tdot.free.armed {

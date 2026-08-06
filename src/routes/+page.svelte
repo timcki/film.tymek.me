@@ -423,8 +423,9 @@
 
 {#snippet triDots(film: Film)}
 	<!-- always the full budget, film-relative: a check is yours here, a dim dot
-	     is busy on another film, a dashed one is still free. An armed dot is
-	     the bowstring drawn: one more tap makes it count -->
+	     is busy on another film, a dashed one is still free. The first free dot
+	     wears the plus that says tap me; armed, it trades the plus for the
+	     bowstring drawn: one more tap makes it count -->
 	{#each Array(film.myPoints) as _, i (i)}
 		<span class="tdot set" in:scale={{ duration: 260, start: 0.3, easing: backOut }}><i>✓</i></span>
 	{/each}
@@ -432,7 +433,9 @@
 		<span class="tdot busy"></span>
 	{/each}
 	{#each Array(Math.max(0, left)) as _, i (i)}
-		<span class="tdot free" class:armed={i === 0 && armed?.filmId === film.id}></span>
+		<span class="tdot free" class:armed={i === 0 && armed?.filmId === film.id}>
+			{#if i === 0 && open && armed?.filmId !== film.id}<i>+</i>{/if}
+		</span>
 	{/each}
 {/snippet}
 
