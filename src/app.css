@@ -1338,7 +1338,9 @@ details[open] > .iconbtn {
 	line-height: 1;
 }
 .tdot.busy {
-	background: var(--line2);
+	/* clearly there, clearly not yours to tap: well above the pill's own
+	   shade, well below the set dot's accent */
+	background: color-mix(in srgb, var(--dimmer) 60%, var(--card2));
 }
 .tdot.free {
 	color: var(--dimmer);
