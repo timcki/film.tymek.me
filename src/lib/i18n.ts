@@ -330,9 +330,11 @@ const pl: Dict = {
 
 	week: (n) => `Tydzień ${n}`,
 	closesIn: 'głosowanie zamyka się za',
+	// tiered: only the digits that matter now, the seconds tick in the last hour
 	clock: (d, h, m, s) => {
-		const hms = `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-		return d ? `${d} ${pl3(d, 'dzień', 'dni', 'dni')} ${hms}` : hms;
+		if (d) return `${d} ${pl3(d, 'dzień', 'dni', 'dni')}`;
+		if (h) return `${h} godz. ${m} min`;
+		return `${m}:${String(s).padStart(2, '0')}`;
 	},
 	votingClosed: 'głosowanie zamknięte',
 	roomPicking: (code) => `sala wybiera, kod ${code}`,
@@ -648,8 +650,9 @@ const en: Dict = {
 
 	week: (n) => `Week ${n}`,
 	closesIn: 'voting closes in',
+	// tiered: only the digits that matter now, the seconds tick in the last hour
 	clock: (d, h, m, s) =>
-		`${d ? `${d}d ` : ''}${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`,
+		d ? `${d} ${en2(d, 'day', 'days')}` : h ? `${h} h ${m} min` : `${m}:${String(s).padStart(2, '0')}`,
 	votingClosed: 'voting is closed',
 	roomPicking: (code) => `the room is picking, code ${code}`,
 	openRoom: "Pick tonight's film",
