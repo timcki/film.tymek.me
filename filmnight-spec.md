@@ -583,9 +583,14 @@ version of its rank ring; tapping it opens the same popup as a backer pill, with
 text-only title line — title, year, runtime — that wraps cleanly. Director, genre and
 the week number live only in the detail sheet. Below the title line: the nominator's
 note clamped to one line (tapping it opens the full pitch in a quick popup, quoted and
-signed), then one footer row that never wraps — the top three backer pills by points,
-a `+N` pill folding the rest (it opens the detail sheet), and the pip dock (or a Vote
-button when `pointsPerWeek === 1`).
+signed), then one footer row that never wraps — the top four backer pills by points,
+a `+N` pill folding the rest (it opens the detail sheet), and the vote pill (or a Vote
+button when `pointsPerWeek === 1`). The pill is one tap target showing the whole weekly
+budget as three small dots, film-relative: a check is a point of yours on this film, a
+dim dot is a point busy on another film, a dashed dot is still free. Tapping casts here
+while anything is free; spent out, the pill opens the sheet. During the grace window a
+mini drain ring wraps the freshest check and an `×` satellite on the pill's shoulder
+undoes it; the full three-pip dock lives only in the detail sheet.
 Below: the nomination box with TMDB autocomplete, the archived/dropped fold-out, watched
 history, and a "how this works" fold showing the *active* rule set's rules.
 

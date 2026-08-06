@@ -235,9 +235,9 @@
 {#snippet backerRow(film: Film)}
 	<span class="backers">
 		{#if film.backers.length}
-			<!-- the top three by points; the rest fold into a +N that opens the
-			     sheet, so the dock always keeps its room on one row -->
-			{#each film.backers.slice(0, 3) as backer (backer.person_id)}
+			<!-- the top four by points; the rest fold into a +N that opens the
+			     sheet, so the vote dot always keeps its room on one row -->
+			{#each film.backers.slice(0, 4) as backer (backer.person_id)}
 				<!-- a 16px face says nothing on a phone, so the pill opens a readable one -->
 				<button
 					class="bk"
@@ -270,12 +270,12 @@
 					<b class="lv{levelOf(backer.xp)}">{backer.points}</b>
 				</button>
 			{/each}
-			{#if film.backers.length > 3}
+			{#if film.backers.length > 4}
 				<button
 					class="bk more"
 					type="button"
 					aria-label={film.backers
-						.slice(3)
+						.slice(4)
 						.map((b) => b.name)
 						.join(', ')}
 					onclick={() => {
@@ -283,7 +283,7 @@
 						detailId = film.id;
 					}}
 				>
-					+{film.backers.length - 3}
+					+{film.backers.length - 4}
 				</button>
 			{/if}
 		{:else}
@@ -320,16 +320,7 @@
 						aria-label={T.btnUndo(undoSeconds(film))}
 						in:scale={{ duration: 260, start: 0.3, easing: backOut }}
 					>
-						<svg viewBox="0 0 36 36" aria-hidden="true">
-							<circle class="ringtrack" cx="18" cy="18" r="16" />
-							<circle
-								class="ring"
-								cx="18"
-								cy="18"
-								r="16"
-								use:drain={{ until: film.myGraceUntil ?? '', total: rules.voteGraceSeconds }}
-							/>
-						</svg>
+						{@render graceRing(film)}
 						<i>{undoSeconds(film)}</i>
 					</button>
 				</form>
@@ -349,6 +340,90 @@
 				></button>
 			</form>
 		{/each}
+	</div>
+{/snippet}
+
+{#snippet graceRing(film: Film)}
+	<!-- keyed on the deadline, so a fresh cast restarts the drain from full -->
+	{#key film.myGraceUntil}
+		<svg viewBox="0 0 36 36" aria-hidden="true">
+			<circle class="ringtrack" cx="18" cy="18" r="16" />
+			<circle
+				class="ring"
+				cx="18"
+				cy="18"
+				r="16"
+				use:drain={{ until: film.myGraceUntil ?? '', total: rules.voteGraceSeconds }}
+			/>
+		</svg>
+	{/key}
+{/snippet}
+
+{#snippet triDots(film: Film)}
+	<!-- always the full budget, film-relative: a check is yours here, a dim dot
+	     is busy on another film, a dashed one is still free -->
+	{#each Array(film.myPoints) as _, i (i)}
+		{#if i === film.myPoints - 1 && canUndo(film)}
+			<span class="tdot set" class:urgent={graceLeftMs(film) < 6000}>
+				{@render graceRing(film)}
+				<i>✓</i>
+			</span>
+		{:else}
+			<span class="tdot set" in:scale={{ duration: 260, start: 0.3, easing: backOut }}><i>✓</i></span>
+		{/if}
+	{/each}
+	{#each Array(Math.max(0, (data.person?.budget ?? 0) - left - film.myPoints)) as _, i (i)}
+		<span class="tdot busy"></span>
+	{/each}
+	{#each Array(Math.max(0, left)) as _, i (i)}
+		<span class="tdot free"></span>
+	{/each}
+{/snippet}
+
+{#snippet voteTri(film: Film)}
+	<!-- the card's vote control: one pill, one tap target, the whole weekly
+	     budget as three dots. A tap casts here while anything is free; spent
+	     out, it opens the sheet. The × on its shoulder undoes during grace. -->
+	<div class="vd">
+		{#if left > 0}
+			<form method="POST" action="?/setPoints" use:enhance={submit()}>
+				<input type="hidden" name="filmId" value={film.id} />
+				<button
+					class="tri"
+					name="points"
+					value={film.myPoints + 1}
+					disabled={!open}
+					aria-label={T.btnAddPoint}
+				>
+					{@render triDots(film)}
+				</button>
+			</form>
+		{:else}
+			<button
+				class="tri"
+				type="button"
+				aria-label={T.dYours(film.myPoints, votes)}
+				onclick={() => {
+					unpeek();
+					detailId = film.id;
+				}}
+			>
+				{@render triDots(film)}
+			</button>
+		{/if}
+		{#if canUndo(film)}
+			<form method="POST" action="?/setPoints" use:enhance={submit()}>
+				<input type="hidden" name="filmId" value={film.id} />
+				<!-- the cross is drawn, not typed: a glyph never sits dead centre -->
+				<button
+					class="vundo"
+					name="points"
+					value={film.myPoints - 1}
+					aria-label={T.btnUndo(undoSeconds(film))}
+					transition:scale={{ duration: 200, start: 0.4, easing: backOut }}
+				></button>
+			</form>
+		{/if}
 	</div>
 {/snippet}
 
@@ -449,9 +524,9 @@
 							{film.myPoints > 0 ? T.btnVoted : T.btnVote}
 						</button>
 					</form>
-				{:else if film.myPoints + left > 0}
-					<!-- no dock at all when there is nothing to do here: no dead UI -->
-					{@render pipDock(film)}
+				{:else if data.person}
+					<!-- always present: even spent-out it shows where the week went -->
+					{@render voteTri(film)}
 				{/if}
 			</div>
 		</div>

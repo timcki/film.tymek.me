@@ -597,6 +597,9 @@ header .sub b {
 	margin-top: auto;
 	/* the lines the meta rows used to fill become air around the footer */
 	padding-top: 11px;
+	/* the vote dot's height, reserved: a dot appearing or vanishing (last
+	   point spent, undo) must never reflow the cards around it */
+	min-height: 45px;
 }
 .warnchip {
 	color: var(--warn);
@@ -1208,6 +1211,116 @@ details[open] > .iconbtn {
 .pip.empty:disabled {
 	opacity: 0.35;
 	cursor: default;
+}
+/* the vote pill: one tap target, the whole weekly budget as three small
+   dots. A check is yours on this film, a dim dot is busy elsewhere, a
+   dashed one is free; the grace ring drains around the freshest check */
+.vd {
+	position: relative;
+	flex: none;
+}
+.tri {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	height: 34px;
+	padding: 0 10px;
+	border: 1px solid var(--line2);
+	border-radius: 99px;
+	background: var(--card2);
+	cursor: pointer;
+	transition:
+		border-color 140ms,
+		transform 140ms;
+}
+.tri:not(:disabled):hover {
+	border-color: var(--accent);
+}
+.tri:not(:disabled):active {
+	transform: scale(0.94);
+}
+.tri:disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+.tdot {
+	position: relative;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	flex: none;
+	display: grid;
+	place-items: center;
+}
+.tdot.set {
+	background: var(--accent);
+	color: var(--accent-ink);
+}
+.tdot.set i {
+	font-style: normal;
+	font-size: 7px;
+	font-weight: 800;
+	line-height: 1;
+}
+.tdot.busy {
+	background: var(--line2);
+}
+.tdot.free {
+	border: 1.5px dashed var(--line2);
+}
+.tdot svg {
+	position: absolute;
+	inset: -4px;
+	transform: rotate(-90deg);
+}
+.tdot .ringtrack {
+	fill: none;
+	stroke: var(--line2);
+	stroke-width: 3;
+}
+.tdot .ring {
+	fill: none;
+	stroke: var(--accent);
+	stroke-width: 3;
+	stroke-linecap: round;
+	stroke-dasharray: 100.5;
+	stroke-dashoffset: 0;
+}
+.tdot.urgent .ring {
+	stroke: var(--warn);
+}
+/* the escape hatch on the dot's shoulder; dissolves when the point cures */
+.vundo {
+	position: absolute;
+	top: -7px;
+	right: -8px;
+	z-index: 2;
+	width: 19px;
+	height: 19px;
+	padding: 0;
+	border-radius: 50%;
+	border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
+	background: var(--card2);
+	color: var(--warn);
+	cursor: pointer;
+}
+/* two bars centred by geometry, immune to any font's idea of an × */
+.vundo::before,
+.vundo::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	margin: auto;
+	width: 9px;
+	height: 1.5px;
+	border-radius: 1px;
+	background: currentColor;
+}
+.vundo::before {
+	transform: rotate(45deg);
+}
+.vundo::after {
+	transform: rotate(-45deg);
 }
 @keyframes ringdrain {
 	to {
