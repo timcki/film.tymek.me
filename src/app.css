@@ -208,10 +208,14 @@ header .sub b {
 	padding: 10px;
 	transition: border-color 0.15s;
 }
+/* the podium is elevation, not colour: blue belongs to votes alone */
 .film.lead {
-	border-color: var(--accent);
-	background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, transparent), var(--card));
-	box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
+	border-color: #4b525c;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), var(--card));
+	box-shadow:
+		0 0 0 1px rgba(255, 255, 255, 0.05),
+		0 0 16px rgba(255, 255, 255, 0.055),
+		0 0 34px rgba(255, 255, 255, 0.035);
 }
 .film.fading {
 	border-color: rgba(224, 161, 95, 0.34);
@@ -303,9 +307,6 @@ header .sub b {
 	font-weight: 800;
 	font-variant-numeric: tabular-nums;
 }
-.film.lead .sc b {
-	color: var(--accent);
-}
 .sc i {
 	display: block;
 	font-style: normal;
@@ -315,6 +316,37 @@ header .sub b {
 	color: var(--dimmer);
 	font-weight: 700;
 	margin-top: 3px;
+}
+/* the score as a coin: the vote dots' big sibling, hue-free so blue can
+   keep meaning "your votes" and nothing else */
+.coin {
+	flex: none;
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	border: 1.5px solid var(--line2);
+	display: grid;
+	place-content: center;
+	row-gap: 2px;
+	text-align: center;
+	line-height: 1;
+}
+.coin b {
+	font-size: 13.5px;
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+}
+.coin i {
+	display: block;
+	font-style: normal;
+	font-size: 6.5px;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--dimmer);
+	font-weight: 700;
+}
+.film.lead .coin {
+	border-color: rgba(255, 255, 255, 0.32);
 }
 .backers {
 	display: flex;

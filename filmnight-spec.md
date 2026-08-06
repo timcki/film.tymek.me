@@ -579,7 +579,10 @@ The prototype (`filmnight.html`) is the visual reference: dark, one column, max 
 your budget or bank, and whether your nomination is used. Then the ranked films: the
 poster with the nominator's face resting on its top-left corner (wearing a slim, quiet
 version of its rank ring; tapping it opens the same popup as a backer pill, with
-"nominated in week N" as its caption), and a
+"nominated in week N" as its caption), and a colour system with one meaning per hue:
+accent blue is reserved for the viewer's own votes, the top-3 highlight is a neutral
+silver elevation, the score sits hue-free in a circular "coin" (the vote dots' big
+sibling; its ring brightens on a top-3 card), and tier colours mark rank. Then a
 text-only title line — title, year, runtime — that wraps cleanly. Director, genre and
 the week number live only in the detail sheet. Below the title line: the nominator's
 note clamped to one line (tapping it opens the full pitch in a quick popup, quoted and

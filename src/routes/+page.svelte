@@ -511,7 +511,7 @@
 						</span>
 					{/if}
 				</div>
-				<div class="sc"><b>{fmtScore(film.score)}</b><i>{T.unit(film.score, votes)}</i></div>
+				<div class="coin"><b>{fmtScore(film.score)}</b><i>{T.unit(film.score, votes)}</i></div>
 			</div>
 			{#if film.note}
 				<!-- one line on the card; the full pitch opens in a quick popup -->
