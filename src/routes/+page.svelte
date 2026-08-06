@@ -256,8 +256,11 @@
 			{#if i === film.myPoints - 1 && canUndo(film)}
 				<form method="POST" action="?/setPoints" use:enhance={submit()}>
 					<input type="hidden" name="filmId" value={film.id} />
+					<!-- the countdown lives inside the pip, so undoing needs no extra
+					     element and nothing in the card ever shifts -->
 					<button
 						class="pip live"
+						class:urgent={graceLeftMs(film) < 6000}
 						name="points"
 						value={film.myPoints - 1}
 						aria-label={T.btnUndo(undoSeconds(film))}
@@ -273,7 +276,7 @@
 								use:drain={{ until: film.myGraceUntil ?? '', total: rules.voteGraceSeconds }}
 							/>
 						</svg>
-						<i></i>
+						<i>{undoSeconds(film)}</i>
 					</button>
 				</form>
 			{:else}
@@ -345,23 +348,7 @@
 					</form>
 				{:else if film.myPoints + left > 0}
 					<!-- no dock at all when there is nothing to do here: no dead UI -->
-					<div class="dockwrap">
-						{@render pipDock(film)}
-						{#if canUndo(film)}
-							<form method="POST" action="?/setPoints" use:enhance={submit()}>
-								<input type="hidden" name="filmId" value={film.id} />
-								<button
-									class="undochip"
-									class:urgent={graceLeftMs(film) < 6000}
-									name="points"
-									value={film.myPoints - 1}
-									in:scale={{ duration: 240, start: 0.6, easing: backOut }}
-								>
-									↩ {T.btnUndo(undoSeconds(film))}
-								</button>
-							</form>
-						{/if}
-					</div>
+					{@render pipDock(film)}
 				{/if}
 			</div>
 		</div>
