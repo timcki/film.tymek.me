@@ -90,22 +90,37 @@ export function standings(
 			});
 		}
 	}
-	const names = new Map(
-		(db.prepare('SELECT id, name FROM person').all() as { id: string; name: string }[]).map((p) => [
-			p.id,
-			p.name
-		])
+	const people = new Map(
+		(
+			db.prepare('SELECT id, name, colour, avatar_updated_at, xp FROM person').all() as {
+				id: string;
+				name: string;
+				colour: string;
+				avatar_updated_at: string | null;
+				xp: number;
+			}[]
+		).map((p) => [p.id, p])
 	);
-	const enriched = films.map((film) => ({
-		...film,
-		backers: backersOf(db, rules, film.id, currentWeek),
-		myPoints: mine.get(film.id)?.points ?? 0,
-		myFloor: mine.get(film.id)?.floor ?? 0,
-		myGraceUntil: mine.get(film.id)?.graceUntil ?? null,
-		addedByName: names.get(film.added_by) ?? film.added_by,
-		campaignWeeks: campaignWeeks(db, film.id, currentWeek),
-		atRisk: isAtRisk(db, rules, film, currentWeek)
-	}));
+	const enriched = films.map((film) => {
+		const nom = people.get(film.added_by);
+		return {
+			...film,
+			backers: backersOf(db, rules, film.id, currentWeek),
+			myPoints: mine.get(film.id)?.points ?? 0,
+			myFloor: mine.get(film.id)?.floor ?? 0,
+			myGraceUntil: mine.get(film.id)?.graceUntil ?? null,
+			addedByName: nom?.name ?? film.added_by,
+			nominator: {
+				person_id: film.added_by,
+				name: nom?.name ?? film.added_by,
+				colour: nom?.colour ?? '#6b7280',
+				avatar: nom ? avatarUrl(film.added_by, nom.avatar_updated_at) : null,
+				xp: nom?.xp ?? 0
+			},
+			campaignWeeks: campaignWeeks(db, film.id, currentWeek),
+			atRisk: isAtRisk(db, rules, film, currentWeek)
+		};
+	});
 	return orderFilms(enriched);
 }
 

@@ -9,7 +9,8 @@
 		size = 19,
 		font = 9,
 		titled = true,
-		xp = null
+		xp = null,
+		slim = false
 	}: {
 		name: string;
 		colour: string;
@@ -24,6 +25,8 @@
 		 * a row and not a jewellery box
 		 */
 		xp?: number | null;
+		/** a quieter ring for faces resting on artwork: thinner band, less glow */
+		slim?: boolean;
 	} = $props();
 
 	const initials = $derived(
@@ -41,7 +44,8 @@
 
 <span
 	class="av {ring !== null ? `lv${ring}` : ''}"
-	style="background:{colour};width:{size}px;height:{size}px;flex-basis:{size}px;font-size:{font}px;--ringw:{size >= 60 ? 3.5 : 2.5}px;--gapw:{size >= 60 ? 2 : 1.5}px"
+	class:slim
+	style="background:{colour};width:{size}px;height:{size}px;flex-basis:{size}px;font-size:{font}px;--ringw:{slim ? 1.5 : size >= 60 ? 3.5 : 2.5}px;--gapw:{slim ? 1 : size >= 60 ? 2 : 1.5}px"
 	title={titled ? name : undefined}
 >
 	{#if avatar}

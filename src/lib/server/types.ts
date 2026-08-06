@@ -112,6 +112,8 @@ export type Standing = Film & {
 	/** when the viewer's undo window shuts, or null once the vote has set */
 	myGraceUntil: string | null;
 	addedByName: string;
+	/** the nominator as a face, for the pill in the card's title line */
+	nominator: Omit<Backer, 'points'>;
 	/** consecutive weeks a single person has backed this film, §9 badge */
 	campaignWeeks: number;
 	/** true when this film is one pointless week away from attrition */

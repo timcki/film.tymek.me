@@ -576,9 +576,14 @@ The prototype (`filmnight.html`) is the visual reference: dark, one column, max 
 660px, mobile-first. Reuse its palette and layout. Screens:
 
 **`/` — the list.** Countdown to Thursday 20:00. A status card showing what you've spent,
-your budget or bank, and whether your nomination is used. Then the ranked films: poster,
-title, year, director, who added it and when, avatars of everyone who has points on it,
-the score, and either a Vote button (when `pointsPerWeek === 1`) or a `− n +` stepper.
+your budget or bank, and whether your nomination is used. Then the ranked films: the
+poster with the nominator's face resting on its top-left corner (wearing a slim, quiet
+version of its rank ring; tapping it opens the same popup as a backer pill, with
+"nominated in week N" as its caption), and a
+text-only title line — title, year, runtime — that wraps cleanly. Director, genre and
+the week number live only in the detail sheet. Below the title line: the nominator's
+note if any, then avatars of everyone who has points on it, the score, and the pip dock
+(or a Vote button when `pointsPerWeek === 1`).
 Below: the nomination box with TMDB autocomplete, the archived/dropped fold-out, watched
 history, and a "how this works" fold showing the *active* rule set's rules.
 

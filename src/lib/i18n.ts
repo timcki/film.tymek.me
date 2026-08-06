@@ -112,6 +112,7 @@ export type Dict = {
 	warnFades: (n: number) => string;
 	campaign: (n: number) => string;
 	addedBy: (name: string, week: number) => string;
+	nomPop: (week: number) => string;
 	nomCta: string;
 	nomCtaSub: string;
 	nomDone: (title: string) => string;
@@ -361,6 +362,7 @@ const pl: Dict = {
 	warnFades: (n) => `znika za ${n} ${plWeeks(n)}`,
 	campaign: (n) => `${n}. tydzień kampanii`,
 	addedBy: (name, week) => `${name}, tydzień ${week}`,
+	nomPop: (week) => `Zgłoszenie z tygodnia ${week}`,
 	nomCta: '+ Zgłoś film',
 	nomCtaSub: 'jedno zgłoszenie na osobę w tygodniu',
 	nomDone: (title) => `Twoje zgłoszenie w tym tygodniu: ${title}`,
@@ -676,6 +678,7 @@ const en: Dict = {
 	warnFades: (n) => `fades in ${n} ${en2(n, 'week', 'weeks')}`,
 	campaign: (n) => `week ${n} of this campaign`,
 	addedBy: (name, week) => `${name}, week ${week}`,
+	nomPop: (week) => `Nominated in week ${week}`,
 	nomCta: '+ Nominate a film',
 	nomCtaSub: 'one nomination per person per week',
 	nomDone: (title) => `You nominated ${title} this week`,

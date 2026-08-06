@@ -62,7 +62,6 @@
 	};
 
 	type Film = PageData['films'][number];
-	type Backer = Film['backers'][number];
 
 	/* ------------------------------------------------------------ backers -- */
 
@@ -71,22 +70,31 @@
 	/** roughly its height, only ever used to decide whether it still fits above */
 	const POP_H = 190;
 
-	let peek = $state<{ backer: Backer; x: number; y: number; below: boolean; tap: boolean } | null>(
-		null
-	);
+	// what the popup needs of a person; backers and nominators both satisfy it
+	type PeekFace = { name: string; colour: string; avatar: string | null; xp: number };
+
+	let peek = $state<{
+		face: PeekFace;
+		sub: string;
+		x: number;
+		y: number;
+		below: boolean;
+		tap: boolean;
+	} | null>(null);
 	let closing: ReturnType<typeof setTimeout>;
 	// a mouse opens on hover and a finger on tap. A touchscreen laptop does both,
 	// so go by the pointer that actually arrived rather than what the screen can do
 	let mousing = false;
 
-	function peekAt(pill: EventTarget | null, backer: Backer, tap: boolean) {
+	function peekAt(pill: EventTarget | null, face: PeekFace, sub: string, tap: boolean) {
 		clearTimeout(closing);
 		if (!(pill instanceof HTMLElement)) return;
 		const box = pill.getBoundingClientRect();
 		const half = POP_W / 2;
 		const below = box.top < POP_H;
 		peek = {
-			backer,
+			face,
+			sub,
 			// clamped, or the pills at either end of the row get sliced by the viewport
 			x: Math.min(Math.max(box.left + box.width / 2, half + 8), window.innerWidth - half - 8),
 			y: below ? box.bottom : box.top,
@@ -210,14 +218,17 @@
 					aria-label={backer.name}
 					onpointerenter={(event) => {
 						mousing = event.pointerType === 'mouse';
-						if (mousing) peekAt(event.currentTarget, backer, false);
+						if (mousing)
+							peekAt(event.currentTarget, backer, `${backer.points} ${T.unit(backer.points, votes)}`, false);
 					}}
 					onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
-					onclick={(event) => !mousing && peekAt(event.currentTarget, backer, true)}
+					onclick={(event) =>
+						!mousing &&
+						peekAt(event.currentTarget, backer, `${backer.points} ${T.unit(backer.points, votes)}`, true)}
 					onfocus={(event) => {
 						// a tap focuses too, and would fight the click handler for the same pill
 						if (event.currentTarget.matches(':focus-visible'))
-							peekAt(event.currentTarget, backer, false);
+							peekAt(event.currentTarget, backer, `${backer.points} ${T.unit(backer.points, votes)}`, false);
 					}}
 					onblur={unpeek}
 				>
@@ -300,33 +311,64 @@
 
 {#snippet row(film: Film, lead: boolean, shelf: boolean)}
 	<div class="film" class:lead class:fading={film.atRisk && !shelf} class:shelf>
-		<button
-			class="p"
-			onclick={() => {
-				unpeek();
-				detailId = film.id;
-			}}
-			aria-label={film.title}
-		>
-			<Poster title={film.title} url={film.poster_url} />
-		</button>
+		<div class="pw">
+			<button
+				class="p"
+				onclick={() => {
+					unpeek();
+					detailId = film.id;
+				}}
+				aria-label={film.title}
+			>
+				<Poster title={film.title} url={film.poster_url} />
+			</button>
+			<!-- whose pick this is: a face on the poster's corner, wearing its rank
+			     ring, out of the text flow so nothing ever wraps around it -->
+			<button
+				class="nomface"
+				type="button"
+				aria-label={film.nominator.name}
+				onpointerenter={(event) => {
+					mousing = event.pointerType === 'mouse';
+					if (mousing) peekAt(event.currentTarget, film.nominator, T.nomPop(film.added_week), false);
+				}}
+				onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+				onclick={(event) =>
+					!mousing && peekAt(event.currentTarget, film.nominator, T.nomPop(film.added_week), true)}
+				onfocus={(event) => {
+					if (event.currentTarget.matches(':focus-visible'))
+						peekAt(event.currentTarget, film.nominator, T.nomPop(film.added_week), false);
+				}}
+				onblur={unpeek}
+			>
+				<Avatar
+					name={film.nominator.name}
+					colour={film.nominator.colour}
+					avatar={film.nominator.avatar}
+					size={22}
+					font={9}
+					titled={false}
+					xp={film.nominator.xp}
+					slim
+				/>
+			</button>
+		</div>
 		<div class="b">
 			<div class="hd">
-				<div class="ttl">{film.title}</div>
+				<!-- the title line is text only, so it wraps cleanly: title, year,
+				     length. The nominator sits on the poster; the rest is the
+				     sheet's business -->
+				<div class="ttl">
+					{film.title}
+					{#if film.year || film.runtime}
+						<span class="mm">
+							{[film.year, film.runtime ? T.minutes(film.runtime) : null]
+								.filter(Boolean)
+								.join(' · ')}
+						</span>
+					{/if}
+				</div>
 				<div class="sc"><b>{fmtScore(film.score)}</b><i>{T.unit(film.score, votes)}</i></div>
-			</div>
-			<div class="meta">
-				{film.year ?? ''}{#if film.year && film.director}<span class="dot"> · </span>{/if}{film.director ??
-					''}
-			</div>
-			<div class="meta2">
-				{[
-					film.genre,
-					film.runtime ? T.minutes(film.runtime) : null,
-					T.addedBy(film.addedByName, film.added_week)
-				]
-					.filter(Boolean)
-					.join(' · ')}
 			</div>
 			{#if film.note}<div class="note">{film.note}</div>{/if}
 			<div class="ft">
@@ -401,8 +443,12 @@
 			<div class="film shelf">
 				<div class="p"><Poster title={film.title} url={film.poster_url} /></div>
 				<div class="b">
-					<div class="hd"><div class="ttl">{film.title}</div></div>
-					<div class="meta">{film.year ?? ''}</div>
+					<div class="hd">
+						<div class="ttl">
+							{film.title}
+							{#if film.year}<span class="mm">{film.year}</span>{/if}
+						</div>
+					</div>
 					<div class="ft">
 						<span class="backers"></span>
 						<form method="POST" action="?/renominate" use:enhance={submit()}>
@@ -588,17 +634,17 @@
 	{/if}
 	<div class="bkpop" class:below={peek.below} style="left:{peek.x}px;top:{peek.y}px" role="tooltip">
 		<Avatar
-			name={peek.backer.name}
-			colour={peek.backer.colour}
-			avatar={peek.backer.avatar}
+			name={peek.face.name}
+			colour={peek.face.colour}
+			avatar={peek.face.avatar}
 			size={116}
 			font={40}
 			titled={false}
-			xp={peek.backer.xp}
+			xp={peek.face.xp}
 		/>
-		<b>{peek.backer.name}</b>
-		<span class="bktitle lv{levelOf(peek.backer.xp)}">{T.levels[levelOf(peek.backer.xp)]}</span>
-		<span>{peek.backer.points} {T.unit(peek.backer.points, votes)}</span>
+		<b>{peek.face.name}</b>
+		<span class="bktitle lv{levelOf(peek.face.xp)}">{T.levels[levelOf(peek.face.xp)]}</span>
+		<span>{peek.sub}</span>
 	</div>
 {/if}
 
