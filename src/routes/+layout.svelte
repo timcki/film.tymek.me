@@ -226,6 +226,26 @@
 
 {/if}
 
+{#if !bare && data.changelog.length}
+	<!-- news shown exactly once: dismissing records the newest id server-side -->
+	<div class="chlog-backdrop"></div>
+	<div class="chlog" role="dialog" aria-label={T.chlogH}>
+		<h2>{T.chlogH}</h2>
+		{#each data.changelog as entry (entry.id)}
+			<h3>{entry.title}</h3>
+			<ul>
+				{#each entry.body as line (line)}
+					<li>{line}</li>
+				{/each}
+			</ul>
+		{/each}
+		<form method="POST" action="/changelog?/dismiss">
+			<input type="hidden" name="to" value={path} />
+			<button class="tap go">{T.chlogOk}</button>
+		</form>
+	</div>
+{/if}
+
 {#if menuOpen}
 	<!-- a tap anywhere else dismisses the menu -->
 	<button class="menu-backdrop" aria-label={T.close} onclick={() => (menuOpen = false)}></button>

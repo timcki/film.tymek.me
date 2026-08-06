@@ -11,6 +11,8 @@ export type Person = {
 	is_admin: number;
 	/** cache of the person's XP, rebuilt by rexpAll() */
 	xp: number;
+	/** the newest changelog entry this person has dismissed */
+	changelog_seen: number;
 };
 
 export type NightStatus = 'planned' | 'skipped' | 'used';

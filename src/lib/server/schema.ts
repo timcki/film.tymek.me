@@ -15,7 +15,9 @@ CREATE TABLE IF NOT EXISTS person (
   is_admin          INTEGER NOT NULL DEFAULT 0,
   -- cache of the person's XP; rebuilt wholesale by rexpAll() inside every
   -- mutating transaction that touches its inputs, so it can never drift
-  xp                INTEGER NOT NULL DEFAULT 0
+  xp                INTEGER NOT NULL DEFAULT 0,
+  -- the newest changelog entry this person has dismissed
+  changelog_seen    INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS week (
@@ -165,5 +167,6 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	['film', 'runtime', 'INTEGER'],
 	['film', 'note', 'TEXT'],
 	['ballot', 'prev_points', 'INTEGER NOT NULL DEFAULT 0'],
-	['person', 'xp', 'INTEGER NOT NULL DEFAULT 0']
+	['person', 'xp', 'INTEGER NOT NULL DEFAULT 0'],
+	['person', 'changelog_seen', 'INTEGER NOT NULL DEFAULT 0']
 ];

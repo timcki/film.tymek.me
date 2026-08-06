@@ -627,6 +627,50 @@ details[open] > .iconbtn {
 	padding: 0;
 	cursor: default;
 }
+.chlog-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 60;
+	background: color-mix(in srgb, var(--bg) 72%, transparent);
+	backdrop-filter: blur(2px);
+}
+.chlog {
+	position: fixed;
+	z-index: 61;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	width: min(440px, calc(100vw - 32px));
+	max-height: min(78vh, 620px);
+	overflow-y: auto;
+	background: var(--card);
+	border: 1px solid var(--line2);
+	border-radius: 16px;
+	padding: 20px 22px;
+}
+.chlog h2 {
+	margin: 0 0 4px;
+	font-size: 13px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--dimmer);
+}
+.chlog h3 {
+	margin: 10px 0 6px;
+	font-size: 16.5px;
+	line-height: 1.3;
+	color: var(--accent);
+}
+.chlog ul {
+	margin: 0 0 14px;
+	padding-left: 18px;
+	font-size: 13.5px;
+	color: var(--dim);
+	line-height: 1.55;
+}
+.chlog li {
+	margin-bottom: 7px;
+}
 .menu {
 	position: absolute;
 	top: calc(100% + 8px);

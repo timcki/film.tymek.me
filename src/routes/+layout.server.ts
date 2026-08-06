@@ -5,6 +5,7 @@ import { currentWeek } from '$lib/server/weeks';
 import { openRunoff } from '$lib/server/runoffs';
 import { avatarUrl, bankBalance, spentInWeek } from '$lib/server/people';
 import { langOf } from '$lib/i18n';
+import { unseenChangelog } from '$lib/changelog';
 import { LANG_COOKIE } from '../hooks.server';
 
 export const load: LayoutServerLoad = async ({ locals, cookies }) => {
@@ -26,9 +27,19 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	const spent = person && week ? spentInWeek(db, person.id, week.number) : 0;
 	const budget = rules.banking ? balance : rules.pointsPerWeek;
 
+	const lang = langOf(cookies.get(LANG_COOKIE));
 	return {
-		lang: langOf(cookies.get(LANG_COOKIE)),
+		lang,
 		rulesJustChanged,
+		// news this person has not dismissed yet, already said in their language
+		changelog: person
+			? unseenChangelog(person.changelog_seen).map((entry) => ({
+					id: entry.id,
+					date: entry.date,
+					title: entry.title[lang],
+					body: entry.body[lang]
+				}))
+			: [],
 		person: person
 			? {
 					id: person.id,
