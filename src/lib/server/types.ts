@@ -9,6 +9,8 @@ export type Person = {
 	avatar_mime: string | null;
 	avatar_updated_at: string | null;
 	is_admin: number;
+	/** cache of the person's XP, rebuilt by rexpAll() */
+	xp: number;
 };
 
 export type NightStatus = 'planned' | 'skipped' | 'used';
@@ -89,6 +91,8 @@ export type Backer = {
 	name: string;
 	colour: string;
 	points: number;
+	/** the person's cached XP, for the level title on their face */
+	xp: number;
 	avatar: string | null;
 };
 

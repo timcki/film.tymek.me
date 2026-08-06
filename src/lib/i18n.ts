@@ -181,6 +181,16 @@ export type Dict = {
 	rotateBtn: string;
 	rotateNote: string;
 	rotated: string;
+	/** the XP ladder's rung names; same length as LEVELS in $lib/levels */
+	levels: string[];
+	youXp: string;
+	xpNext: (n: number) => string;
+	xpTop: string;
+	xpRowAttend: string;
+	xpRowVote: string;
+	xpRowNominate: string;
+	xpRowWatched: string;
+	xpRowBacked: string;
 	/** closesAt is the current round's deadline, so the rules can name the real date */
 	rules: (rules: RulesView, closesAt?: string | null) => Rule[];
 
@@ -425,6 +435,15 @@ const pl: Dict = {
 	rotateBtn: 'Wygeneruj nowy link',
 	rotateNote: 'Możesz użyć, jeśli chcesz zresetować swój link, stary przestaje wtedy działać',
 	rotated: 'Nowy link gotowy. Każde twoje inne urządzenie musi zeskanować kod jeszcze raz.',
+	levels: ['Widz', 'Bywalec', 'Kinofil', 'Kinoman', 'Koneser', 'Krytyk', 'Kurator', 'Legenda kina'],
+	youXp: 'Doświadczenie',
+	xpNext: (n) => `${n} XP do następnego poziomu`,
+	xpTop: 'najwyższy poziom',
+	xpRowAttend: 'Wieczorki',
+	xpRowVote: 'Tygodnie z głosem',
+	xpRowNominate: 'Zgłoszenia',
+	xpRowWatched: 'Twoje filmy obejrzane',
+	xpRowBacked: 'Trafieni zwycięzcy',
 	rules: plRules,
 
 	hostH: 'Prowadzący',
@@ -714,6 +733,15 @@ const en: Dict = {
 	rotateBtn: 'Issue a new link',
 	rotateNote: 'Use this if you want to reset your link; the old one then stops working',
 	rotated: 'New link issued. Every other device of yours needs to scan again.',
+	levels: ['Viewer', 'Regular', 'Film Buff', 'Cinephile', 'Connoisseur', 'Critic', 'Curator', 'Screen Legend'],
+	youXp: 'Experience',
+	xpNext: (n) => `${n} XP to the next level`,
+	xpTop: 'top level',
+	xpRowAttend: 'Nights attended',
+	xpRowVote: 'Weeks voted',
+	xpRowNominate: 'Nominations',
+	xpRowWatched: 'Your films watched',
+	xpRowBacked: 'Winners backed',
 	rules: enRules,
 
 	hostH: 'Host',

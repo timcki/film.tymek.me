@@ -4,6 +4,7 @@
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import { dictFor, LANGS } from '$lib/i18n';
+	import { LEVELS, levelOf, nextLevelAt } from '$lib/levels';
 	import { say } from '$lib/toast.svelte';
 	import type { ActionData, PageData } from './$types';
 
@@ -11,6 +12,15 @@
 
 	const T = $derived(dictFor(data.lang));
 	const person = $derived(data.person!);
+	const level = $derived(levelOf(data.xp.total));
+	const nextAt = $derived(nextLevelAt(data.xp.total));
+	const xpRows = $derived([
+		{ label: T.xpRowAttend, count: data.xp.nightsAttended, per: data.xpRates.attend },
+		{ label: T.xpRowVote, count: data.xp.weeksVoted, per: data.xpRates.vote },
+		{ label: T.xpRowNominate, count: data.xp.nominations, per: data.xpRates.nominate },
+		{ label: T.xpRowWatched, count: data.xp.nominationsWatched, per: data.xpRates.nominationWatched },
+		{ label: T.xpRowBacked, count: data.xp.winnersBacked, per: data.xpRates.backedWinner }
+	]);
 
 	let fileInput = $state<HTMLInputElement | null>(null);
 	let uploading = $state(false);
@@ -158,6 +168,30 @@
 	<div class="tx">{T.qrBody}</div>
 </div>
 <div class="linkbox">{data.link}</div>
+
+<div class="sec">{T.youXp}</div>
+<div class="xpcard">
+	<div class="xphead">
+		<b class="xptitle">{T.levels[level]}</b>
+		<span class="xptotal">{data.xp.total} XP</span>
+	</div>
+	{#if nextAt !== null}
+		<div class="xpbar">
+			<i style="width:{Math.round(((data.xp.total - LEVELS[level]) / (nextAt - LEVELS[level])) * 100)}%"
+			></i>
+		</div>
+		<div class="xpnext">{T.xpNext(nextAt - data.xp.total)}</div>
+	{:else}
+		<div class="xpnext">{T.xpTop}</div>
+	{/if}
+	{#each xpRows as row (row.label)}
+		{#if row.count > 0}
+			<div class="stat">
+				<span>{row.label} · {row.count} × {row.per}</span><b>{row.count * row.per}</b>
+			</div>
+		{/if}
+	{/each}
+</div>
 
 <div class="sec">{T.youStats}</div>
 <div class="stat"><span>{T.statPoints}</span><b>{data.stats.spent}</b></div>

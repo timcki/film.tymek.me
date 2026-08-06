@@ -4,6 +4,7 @@ import type { RuleSet } from './rules.js';
 import { closeWeek, currentWeek, openWeek, syncOpenWeek } from './weeks.js';
 import { closeExpiredRunoffs } from './runoffs.js';
 import { rescoreAll } from './scoring.js';
+import { rexpAll } from './xp.js';
 import { iso } from './time.js';
 
 let timer: NodeJS.Timeout | null = null;
@@ -39,8 +40,10 @@ export function tick(now: Date = new Date(), db: DB = getDb()): void {
 		return;
 	}
 
-	// keeps the score cache honest even when nobody has voted since a rule-set change
+	// keeps the caches honest even when nobody has voted since a rule-set change
+	// or a migration seeded new data
 	rescoreAll(db, rules, week.number);
+	rexpAll(db);
 }
 
 export function startScheduler(): void {

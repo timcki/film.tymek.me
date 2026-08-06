@@ -1,11 +1,15 @@
 import type { DB } from './db.js';
 import { iso } from './time.js';
+import { rexpAll } from './xp.js';
 
 /** §7.4: records presence once per night; scanning again changes nothing */
 export function checkIn(db: DB, weekNumber: number, personId: string, now: Date = new Date()): void {
-	db.prepare(
-		`INSERT OR IGNORE INTO attendance (week_number, person_id, checked_in_at) VALUES (?, ?, ?)`
-	).run(weekNumber, personId, iso(now));
+	const result = db
+		.prepare(
+			`INSERT OR IGNORE INTO attendance (week_number, person_id, checked_in_at) VALUES (?, ?, ?)`
+		)
+		.run(weekNumber, personId, iso(now));
+	if (result.changes > 0) rexpAll(db);
 }
 
 export function attended(db: DB, weekNumber: number, personId: string): boolean {

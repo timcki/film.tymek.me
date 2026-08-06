@@ -328,6 +328,10 @@ header .sub b {
 	color: var(--dim);
 	font-variant-numeric: tabular-nums;
 }
+.bkpop .bktitle {
+	color: var(--accent);
+	font-weight: 650;
+}
 @keyframes bkpop {
 	from {
 		opacity: 0;
@@ -980,6 +984,45 @@ details[open] > .iconbtn {
 	padding: 11px 0;
 	border-bottom: 1px solid var(--line);
 	font-size: 14px;
+}
+.xpcard {
+	background: var(--card);
+	border: 1px solid var(--line2);
+	border-radius: 14px;
+	padding: 14px 16px;
+}
+.xphead {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 12px;
+}
+.xptitle {
+	font-size: 17px;
+	color: var(--accent);
+}
+.xptotal {
+	font-variant-numeric: tabular-nums;
+	color: var(--dim);
+	font-size: 13px;
+}
+.xpbar {
+	margin-top: 9px;
+	height: 6px;
+	border-radius: 99px;
+	background: var(--card2);
+	overflow: hidden;
+}
+.xpbar i {
+	display: block;
+	height: 100%;
+	border-radius: 99px;
+	background: var(--accent);
+}
+.xpnext {
+	margin: 6px 0 4px;
+	font-size: 11.5px;
+	color: var(--dimmer);
 }
 .stat span {
 	color: var(--dim);

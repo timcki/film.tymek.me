@@ -12,7 +12,10 @@ CREATE TABLE IF NOT EXISTS person (
   avatar_mime       TEXT,
   avatar_updated_at TEXT,
   -- may reach /admin; seeded from the ADMINS environment variable at boot
-  is_admin          INTEGER NOT NULL DEFAULT 0
+  is_admin          INTEGER NOT NULL DEFAULT 0,
+  -- cache of the person's XP; rebuilt wholesale by rexpAll() inside every
+  -- mutating transaction that touches its inputs, so it can never drift
+  xp                INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS week (
@@ -161,5 +164,6 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	['film', 'genre', 'TEXT'],
 	['film', 'runtime', 'INTEGER'],
 	['film', 'note', 'TEXT'],
-	['ballot', 'prev_points', 'INTEGER NOT NULL DEFAULT 0']
+	['ballot', 'prev_points', 'INTEGER NOT NULL DEFAULT 0'],
+	['person', 'xp', 'INTEGER NOT NULL DEFAULT 0']
 ];

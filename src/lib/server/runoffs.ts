@@ -4,6 +4,7 @@ import type { Film, Runoff, Week } from './types.js';
 import { RuleError } from './types.js';
 import type { RuleSet } from './rules.js';
 import { orderFilms } from './rules.js';
+import { checkIn } from './attendance.js';
 import { iso } from './time.js';
 import { finish, weekByNumber } from './weeks.js';
 
@@ -84,6 +85,9 @@ export function flashVote(
 			 DO UPDATE SET film_id = excluded.film_id, person_id = excluded.person_id,
 			               created_at = excluded.created_at`
 		).run(runoffId, voterKey, personId, filmId, iso(now));
+
+		// §7.4: an identified flash vote implies being in the room
+		if (personId) checkIn(db, runoff.week_number, personId, now);
 	});
 }
 

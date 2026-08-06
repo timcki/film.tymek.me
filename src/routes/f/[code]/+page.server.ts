@@ -80,8 +80,6 @@ export const actions: Actions = {
 
 		try {
 			flashVote(db, runoff.id, voterKey, personId, filmId);
-			// a flash vote from a known person implies presence
-			if (personId) checkIn(db, runoff.week_number, personId);
 			return { ok: true };
 		} catch (err) {
 			if (err instanceof RuleError) return fail(409, { message: err.message });

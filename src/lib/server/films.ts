@@ -7,6 +7,7 @@ import { orderFilms, titleKey } from './rules.js';
 import { iso } from './time.js';
 import { avatarUrl, bankBalance, spentInWeek } from './people.js';
 import { campaignWeeks, pointsInWindow, rescoreAll, totalPoints } from './scoring.js';
+import { rexpAll } from './xp.js';
 import { requireOpenWeek } from './weeks.js';
 
 export function filmById(db: DB, id: number): Film | undefined {
@@ -30,7 +31,7 @@ function backersOf(db: DB, rules: RuleSet, filmId: number, currentWeek: number):
 	const params: (number | string)[] = weeks ? [filmId, ...weeks] : [filmId];
 	const rows = db
 		.prepare(
-			`SELECT b.person_id, p.name, p.colour, p.avatar_updated_at, SUM(b.points) AS points
+			`SELECT b.person_id, p.name, p.colour, p.avatar_updated_at, p.xp, SUM(b.points) AS points
 			 FROM ballot b JOIN person p ON p.id = b.person_id
 			 WHERE b.film_id = ? ${clause}
 			 GROUP BY b.person_id
@@ -206,6 +207,7 @@ export function nominate(db: DB, rules: RuleSet, personId: string, input: Nomina
 		assertNotDuplicate(db, input);
 		const id = insertFilm(db, input, personId, week.number);
 		rescoreAll(db, rules, week.number);
+		rexpAll(db);
 		return id;
 	});
 }
@@ -232,6 +234,7 @@ export function renominate(db: DB, rules: RuleSet, personId: string, filmId: num
 		assertNotDuplicate(db, input);
 		const id = insertFilm(db, input, personId, week.number);
 		rescoreAll(db, rules, week.number);
+		rexpAll(db);
 		return id;
 	});
 }
@@ -339,5 +342,6 @@ export function setPoints(
 		}
 
 		rescoreAll(db, rules, week.number);
+		rexpAll(db);
 	});
 }

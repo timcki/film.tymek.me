@@ -4,6 +4,7 @@
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import { dictFor, fmtScore, isVotes } from '$lib/i18n';
+	import { levelOf } from '$lib/levels';
 	import { say } from '$lib/toast.svelte';
 	import type { ActionData, PageData } from './$types';
 
@@ -530,6 +531,7 @@
 			titled={false}
 		/>
 		<b>{peek.backer.name}</b>
+		<span class="bktitle">{T.levels[levelOf(peek.backer.xp)]}</span>
 		<span>{peek.backer.points} {T.unit(peek.backer.points, votes)}</span>
 	</div>
 {/if}

@@ -7,6 +7,7 @@ import { titleKey } from './rules.js';
 import { iso } from './time.js';
 import { newToken, slugify } from './tokens.js';
 import { rescoreAll, scoreFor } from './scoring.js';
+import { rexpAll } from './xp.js';
 import { avatarUrl } from './people.js';
 
 /**
@@ -184,6 +185,7 @@ export function setFilmStatus(db: DB, rules: RuleSet, id: number, status: FilmSt
 			id
 		);
 		rescoreAll(db, rules, week);
+		rexpAll(db);
 	});
 }
 
@@ -201,6 +203,7 @@ export function markWatched(db: DB, rules: RuleSet, id: number, week: number, cu
 		).run(week, score, id);
 		db.prepare('UPDATE week SET winner_film_id = ? WHERE number = ?').run(id, week);
 		rescoreAll(db, rules, current);
+		rexpAll(db);
 	});
 }
 
@@ -273,5 +276,6 @@ export function deleteFilm(db: DB, id: number): void {
 		};
 		if (shown.n) throw new RuleError('film_has_ballots', 'the room has seen it; archive it instead');
 		db.prepare('DELETE FROM film WHERE id = ?').run(id);
+		rexpAll(db);
 	});
 }

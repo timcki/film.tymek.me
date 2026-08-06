@@ -7,6 +7,7 @@ import { accrue, orderFilms } from './rules.js';
 import { iso } from './time.js';
 import { markNightUsed, nextNight } from './schedule.js';
 import { pointsInWindow, rescoreAll, totalPoints } from './scoring.js';
+import { rexpAll } from './xp.js';
 import { newCode } from './tokens.js';
 
 export function currentWeek(db: DB): Week | undefined {
@@ -137,6 +138,7 @@ export function finish(
 	markNightUsed(db, week.number, week.closes_at);
 	const next = openWeek(db, week.number + 1, now);
 	rescoreAll(db, rules, next.number);
+	rexpAll(db);
 }
 
 function closeWithoutWinner(db: DB, rules: RuleSet, week: Week, now: Date): void {

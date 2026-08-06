@@ -3,6 +3,7 @@ import { getDb } from '$lib/server/db';
 import { activeRules, origin } from '$lib/server/config';
 import { bankBalance, clearAvatar, rotateToken, setAvatar } from '$lib/server/people';
 import { currentWeek } from '$lib/server/weeks';
+import { XP, xpBreakdown } from '$lib/server/xp';
 import { qrSvg } from '$lib/server/qr';
 import { ruleFail } from '$lib/server/respond';
 import { RuleError } from '$lib/server/types';
@@ -66,7 +67,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 			longestCampaign,
 			nominatedThisWeek,
 			bank: rules.banking ? bankBalance(db, person.id) : null
-		}
+		},
+		// derived live for the one person looking; the cached column serves lists
+		xp: xpBreakdown(db, person.id),
+		xpRates: XP
 	};
 };
 
