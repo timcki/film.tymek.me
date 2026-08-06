@@ -193,8 +193,20 @@ export function setFilmStatus(db: DB, rules: RuleSet, id: number, status: FilmSt
 export function markWatched(db: DB, rules: RuleSet, id: number, week: number, current: number): void {
 	immediate(db, () => {
 		filmOr404(db, id);
-		const exists = db.prepare('SELECT 1 FROM week WHERE number = ?').get(week);
-		if (!exists) throw new RuleError('no_such_week', `there is no week ${week}`, { week });
+		const row = db.prepare('SELECT winner_film_id FROM week WHERE number = ?').get(week) as
+			| { winner_film_id: number | null }
+			| undefined;
+		if (!row) throw new RuleError('no_such_week', `there is no week ${week}`, { week });
+		// without this the second film to be marked silently orphans the first, which
+		// keeps status 'watched' on a week it is no longer the winner of, and the
+		// history page and the film list stop agreeing about that night
+		if (row.winner_film_id !== null && row.winner_film_id !== id) {
+			const held = filmOr404(db, row.winner_film_id);
+			throw new RuleError('week_has_winner', `week ${week} is already ${held.title}`, {
+				week,
+				title: held.title
+			});
+		}
 		// the frozen score is a permanent record, so take it from the ballots rather
 		// than trusting whatever the cache happened to hold
 		const score = scoreFor(db, rules, id, week);

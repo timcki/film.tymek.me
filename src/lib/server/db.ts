@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { ADDED_COLUMNS, SCHEMA } from './schema.js';
+import { ADDED_COLUMNS, LATE_INDEXES, SCHEMA } from './schema.js';
 
 export type DB = Database.Database;
 
@@ -16,6 +16,7 @@ export function applySchema(db: DB): void {
 			db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${decl}`);
 		}
 	}
+	for (const statement of LATE_INDEXES) db.exec(statement);
 	// idempotent data seed: flash votes cast before the attendance table existed
 	// still mean the person was in the room that night
 	db.exec(

@@ -59,7 +59,7 @@ export function syncOpenWeek(db: DB): Week | undefined {
 /** ordered active films, per §3.2, with their scores as of `week` */
 export function standingsFor(db: DB, rules: RuleSet, week: number): (Film & { score: number })[] {
 	rescoreAll(db, rules, week);
-	const films = db.prepare(`SELECT * FROM film WHERE status = 'active'`).all() as (Film & {
+	const films = db.prepare(`SELECT * FROM film WHERE status = 'active' AND archival = 0`).all() as (Film & {
 		score: number;
 	})[];
 	return orderFilms(films);
@@ -80,7 +80,7 @@ export function shortlistOf(db: DB, week: number): Film[] {
 
 /** §3.4, evaluated once during week close, after the winner has been removed */
 export function applyAttrition(db: DB, rules: RuleSet, week: number): void {
-	const films = db.prepare(`SELECT * FROM film WHERE status = 'active'`).all() as Film[];
+	const films = db.prepare(`SELECT * FROM film WHERE status = 'active' AND archival = 0`).all() as Film[];
 	for (const film of films) {
 		if (rules.attrition.kind === 'archive') {
 			const age = week - film.added_week;

@@ -15,7 +15,9 @@ export function filmById(db: DB, id: number): Film | undefined {
 }
 
 export function filmsByStatus(db: DB, status: Film['status']): Film[] {
-	return db.prepare('SELECT * FROM film WHERE status = ?').all(status) as Film[];
+	return db
+		.prepare('SELECT * FROM film WHERE status = ? AND archival = 0')
+		.all(status) as Film[];
 }
 
 /** the weeks whose ballots contribute to the current score under these rules */
@@ -61,7 +63,9 @@ export function standings(
 	viewerId: string | null,
 	status: Film['status'] = 'active'
 ): Standing[] {
-	const films = db.prepare('SELECT * FROM film WHERE status = ?').all(status) as (Film & {
+	const films = db
+		.prepare('SELECT * FROM film WHERE status = ? AND archival = 0')
+		.all(status) as (Film & {
 		score: number;
 	})[];
 	const now = new Date();
@@ -143,7 +147,12 @@ function duplicate(clash: Film): RuleError {
 	});
 }
 
-/** §4.1: a dropped film does not block, that is what Re-nominate is for */
+/**
+ * §4.1: a dropped film does not block, that is what Re-nominate is for. Nor does
+ * an archival proposition: somebody having suggested it at a night two years ago
+ * and the room never watching it is no reason it cannot go up now. An archival
+ * film we did watch still blocks, which is the whole point of writing it down.
+ */
 function assertNotDuplicate(db: DB, input: NominationInput): void {
 	const key = titleKey(input.title);
 	if (!key) throw new RuleError('no_title', 'give the film a title');
@@ -151,7 +160,8 @@ function assertNotDuplicate(db: DB, input: NominationInput): void {
 	if (input.tmdbId) {
 		const clash = db
 			.prepare(
-				`SELECT * FROM film WHERE tmdb_id = ? AND status IN ('active','archived','watched') LIMIT 1`
+				`SELECT * FROM film WHERE tmdb_id = ? AND status IN ('active','archived','watched')
+			   AND (archival = 0 OR status = 'watched') LIMIT 1`
 			)
 			.get(input.tmdbId) as Film | undefined;
 		if (clash) throw duplicate(clash);
@@ -159,15 +169,21 @@ function assertNotDuplicate(db: DB, input: NominationInput): void {
 
 	const byTitle = db
 		.prepare(
-			`SELECT * FROM film WHERE title_key = ? AND status IN ('active','archived','watched') LIMIT 1`
+			`SELECT * FROM film WHERE title_key = ? AND status IN ('active','archived','watched')
+			   AND (archival = 0 OR status = 'watched') LIMIT 1`
 		)
 		.get(key) as Film | undefined;
 	if (byTitle) throw duplicate(byTitle);
 }
 
 function assertNominationSlot(db: DB, rules: RuleSet, personId: string, week: number): void {
+	// archival rows are a record of a past night, not a claim on this week's slot.
+	// Deliberately stricter than the index, which also lets watched films go: a
+	// film marked watched mid-round should not hand its nominator a second turn
 	const row = db
-		.prepare('SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND added_week = ?')
+		.prepare(
+			'SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND added_week = ? AND archival = 0'
+		)
 		.get(personId, week) as { n: number };
 	if (row.n >= rules.nominationsPerWeek) {
 		throw new RuleError('already_nominated', 'you have already nominated a film this week');
@@ -293,6 +309,11 @@ export function setPoints(
 
 		const film = filmById(db, filmId);
 		if (!film) throw new RuleError('no_film', 'no such film');
+		if (film.archival) {
+			throw new RuleError('film_archival', `${film.title} is a record of a past night`, {
+				title: film.title
+			});
+		}
 		if (film.status === 'watched') {
 			throw new RuleError('watched_already', `we already watched ${film.title}`, { title: film.title });
 		}

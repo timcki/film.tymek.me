@@ -65,6 +65,11 @@ export type Film = {
 	/** cache of the current score, rebuilt by rescoreAll() */
 	score: number;
 	created_at: string;
+	/**
+	 * 1 for a record of a past night rather than a nomination in play: invisible to
+	 * the list, untouched by attrition, unvotable, and outside the one-per-round index
+	 */
+	archival: number;
 };
 
 export type Ballot = {

@@ -50,10 +50,17 @@ CREATE TABLE IF NOT EXISTS film (
   -- cache of the current score; rebuilt wholesale by rescoreAll() inside every
   -- mutating transaction, so it can never drift from the ballot table
   score        REAL NOT NULL DEFAULT 0,
-  created_at   TEXT NOT NULL
+  created_at   TEXT NOT NULL,
+  -- a record of a night that happened rather than a nomination in play: kept off
+  -- the list, out of attrition, and out of the one-per-round index. What lets a
+  -- film proposed in week 12 and never watched be written down without landing
+  -- on today's ballot
+  archival     INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS film_one_per_person_per_week ON film(added_by, added_week);
+-- the one-per-person-per-round index lives in LATE_INDEXES, not here: it names
+-- archival, which a database created before that column does not have until
+-- ADDED_COLUMNS has run
 CREATE INDEX IF NOT EXISTS film_title_key ON film(title_key);
 CREATE INDEX IF NOT EXISTS film_status ON film(status);
 
@@ -166,7 +173,26 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	['film', 'genre', 'TEXT'],
 	['film', 'runtime', 'INTEGER'],
 	['film', 'note', 'TEXT'],
+	['film', 'archival', 'INTEGER NOT NULL DEFAULT 0'],
 	['ballot', 'prev_points', 'INTEGER NOT NULL DEFAULT 0'],
 	['person', 'xp', 'INTEGER NOT NULL DEFAULT 0'],
 	['person', 'changelog_seen', 'INTEGER NOT NULL DEFAULT 0']
+];
+
+/**
+ * Index work that has to happen after ADDED_COLUMNS, because it names columns a
+ * database created before them does not have yet. Applied on every open; each
+ * statement is a no-op once it has run.
+ *
+ * The old index covered every film ever, so it enforced a rule about the open
+ * round against a year of history: re-crediting two of week 12's films to one
+ * person was impossible, and writing down a second film for a week somebody had
+ * already nominated in collided with their nomination. Scoping it to the rows
+ * the rule is actually about leaves history free to be rearranged.
+ */
+export const LATE_INDEXES: string[] = [
+	'DROP INDEX IF EXISTS film_one_per_person_per_week',
+	`CREATE UNIQUE INDEX IF NOT EXISTS film_one_per_person_per_round
+	   ON film(added_by, added_week)
+	   WHERE archival = 0 AND status != 'watched'`
 ];
