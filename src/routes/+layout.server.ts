@@ -51,7 +51,8 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 			decayFactor: rules.decayFactor,
 			attrition: rules.attrition,
 			nominationsPerWeek: rules.nominationsPerWeek,
-			shortlistSize: rules.shortlistSize
+			shortlistSize: rules.shortlistSize,
+			voteGraceSeconds: rules.voteGraceSeconds
 		},
 		week: week
 			? {

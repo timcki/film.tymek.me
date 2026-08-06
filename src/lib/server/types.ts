@@ -68,6 +68,9 @@ export type Ballot = {
 	person_id: string;
 	film_id: number;
 	points: number;
+	/** §8.3: what the vote falls back to if undone within the grace window */
+	prev_points: number;
+	/** when the last raise happened; the grace window runs from here */
 	updated_at: string;
 };
 
@@ -93,6 +96,8 @@ export type Standing = Film & {
 	score: number;
 	backers: Backer[];
 	myPoints: number;
+	/** §8.3: the lowest value the viewer may set on this film right now */
+	myFloor: number;
 	addedByName: string;
 	/** consecutive weeks a single person has backed this film, §9 badge */
 	campaignWeeks: number;

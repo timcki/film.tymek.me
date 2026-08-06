@@ -63,12 +63,17 @@ export function standings(
 	const films = db.prepare('SELECT * FROM film WHERE status = ?').all(status) as (Film & {
 		score: number;
 	})[];
-	const mine = new Map<number, number>();
+	const now = new Date();
+	const mine = new Map<number, { points: number; floor: number }>();
 	if (viewerId) {
 		const rows = db
-			.prepare('SELECT film_id, points FROM ballot WHERE person_id = ? AND week_number = ?')
-			.all(viewerId, currentWeek) as { film_id: number; points: number }[];
-		for (const row of rows) mine.set(row.film_id, row.points);
+			.prepare(
+				'SELECT film_id, points, prev_points, updated_at FROM ballot WHERE person_id = ? AND week_number = ?'
+			)
+			.all(viewerId, currentWeek) as (BallotRow & { film_id: number })[];
+		for (const row of rows) {
+			mine.set(row.film_id, { points: row.points, floor: pointsFloor(rules, row, now) });
+		}
 	}
 	const names = new Map(
 		(db.prepare('SELECT id, name FROM person').all() as { id: string; name: string }[]).map((p) => [
@@ -79,7 +84,8 @@ export function standings(
 	const enriched = films.map((film) => ({
 		...film,
 		backers: backersOf(db, rules, film.id, currentWeek),
-		myPoints: mine.get(film.id) ?? 0,
+		myPoints: mine.get(film.id)?.points ?? 0,
+		myFloor: mine.get(film.id)?.floor ?? 0,
 		addedByName: names.get(film.added_by) ?? film.added_by,
 		campaignWeeks: campaignWeeks(db, film.id, currentWeek),
 		atRisk: isAtRisk(db, rules, film, currentWeek)
@@ -230,26 +236,43 @@ export function renominate(db: DB, rules: RuleSet, personId: string, filmId: num
 	});
 }
 
-function currentPoints(db: DB, personId: string, filmId: number, week: number): number {
-	const row = db
-		.prepare('SELECT points FROM ballot WHERE week_number = ? AND person_id = ? AND film_id = ?')
-		.get(week, personId, filmId) as { points: number } | undefined;
-	return row?.points ?? 0;
+type BallotRow = { points: number; prev_points: number; updated_at: string };
+
+function ballotRow(db: DB, personId: string, filmId: number, week: number): BallotRow | undefined {
+	return db
+		.prepare(
+			'SELECT points, prev_points, updated_at FROM ballot WHERE week_number = ? AND person_id = ? AND film_id = ?'
+		)
+		.get(week, personId, filmId) as BallotRow | undefined;
+}
+
+/**
+ * §8.3: the lowest value this vote may be set to right now. Inside the grace
+ * window that is whatever it was before the last raise; outside it, the vote
+ * itself. A row's absence means nothing is committed yet.
+ */
+export function pointsFloor(rules: RuleSet, row: BallotRow | undefined, now: Date): number {
+	if (!row) return 0;
+	const sinceRaise = now.getTime() - new Date(row.updated_at).getTime();
+	return sinceRaise < rules.voteGraceSeconds * 1000 ? row.prev_points : row.points;
 }
 
 /**
  * §8.1. Takes an absolute point value, not a delta, because deltas are not idempotent
  * and double-taps on a phone are common.
+ * §8.3. Points can always be added; going down is only allowed back to the floor,
+ * and only while the grace window from the last raise is open.
  */
 export function setPoints(
 	db: DB,
 	rules: RuleSet,
 	personId: string,
 	filmId: number,
-	points: number
+	points: number,
+	now: Date = new Date()
 ): void {
 	immediate(db, () => {
-		const week = requireOpenWeek(db);
+		const week = requireOpenWeek(db, now);
 		if (!Number.isInteger(points) || points < 0) {
 			throw new RuleError('bad_points', 'points must be a whole number');
 		}
@@ -265,8 +288,18 @@ export function setPoints(
 			});
 		}
 
-		const spentElsewhere =
-			spentInWeek(db, personId, week.number) - currentPoints(db, personId, filmId, week.number);
+		const row = ballotRow(db, personId, filmId, week.number);
+		const current = row?.points ?? 0;
+		const floor = pointsFloor(rules, row, now);
+		if (points < floor) {
+			throw new RuleError(
+				'votes_final',
+				`a vote is final ${rules.voteGraceSeconds} s after casting; only adding is allowed`,
+				{ floor, seconds: rules.voteGraceSeconds }
+			);
+		}
+
+		const spentElsewhere = spentInWeek(db, personId, week.number) - current;
 		const allowance = rules.banking ? bankBalance(db, personId) : rules.pointsPerWeek;
 		if (spentElsewhere + points > allowance) {
 			const left = allowance - spentElsewhere;
@@ -277,19 +310,27 @@ export function setPoints(
 			);
 		}
 
-		if (points === 0) {
+		if (points > current) {
+			// a raise commits at the floor and opens a fresh grace window; raises
+			// inside one window collapse so the undo goes back to before them all
+			db.prepare(
+				`INSERT INTO ballot (week_number, person_id, film_id, points, prev_points, updated_at)
+				 VALUES (?, ?, ?, ?, ?, ?)
+				 ON CONFLICT(week_number, person_id, film_id)
+				 DO UPDATE SET points = excluded.points, prev_points = excluded.prev_points,
+				               updated_at = excluded.updated_at`
+			).run(week.number, personId, filmId, points, floor, iso(now));
+		} else if (points < current && points === 0) {
 			db.prepare('DELETE FROM ballot WHERE week_number = ? AND person_id = ? AND film_id = ?').run(
 				week.number,
 				personId,
 				filmId
 			);
-		} else {
+		} else if (points < current) {
+			// an undo keeps the original raise time, so it cannot stretch the window
 			db.prepare(
-				`INSERT INTO ballot (week_number, person_id, film_id, points, updated_at)
-				 VALUES (?, ?, ?, ?, ?)
-				 ON CONFLICT(week_number, person_id, film_id)
-				 DO UPDATE SET points = excluded.points, updated_at = excluded.updated_at`
-			).run(week.number, personId, filmId, points, iso());
+				'UPDATE ballot SET points = ? WHERE week_number = ? AND person_id = ? AND film_id = ?'
+			).run(points, week.number, personId, filmId);
 		}
 
 		// §8.1: a single vote revives an archived film

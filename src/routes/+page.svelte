@@ -252,7 +252,9 @@
 							class:on={film.myPoints > 0}
 							name="points"
 							value={film.myPoints > 0 ? 0 : 1}
-							disabled={!open || (film.myPoints === 0 && left < 1)}
+							disabled={!open ||
+								(film.myPoints === 0 && left < 1) ||
+								(film.myPoints > 0 && film.myFloor > 0)}
 						>
 							{film.myPoints > 0 ? T.btnVoted : T.btnVote}
 						</button>
@@ -427,8 +429,8 @@
 						<input type="hidden" name="filmId" value={detail.id} />
 						<button
 							name="points"
-							value={Math.max(0, detail.myPoints - 1)}
-							disabled={!open || !detail.myPoints}>−</button
+							value={Math.max(detail.myFloor, detail.myPoints - 1)}
+							disabled={!open || detail.myPoints <= detail.myFloor}>−</button
 						>
 					</form>
 					<span class:on={detail.myPoints > 0}>{detail.myPoints}</span>

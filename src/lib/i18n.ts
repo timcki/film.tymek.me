@@ -34,6 +34,7 @@ export type RulesView = {
 		| { kind: 'drop'; afterWeeksWithoutPoints: number };
 	nominationsPerWeek: number;
 	shortlistSize: number;
+	voteGraceSeconds: number;
 };
 
 /** one point a week and no banking means the currency reads as votes, not points */
@@ -244,7 +245,7 @@ const plRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 	} else if (votes) {
 		out.push({
 			head: 'Masz jeden głos tygodniowo.',
-			body: 'Możesz go przenosić do zamknięcia głosowania, potem się zamyka.'
+			body: 'Wykorzystaj go w danym tygodniu albo przepada.'
 		});
 	} else {
 		out.push({
@@ -258,8 +259,13 @@ const plRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 			? 'Twój głos idzie na jeden film.'
 			: 'Gdy głosujesz na film, możesz zużyć tyle punktów, ile masz dostępnych.',
 		body: votes
-			? 'Możesz go przenieść na inny, dopóki tydzień jest otwarty.'
+			? 'Wybieraj uważnie, bo raz oddany zostaje.'
 			: 'Po jednym co tydzień, żeby film nie odpadł z listy, albo wszystko naraz, żeby go przepchnąć.'
+	});
+
+	out.push({
+		head: 'Oddanych punktów nie można cofać.',
+		body: `Masz ${r.voteGraceSeconds} sekund na poprawienie pomyłki, potem głos zostaje i można tylko dokładać.`
 	});
 
 	if (r.scoring === 'fade') {
@@ -321,7 +327,7 @@ const pl: Dict = {
 		if (r.banking) {
 			return `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} co tydzień. Niewydane punkty akumulują się co tydzień, maksymalnie do ${r.bankCap}.`;
 		}
-		if (isVotes(r)) return 'Masz jeden głos tygodniowo. Możesz go przenosić do zamknięcia głosowania.';
+		if (isVotes(r)) return 'Masz jeden głos tygodniowo. Wykorzystaj go albo przepada.';
 		return `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} na tydzień. Niewykorzystane przepadają po wieczorku.`;
 	},
 	rulesChanged: (label) =>
@@ -482,6 +488,8 @@ const pl: Dict = {
 				return `${p.title} wypadł z listy; zgłoś go ponownie.`;
 			case 'bad_points':
 				return 'Punkty muszą być liczbą całkowitą.';
+			case 'votes_final':
+				return `Głos jest ostateczny. Na cofnięcie pomyłki masz ${p.seconds} s od oddania, potem punkty można tylko dokładać.`;
 			case 'not_enough_points':
 				return `Zostało ci ${p.left} z ${p.allowance}, więc ${p.points} to za dużo.`;
 			case 'note_too_long':
@@ -530,7 +538,7 @@ const enRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 	} else if (votes) {
 		out.push({
 			head: 'One vote a week.',
-			body: 'Move it freely until voting closes, then it sets.'
+			body: 'Use it that week or lose it.'
 		});
 	} else {
 		out.push({
@@ -542,8 +550,13 @@ const enRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 	out.push({
 		head: votes ? 'Your vote goes on one film.' : 'You can spend as many points on a film as you have.',
 		body: votes
-			? 'Move it to another while the week is still open.'
+			? 'Pick carefully; once cast it stays.'
 			: 'One a week to keep a film on the list, or the lot at once to force it through.'
+	});
+
+	out.push({
+		head: 'A cast vote cannot be taken back.',
+		body: `You get ${r.voteGraceSeconds} seconds to fix a slip, then it stands and points can only be added.`
 	});
 
 	if (r.scoring === 'fade') {
@@ -603,7 +616,7 @@ const en: Dict = {
 		if (r.banking) {
 			return `You get ${r.pointsPerWeek} points every week. Unspent points accumulate week to week, up to ${r.bankCap}.`;
 		}
-		if (isVotes(r)) return 'One vote a week. Move it freely until voting closes.';
+		if (isVotes(r)) return 'One vote a week. Use it or lose it.';
 		return `You get ${r.pointsPerWeek} points a week. Anything unspent is gone after the night.`;
 	},
 	rulesChanged: (label) =>

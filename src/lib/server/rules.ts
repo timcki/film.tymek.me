@@ -31,6 +31,11 @@ export type RuleSet = {
 	 * film never loses a slot to a coin flip.
 	 */
 	shortlistSize: number;
+	/**
+	 * §8.3: a cast vote is final. For this many seconds after a raise it can
+	 * still be unwound (double-taps on a phone are common); then it stands.
+	 */
+	voteGraceSeconds: number;
 };
 
 export const RULE_SETS: Record<RuleSetId, RuleSet> = {
@@ -44,7 +49,8 @@ export const RULE_SETS: Record<RuleSetId, RuleSet> = {
 		decayFactor: 0,
 		attrition: { kind: 'archive', afterWeeksAtZero: 8 },
 		nominationsPerWeek: 1,
-		shortlistSize: 3
+		shortlistSize: 3,
+		voteGraceSeconds: 30
 	},
 	rolling: {
 		id: 'rolling',
@@ -56,7 +62,8 @@ export const RULE_SETS: Record<RuleSetId, RuleSet> = {
 		decayFactor: 0.5,
 		attrition: { kind: 'drop', afterWeeksWithoutPoints: 1 },
 		nominationsPerWeek: 1,
-		shortlistSize: 3
+		shortlistSize: 3,
+		voteGraceSeconds: 30
 	},
 	banked: {
 		id: 'banked',
@@ -68,7 +75,8 @@ export const RULE_SETS: Record<RuleSetId, RuleSet> = {
 		decayFactor: 0,
 		attrition: { kind: 'drop', afterWeeksWithoutPoints: 2 },
 		nominationsPerWeek: 1,
-		shortlistSize: 3
+		shortlistSize: 3,
+		voteGraceSeconds: 30
 	},
 	weekly: {
 		id: 'weekly',
@@ -80,7 +88,8 @@ export const RULE_SETS: Record<RuleSetId, RuleSet> = {
 		decayFactor: 0.75,
 		attrition: { kind: 'drop', afterWeeksWithoutPoints: 2 },
 		nominationsPerWeek: 1,
-		shortlistSize: 3
+		shortlistSize: 3,
+		voteGraceSeconds: 30
 	}
 };
 

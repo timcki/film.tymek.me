@@ -57,6 +57,10 @@ CREATE TABLE IF NOT EXISTS ballot (
   person_id   TEXT    NOT NULL REFERENCES person(id),
   film_id     INTEGER NOT NULL REFERENCES film(id),
   points      INTEGER NOT NULL CHECK (points > 0),
+  -- §8.3: the value before the last raise. While the grace window is open the
+  -- vote can fall back to this; once it shuts, points can only go up
+  prev_points INTEGER NOT NULL DEFAULT 0,
+  -- when the last raise happened; the grace window is measured from here
   updated_at  TEXT    NOT NULL,
   PRIMARY KEY (week_number, person_id, film_id)
 );
@@ -147,5 +151,6 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	['person', 'is_admin', 'INTEGER NOT NULL DEFAULT 0'],
 	['film', 'genre', 'TEXT'],
 	['film', 'runtime', 'INTEGER'],
-	['film', 'note', 'TEXT']
+	['film', 'note', 'TEXT'],
+	['ballot', 'prev_points', 'INTEGER NOT NULL DEFAULT 0']
 ];

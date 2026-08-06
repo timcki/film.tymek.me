@@ -53,7 +53,8 @@ describe('budgets', () => {
 		expect(accrue(rules, 0, 0)).toBeGreaterThanOrEqual(0);
 	});
 
-	// 4. setting points to 0 frees the budget for another film in the same week
+	// 4. undoing a cast within the grace window frees the budget for another film;
+	// outside the window votes are final, which finality.test.ts covers
 	it('freeing points on one film lets you spend them on another', () => {
 		const { db, rules } = freshDb('banked');
 		const a = addFilm(db, 'Stalker', 'ala', 1);
@@ -75,5 +76,10 @@ describe('budgets', () => {
 		expect(RULE_SETS.ledger.pointsPerWeek).toBe(1);
 		expect(RULE_SETS.rolling.pointsPerWeek).toBe(5);
 		expect(RULE_SETS.banked.pointsPerWeek).toBe(2);
+	});
+
+	it('weekly grants two points a week and never banks them', () => {
+		expect(RULE_SETS.weekly.pointsPerWeek).toBe(2);
+		expect(RULE_SETS.weekly.banking).toBe(false);
 	});
 });
