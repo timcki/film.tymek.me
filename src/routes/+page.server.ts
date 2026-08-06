@@ -4,6 +4,7 @@ import { getDb } from '$lib/server/db';
 import { activeRules } from '$lib/server/config';
 import { currentWeek } from '$lib/server/weeks';
 import {
+	castOrder,
 	filmsByStatus,
 	nominate,
 	renominate,
@@ -20,7 +21,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const week = currentWeek(db);
 	const person = locals.person!;
 	if (!week) {
-		return { films: [], archived: [], dropped: [], shortlistCount: 0, nominatedThisWeek: null };
+		return {
+			films: [],
+			archived: [],
+			dropped: [],
+			shortlistCount: 0,
+			nominatedThisWeek: null,
+			myCastOrder: []
+		};
 	}
 
 	const nominatedThisWeek = db
@@ -39,7 +47,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		archived: standings(db, rules, week.number, person.id, 'archived'),
 		dropped: filmsByStatus(db, 'dropped'),
 		shortlistCount: shortlistCount > 1 ? shortlistCount : 0,
-		nominatedThisWeek: nominatedThisWeek ?? null
+		nominatedThisWeek: nominatedThisWeek ?? null,
+		myCastOrder: castOrder(db, person.id, week.number)
 	};
 };
 

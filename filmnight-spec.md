@@ -593,7 +593,10 @@ signed), then one footer row that never wraps — the top four backer pills by p
 a `+N` pill folding the rest (it opens the detail sheet), and the vote pill (or a Vote
 button when `pointsPerWeek === 1`). The pill is one tap target showing the whole weekly
 budget as three small dots, film-relative: a check is a point of yours on this film, a
-dim dot is a point busy on another film, a dashed dot is still free. Casting takes two
+dim dot is a point busy on another film, a dashed dot is still free. Spent slots keep
+the order the week's points were cast (approximated by each film's last raise, since
+individual casts are not stored), so the same slot means the same point on every card
+in the list. Casting takes two
 taps: the first arms the next free dot (a pulsing accent circle; it relaxes after ~4s
 or on a tap elsewhere, and an abandoned arm earns a one-line toast hint), the second
 casts — final on the spot, and the list glides into its new order with a FLIP animation

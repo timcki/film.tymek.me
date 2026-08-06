@@ -423,15 +423,19 @@
 {/snippet}
 
 {#snippet triDots(film: Film)}
-	<!-- always the full budget, film-relative: a check is yours here, a dim dot
-	     is busy on another film, a dashed one is still free. The first free dot
-	     wears the plus that says tap me; armed, it trades the plus for the
-	     bowstring drawn: one more tap makes it count -->
-	{#each Array(film.myPoints) as _, i (i)}
-		<span class="tdot set" in:scale={{ duration: 260, start: 0.3, easing: backOut }}><i>✓</i></span>
-	{/each}
-	{#each Array(Math.max(0, (data.person?.budget ?? 0) - left - film.myPoints)) as _, i (i)}
-		<span class="tdot busy"></span>
+	<!-- the spent slots in the order the week's points were cast, so every
+	     card tells the same story: a check where a point landed here, a busy
+	     dot where it went to another film, free slots at the end. The first
+	     free dot wears the plus that says tap me; armed, it trades the plus
+	     for the bowstring drawn: one more tap makes it count -->
+	{#each data.myCastOrder as entry (entry.filmId)}
+		{#each Array(entry.points) as _, i (i)}
+			{#if entry.filmId === film.id}
+				<span class="tdot set" in:scale={{ duration: 260, start: 0.3, easing: backOut }}><i>✓</i></span>
+			{:else}
+				<span class="tdot busy"></span>
+			{/if}
+		{/each}
 	{/each}
 	{#each Array(Math.max(0, left)) as _, i (i)}
 		<span class="tdot free" class:armed={i === 0 && armed?.filmId === film.id}>
