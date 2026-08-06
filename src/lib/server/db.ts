@@ -16,6 +16,14 @@ export function applySchema(db: DB): void {
 			db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${decl}`);
 		}
 	}
+	// idempotent data seed: flash votes cast before the attendance table existed
+	// still mean the person was in the room that night
+	db.exec(
+		`INSERT OR IGNORE INTO attendance (week_number, person_id, checked_in_at)
+		 SELECT r.week_number, rb.person_id, rb.created_at
+		 FROM runoff_ballot rb JOIN runoff r ON r.id = rb.runoff_id
+		 WHERE rb.person_id IS NOT NULL`
+	);
 }
 
 /** opens a database at `path` and makes sure the schema is present */

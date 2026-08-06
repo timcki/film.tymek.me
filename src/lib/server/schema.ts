@@ -98,6 +98,15 @@ CREATE TABLE IF NOT EXISTS runoff_ballot (
   PRIMARY KEY (runoff_id, voter_key)
 );
 
+-- §7.4: who was in the room on a given night. Scanning the room code and
+-- identifying yourself is the whole ceremony; a flash vote implies it
+CREATE TABLE IF NOT EXISTS attendance (
+  week_number   INTEGER NOT NULL REFERENCES week(number),
+  person_id     TEXT    NOT NULL REFERENCES person(id),
+  checked_in_at TEXT    NOT NULL,
+  PRIMARY KEY (week_number, person_id)
+);
+
 CREATE TABLE IF NOT EXISTS tmdb_cache (
   query      TEXT PRIMARY KEY,
   body       TEXT NOT NULL,

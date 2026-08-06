@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyAttrition, closeWeek } from '../src/lib/server/weeks.js';
+import { closeRunoff, openRunoff } from '../src/lib/server/runoffs.js';
 import { filmById, setPoints } from '../src/lib/server/films.js';
 import { addFilm, castBallot, forceAdvanceTo, freshDb } from './helpers.js';
 
@@ -68,6 +69,7 @@ describe('attrition', () => {
 		setPoints(db, rules, 'ala', winner, 2);
 
 		closeWeek(db, rules);
+		closeRunoff(db, rules, openRunoff(db)!.id);
 		expect(filmById(db, winner)!.status).toBe('watched');
 		expect(filmById(db, loser)!.status).toBe('dropped');
 	});

@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { closeWeek, currentWeek, weekByNumber } from '../src/lib/server/weeks.js';
+import type { DB } from '../src/lib/server/db.js';
+import type { RuleSet } from '../src/lib/server/rules.js';
+import { closeWeek, currentWeek, weekByNumber, type CloseResult } from '../src/lib/server/weeks.js';
+import { closeRunoff, openRunoff } from '../src/lib/server/runoffs.js';
 import { setPoints } from '../src/lib/server/films.js';
 import { formatLocal, nextDeadline } from '../src/lib/server/time.js';
 import { addFilm, castBallot, freshDb } from './helpers.js';
+
+/** every decided night goes to the room now; close and let it fall through */
+function closeAndResolve(db: DB, rules: RuleSet, now?: Date): CloseResult {
+	const result = closeWeek(db, rules, now);
+	if (result.kind === 'runoff') closeRunoff(db, rules, openRunoff(db)!.id, now);
+	return result;
+}
 
 describe('week lifecycle', () => {
 	// 15. closeWeek on an already-closed week is a no-op
@@ -11,8 +21,10 @@ describe('week lifecycle', () => {
 		const film = addFilm(db, 'Stalker', 'ala', 1);
 		setPoints(db, rules, 'ala', film, 2);
 
-		const first = closeWeek(db, rules);
-		expect(first.kind).toBe('winner');
+		// even a lone candidate goes to the room, where the code doubles as the
+		// attendance sheet; resolving the runoff finishes the week
+		const first = closeAndResolve(db, rules);
+		expect(first.kind).toBe('runoff');
 
 		// week 2 is now open with no films; closing it again resolves nothing new
 		const before = db.prepare('SELECT COUNT(*) AS n FROM week').get() as { n: number };
@@ -33,9 +45,10 @@ describe('week lifecycle', () => {
 		setPoints(db, rules, 'ala', film, 2);
 
 		const a = closeWeek(db, rules);
-		const b = closeWeek(db, rules); // week 2 is open but empty
-		expect(a.kind).toBe('winner');
-		expect(b.kind).toBe('no-winner');
+		expect(a.kind).toBe('runoff');
+		// a second close while the room is picking must change nothing
+		expect(closeWeek(db, rules).kind).toBe('noop');
+		closeRunoff(db, rules, openRunoff(db)!.id);
 
 		const week1 = weekByNumber(db, 1)!;
 		expect(week1.status).toBe('closed');
@@ -53,7 +66,7 @@ describe('week lifecycle', () => {
 		setPoints(db, rules, 'ala', film, 2);
 		castBallot(db, 1, 'bartek', film, 1);
 
-		closeWeek(db, rules);
+		closeAndResolve(db, rules);
 		const frozen = (db.prepare('SELECT final_score FROM film WHERE id = ?').get(film) as {
 			final_score: number;
 		}).final_score;
@@ -61,7 +74,7 @@ describe('week lifecycle', () => {
 
 		// later ballots in a later week do not rewrite history
 		castBallot(db, 2, 'celina', film, 5);
-		closeWeek(db, rules, new Date('2026-08-06T18:00:01Z'));
+		closeAndResolve(db, rules, new Date('2026-08-06T18:00:01Z'));
 		const still = (db.prepare('SELECT final_score FROM film WHERE id = ?').get(film) as {
 			final_score: number;
 		}).final_score;
@@ -90,12 +103,14 @@ describe('week lifecycle', () => {
 		expect(weekByNumber(db, 2)!.status).toBe('open');
 	});
 
-	it('one film with any points wins by default', () => {
+	it('one film with any points wins once the room step resolves', () => {
 		const { db, rules } = freshDb('banked');
 		const film = addFilm(db, 'Stalker', 'ala', 1);
 		setPoints(db, rules, 'ala', film, 1);
 		const result = closeWeek(db, rules);
-		expect(result.kind).toBe('winner');
+		expect(result.kind === 'runoff' && result.films.map((f) => f.id)).toEqual([film]);
+		// nobody flash-votes; the fallback ordering picks the only candidate
+		closeRunoff(db, rules, openRunoff(db)!.id);
 		expect(weekByNumber(db, 1)!.winner_film_id).toBe(film);
 	});
 });

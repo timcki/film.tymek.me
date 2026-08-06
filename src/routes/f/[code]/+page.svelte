@@ -46,6 +46,7 @@
 
 {#if data.decided}
 	<p class="banner accent">{T.roomDecided}</p>
+	{#if data.checkedIn}<p class="hintline">{T.roomCheckedIn}</p>{/if}
 	{#each data.tally as row (row.film.id)}
 		<div class="pickbtn" class:on={row.film.id === data.winnerFilmId}>
 			<div class="th"><Poster title={row.film.title} url={row.film.poster_url} /></div>
@@ -62,7 +63,11 @@
 	<input class="sinput" placeholder={T.roomFilter} bind:value={filter} autocomplete="off" />
 	<div class="namegrid">
 		{#each shown as person (person.id)}
-			<button class="namebtn" onclick={() => (who = person.id)}>{person.name}</button>
+			<!-- picking a name is the check-in; display:contents keeps the grid intact -->
+			<form method="POST" action="?/checkIn" style="display:contents" use:enhance={submit}>
+				<input type="hidden" name="personId" value={person.id} />
+				<button class="namebtn" onclick={() => (who = person.id)}>{person.name}</button>
+			</form>
 		{/each}
 	</div>
 	<p class="hintline">{T.roomGuestNote}</p>
@@ -70,6 +75,7 @@
 {:else}
 	<p class="hintline">
 		{T.roomVotingAs(data.identified ?? data.people.find((p) => p.id === who)?.name ?? T.roomGuest)}
+		{#if data.checkedIn || (who && who !== 'guest')}· {T.roomCheckedIn}{/if}
 	</p>
 	{#each data.tally as row (row.film.id)}
 		<form method="POST" action="?/flashVote" use:enhance={submit}>

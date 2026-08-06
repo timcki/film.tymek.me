@@ -45,15 +45,20 @@ describe('the weekly shortlist', () => {
 		expect(ids).not.toContain(ignored);
 	});
 
-	it('skips the room vote when only one film has any points', () => {
+	it('sends even a lone candidate to the room, and the fallback confirms it', () => {
 		const { db, rules } = freshDb('banked');
 		const only = addFilm(db, 'Only', 'ala', 1);
 		addFilm(db, 'Nothing', 'bartek', 1);
 		castBallot(db, 1, 'ala', only, 2);
 
+		// the code on the screen doubles as the attendance sheet, so the room step
+		// happens every decided night; a pointless film still never appears in it
 		const result = closeWeek(db, rules);
-		expect(result.kind).toBe('winner');
-		expect(openRunoff(db)).toBeUndefined();
+		expect(result.kind === 'runoff' && result.films.map((f) => f.id)).toEqual([only]);
+		const runoff = openRunoff(db)!;
+		expect(filmById(db, only)!.status).toBe('active');
+
+		closeRunoff(db, rules, runoff.id);
 		expect(filmById(db, only)!.status).toBe('watched');
 	});
 

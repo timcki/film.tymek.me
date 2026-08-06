@@ -7,6 +7,7 @@ import { RULE_SETS } from '../src/lib/server/rules.js';
 import { iso } from '../src/lib/server/time.js';
 import { newToken } from '../src/lib/server/tokens.js';
 import { closeWeek, openWeek } from '../src/lib/server/weeks.js';
+import { closeRunoff, openRunoff } from '../src/lib/server/runoffs.js';
 import { setPoints } from '../src/lib/server/films.js';
 
 /**
@@ -49,9 +50,10 @@ describe('two connections at once', () => {
 		const first = closeWeek(a, rules);
 		const second = closeWeek(b, rules);
 
-		// the second caller sees week 2, freshly opened and empty
-		expect(first.kind).toBe('winner');
-		expect(second.kind).toBe('no-winner');
+		// the loser of the race sees the week already in the room-picking stage
+		expect(first.kind).toBe('runoff');
+		expect(second.kind).toBe('noop');
+		closeRunoff(b, rules, openRunoff(b)!.id);
 
 		const watched = b.prepare(`SELECT COUNT(*) AS n FROM film WHERE status = 'watched'`).get() as {
 			n: number;

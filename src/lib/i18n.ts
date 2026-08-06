@@ -200,6 +200,7 @@ export type Dict = {
 	roomGuest: string;
 	roomGuestNote: string;
 	roomVotingAs: (name: string) => string;
+	roomCheckedIn: string;
 	roomChange: string;
 	roomDecided: string;
 	roomWinner: string;
@@ -443,6 +444,7 @@ const pl: Dict = {
 	roomGuest: 'Jestem gościem',
 	roomGuestNote: 'Nie ma cię na liście? Zagłosuj jako gość, w sali też się liczy.',
 	roomVotingAs: (name) => `głosujesz jako ${name}`,
+	roomCheckedIn: 'obecność zapisana ✓',
 	roomChange: 'Dotknij jeszcze raz, żeby zmienić zdanie. Liczy się ostatni wybór.',
 	roomDecided: 'Dzisiejszy wieczór rozstrzygnięty.',
 	roomWinner: 'wygrywa',
@@ -731,6 +733,7 @@ const en: Dict = {
 	roomGuest: "I'm a guest",
 	roomGuestNote: 'Not on the list? Vote as a guest; it still counts in the room.',
 	roomVotingAs: (name) => `voting as ${name}`,
+	roomCheckedIn: 'checked in ✓',
 	roomChange: 'Tap again to change your mind. Only the last tap counts.',
 	roomDecided: 'Tonight is decided.',
 	roomWinner: 'winner',

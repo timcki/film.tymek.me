@@ -9,6 +9,7 @@ import {
 	setNightStatus
 } from '../src/lib/server/schedule.js';
 import { closeWeek, currentWeek, openWeek, syncOpenWeek } from '../src/lib/server/weeks.js';
+import { closeRunoff, openRunoff } from '../src/lib/server/runoffs.js';
 import { tick } from '../src/lib/server/scheduler.js';
 import { RuleError } from '../src/lib/server/types.js';
 import { addFilm, castBallot, freshDb } from './helpers.js';
@@ -104,6 +105,7 @@ describe('a round that closes on a planned night', () => {
 		const film = addFilm(db, 'Only', 'ala', 1);
 		castBallot(db, 1, 'ala', film, 2);
 		closeWeek(db, rules, at('2026-08-05T18:00:00.000Z'));
+		closeRunoff(db, rules, openRunoff(db)!.id, at('2026-08-05T18:05:00.000Z'));
 
 		const nights = allNights(db);
 		expect(nights[0].status).toBe('used');
@@ -137,7 +139,11 @@ describe('the scheduler', () => {
 		tick(at('2026-08-04T17:59:00.000Z'), db);
 		expect(currentWeek(db)!.number).toBe(1);
 
+		// the close sends the night to the room; the runoff expiring three hours
+		// later is what resolves the week, and the tick handles that too
 		tick(at('2026-08-04T18:00:30.000Z'), db);
+		expect(currentWeek(db)!.status).toBe('runoff');
+		tick(at('2026-08-04T21:01:00.000Z'), db);
 		expect(currentWeek(db)!.number).toBe(2);
 	});
 });

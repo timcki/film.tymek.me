@@ -154,7 +154,6 @@ function closeWithoutWinner(db: DB, rules: RuleSet, week: Week, now: Date): void
 export type CloseResult =
 	| { kind: 'noop' }
 	| { kind: 'no-winner' }
-	| { kind: 'winner'; film: Film }
 	| { kind: 'runoff'; code: string; films: Film[] };
 
 /**
@@ -172,25 +171,22 @@ export function closeWeek(db: DB, rules: RuleSet, now: Date = new Date()): Close
 			return { kind: 'no-winner' } as CloseResult;
 		}
 
-		// points decide who the candidates are; the room decides which one we watch
+		// points decide who the candidates are; the room decides which one we watch.
+		// Even a lone candidate goes to the room: the code on the screen doubles as
+		// the attendance sheet, and letting the runoff expire confirms the film
 		const shortlist = ranked.filter((f) => f.score > 0).slice(0, rules.shortlistSize);
-		if (shortlist.length > 1) {
-			const code = uniqueCode(db);
-			const result = db
-				.prepare(
-					`INSERT INTO runoff (week_number, code, created_at, expires_at) VALUES (?, ?, ?, ?)`
-				)
-				.run(week.number, code, iso(now), iso(new Date(now.getTime() + 3 * 60 * 60 * 1000)));
-			const runoffId = Number(result.lastInsertRowid);
-			const link = db.prepare('INSERT INTO runoff_film (runoff_id, film_id) VALUES (?, ?)');
-			for (const film of shortlist) link.run(runoffId, film.id);
-			db.prepare(`UPDATE week SET status = 'runoff' WHERE number = ?`).run(week.number);
-			// the week stays unresolved until the room vote closes, or until it expires
-			return { kind: 'runoff', code, films: shortlist } as CloseResult;
-		}
-
-		finish(db, rules, week, ranked[0], now);
-		return { kind: 'winner', film: ranked[0] } as CloseResult;
+		const code = uniqueCode(db);
+		const result = db
+			.prepare(
+				`INSERT INTO runoff (week_number, code, created_at, expires_at) VALUES (?, ?, ?, ?)`
+			)
+			.run(week.number, code, iso(now), iso(new Date(now.getTime() + 3 * 60 * 60 * 1000)));
+		const runoffId = Number(result.lastInsertRowid);
+		const link = db.prepare('INSERT INTO runoff_film (runoff_id, film_id) VALUES (?, ?)');
+		for (const film of shortlist) link.run(runoffId, film.id);
+		db.prepare(`UPDATE week SET status = 'runoff' WHERE number = ?`).run(week.number);
+		// the week stays unresolved until the room vote closes, or until it expires
+		return { kind: 'runoff', code, films: shortlist } as CloseResult;
 	});
 }
 
