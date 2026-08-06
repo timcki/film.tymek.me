@@ -594,6 +594,7 @@
 			size={116}
 			font={40}
 			titled={false}
+			xp={peek.backer.xp}
 		/>
 		<b>{peek.backer.name}</b>
 		<span class="bktitle">{T.levels[levelOf(peek.backer.xp)]}</span>

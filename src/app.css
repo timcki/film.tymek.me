@@ -506,6 +506,52 @@ header .sub b {
 	object-fit: cover;
 	display: block;
 }
+/* the rank ring: a face wears its level. The ramp runs bare, silver, accent,
+   and finally the warm gold of a screen legend */
+.av.lv1 {
+	box-shadow: 0 0 0 var(--ringw, 2px) #4d535c;
+}
+.av.lv2 {
+	box-shadow: 0 0 0 var(--ringw, 2px) #868c96;
+}
+.av.lv3 {
+	box-shadow: 0 0 0 var(--ringw, 2px) color-mix(in srgb, var(--accent) 55%, #4d535c);
+}
+.av.lv4 {
+	box-shadow: 0 0 0 var(--ringw, 2px) var(--accent);
+}
+.av.lv5 {
+	box-shadow:
+		0 0 0 var(--ringw, 2px) var(--accent),
+		0 0 10px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.av.lv6 {
+	box-shadow: 0 0 0 var(--ringw, 2px) var(--warn);
+}
+.av.lv7 {
+	box-shadow:
+		0 0 0 var(--ringw, 2px) var(--warn),
+		0 0 12px color-mix(in srgb, var(--warn) 60%, transparent);
+	animation: legend 2.8s ease-in-out infinite;
+}
+@keyframes legend {
+	0%,
+	100% {
+		box-shadow:
+			0 0 0 var(--ringw, 2px) var(--warn),
+			0 0 8px color-mix(in srgb, var(--warn) 45%, transparent);
+	}
+	50% {
+		box-shadow:
+			0 0 0 var(--ringw, 2px) var(--warn),
+			0 0 15px color-mix(in srgb, var(--warn) 75%, transparent);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.av.lv7 {
+		animation: none;
+	}
+}
 .tap {
 	border: 1px solid var(--line2);
 	background: var(--card2);

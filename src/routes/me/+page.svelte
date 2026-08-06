@@ -113,7 +113,8 @@
 
 <div class="sec">{T.youPhoto}</div>
 <div class="photo">
-	<span class="big" style="background:{person.colour}">
+	<!-- .av gives the wrapper the rank ring; --ringw 3px because it is a big face -->
+	<span class="big av lv{level}" style="background:{person.colour};--ringw:3px">
 		{#if person.avatar}
 			<img src={person.avatar} alt="" />
 		{:else}

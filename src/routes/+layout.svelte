@@ -108,6 +108,7 @@
 									avatar={data.person.avatar}
 									size={28}
 									font={11}
+									xp={data.person.xp}
 								/>
 							</summary>
 
@@ -119,6 +120,7 @@
 										avatar={data.person.avatar}
 										size={26}
 										font={11}
+										xp={data.person.xp}
 									/>
 									<b>{data.person.name}</b>
 								</div>

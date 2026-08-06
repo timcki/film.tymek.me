@@ -47,6 +47,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 					colour: person.colour,
 					avatar: avatarUrl(person.id, person.avatar_updated_at),
 					isAdmin: Boolean(person.is_admin),
+					xp: person.xp,
 					budget,
 					spent,
 					left: budget - spent

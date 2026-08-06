@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { levelOf } from '$lib/levels';
+
 	/** a face: the uploaded picture if there is one, initials on their colour if not */
 	let {
 		name,
@@ -6,7 +8,8 @@
 		avatar = null,
 		size = 19,
 		font = 9,
-		titled = true
+		titled = true,
+		xp = null
 	}: {
 		name: string;
 		colour: string;
@@ -15,6 +18,12 @@
 		font?: number;
 		/** off where something else already names the face, so the two do not stack up */
 		titled?: boolean;
+		/**
+		 * when given, the face wears its rank as a ring. Pass it where a face has
+		 * room to be looked at; the 16px pills stay bare so the backer row stays
+		 * a row and not a jewellery box
+		 */
+		xp?: number | null;
 	} = $props();
 
 	const initials = $derived(
@@ -26,11 +35,16 @@
 			.join('')
 			.toUpperCase()
 	);
+
+	const ring = $derived(xp === null ? null : levelOf(xp));
 </script>
 
 <span
-	class="av"
-	style="background:{colour};width:{size}px;height:{size}px;flex-basis:{size}px;font-size:{font}px"
+	class="av {ring !== null ? `lv${ring}` : ''}"
+	style="background:{colour};width:{size}px;height:{size}px;flex-basis:{size}px;font-size:{font}px;--ringw:{size >=
+	60
+		? 3
+		: 2}px"
 	title={titled ? name : undefined}
 >
 	{#if avatar}
