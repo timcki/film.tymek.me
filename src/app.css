@@ -94,8 +94,34 @@ header .sub b {
 	color: #b9bec7;
 	white-space: nowrap;
 	cursor: help;
+	display: flex;
+	align-items: center;
+	gap: 5px;
 }
 .pill b {
+	color: var(--accent);
+	font-variant-numeric: tabular-nums;
+}
+/* the budget as dots, spelled like the card docks */
+.hpip {
+	width: 15px;
+	height: 15px;
+	border-radius: 50%;
+	display: grid;
+	place-items: center;
+	flex: none;
+}
+.hpip.spent {
+	background: var(--accent);
+	color: var(--accent-ink);
+	font-size: 8px;
+	font-weight: 800;
+	line-height: 1;
+}
+.hpip.free {
+	border: 1.5px dashed var(--line2);
+}
+.tip b {
 	color: var(--accent);
 	font-variant-numeric: tabular-nums;
 }

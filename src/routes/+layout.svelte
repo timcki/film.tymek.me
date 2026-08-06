@@ -197,16 +197,25 @@
 
 				{#if showPill && data.person}
 					<div class="budget">
+						<!-- the same grammar as the cards: a check is spent, a dashed dot is
+						     still yours. The words live in the tip -->
 						<button
 							class="pill"
 							aria-expanded={tipOpen}
+							aria-label={T.budgetPill(data.person.left, data.person.budget, isVotes(data.rules))}
 							onclick={() => (tipOpen = !tipOpen)}
 							onblur={() => (tipOpen = false)}
 						>
-							<b>{T.budgetPill(data.person.left, data.person.budget, isVotes(data.rules))}</b>
+							{#each Array(Math.max(0, data.person.spent)) as _, i (i)}
+								<span class="hpip spent">✓</span>
+							{/each}
+							{#each Array(Math.max(0, data.person.left)) as _, i (i)}
+								<span class="hpip free"></span>
+							{/each}
 						</button>
 						<div class="tip" style:display={tipOpen ? 'block' : 'none'}>
-							{T.budgetHelp(data.rules)}
+							<b>{T.budgetPill(data.person.left, data.person.budget, isVotes(data.rules))}</b>
+							· {T.budgetHelp(data.rules)}
 						</div>
 					</div>
 				{/if}
