@@ -15,14 +15,6 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	const runoff = openRunoff(db);
 	const person = locals.person;
 
-	// §10: a rule-set change is announced for the week it happened in
-	const lastChange = db
-		.prepare('SELECT rules_id, week_number FROM rules_change ORDER BY id DESC LIMIT 1')
-		.get() as { rules_id: string; week_number: number } | undefined;
-	const rulesJustChanged = Boolean(
-		lastChange && week && lastChange.week_number === week.number && lastChange.week_number > 1
-	);
-
 	const balance = person ? bankBalance(db, person.id) : 0;
 	const spent = person && week ? spentInWeek(db, person.id, week.number) : 0;
 	const budget = rules.banking ? balance : rules.pointsPerWeek;
@@ -30,7 +22,6 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	const lang = langOf(cookies.get(LANG_COOKIE));
 	return {
 		lang,
-		rulesJustChanged,
 		// news this person has not dismissed yet, already said in their language
 		changelog: person
 			? unseenChangelog(person.changelog_seen).map((entry) => ({
