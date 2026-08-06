@@ -229,11 +229,18 @@
 	let detailId = $state<number | null>(null);
 	let noteEdit = $state(false);
 	let searchOpen = $state(false);
+	// the +N fold opens every backer pill in a small modal; face popups stack on top
+	let backersOpenId = $state<number | null>(null);
 
 	const detail = $derived(
 		detailId === null
 			? null
 			: ([...data.films, ...data.archived].find((f) => f.id === detailId) ?? null)
+	);
+	const backersFilm = $derived(
+		backersOpenId === null
+			? null
+			: ([...data.films, ...data.archived].find((f) => f.id === backersOpenId) ?? null)
 	);
 	const anySheet = $derived(detail !== null || searchOpen);
 
@@ -317,59 +324,63 @@
 	});
 </script>
 
+{#snippet bkPill(backer: Film['backers'][number])}
+	<!-- a 16px face says nothing on a phone, so the pill opens a readable one -->
+	<button
+		class="bk"
+		type="button"
+		style="--bkring:var(--tier{levelOf(backer.xp)})"
+		aria-label={backer.name}
+		onpointerenter={(event) => {
+			mousing = event.pointerType === 'mouse';
+			if (mousing)
+				peekAt(event.currentTarget, backer, `${backer.points} ${T.unit(backer.points, votes)}`, false);
+		}}
+		onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+		onclick={(event) =>
+			!mousing &&
+			peekAt(event.currentTarget, backer, `${backer.points} ${T.unit(backer.points, votes)}`, true)}
+		onfocus={(event) => {
+			// a tap focuses too, and would fight the click handler for the same pill
+			if (event.currentTarget.matches(':focus-visible'))
+				peekAt(event.currentTarget, backer, `${backer.points} ${T.unit(backer.points, votes)}`, false);
+		}}
+		onblur={unpeek}
+	>
+		<Avatar
+			name={backer.name}
+			colour={backer.colour}
+			avatar={backer.avatar}
+			size={16}
+			font={8}
+			titled={false}
+		/>
+		<b>{backer.points}</b>
+	</button>
+{/snippet}
+
 {#snippet backerRow(film: Film)}
 	<span class="backers">
 		{#if film.backers.length}
-			<!-- the top eight by points, wrapping onto a second row if need be;
-			     the rest fold into a +N that opens the sheet -->
-			{#each film.backers.slice(0, 8) as backer (backer.person_id)}
-				<!-- a 16px face says nothing on a phone, so the pill opens a readable one -->
-				<button
-					class="bk"
-					type="button"
-					style="--bkring:var(--tier{levelOf(backer.xp)})"
-					aria-label={backer.name}
-					onpointerenter={(event) => {
-						mousing = event.pointerType === 'mouse';
-						if (mousing)
-							peekAt(event.currentTarget, backer, `${backer.points} ${T.unit(backer.points, votes)}`, false);
-					}}
-					onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
-					onclick={(event) =>
-						!mousing &&
-						peekAt(event.currentTarget, backer, `${backer.points} ${T.unit(backer.points, votes)}`, true)}
-					onfocus={(event) => {
-						// a tap focuses too, and would fight the click handler for the same pill
-						if (event.currentTarget.matches(':focus-visible'))
-							peekAt(event.currentTarget, backer, `${backer.points} ${T.unit(backer.points, votes)}`, false);
-					}}
-					onblur={unpeek}
-				>
-					<Avatar
-						name={backer.name}
-						colour={backer.colour}
-						avatar={backer.avatar}
-						size={16}
-						font={8}
-						titled={false}
-					/>
-					<b>{backer.points}</b>
-				</button>
+			<!-- the top seven by points plus the fold make eight items at most,
+			     so the row wraps to two tidy rows and never stretches the card -->
+			{#each film.backers.slice(0, 7) as backer (backer.person_id)}
+				{@render bkPill(backer)}
 			{/each}
-			{#if film.backers.length > 8}
+			{#if film.backers.length > 7}
 				<button
 					class="bk more"
 					type="button"
 					aria-label={film.backers
-						.slice(8)
+						.slice(7)
 						.map((b) => b.name)
 						.join(', ')}
 					onclick={() => {
 						unpeek();
-						detailId = film.id;
+						backersOpenId = film.id;
 					}}
 				>
-					+{film.backers.length - 8}
+					+{film.backers.length - 7}
 				</button>
 			{/if}
 		{:else}
@@ -937,6 +948,21 @@
 	</div>
 {/if}
 
+{#if backersFilm}
+	<!-- everyone with points on the film; each pill opens the usual face popup
+	     above this modal (the popup layers sit higher on purpose) -->
+	<button class="bkm-backdrop" aria-label={T.close} onclick={() => (backersOpenId = null)}
+	></button>
+	<div class="bkmodal" role="dialog" aria-label={T.dBacked}>
+		<h3>{backersFilm.title}</h3>
+		<div class="bkmgrid">
+			{#each backersFilm.backers as backer (backer.person_id)}
+				{@render bkPill(backer)}
+			{/each}
+		</div>
+	</div>
+{/if}
+
 {#if scorePop}
 	{#if scorePop.tap}
 		<button class="menu-backdrop" aria-label={T.close} onclick={unpeek}></button>
@@ -965,6 +991,10 @@
 <svelte:window
 	onscroll={unpeek}
 	onresize={unpeek}
-	onkeydown={(event) => event.key === 'Escape' && unpeek()}
+	onkeydown={(event) => {
+		if (event.key !== 'Escape') return;
+		unpeek();
+		backersOpenId = null;
+	}}
 	onpointerdown={disarmElsewhere}
 />

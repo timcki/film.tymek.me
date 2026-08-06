@@ -591,9 +591,10 @@ the week number live only in the detail sheet. Below the title line: the nominat
 note directly under the title, clamped to one line that ends before the coin (tapping
 it opens the full pitch in a quick popup, quoted and signed); where nobody pitched, one
 quiet line of the TMDB synopsis stands in (tappable the same way, unquoted), falling
-back to director · genre. Then the footer — the top eight backer pills by points,
-wrapping onto a second row when needed, a `+N` pill folding the rest (it opens the
-detail sheet), and the vote pill (or a Vote button when `pointsPerWeek === 1`). The pill is one tap target showing the whole weekly
+back to director · genre. Then the footer — the top seven backer pills by points,
+wrapping onto a second row when needed, a `+N` pill folding the rest (it opens a small
+modal listing every backer pill; tapping a face there stacks the usual popup on top),
+and the vote pill (or a Vote button when `pointsPerWeek === 1`). The pill is one tap target showing the whole weekly
 budget as three small dots, film-relative: a check is a point of yours on this film, a
 dim dot is a point busy on another film, a dashed dot is still free. Spent slots keep
 the order the week's points were cast (approximated by each film's last raise, since

@@ -956,6 +956,44 @@ details[open] > .iconbtn {
 	padding: 0;
 	cursor: default;
 }
+/* the backers modal sits BELOW the face-popup layers (menu-backdrop 45,
+   bkpop 50), so tapping a pill inside stacks the usual popup on top */
+.bkm-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 40;
+	background: color-mix(in srgb, var(--bg) 72%, transparent);
+	backdrop-filter: blur(2px);
+	border: 0;
+	padding: 0;
+	cursor: default;
+}
+.bkmodal {
+	position: fixed;
+	z-index: 41;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	width: min(360px, calc(100vw - 32px));
+	max-height: 70vh;
+	overflow-y: auto;
+	background: var(--card2);
+	border: 1px solid var(--line2);
+	border-radius: var(--r);
+	padding: 16px;
+	box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+}
+.bkmodal h3 {
+	margin: 0 0 10px;
+	font-size: 14px;
+	font-weight: 650;
+	letter-spacing: -0.01em;
+}
+.bkmgrid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 7px;
+}
 .chlog-backdrop {
 	position: fixed;
 	inset: 0;
