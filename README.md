@@ -1,8 +1,8 @@
 # Wieczorki filmowe
 
-A private weekly film-voting site. One nomination each per week, two voting points each
-per week that expire unspent, film scores that fade a quarter each week, and on Thursday
-the top three go to whoever turned up. Showing up earns XP and film-buff ranks.
+A private weekly film-voting site. One nomination each per week, three voting points
+each per week that expire unspent, film scores that fade a quarter each week, and on
+Thursday the top three go to whoever turned up. Showing up earns XP and film-buff ranks.
 
 Implements `filmnight-spec.md`; the interface follows `filmnight-v2.html`. Polish by
 default with an English toggle. SvelteKit 2 + Svelte 5 runes + better-sqlite3, served by

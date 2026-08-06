@@ -82,8 +82,8 @@ describe('votes are final after the grace window', () => {
 		const a = addFilm(db, 'Stalker', 'ala', 1);
 		const b = addFilm(db, 'Solaris', 'bartek', 1);
 
-		setPoints(db, rules, 'ala', a, 2, at(0));
-		// both points are final; nothing left for the other film
+		setPoints(db, rules, 'ala', a, rules.pointsPerWeek, at(0));
+		// the whole budget is final; nothing left for the other film
 		expect(() => setPoints(db, rules, 'ala', b, 1, at(GRACE + 1))).toThrow(/points/);
 	});
 });

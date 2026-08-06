@@ -81,7 +81,7 @@ export const RULE_SETS: Record<RuleSetId, RuleSet> = {
 	weekly: {
 		id: 'weekly',
 		label: 'Weekly',
-		pointsPerWeek: 2,
+		pointsPerWeek: 3,
 		banking: false,
 		bankCap: 0,
 		scoring: 'fade',

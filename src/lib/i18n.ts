@@ -277,14 +277,14 @@ const plRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 	});
 
 	out.push({
-		head: 'Oddanych punktów nie można cofać.',
-		body: `Masz ${r.voteGraceSeconds} sekund na poprawienie pomyłki, potem głos zostaje i można tylko dokładać.`
+		head: 'Punktów wydanych na film nie można cofać.',
+		body: `Masz ${r.voteGraceSeconds} sekund na poprawienie pomyłki.`
 	});
 
 	if (r.scoring === 'fade') {
 		out.push({
 			head: `${votes ? 'Głosy' : 'Punkty'} na filmie tracą co tydzień ${fadePercent(r)}% wartości.`,
-			body: 'Świeże głosy ważą najwięcej, stare powoli gasną. Film utrzymuje się wysoko tylko wtedy, gdy ktoś wciąż go chce.'
+			body: 'Świeże głosy liczą się najbardziej, te z poprzednich tygodni powoli wygasają. Film utrzymuje się wysoko tylko wtedy, gdy dostaje świeże głosy co tydzień.'
 		});
 	} else {
 		out.push({
@@ -446,8 +446,8 @@ const pl: Dict = {
 	xpRowNominate: 'Zgłoszenia',
 	xpRowWatched: 'Twoje filmy obejrzane',
 	xpRowBacked: 'Trafieni zwycięzcy',
-	chlogH: 'Co nowego',
-	chlogOk: 'Jasne',
+	chlogH: 'Changelog',
+	chlogOk: 'OK',
 	rules: plRules,
 
 	hostH: 'Prowadzący',
@@ -514,7 +514,7 @@ const pl: Dict = {
 			case 'bad_points':
 				return 'Punkty muszą być liczbą całkowitą.';
 			case 'votes_final':
-				return `Głos jest ostateczny. Na cofnięcie pomyłki masz ${p.seconds} s od oddania, potem punkty można tylko dokładać.`;
+				return `Punkt wydany na film jest ostateczny. Na cofnięcie pomyłki masz ${p.seconds} s od kliknięcia.`;
 			case 'not_enough_points':
 				return `Zostało ci ${p.left} z ${p.allowance}, więc ${p.points} to za dużo.`;
 			case 'note_too_long':

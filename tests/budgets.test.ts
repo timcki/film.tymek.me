@@ -78,8 +78,8 @@ describe('budgets', () => {
 		expect(RULE_SETS.banked.pointsPerWeek).toBe(2);
 	});
 
-	it('weekly grants two points a week and never banks them', () => {
-		expect(RULE_SETS.weekly.pointsPerWeek).toBe(2);
+	it('weekly grants three points a week and never banks them', () => {
+		expect(RULE_SETS.weekly.pointsPerWeek).toBe(3);
 		expect(RULE_SETS.weekly.banking).toBe(false);
 	});
 });

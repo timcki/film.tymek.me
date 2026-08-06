@@ -19,19 +19,19 @@ export const CHANGELOG: ChangelogEntry[] = [
 		id: 1,
 		date: '2026-08-06',
 		title: {
-			pl: 'Nowe zasady: punkty gasną, obecność się liczy',
+			pl: 'Nowe zasady: koniec kumulowania punktów, równe zabieranie punktów filmom, obecność daje teraz XP',
 			en: 'New rules: points fade, showing up counts'
 		},
 		body: {
 			pl: [
-				'Dostajesz 2 punkty co tydzień. Bank znika; niewydane punkty przepadają po wieczorku.',
-				'Punkty na filmie tracą co tydzień 25% wartości, więc lista pokazuje to, czego chcemy teraz. Kara za przegraną w top 3 znika razem z bankiem.',
-				'Oddanych głosów nie można już cofać. Masz 30 sekund na poprawienie pomyłki, potem głos zostaje.',
-				'Skanując kod w sali zapisujesz swoją obecność. Za przychodzenie, głosowanie i zgłoszenia dostajesz XP i poziomy; szczegóły w zakładce Ty.',
-				'Wszystkie wyniki przeliczono od nowa z dotychczasowych głosów; nic nie przepadło.'
+				'Dostajesz teraz 3 punkty co tydzień, ale przestają się kumulować. Niewydane punkty przepadają po zamknięciu głosowania w danym tygodniu.',
+				'Punkty na filmie tracą co tydzień 25% wartości. Wszystkim filmom zabieramy punkty po równo (nie karzemy bardziej tych w top 3).',
+				'Oddanych głosów nie można już cofać. Masz 30 sekund na poprawienie pomyłki, potem głos jest na stałe.',
+				'Skanując kod QR do głosowania zapisujesz swoją obecność. Za przychodzenie, głosowanie i zgłoszenia dostajesz XP i poziomy (co będzie nagrodą za poziomy: do wspólnej decyzji, na razie są tytuły i ładne rameczki).',
+				'Wszystkie wyniki przeliczono od nowa z dotychczasowych głosów. Skumulowane punkty z poprzedniego tygodnia niestety są stracone.'
 			],
 			en: [
-				'You get 2 points a week. The bank is gone; anything unspent expires after the night.',
+				'You get 3 points a week now, but they no longer accumulate. Anything unspent expires when the week closes.',
 				'Points on a film lose 25% of their value each week, so the list shows what we want now. The top-3 pass-over penalty is gone along with the bank.',
 				'Votes can no longer be taken back. You get 30 seconds to fix a slip, then it stands.',
 				'Scanning the room code records your attendance. Coming, voting and nominating earn XP and levels; details on the You tab.',

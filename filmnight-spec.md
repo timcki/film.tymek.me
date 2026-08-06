@@ -88,7 +88,7 @@ export const RULE_SETS: Record<RuleSetId, RuleSet> = {
   weekly: {
     id: 'weekly',
     label: 'Weekly',
-    pointsPerWeek: 2,
+    pointsPerWeek: 3,
     banking: false,
     bankCap: 0,
     scoring: 'fade',
@@ -101,7 +101,7 @@ export const RULE_SETS: Record<RuleSetId, RuleSet> = {
 };
 ```
 
-`weekly` in one breath: two points a week, use them or lose them; points on a film lose
+`weekly` in one breath: three points a week, use them or lose them; points on a film lose
 a quarter of their value each week; the top three go to the room; votes are final after
 thirty seconds. There is no pass-over penalty; time taxes every film equally, which is
 the whole rotation mechanic.
@@ -137,7 +137,7 @@ export function score(rules: RuleSet, points: Map<number, number>, currentWeek: 
 ```
 
 Under `fade`, scores are fractional; the UI shows one decimal. A film with one devoted
-backer feeding 2 points a week sustains at most 2 / (1 − 0.75) = 8, so scores live in a
+backer feeding 3 points a week sustains at most 3 / (1 − 0.75) = 12, so scores live in a
 narrow, legible band and a leader that is not fed this week visibly sags a quarter.
 
 Scores are **always derived from the ballot table**, never stored as a mutable running
