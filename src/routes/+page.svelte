@@ -208,6 +208,7 @@
 					class="bk"
 					type="button"
 					aria-label={backer.name}
+					transition:scale={{ duration: 180, start: 0.5, easing: backOut }}
 					onpointerenter={(event) => {
 						mousing = event.pointerType === 'mouse';
 						if (mousing) peekAt(event.currentTarget, backer, false);
@@ -229,7 +230,9 @@
 						font={8}
 						titled={false}
 					/>
-					<b>{backer.points}</b>
+					{#key backer.points}
+						<b in:scale={{ duration: 200, start: 1.7, easing: backOut }}>{backer.points}</b>
+					{/key}
 				</button>
 			{/each}
 		{:else}
@@ -280,11 +283,18 @@
 					</button>
 				</form>
 			{:else}
-				<span class="pip set"><i></i></span>
+				<span class="pip set"><i>✓</i></span>
 			{/if}
 		{/each}
 		{#each Array(Math.max(0, left)) as _, i (i)}
-			<form method="POST" action="?/setPoints" use:enhance={submit()}>
+			<!-- the transition keeps every card honest in motion: spending anywhere
+			     makes this slot leave gracefully instead of blinking out -->
+			<form
+				method="POST"
+				action="?/setPoints"
+				use:enhance={submit()}
+				transition:scale={{ duration: 180, start: 0.4, easing: backOut }}
+			>
 				<input type="hidden" name="filmId" value={film.id} />
 				<button
 					class="pip empty"
@@ -499,11 +509,7 @@
 				<div class="lab">
 					{#if detail.myPoints}
 						<b>{T.dYours(detail.myPoints, votes)}</b>
-						{#if canUndo(detail)}
-							<span class="graceline">{T.btnUndo(undoSeconds(detail))}</span>
-						{:else}
-							<span class="graceline set">✓ {T.lockedTag}</span>
-						{/if}
+						{rules.banking ? T.dBankLeft(left) : T.dWeekLeft(left, data.person?.budget ?? 0)}
 					{:else}
 						<b>{T.dNone(left, votes)}</b>
 					{/if}
