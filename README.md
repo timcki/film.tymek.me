@@ -1,7 +1,8 @@
 # Wieczorki filmowe
 
-A private weekly film-voting site. One nomination each per week, a budget of voting
-points each per week, and on Thursday the top three go to whoever turned up.
+A private weekly film-voting site. One nomination each per week, two voting points each
+per week that expire unspent, film scores that fade a quarter each week, and on Thursday
+the top three go to whoever turned up. Showing up earns XP and film-buff ranks.
 
 Implements `filmnight-spec.md`; the interface follows `filmnight-v2.html`. Polish by
 default with an English toggle. SvelteKit 2 + Svelte 5 runes + better-sqlite3, served by
@@ -19,18 +20,22 @@ npm run seed                # creates the roster, opens week 1, prints the links
 npm run dev
 ```
 
-`npm test` runs the acceptance suite (§11 of the spec, plus notes, avatars and copy: 85
+`npm test` runs the acceptance suite (§11 of the spec, plus notes, avatars and copy: 146
 tests). `npm run check` typechecks.
 
 ## How it fits together
 
 | Path | What it does |
 |---|---|
-| `src/lib/server/rules.ts` | the three rule sets, scoring, budgets, ordering, `titleKey` |
+| `src/lib/server/rules.ts` | the four rule sets, scoring (incl. fade), budgets, ordering, `titleKey` |
 | `src/lib/server/scoring.ts` | scores derived from the ballot table; `rescoreAll()` |
 | `src/lib/server/weeks.ts` | `closeWeek`, attrition, bank accrual, `finish` |
 | `src/lib/server/runoffs.ts` | flash votes, tally, `closeRunoff` |
-| `src/lib/server/films.ts` | `setPoints`, `nominate`, `renominate`, standings |
+| `src/lib/server/films.ts` | `setPoints` with the 30 s grace window, `nominate`, standings |
+| `src/lib/server/attendance.ts` | check-in behind the room code, `attendedWeeks` |
+| `src/lib/server/xp.ts` | XP derived from the tables; `rexpAll()` cache rebuild |
+| `src/lib/levels.ts` | the XP ladder thresholds, shared with the client |
+| `src/lib/changelog.ts` | dated news entries the layout shows once per person |
 | `src/lib/server/scheduler.ts` | the minute tick that closes weeks and expired runoffs |
 | `src/hooks.server.ts` | cookie identity; everything but `/u/:token` and `/f/:code` needs it |
 | `src/lib/i18n.ts` | every string the app says about itself, in Polish and English |

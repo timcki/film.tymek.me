@@ -36,20 +36,23 @@ must be implemented exactly; everything else has room for judgement.
 | **Nomination** | Adding a film to the list. One per person per week, free, doesn't bank. |
 | **Ballot** | Points a person has put on a film in a given week. |
 | **Score** | A film's current standing, computed from ballots per the active rule set. |
-| **Runoff** | The in-room tie-break: a QR code, one flash vote per person present. |
+| **Runoff** | The room step every decided night: a QR code, one flash vote per person present. |
 | **Flash vote** | A vote cast in a runoff. Decides the night only; never affects scores. |
 | **Bank** | A person's stored unspent points. Only exists in the `banked` rule set. |
+| **Attendance** | A row saying you were in the room that night. Earned by scanning the room code and identifying yourself; a flash vote implies it. |
+| **XP** | Experience points, derived from attendance, ballots and films. Cosmetic: levels and titles, never voting power. |
 
 ---
 
 ## 3. Rule sets
 
-Exactly one is active, chosen by `RULES` in the environment. Default `banked`.
+Exactly one is active, chosen by `RULES` in the environment. Default `weekly`, the set
+that went live in August 2026; `ledger`, `rolling` and `banked` remain one env var away.
 
 ```ts
 // src/lib/server/rules.ts
 
-export type RuleSetId = 'ledger' | 'rolling' | 'banked';
+export type RuleSetId = 'ledger' | 'rolling' | 'banked' | 'weekly';
 
 export type RuleSet = {
   id: RuleSetId;
@@ -61,52 +64,47 @@ export type RuleSet = {
   /** maximum bank balance; ignored when banking is false */
   bankCap: number;
   /** how a film's score is computed */
-  scoring: 'total' | 'decay';
-  /** only used when scoring === 'decay' */
+  scoring: 'total' | 'decay' | 'fade';
+  /**
+   * 'decay': weight of last week's points in the two-week window.
+   * 'fade': weekly multiplier applied to every past week's points, so a point
+   * cast n weeks ago is worth decayFactor^n. Unused under 'total'.
+   */
   decayFactor: number;
   /** what happens to films nobody is voting for */
   attrition:
     | { kind: 'archive'; afterWeeksAtZero: number }   // hidden but revivable by a vote
     | { kind: 'drop'; afterWeeksWithoutPoints: number }; // removed; revivable only by re-nomination
   nominationsPerWeek: number;
+  /** how many films go to the room; the strict top N of the §3.2 ordering */
+  shortlistSize: number;
+  /** §8.3: how long a cast vote can still be unwound, in seconds */
+  voteGraceSeconds: number;
 };
 
 export const RULE_SETS: Record<RuleSetId, RuleSet> = {
-  ledger: {
-    id: 'ledger',
-    label: 'Ledger',
-    pointsPerWeek: 1,
-    banking: false,
-    bankCap: 0,
-    scoring: 'total',
-    decayFactor: 0,
-    attrition: { kind: 'archive', afterWeeksAtZero: 8 },
-    nominationsPerWeek: 1
-  },
-  rolling: {
-    id: 'rolling',
-    label: 'Rolling',
-    pointsPerWeek: 5,
-    banking: false,
-    bankCap: 0,
-    scoring: 'decay',
-    decayFactor: 0.5,
-    attrition: { kind: 'drop', afterWeeksWithoutPoints: 1 },
-    nominationsPerWeek: 1
-  },
-  banked: {
-    id: 'banked',
-    label: 'Banked',
+  // ledger, rolling and banked as before (see rules.ts), all with
+  // shortlistSize 3 and voteGraceSeconds 30; the live set:
+  weekly: {
+    id: 'weekly',
+    label: 'Weekly',
     pointsPerWeek: 2,
-    banking: true,
-    bankCap: 12,
-    scoring: 'total',
-    decayFactor: 0,
+    banking: false,
+    bankCap: 0,
+    scoring: 'fade',
+    decayFactor: 0.75,
     attrition: { kind: 'drop', afterWeeksWithoutPoints: 2 },
-    nominationsPerWeek: 1
+    nominationsPerWeek: 1,
+    shortlistSize: 3,
+    voteGraceSeconds: 30
   }
 };
 ```
+
+`weekly` in one breath: two points a week, use them or lose them; points on a film lose
+a quarter of their value each week; the top three go to the room; votes are final after
+thirty seconds. There is no pass-over penalty; time taxes every film equally, which is
+the whole rotation mechanic.
 
 ### 3.1 Scoring
 
@@ -121,12 +119,26 @@ export function score(rules: RuleSet, points: Map<number, number>, currentWeek: 
     for (const p of points.values()) sum += p;
     return sum;
   }
+  if (rules.scoring === 'fade') {
+    // every past week contributes, geometrically discounted by age, so the
+    // score stays recomputable from the ballot table alone
+    let sum = 0;
+    for (const [week, p] of points) {
+      if (week > currentWeek) continue;
+      sum += p * rules.decayFactor ** (currentWeek - week);
+    }
+    return sum;
+  }
   // 'decay' — deliberately a two-week window, not a recursive EMA.
   // Simulation showed the two forms are indistinguishable in outcome, and this
   // one is stateless: it can always be recomputed from the ballot table alone.
   return (points.get(currentWeek) ?? 0) + rules.decayFactor * (points.get(currentWeek - 1) ?? 0);
 }
 ```
+
+Under `fade`, scores are fractional; the UI shows one decimal. A film with one devoted
+backer feeding 2 points a week sustains at most 2 / (1 − 0.75) = 8, so scores live in a
+narrow, legible band and a leader that is not fed this week visibly sags a quarter.
 
 Scores are **always derived from the ballot table**, never stored as a mutable running
 total. A `score` column may exist as a cache but must be recomputable by a single
@@ -234,6 +246,10 @@ CREATE TABLE ballot (
   person_id   TEXT    NOT NULL REFERENCES person(id),
   film_id     INTEGER NOT NULL REFERENCES film(id),
   points      INTEGER NOT NULL CHECK (points > 0),
+  -- §8.3: the value before the last raise; what the vote can fall back to
+  -- while the grace window is open
+  prev_points INTEGER NOT NULL DEFAULT 0,
+  -- when the last raise happened; the grace window is measured from here
   updated_at  TEXT    NOT NULL,
   PRIMARY KEY (week_number, person_id, film_id)
 );
@@ -271,6 +287,14 @@ CREATE TABLE runoff_ballot (
   PRIMARY KEY (runoff_id, voter_key)
 );
 
+-- §7.4: who was in the room on a given night
+CREATE TABLE attendance (
+  week_number   INTEGER NOT NULL REFERENCES week(number),
+  person_id     TEXT    NOT NULL REFERENCES person(id),
+  checked_in_at TEXT    NOT NULL,
+  PRIMARY KEY (week_number, person_id)
+);
+
 CREATE TABLE tmdb_cache (
   query      TEXT PRIMARY KEY,
   body       TEXT NOT NULL,
@@ -278,7 +302,11 @@ CREATE TABLE tmdb_cache (
 );
 ```
 
-A ballot row exists only when `points > 0`. Setting points to 0 deletes the row.
+The `person` table also carries two cache/bookkeeping columns: `xp` (rebuilt wholesale
+by `rexpAll()`, §9.2) and `changelog_seen` (the newest changelog entry dismissed, §9.3).
+
+A ballot row exists only when `points > 0`. Undoing a cast back to 0 within the grace
+window (§8.3) deletes the row; outside the window points can only rise.
 
 ### 4.1 Duplicate detection
 
@@ -363,20 +391,25 @@ closeWeek(w):
       w.status = 'closed'; w.winner = null
       applyAttrition(w); accrueBanks(w); openWeek(w.number + 1)
       return
-  tied = standings.filter(f => f.score == standings[0].score)
-  if tied.length > 1:
-      create runoff(week=w, films=tied, code=newCode(), expires_at=now+3h)
-      w.status = 'runoff'
-      return                       // the week stays unresolved until the runoff closes
-  finish(w, standings[0])
+  shortlist = standings.filter(f => f.score > 0).slice(0, rules.shortlistSize)
+  // every decided night goes to the room, even a lone candidate: the code on
+  // the screen doubles as the attendance sheet, and letting the runoff expire
+  // confirms the film
+  create runoff(week=w, films=shortlist, code=newCode(), expires_at=now+3h)
+  w.status = 'runoff'
+  // the week stays unresolved until the runoff closes, or until it expires
 
-finish(w, winner):
+finish(w, winner):                 // called by closeRunoff, §7.3
   winner.status = 'watched'; winner.watched_week = w.number; winner.final_score = score
   w.winner_film_id = winner.id; w.status = 'closed'; w.resolved_at = now
   applyAttrition(w)                // §3.4, after the winner is removed
   accrueBanks(w)                   // §3.3, only when rules.banking
-  openWeek(w.number + 1)           // opens_at = now, closes_at = next Thursday 20:00 local
+  openWeek(w.number + 1)           // opens_at = now, closes_at = the next planned night
 ```
+
+Points decide who the candidates are; the room decides which one gets watched. A
+no-winner week creates no runoff and therefore no attendance sheet: nothing was
+scheduled to happen, so nothing is recorded.
 
 Ballots from closed weeks are never modified. They stay in the table forever and are what
 scores are computed from.
@@ -428,7 +461,24 @@ winner = runoff films ordered by (flash votes desc, then §3.2 ordering)
 So zero turnout falls back cleanly to the oldest film, and a tied flash vote does too. Then
 run `finish(week, winner)` from §6.1.
 
-### 7.4 The host view
+### 7.4 Attendance
+
+Being in the room is worth remembering. One row per `(week_number, person_id)`,
+recorded when:
+
+- a person with their own cookie loads `/f/:code` while the runoff is not yet expired;
+  scanning the code is the whole ceremony, and late arrivals after the film was picked
+  still count;
+- a name is picked on a shared phone (a dedicated `checkIn` action);
+- an identified flash vote lands: `flashVote` itself checks the person in, so the
+  invariant holds at the engine layer, not just in the route.
+
+An idempotent seed runs at every boot: any historical `runoff_ballot` row with a known
+`person_id` becomes an attendance row, so the record reaches back to week 1 and can
+never rot. Anonymous guests leave no trace. Attendance affects XP (§9.2) and nothing
+else; never scores, budgets, or attrition.
+
+### 7.5 The host view
 
 `/host` is a projector-friendly page: big room QR, the code in large monospace, the tied
 films, the live tally, a **Close** button, and a row of the six names so the host can cast
@@ -464,19 +514,41 @@ Takes `filmId` and an **absolute** point value, not a delta — deltas are not i
 and double-taps on a phone are common.
 
 ```
-setPoints(person, filmId, points):
+setPoints(person, filmId, points, now):
   BEGIN IMMEDIATE
   assert week is open and now < closes_at
   assert points >= 0
+  floor = pointsFloor(row, now)                 // §8.3
+  assert points >= floor                        // 409 'votes_final' otherwise
   spentElsewhere = sum(ballot.points where week, person, film != filmId)
   assert spentElsewhere + points <= budget(person)
-  if points == 0: delete ballot row
-  else: upsert ballot row
+  if points > current:  upsert row with prev_points = floor, updated_at = now
+  if points < current and points == 0: delete row
+  if points < current:  update points only      // the undo never stretches the window
   if film.status == 'archived' and points > 0: film.status = 'active'   // revival
   COMMIT
 ```
 
 The `assert`s return 409 with a human-readable message; the UI shows it as a toast.
+
+### 8.3 Votes are final
+
+A cast vote is a commitment, not a position to shuffle all week. For
+`voteGraceSeconds` (30) after a raise the vote can fall back to what it was before
+the raise (misclick insurance for phones), and then it stands: points can only be
+added. Concretely:
+
+```
+pointsFloor(row, now):
+  if no row: return 0
+  if now - row.updated_at < voteGraceSeconds: return row.prev_points
+  return row.points
+```
+
+Raises inside one open window collapse (`prev_points` keeps the pre-window value), so
+the undo unwinds them all; an undo never resets `updated_at`, so it cannot stretch the
+window. The server's clock decides, as always. The UI mirrors the rule by hiding the
+minus button once `myPoints <= myFloor`.
 
 ### 8.2 `/api/search`
 
@@ -525,6 +597,51 @@ points spent all-time, films you nominated that got watched, longest campaign.
 who has had how many of their nominations watched. That table is the group's own check on
 whether the active rule set is being fair.
 
+### 9.2 XP and levels
+
+Showing up should earn something visible, so it earns prestige, never voting power.
+XP is **derived, like scores**: recomputable from the `attendance`, `ballot` and `film`
+tables alone, which makes it retroactive to week 1 and impossible to corrupt.
+
+| Source | XP |
+|---|---|
+| Attended a film night | 10 |
+| Spent at least one point that week | 2 |
+| Nominated a film | 1 |
+| A film you nominated got watched | 15 |
+| Had points on the winner in its winning week | 3 |
+
+Attendance dominates by design. The nomination reward is token-sized so the list cannot
+be farmed; the watched-nomination jackpot rewards nominating things *other people* end
+up wanting.
+
+Eight named ranks, thresholds in `src/lib/levels.ts`, names in both dictionaries:
+Widz 0, Bywalec 30, Kinofil 75, Kinoman 150, Koneser 250, Krytyk 400, Kurator 600,
+Legenda kina 850. A weekly attendee reaches the top in a bit over a year; a vote-only
+homebody makes Kinofil in about nine months. That 4:1 pace gap *is* the attendance
+reward, expressed in prestige.
+
+`person.xp` is a cache in the mould of `film.score`: rebuilt wholesale by `rexpAll()`,
+the column's only writer, inside every mutating transaction that touches its inputs
+(casting, checking in, nominating, closing a week, the admin film fixes) plus the
+scheduler's once-a-minute honesty pass. XP moves only on events, never with the passage
+of time, so there is no TTL anywhere. Reads are a plain SELECT; `/me` derives the
+breakdown live for the one person looking.
+
+Surfaces: rank title and progress bar on `/me` with the per-source breakdown, and the
+rank title on the enlarged backer face. Badges, streaks and level perks are deliberately
+out — see `FUTURE_IDEAS.md`.
+
+### 9.3 The changelog
+
+Rule changes deserve better than a banner somebody misses. Entries live in
+`src/lib/changelog.ts` (monotonic id, date, title and body in both languages), and
+`person.changelog_seen` remembers the newest id each person has dismissed. Any
+authenticated page load with newer entries shows a modal, once; dismissing records the
+id. A deploy with nothing worth saying adds no entry and shows nobody anything. Entry 1
+announces the August 2026 rules change, which satisfies the announce-for-a-week duty in
+§10 permanently.
+
 ---
 
 ## 10. Edge cases
@@ -532,7 +649,8 @@ whether the active rule set is being fair.
 | Case | Behaviour |
 |---|---|
 | Nobody votes all week | No winner. Week closes, nothing watched, next week opens. Say so on the page. |
-| Fewer than two films on the list | Fine. One film wins by default if it has any points. |
+| Fewer than two films on the list | Fine. A lone candidate still goes to the room; the runoff closing or expiring confirms it. |
+| A film sits in the top 3 unpicked for weeks | Its points fade like everyone else's; there is no extra penalty. If the room keeps declining a persistently fed film, see the pass-over strikes idea in `FUTURE_IDEAS.md`. |
 | Everyone abstains but films have old points (`ledger`) | Highest total still wins — correct, that's the whole mechanic. |
 | Person nominates something already watched | Rejected with "we watched that in week 12". |
 | Person nominates a dropped film | Rejected; UI points them at the Re-nominate button in the fold-out. |
@@ -553,11 +671,12 @@ Write these as Vitest tests against an in-memory SQLite instance. They are the d
 of done.
 
 **Budgets**
-1. A person cannot spend more than `pointsPerWeek` in a week (all three rule sets).
+1. A person cannot spend more than `pointsPerWeek` in a week (all non-banking rule sets).
 2. In `banked`, a person cannot spend more than their bank balance.
 3. In `banked`, unspent points carry over; the balance never exceeds `bankCap` and never
    goes negative.
-4. Setting points to 0 frees the budget for another film in the same week.
+4. Undoing a cast to 0 within the grace window frees the budget for another film in the
+   same week; outside the window the points stay spent.
 
 **Nominations**
 5. A second nomination in the same week is rejected.
@@ -607,6 +726,35 @@ of done.
 32. Rotating a token invalidates the old link.
 33. Every mutating route rejects an anonymous caller except the runoff routes.
 
+**Fade scoring**
+34. A point cast n weeks ago is worth `decayFactor^n`; the same ballots viewed a week
+    later are worth `decayFactor` times as much.
+35. A passed-over shortlist film keeps its full faded score and every ballot row.
+36. `final_score` freezes at the moment of watching and does not fade afterwards.
+
+**Vote finality**
+37. A full undo inside the grace window succeeds; the same undo one second after it
+    shuts is rejected with `votes_final`.
+38. Raises inside one window collapse; a raise after the window commits the earlier
+    points as the new floor.
+39. An undo does not stretch the window.
+
+**Attendance**
+40. Checking in is idempotent per night; a lone candidate's night still has a code.
+41. An identified flash vote implies attendance; the boot seed converts historical
+    flash votes and is itself idempotent.
+
+**XP**
+42. Each source pays at the published rate; a week of voting counts once however many
+    films got points; only points on the winner in its winning week pay the backer
+    bonus.
+43. `person.xp` equals a from-scratch derivation after every event kind that touches
+    its inputs, and catches up retroactively when history is seeded.
+
+**Changelog**
+44. Every entry has both languages and a unique id; a fresh person sees everything,
+    a person who dismissed the newest id sees nothing.
+
 ---
 
 ## 12. Deployment
@@ -624,7 +772,7 @@ Environment:
 
 ```
 ORIGIN=https://filmnight.example
-RULES=banked
+RULES=weekly
 TMDB_API_KEY=…
 TZ=Europe/Warsaw
 DATABASE_PATH=/var/lib/filmnight/filmnight.db
@@ -654,19 +802,24 @@ Steps 1–4 are a working system for six people. Everything after is comfort.
 
 ## 14. Deliberately not included
 
-- Any notion of "attendance" beyond the runoff. Whether you came doesn't affect your
-  points; that would punish the person who's away and undermine the whole design.
+- ~~Any notion of "attendance" beyond the runoff.~~ **Revised, August 2026.** The group
+  grew to ~22 people with 6 to 8 regulars, and the consensus shifted: showing up should
+  be rewarded. The original worry (punishing whoever is away) still shapes the design:
+  attendance earns XP and titles (§9.2), never points, so absence costs prestige pace,
+  not influence. Ideas that would convert presence into voting power (the underdog
+  point, level perks) wait in `FUTURE_IDEAS.md` behind that same caution.
+- Attendance rewards that touch the economy. See above.
 - Comments, ratings, or a chat. There's a group chat already.
-- Admin roles. All six are equal; anyone can close a week early.
 - Undo of a watched film. If you watched the wrong thing, edit the database.
 
 ---
 
 ## 15. Open questions for the group
 
-1. **Which rule set goes live.** `RULES=banked` is the default here because it tested best
-   on fairness while keeping the list short, but `ledger` and `rolling` are one env var
-   away. Agree to revisit after ~8 weeks with the `/history` table in front of you.
+1. **Which rule set goes live.** ~~`RULES=banked`~~ Settled, August 2026: `weekly` is
+   live. The group ran `banked` for a season, found the pass-over halving unfair and the
+   bank a reward for disengagement, and swapped both for fade scoring. The other three
+   sets remain one env var away.
 2. **Whether the room code should rotate.** A static code can be forwarded to someone at
    home. Rotating it every 20 seconds fixes that and costs a websocket. Probably not worth
    it for six friends.
