@@ -150,8 +150,9 @@ header .sub b {
 	cursor: pointer;
 }
 .lang button.on {
-	background: var(--accent);
-	color: var(--accent-ink);
+	/* a dull white, deliberately: the switcher is furniture, not a highlight */
+	background: #d3d7dd;
+	color: var(--bg);
 }
 
 /* the budget explainer: hover with a mouse, tap on a phone */

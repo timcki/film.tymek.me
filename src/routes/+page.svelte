@@ -534,11 +534,8 @@
 {/snippet}
 
 <div class="list">
+	<!-- no banner over the trójka: the lead glow and the reszta divider say it -->
 	{#each data.films as film, i (film.id)}
-		{#if data.shortlistCount && i === 0}
-			<div class="shortlist-head">{T.shortlistHead(data.shortlistCount)}</div>
-			<p class="shortlist-note">{T.shortlistNote(data.shortlistCount)}</p>
-		{/if}
 		{#if data.shortlistCount && i === data.shortlistCount}
 			<div class="rest-head">{T.restHead}</div>
 		{/if}
