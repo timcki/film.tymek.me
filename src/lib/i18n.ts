@@ -107,6 +107,8 @@ export type Dict = {
 	btnSpent: (n: number) => string;
 	btnVote: string;
 	btnVoted: string;
+	btnUndo: (s: number) => string;
+	lockedTag: string;
 	btnRenominate: string;
 	warnDrops: string;
 	warnFades: (n: number) => string;
@@ -355,6 +357,8 @@ const pl: Dict = {
 	btnSpent: (n) => `✓ ${n} pkt`,
 	btnVote: 'Głosuj',
 	btnVoted: '✓ twój głos',
+	btnUndo: (s) => `Cofnij · ${s} s`,
+	lockedTag: 'na stałe',
 	btnRenominate: 'Zgłoś ponownie',
 	warnDrops: 'odpada w tym tyg, jeśli nie dostanie głosów',
 	warnFades: (n) => `znika za ${n} ${plWeeks(n)}`,
@@ -656,6 +660,8 @@ const en: Dict = {
 	btnSpent: (n) => `✓ ${n} spent`,
 	btnVote: 'Vote',
 	btnVoted: '✓ your vote',
+	btnUndo: (s) => `Undo · ${s} s`,
+	lockedTag: 'locked in',
 	btnRenominate: 'Re-nominate',
 	warnDrops: 'drops this week unless it gets votes',
 	warnFades: (n) => `fades in ${n} ${en2(n, 'week', 'weeks')}`,

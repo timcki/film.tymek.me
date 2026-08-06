@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { scale } from 'svelte/transition';
+	import { backOut } from 'svelte/easing';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Poster from '$lib/components/Poster.svelte';
@@ -16,6 +18,39 @@
 	const left = $derived(data.person?.left ?? 0);
 	const open = $derived(data.week?.status === 'open');
 	const nominated = $derived(data.nominatedThisWeek);
+
+	/* -------------------------------------------------------- vote finality -- */
+
+	// drives the undo countdowns; 250 ms keeps the seconds display honest
+	let nowMs = $state(Date.now());
+	$effect(() => {
+		const timer = setInterval(() => (nowMs = Date.now()), 250);
+		return () => clearInterval(timer);
+	});
+
+	type Graceful = { myPoints: number; myFloor: number; myGraceUntil: string | null };
+
+	function graceLeftMs(film: Graceful): number {
+		if (!film.myGraceUntil) return 0;
+		return Math.max(0, new Date(film.myGraceUntil).getTime() - nowMs);
+	}
+
+	/** the undo affordance exists exactly while the server would honour it */
+	function canUndo(film: Graceful): boolean {
+		return open && film.myPoints > film.myFloor && graceLeftMs(film) > 0;
+	}
+
+	const undoSeconds = (film: Graceful) => Math.ceil(graceLeftMs(film) / 1000);
+
+	/**
+	 * Starts the drain ring exactly once per mount. An action rather than a style
+	 * binding, because the binding would re-run on every tick and restart the
+	 * CSS animation from zero.
+	 */
+	function drain(node: SVGElement, opts: { until: string; total: number }) {
+		const leftMs = Math.max(0, new Date(opts.until).getTime() - Date.now());
+		node.style.animation = `ringdrain ${opts.total}s linear -${opts.total - leftMs / 1000}s forwards`;
+	}
 
 	type Result = {
 		tmdbId: number | null;
@@ -245,9 +280,9 @@
 			{#if film.note}<div class="note">{film.note}</div>{/if}
 			<div class="ft">
 				{@render backerRow(film)}
-				<form method="POST" action="?/setPoints" use:enhance={submit()}>
-					<input type="hidden" name="filmId" value={film.id} />
-					{#if votes}
+				{#if votes}
+					<form method="POST" action="?/setPoints" use:enhance={submit()}>
+						<input type="hidden" name="filmId" value={film.id} />
 						<button
 							class="tap"
 							class:on={film.myPoints > 0}
@@ -255,22 +290,38 @@
 							value={film.myPoints > 0 ? 0 : 1}
 							disabled={!open ||
 								(film.myPoints === 0 && left < 1) ||
-								(film.myPoints > 0 && film.myFloor > 0)}
+								(film.myPoints > 0 && !canUndo(film))}
 						>
 							{film.myPoints > 0 ? T.btnVoted : T.btnVote}
 						</button>
-					{:else}
-						<button
-							class="tap"
-							class:on={film.myPoints > 0}
-							name="points"
-							value={film.myPoints + 1}
-							disabled={!open || left < 1}
-						>
-							{film.myPoints > 0 ? T.btnSpent(film.myPoints) : T.btnAddPoint}
-						</button>
-					{/if}
-				</form>
+					</form>
+				{:else}
+					<div class="votecluster">
+						{#if film.myPoints > 0}
+							<span class="minechip" class:live={canUndo(film)}>✓ {film.myPoints} pkt</span>
+						{/if}
+						{#if canUndo(film)}
+							<form method="POST" action="?/setPoints" use:enhance={submit()}>
+								<input type="hidden" name="filmId" value={film.id} />
+								<button
+									class="undochip"
+									class:urgent={graceLeftMs(film) < 6000}
+									name="points"
+									value={film.myPoints - 1}
+									in:scale={{ duration: 240, start: 0.6, easing: backOut }}
+								>
+									↩ {T.btnUndo(undoSeconds(film))}
+								</button>
+							</form>
+						{/if}
+						<form method="POST" action="?/setPoints" use:enhance={submit()}>
+							<input type="hidden" name="filmId" value={film.id} />
+							<button class="tap" name="points" value={film.myPoints + 1} disabled={!open || left < 1}>
+								{T.btnAddPoint}
+							</button>
+						</form>
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -420,25 +471,58 @@
 				<div class="lab">
 					{#if detail.myPoints}
 						<b>{T.dYours(detail.myPoints, votes)}</b>
-						{rules.banking ? T.dBankLeft(left) : T.dWeekLeft(left, data.person?.budget ?? 0)}
+						{#if canUndo(detail)}
+							<span class="graceline">{T.btnUndo(undoSeconds(detail))}</span>
+						{:else}
+							<span class="graceline set">✓ {T.lockedTag}</span>
+						{/if}
 					{:else}
 						<b>{T.dNone(left, votes)}</b>
 					{/if}
 				</div>
-				<div class="step">
-					<form method="POST" action="?/setPoints" use:enhance={submit()}>
-						<input type="hidden" name="filmId" value={detail.id} />
-						<button
-							name="points"
-							value={Math.max(detail.myFloor, detail.myPoints - 1)}
-							disabled={!open || detail.myPoints <= detail.myFloor}>−</button
-						>
-					</form>
-					<span class:on={detail.myPoints > 0}>{detail.myPoints}</span>
-					<form method="POST" action="?/setPoints" use:enhance={submit()}>
-						<input type="hidden" name="filmId" value={detail.id} />
-						<button name="points" value={detail.myPoints + 1} disabled={!open || left < 1}>+</button>
-					</form>
+				<div class="pips">
+					{#each Array(detail.myPoints) as _, i (i)}
+						{#if i === detail.myPoints - 1 && canUndo(detail)}
+							<!-- the freshest point: still soft, wearing its countdown; tap takes it back -->
+							<form method="POST" action="?/setPoints" use:enhance={submit()}>
+								<input type="hidden" name="filmId" value={detail.id} />
+								<button
+									class="pip live"
+									name="points"
+									value={detail.myPoints - 1}
+									aria-label={T.btnUndo(undoSeconds(detail))}
+									in:scale={{ duration: 260, start: 0.3, easing: backOut }}
+								>
+									<svg viewBox="0 0 36 36" aria-hidden="true">
+										<circle class="ringtrack" cx="18" cy="18" r="16" />
+										<circle
+											class="ring"
+											cx="18"
+											cy="18"
+											r="16"
+											use:drain={{ until: detail.myGraceUntil ?? '', total: rules.voteGraceSeconds }}
+										/>
+									</svg>
+									<i></i>
+								</button>
+							</form>
+						{:else}
+							<span class="pip set"><i></i></span>
+						{/if}
+					{/each}
+					{#each Array(Math.max(0, left)) as _, i (i)}
+						<!-- an empty slot is also the cast button: tap it and the point moves in -->
+						<form method="POST" action="?/setPoints" use:enhance={submit()}>
+							<input type="hidden" name="filmId" value={detail.id} />
+							<button
+								class="pip empty"
+								name="points"
+								value={detail.myPoints + 1}
+								disabled={!open}
+								aria-label={T.btnAddPoint}
+							></button>
+						</form>
+					{/each}
 				</div>
 			</div>
 		{/if}

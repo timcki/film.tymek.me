@@ -65,7 +65,10 @@ export function standings(
 		score: number;
 	})[];
 	const now = new Date();
-	const mine = new Map<number, { points: number; floor: number }>();
+	const mine = new Map<
+		number,
+		{ points: number; floor: number; graceUntil: string | null }
+	>();
 	if (viewerId) {
 		const rows = db
 			.prepare(
@@ -73,7 +76,14 @@ export function standings(
 			)
 			.all(viewerId, currentWeek) as (BallotRow & { film_id: number })[];
 		for (const row of rows) {
-			mine.set(row.film_id, { points: row.points, floor: pointsFloor(rules, row, now) });
+			const floor = pointsFloor(rules, row, now);
+			const until = new Date(row.updated_at).getTime() + rules.voteGraceSeconds * 1000;
+			mine.set(row.film_id, {
+				points: row.points,
+				floor,
+				// when the undo affordance should dissolve; null once the vote has set
+				graceUntil: floor < row.points && until > now.getTime() ? iso(new Date(until)) : null
+			});
 		}
 	}
 	const names = new Map(
@@ -87,6 +97,7 @@ export function standings(
 		backers: backersOf(db, rules, film.id, currentWeek),
 		myPoints: mine.get(film.id)?.points ?? 0,
 		myFloor: mine.get(film.id)?.floor ?? 0,
+		myGraceUntil: mine.get(film.id)?.graceUntil ?? null,
 		addedByName: names.get(film.added_by) ?? film.added_by,
 		campaignWeeks: campaignWeeks(db, film.id, currentWeek),
 		atRisk: isAtRisk(db, rules, film, currentWeek)

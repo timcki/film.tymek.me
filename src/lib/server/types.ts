@@ -104,6 +104,8 @@ export type Standing = Film & {
 	myPoints: number;
 	/** §8.3: the lowest value the viewer may set on this film right now */
 	myFloor: number;
+	/** when the viewer's undo window shuts, or null once the vote has set */
+	myGraceUntil: string | null;
 	addedByName: string;
 	/** consecutive weeks a single person has backed this film, §9 badge */
 	campaignWeeks: number;
