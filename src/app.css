@@ -18,6 +18,15 @@
 	--cut: #ec939a;
 	--bad: #e0715f;
 	--r: 14px;
+	/* the rank ladder's rarity ramp, worn as rings and rank titles */
+	--tier0: #8a93a1;
+	--tier1: #7fd39b;
+	--tier2: #6cd8d2;
+	--tier3: #92bbe8;
+	--tier4: #b79df2;
+	--tier5: #ea9cd4;
+	--tier6: #e0a15f;
+	--tier7: #f0c163;
 }
 
 * {
@@ -332,6 +341,14 @@ header .sub b {
 	color: var(--accent);
 	font-weight: 650;
 }
+.bkpop .bktitle.lv0 { color: var(--tier0); }
+.bkpop .bktitle.lv1 { color: var(--tier1); }
+.bkpop .bktitle.lv2 { color: var(--tier2); }
+.bkpop .bktitle.lv3 { color: var(--tier3); }
+.bkpop .bktitle.lv4 { color: var(--tier4); }
+.bkpop .bktitle.lv5 { color: var(--tier5); }
+.bkpop .bktitle.lv6 { color: var(--tier6); }
+.bkpop .bktitle.lv7 { color: var(--tier7); }
 @keyframes bkpop {
 	from {
 		opacity: 0;
@@ -506,63 +523,96 @@ header .sub b {
 	object-fit: cover;
 	display: block;
 }
-/* the rank ring: a face wears its level. A dark gap between face and ring
-   makes it read as a frame on any surface; the ramp runs silver, accent,
-   and finally the warm gold of a screen legend */
-.av.lv1 {
+/* the rank ring: a face wears its level, and even the first rung gets a
+   proper frame. The ramp climbs the rarity rainbow: steel, green, teal,
+   accent blue, violet, rose, and gold at the summit. A dark gap keeps every
+   ring reading as a frame on any surface */
+.av:is(.lv0, .lv1, .lv2, .lv3, .lv4, .lv5, .lv6, .lv7) {
 	box-shadow:
 		0 0 0 var(--gapw, 1.5px) #0f1012,
-		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) #6a707b;
+		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
+		0 0 var(--glowr, 0px) var(--glowc, transparent);
+}
+.av.lv0 {
+	--ringc: var(--tier0);
+	--glowr: 6px;
+	--glowc: rgba(138, 147, 161, 0.4);
+}
+.av.lv1 {
+	--ringc: var(--tier1);
+	--glowr: 10px;
+	--glowc: rgba(127, 211, 155, 0.55);
 }
 .av.lv2 {
-	box-shadow:
-		0 0 0 var(--gapw, 1.5px) #0f1012,
-		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) #a6adb8;
+	--ringc: var(--tier2);
+	--glowr: 12px;
+	--glowc: rgba(108, 216, 210, 0.6);
 }
 .av.lv3 {
-	box-shadow:
-		0 0 0 var(--gapw, 1.5px) #0f1012,
-		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) color-mix(in srgb, var(--accent) 70%, #6a707b);
+	--ringc: var(--tier3);
+	--glowr: 14px;
+	--glowc: color-mix(in srgb, var(--accent) 65%, transparent);
 }
 .av.lv4 {
-	box-shadow:
-		0 0 0 var(--gapw, 1.5px) #0f1012,
-		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--accent);
+	--ringc: var(--tier4);
+	--glowr: 16px;
+	--glowc: rgba(183, 157, 242, 0.65);
 }
 .av.lv5 {
-	box-shadow:
-		0 0 0 var(--gapw, 1.5px) #0f1012,
-		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--accent),
-		0 0 14px color-mix(in srgb, var(--accent) 75%, transparent);
+	--ringc: var(--tier5);
+	--glowr: 18px;
+	--glowc: rgba(234, 156, 212, 0.7);
 }
 .av.lv6 {
-	box-shadow:
-		0 0 0 var(--gapw, 1.5px) #0f1012,
-		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--warn);
+	--ringc: var(--tier6);
+	--glowr: 20px;
+	--glowc: color-mix(in srgb, var(--warn) 75%, transparent);
+	animation: ringpulse6 2.6s ease-in-out infinite;
 }
+/* the summit: brighter gold, a white sparkle hairline, and a breathing aura */
 .av.lv7 {
+	--ringc: var(--tier7);
 	box-shadow:
 		0 0 0 var(--gapw, 1.5px) #0f1012,
-		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--warn),
-		0 0 16px color-mix(in srgb, var(--warn) 80%, transparent);
-	animation: legend 2.8s ease-in-out infinite;
+		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
+		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) rgba(255, 244, 214, 0.85),
+		0 0 22px rgba(240, 193, 99, 0.85);
+	animation: ringpulse7 2.6s ease-in-out infinite;
 }
-@keyframes legend {
+@keyframes ringpulse6 {
 	0%,
 	100% {
 		box-shadow:
 			0 0 0 var(--gapw, 1.5px) #0f1012,
-			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--warn),
-			0 0 10px color-mix(in srgb, var(--warn) 60%, transparent);
+			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
+			0 0 14px color-mix(in srgb, var(--warn) 60%, transparent);
 	}
 	50% {
 		box-shadow:
 			0 0 0 var(--gapw, 1.5px) #0f1012,
-			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--warn),
-			0 0 20px color-mix(in srgb, var(--warn) 90%, transparent);
+			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
+			0 0 24px color-mix(in srgb, var(--warn) 85%, transparent);
+	}
+}
+@keyframes ringpulse7 {
+	0%,
+	100% {
+		box-shadow:
+			0 0 0 var(--gapw, 1.5px) #0f1012,
+			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
+			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) rgba(255, 244, 214, 0.85),
+			0 0 15px rgba(240, 193, 99, 0.65);
+	}
+	50% {
+		box-shadow:
+			0 0 0 var(--gapw, 1.5px) #0f1012,
+			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
+			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) rgba(255, 250, 235, 1),
+			0 0 28px rgba(240, 193, 99, 1);
 	}
 }
 @media (prefers-reduced-motion: reduce) {
+	.av.lv6,
 	.av.lv7 {
 		animation: none;
 	}

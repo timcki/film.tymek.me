@@ -597,7 +597,7 @@
 			xp={peek.backer.xp}
 		/>
 		<b>{peek.backer.name}</b>
-		<span class="bktitle">{T.levels[levelOf(peek.backer.xp)]}</span>
+		<span class="bktitle lv{levelOf(peek.backer.xp)}">{T.levels[levelOf(peek.backer.xp)]}</span>
 		<span>{peek.backer.points} {T.unit(peek.backer.points, votes)}</span>
 	</div>
 {/if}
