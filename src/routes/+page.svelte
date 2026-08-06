@@ -122,6 +122,8 @@
 	let notePop = $state<{
 		text: string;
 		sig: string;
+		/** true for a nominator's pitch, false for a database blurb */
+		quoted: boolean;
 		x: number;
 		y: number;
 		below: boolean;
@@ -166,7 +168,28 @@
 		if (!(el instanceof HTMLElement) || !film.note) return;
 		peek = null;
 		scorePop = null;
-		notePop = { text: film.note, sig: T.noteSig(film.addedByName), tap, ...anchorAt(el, NPOP_W, NPOP_H) };
+		notePop = {
+			text: film.note,
+			sig: T.noteSig(film.addedByName),
+			quoted: true,
+			tap,
+			...anchorAt(el, NPOP_W, NPOP_H)
+		};
+	}
+
+	/** the TMDB synopsis, standing in where the nominator left no pitch */
+	function blurbAt(el: EventTarget | null, film: Film, tap: boolean) {
+		clearTimeout(closing);
+		if (!(el instanceof HTMLElement) || !film.overview) return;
+		peek = null;
+		scorePop = null;
+		notePop = {
+			text: film.overview,
+			sig: '',
+			quoted: false,
+			tap,
+			...anchorAt(el, NPOP_W, NPOP_H)
+		};
 	}
 
 	/** the fade arithmetic behind a score, one row per week with points */
@@ -297,9 +320,9 @@
 {#snippet backerRow(film: Film)}
 	<span class="backers">
 		{#if film.backers.length}
-			<!-- the top four by points; the rest fold into a +N that opens the
-			     sheet, so the vote dot always keeps its room on one row -->
-			{#each film.backers.slice(0, 4) as backer (backer.person_id)}
+			<!-- the top eight by points, wrapping onto a second row if need be;
+			     the rest fold into a +N that opens the sheet -->
+			{#each film.backers.slice(0, 8) as backer (backer.person_id)}
 				<!-- a 16px face says nothing on a phone, so the pill opens a readable one -->
 				<button
 					class="bk"
@@ -333,12 +356,12 @@
 					<b>{backer.points}</b>
 				</button>
 			{/each}
-			{#if film.backers.length > 4}
+			{#if film.backers.length > 8}
 				<button
 					class="bk more"
 					type="button"
 					aria-label={film.backers
-						.slice(4)
+						.slice(8)
 						.map((b) => b.name)
 						.join(', ')}
 					onclick={() => {
@@ -346,7 +369,7 @@
 						detailId = film.id;
 					}}
 				>
-					+{film.backers.length - 4}
+					+{film.backers.length - 8}
 				</button>
 			{/if}
 		{:else}
@@ -538,17 +561,62 @@
 		</div>
 		<div class="b">
 			<div class="hd">
-				<!-- the title line is text only, so it wraps cleanly: title, year,
-				     length. The nominator sits on the poster; the rest is the
-				     sheet's business -->
-				<div class="ttl">
-					{film.title}
-					{#if film.year || film.runtime}
-						<span class="mm">
-							{[film.year, film.runtime ? T.minutes(film.runtime) : null]
-								.filter(Boolean)
-								.join(' · ')}
-						</span>
+				<div class="hleft">
+					<!-- the title line is text only, so it wraps cleanly: title, year,
+					     length. The nominator sits on the poster; the rest is the
+					     sheet's business -->
+					<div class="ttl">
+						{film.title}
+						{#if film.year || film.runtime}
+							<span class="mm">
+								{[film.year, film.runtime ? T.minutes(film.runtime) : null]
+									.filter(Boolean)
+									.join(' · ')}
+							</span>
+						{/if}
+					</div>
+					<!-- one line right under the title, ending before the coin: the
+					     nominator's pitch, or the synopsis where nobody pitched -->
+					{#if film.note}
+						<button
+							class="note"
+							type="button"
+							onpointerenter={(event) => {
+								mousing = event.pointerType === 'mouse';
+								if (mousing) noteAt(event.currentTarget, film, false);
+							}}
+							onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+							onclick={(event) => !mousing && noteAt(event.currentTarget, film, true)}
+							onfocus={(event) => {
+								if (event.currentTarget.matches(':focus-visible'))
+									noteAt(event.currentTarget, film, false);
+							}}
+							onblur={unpeek}
+						>
+							{film.note}
+						</button>
+					{:else if film.overview}
+						<button
+							class="note blurb"
+							type="button"
+							onpointerenter={(event) => {
+								mousing = event.pointerType === 'mouse';
+								if (mousing) blurbAt(event.currentTarget, film, false);
+							}}
+							onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+							onclick={(event) => !mousing && blurbAt(event.currentTarget, film, true)}
+							onfocus={(event) => {
+								if (event.currentTarget.matches(':focus-visible'))
+									blurbAt(event.currentTarget, film, false);
+							}}
+							onblur={unpeek}
+						>
+							{film.overview}
+						</button>
+					{:else if film.director || film.genre}
+						<div class="note blurb still">
+							{[film.director, film.genre].filter(Boolean).join(' · ')}
+						</div>
 					{/if}
 				</div>
 				<!-- tapping the coin explains the fade arithmetic behind the number -->
@@ -566,25 +634,6 @@
 					<b>{fmtScore(film.score)}</b><i>{T.unit(film.score, votes)}</i>
 				</button>
 			</div>
-			{#if film.note}
-				<!-- one line on the card; the full pitch opens in a quick popup -->
-				<button
-					class="note"
-					type="button"
-					onpointerenter={(event) => {
-						mousing = event.pointerType === 'mouse';
-						if (mousing) noteAt(event.currentTarget, film, false);
-					}}
-					onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
-					onclick={(event) => !mousing && noteAt(event.currentTarget, film, true)}
-					onfocus={(event) => {
-						if (event.currentTarget.matches(':focus-visible')) noteAt(event.currentTarget, film, false);
-					}}
-					onblur={unpeek}
-				>
-					{film.note}
-				</button>
-			{/if}
 			<div class="ft">
 				{@render backerRow(film)}
 				{#if votes}
@@ -883,8 +932,8 @@
 		style="left:{notePop.x}px;top:{notePop.y}px"
 		role="tooltip"
 	>
-		<p>“{notePop.text}”</p>
-		<span class="sig">{notePop.sig}</span>
+		<p>{notePop.quoted ? `“${notePop.text}”` : notePop.text}</p>
+		{#if notePop.sig}<span class="sig">{notePop.sig}</span>{/if}
 	</div>
 {/if}
 

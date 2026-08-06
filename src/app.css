@@ -280,6 +280,13 @@ header .sub b {
 	gap: 10px;
 	align-items: flex-start;
 }
+/* the title and its one-line pitch stack here, ending before the coin */
+.hleft {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
 .ttl {
 	flex: 1;
 	min-width: 0;
@@ -498,12 +505,22 @@ button.sc {
 	font-size: 11.5px;
 	color: #b3b9c2;
 	line-height: 1.4;
-	margin-top: 7px;
+	margin-top: 4px;
 	padding: 0 0 0 8px;
 	font-style: italic;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+/* the synopsis stand-in: plainly a database voice, not somebody's pitch */
+.note.blurb {
+	border-left: 0;
+	padding-left: 0;
+	font-style: normal;
+	color: var(--dim);
+}
+.note.blurb.still {
+	cursor: default;
 }
 /* the full pitch, quoted; wears the same frame as the face popup */
 .ntpop {
