@@ -256,17 +256,6 @@ export function reassignFilm(db: DB, id: number, personId: string): void {
 	});
 }
 
-/** the penalty is only ever a judgement about a room vote, so it can be undone */
-export function clearPenalty(db: DB, rules: RuleSet, id: number, week: number): void {
-	immediate(db, () => {
-		filmOr404(db, id);
-		db.prepare(
-			'UPDATE film SET penalty = 0, last_penalty = 0, last_penalty_week = NULL WHERE id = ?'
-		).run(id);
-		rescoreAll(db, rules, week);
-	});
-}
-
 /**
  * Only for something nominated by mistake. Anything anyone has voted for, or that
  * the room has been shown, is history and gets archived instead of erased.

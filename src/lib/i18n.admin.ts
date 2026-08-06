@@ -69,8 +69,6 @@ export type AdminDict = {
 	filStatus: (status: string) => string;
 	filBy: (name: string, week: number) => string;
 	filBallots: (n: number) => string;
-	filPenalty: (n: number) => string;
-	filClearPenalty: string;
 	filEdit: string;
 	filSave: string;
 	filCancel: string;
@@ -171,8 +169,6 @@ const pl: AdminDict = {
 	filStatus: (status) => STATUS_PL[status] ?? status,
 	filBy: (name, week) => `${name}, tydzień ${week}`,
 	filBallots: (n) => `${n} głosów w bazie`,
-	filPenalty: (n) => `kara −${n}`,
-	filClearPenalty: 'Cofnij karę',
 	filEdit: 'Edytuj',
 	filSave: 'Zapisz',
 	filCancel: 'Anuluj',
@@ -317,8 +313,6 @@ const en: AdminDict = {
 	filStatus: (status) => STATUS_EN[status] ?? status,
 	filBy: (name, week) => `${name}, week ${week}`,
 	filBallots: (n) => `${n} ballots on record`,
-	filPenalty: (n) => `penalty −${n}`,
-	filClearPenalty: 'Undo the penalty',
 	filEdit: 'Edit',
 	filSave: 'Save',
 	filCancel: 'Cancel',

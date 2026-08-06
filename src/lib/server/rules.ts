@@ -1,4 +1,4 @@
-export type RuleSetId = 'ledger' | 'rolling' | 'banked';
+export type RuleSetId = 'ledger' | 'rolling' | 'banked' | 'weekly';
 
 export type Attrition =
 	| { kind: 'archive'; afterWeeksAtZero: number }
@@ -14,8 +14,12 @@ export type RuleSet = {
 	/** maximum bank balance; ignored when banking is false */
 	bankCap: number;
 	/** how a film's score is computed */
-	scoring: 'total' | 'decay';
-	/** only used when scoring === 'decay' */
+	scoring: 'total' | 'decay' | 'fade';
+	/**
+	 * 'decay': weight of last week's points in the two-week window.
+	 * 'fade': weekly multiplier applied to every past week's points, so a point
+	 * cast n weeks ago is worth decayFactor^n. Unused under 'total'.
+	 */
 	decayFactor: number;
 	/** what happens to films nobody is voting for */
 	attrition: Attrition;
@@ -65,15 +69,27 @@ export const RULE_SETS: Record<RuleSetId, RuleSet> = {
 		attrition: { kind: 'drop', afterWeeksWithoutPoints: 2 },
 		nominationsPerWeek: 1,
 		shortlistSize: 3
+	},
+	weekly: {
+		id: 'weekly',
+		label: 'Weekly',
+		pointsPerWeek: 2,
+		banking: false,
+		bankCap: 0,
+		scoring: 'fade',
+		decayFactor: 0.75,
+		attrition: { kind: 'drop', afterWeeksWithoutPoints: 2 },
+		nominationsPerWeek: 1,
+		shortlistSize: 3
 	}
 };
 
 export function isRuleSetId(value: string | undefined): value is RuleSetId {
-	return value === 'ledger' || value === 'rolling' || value === 'banked';
+	return value === 'ledger' || value === 'rolling' || value === 'banked' || value === 'weekly';
 }
 
 export function ruleSetFromEnv(value: string | undefined): RuleSet {
-	return RULE_SETS[isRuleSetId(value) ? value : 'banked'];
+	return RULE_SETS[isRuleSetId(value) ? value : 'weekly'];
 }
 
 /**
@@ -84,6 +100,17 @@ export function score(rules: RuleSet, points: Map<number, number>, currentWeek: 
 	if (rules.scoring === 'total') {
 		let sum = 0;
 		for (const p of points.values()) sum += p;
+		return sum;
+	}
+	if (rules.scoring === 'fade') {
+		// every past week contributes, geometrically discounted by age, so the
+		// score stays recomputable from the ballot table alone and nothing needs
+		// a stored running value
+		let sum = 0;
+		for (const [week, p] of points) {
+			if (week > currentWeek) continue;
+			sum += p * rules.decayFactor ** (currentWeek - week);
+		}
 		return sum;
 	}
 	// 'decay' is deliberately a two-week window, not a recursive EMA, so it can

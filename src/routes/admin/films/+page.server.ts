@@ -3,7 +3,6 @@ import { getDb } from '$lib/server/db';
 import { activeRules } from '$lib/server/config';
 import { logAdmin, requireAdmin } from '$lib/server/admin';
 import {
-	clearPenalty,
 	deleteFilm,
 	editFilm,
 	managedFilms,
@@ -99,19 +98,6 @@ export const actions: Actions = {
 		try {
 			reassignFilm(getDb(), id, to);
 			logAdmin(getDb(), person.id, 'film.reassign', String(id), to);
-			return { saved: true };
-		} catch (error) {
-			return ruleFail(error);
-		}
-	},
-
-	penalty: async ({ request, locals }) => {
-		const person = requireAdmin(locals.person);
-		const form = await request.formData();
-		const id = Number(form.get('id'));
-		try {
-			clearPenalty(getDb(), activeRules(), id, nowWeek());
-			logAdmin(getDb(), person.id, 'film.clear_penalty', String(id));
 			return { saved: true };
 		} catch (error) {
 			return ruleFail(error);

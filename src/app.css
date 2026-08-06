@@ -485,17 +485,6 @@ header .sub b {
 	font-size: 10.5px;
 	font-weight: 650;
 }
-.cutchip {
-	align-self: flex-start;
-	margin-top: 6px;
-	padding: 2px 8px;
-	border-radius: 99px;
-	font-size: 10.5px;
-	font-weight: 650;
-	color: var(--cut);
-	background: color-mix(in srgb, var(--cut) 11%, transparent);
-	border: 1px solid color-mix(in srgb, var(--cut) 26%, transparent);
-}
 .av {
 	width: 19px;
 	height: 19px;
@@ -1384,11 +1373,6 @@ details[open] > .iconbtn {
 	color: var(--dimmer);
 	background: none;
 	border-color: var(--line2);
-}
-.badge.cut {
-	color: var(--cut);
-	background: color-mix(in srgb, var(--cut) 12%, transparent);
-	border-color: color-mix(in srgb, var(--cut) 28%, transparent);
 }
 .nextcard {
 	display: flex;

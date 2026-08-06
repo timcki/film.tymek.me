@@ -27,7 +27,7 @@ export type RulesView = {
 	pointsPerWeek: number;
 	banking: boolean;
 	bankCap: number;
-	scoring: 'total' | 'decay';
+	scoring: 'total' | 'decay' | 'fade';
 	decayFactor: number;
 	attrition:
 		| { kind: 'archive'; afterWeeksAtZero: number }
@@ -42,6 +42,17 @@ export function isVotes(rules: RulesView): boolean {
 }
 
 export type Rule = { head: string; body: string };
+
+/** how much of a point's value is gone after a week under 'fade', as a percentage */
+export function fadePercent(r: RulesView): number {
+	return Math.round((1 - r.decayFactor) * 100);
+}
+
+/** scores are fractional under 'fade'; one decimal is plenty for the eye */
+export function fmtScore(n: number): string {
+	const rounded = Math.round(n * 10) / 10;
+	return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
 
 export type ErrorParams = Record<string, string | number>;
 
@@ -98,7 +109,6 @@ export type Dict = {
 	btnRenominate: string;
 	warnDrops: string;
 	warnFades: (n: number) => string;
-	cutChip: (n: number, votes: boolean) => string;
 	campaign: (n: number) => string;
 	addedBy: (name: string, week: number) => string;
 	nomCta: string;
@@ -252,13 +262,20 @@ const plRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 			: 'Po jednym co tydzień, żeby film nie odpadł z listy, albo wszystko naraz, żeby go przepchnąć.'
 	});
 
-	out.push({
-		head:
-			r.scoring === 'total'
-				? `${votes ? 'Głosy' : 'Punkty'} kumulują się na filmie co tydzień.`
-				: `Wynik to ten tydzień plus ${r.decayFactor} poprzedniego.`,
-		body: r.scoring === 'total' ? '' : 'Nic nie kumuluje się na długo.'
-	});
+	if (r.scoring === 'fade') {
+		out.push({
+			head: `${votes ? 'Głosy' : 'Punkty'} na filmie tracą co tydzień ${fadePercent(r)}% wartości.`,
+			body: 'Świeże głosy ważą najwięcej, stare powoli gasną. Film utrzymuje się wysoko tylko wtedy, gdy ktoś wciąż go chce.'
+		});
+	} else {
+		out.push({
+			head:
+				r.scoring === 'total'
+					? `${votes ? 'Głosy' : 'Punkty'} kumulują się na filmie co tydzień.`
+					: `Wynik to ten tydzień plus ${r.decayFactor} poprzedniego.`,
+			body: r.scoring === 'total' ? '' : 'Nic nie kumuluje się na długo.'
+		});
+	}
 
 	out.push({
 		head: `${r.nominationsPerWeek === 1 ? 'Jedno' : r.nominationsPerWeek} zgłoszenie tygodniowo.`,
@@ -274,11 +291,6 @@ const plRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 			`${r.shortlistSize} ${plFilms(r.shortlistSize)} z największą liczbą punktów trafiają do głosowania. ` +
 			'Kod QR pojawia się na ekranie i głos mają tylko ci, którzy przyszli. ' +
 			'Jeśli nikt nie zagłosuje, wygrywa najwyższy wynik.'
-	});
-
-	out.push({
-		head: `Filmy z top ${r.shortlistSize}, których sala nie wybrała, tracą połowę wyniku.`,
-		body: 'Zaokrąglamy w dół, minimum 1, więc sama kara nigdy nie usunie filmu z listy. Wygrany nie traci nic.'
 	});
 
 	return out;
@@ -327,7 +339,6 @@ const pl: Dict = {
 	btnRenominate: 'Zgłoś ponownie',
 	warnDrops: 'odpada w tym tyg, jeśli nie dostanie głosów',
 	warnFades: (n) => `znika za ${n} ${plWeeks(n)}`,
-	cutChip: (n, votes) => `−${n} ${votes ? plVotes(n) : 'pkt'} · przegrał w top 3`,
 	campaign: (n) => `${n}. tydzień kampanii`,
 	addedBy: (name, week) => `${name}, tydzień ${week}`,
 	nomCta: '+ Zgłoś film',
@@ -352,6 +363,7 @@ const pl: Dict = {
 	dBankLeft: (n) => `${n} ${plPoints(n)} w banku`,
 	dWeekLeft: (n, budget) => `${n} z ${budget} w tym tygodniu`,
 	sortLabel: (r) => {
+		if (r.scoring === 'fade') return `punkty tracą ${fadePercent(r)}% co tydzień`;
 		if (r.scoring === 'decay') return `ten tydzień + ${r.decayFactor} poprzedniego`;
 		return isVotes(r) ? 'wszystkie głosy od początku' : 'suma wszystkich wydanych punktów';
 	},
@@ -534,13 +546,20 @@ const enRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 			: 'One a week to keep a film on the list, or the lot at once to force it through.'
 	});
 
-	out.push({
-		head:
-			r.scoring === 'total'
-				? `${votes ? 'Votes' : 'Points'} accumulate on a film week after week.`
-				: `A score is this week plus ${r.decayFactor} of last week.`,
-		body: r.scoring === 'total' ? '' : 'Nothing accumulates for long.'
-	});
+	if (r.scoring === 'fade') {
+		out.push({
+			head: `${votes ? 'Votes' : 'Points'} on a film lose ${fadePercent(r)}% of their value each week.`,
+			body: 'Fresh votes weigh the most and old ones slowly fade, so a film stays high only while somebody still wants it.'
+		});
+	} else {
+		out.push({
+			head:
+				r.scoring === 'total'
+					? `${votes ? 'Votes' : 'Points'} accumulate on a film week after week.`
+					: `A score is this week plus ${r.decayFactor} of last week.`,
+			body: r.scoring === 'total' ? '' : 'Nothing accumulates for long.'
+		});
+	}
 
 	out.push({
 		head: `${r.nominationsPerWeek === 1 ? 'One' : r.nominationsPerWeek} nomination a week.`,
@@ -556,11 +575,6 @@ const enRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 			`The ${r.shortlistSize} films with the most points go to the vote. ` +
 			'A QR goes up on the screen and only the people who turned up get a say. ' +
 			'If nobody votes, the highest score wins.'
-	});
-
-	out.push({
-		head: 'A shortlisted film the room passes over keeps half its score.',
-		body: 'Rounded down, never below one, so the cut alone can never take a film off the list. The winner loses nothing.'
 	});
 
 	return out;
@@ -607,7 +621,6 @@ const en: Dict = {
 	btnRenominate: 'Re-nominate',
 	warnDrops: 'drops this week unless it gets votes',
 	warnFades: (n) => `fades in ${n} ${en2(n, 'week', 'weeks')}`,
-	cutChip: (n, votes) => `−${n} ${votes ? en2(n, 'vote', 'votes') : 'pts'} · lost the room vote`,
 	campaign: (n) => `week ${n} of this campaign`,
 	addedBy: (name, week) => `${name}, week ${week}`,
 	nomCta: '+ Nominate a film',
@@ -630,6 +643,7 @@ const en: Dict = {
 	dBankLeft: (n) => `${n} left in your bank`,
 	dWeekLeft: (n, budget) => `${n} of ${budget} left this week`,
 	sortLabel: (r) => {
+		if (r.scoring === 'fade') return `points fade ${fadePercent(r)}% a week`;
 		if (r.scoring === 'decay') return `this week plus ${r.decayFactor} of last week`;
 		return isVotes(r) ? 'all-time votes' : 'total points ever spent';
 	},

@@ -48,7 +48,6 @@
 			<div class="fmeta">
 				<span class="badge soft">{A.filStatus(film.status)}</span>
 				{A.filBy(film.added_by_name, film.added_week)} · {A.filBallots(film.ballots)}
-				{#if film.penalty > 0}<span class="badge cut">{A.filPenalty(film.penalty)}</span>{/if}
 				{#if film.watched_week}<span class="badge">{A.filWeek} {film.watched_week}</span>{/if}
 			</div>
 
@@ -115,13 +114,6 @@
 						</select>
 						<button class="tap">{A.filReassign}</button>
 					</form>
-
-					{#if film.penalty > 0}
-						<form method="POST" action="?/penalty" use:enhance={submit()}>
-							<input type="hidden" name="id" value={film.id} />
-							<button class="tap">{A.filClearPenalty}</button>
-						</form>
-					{/if}
 
 					{#if film.ballots === 0 && film.status !== 'watched'}
 						<form method="POST" action="?/remove" use:enhance={submit()}>

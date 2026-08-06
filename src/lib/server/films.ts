@@ -19,7 +19,9 @@ export function filmsByStatus(db: DB, status: Film['status']): Film[] {
 
 /** the weeks whose ballots contribute to the current score under these rules */
 function scoringWeeks(rules: RuleSet, currentWeek: number): number[] | null {
-	return rules.scoring === 'total' ? null : [currentWeek, currentWeek - 1];
+	// under 'total' and 'fade' every week counts (fade just discounts them);
+	// only 'decay' has a hard two-week window
+	return rules.scoring === 'decay' ? [currentWeek, currentWeek - 1] : null;
 }
 
 function backersOf(db: DB, rules: RuleSet, filmId: number, currentWeek: number): Backer[] {

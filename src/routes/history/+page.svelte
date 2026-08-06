@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Avatar from '$lib/components/Avatar.svelte';
-	import { dictFor, isVotes } from '$lib/i18n';
+	import { dictFor, fmtScore, isVotes } from '$lib/i18n';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -21,7 +21,7 @@
 			<div class="lb">
 				<b>{film.title}</b>
 				{T.week(film.watched_week)}{#if film.final_score !== null}
-					· {film.final_score}
+					· {fmtScore(film.final_score)}
 					{T.unit(film.final_score, votes)}
 				{/if}
 			</div>

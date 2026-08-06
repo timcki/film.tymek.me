@@ -6,7 +6,7 @@ import type { RuleSet } from './rules.js';
 import { accrue, orderFilms } from './rules.js';
 import { iso } from './time.js';
 import { markNightUsed, nextNight } from './schedule.js';
-import { pointsInWindow, rescoreAll, scoreFor, totalPoints } from './scoring.js';
+import { pointsInWindow, rescoreAll, totalPoints } from './scoring.js';
 import { newCode } from './tokens.js';
 
 export function currentWeek(db: DB): Week | undefined {
@@ -77,28 +77,6 @@ export function shortlistOf(db: DB, week: number): Film[] {
 		.all(week) as Film[];
 }
 
-/** score after one pass-over: half, rounded down, never below one */
-export function halved(score: number): number {
-	return Math.max(1, Math.floor(score / 2));
-}
-
-/**
- * §3.5. The shortlisted films the room passed over keep half their score. The
- * floor of one means the penalty alone can never take a film off the list; that
- * stays the job of attrition, which counts ballots and so never sees this.
- */
-export function halvePassedOver(db: DB, rules: RuleSet, week: Week, winnerId: number): void {
-	const update = db.prepare(
-		`UPDATE film SET penalty = penalty + ?, last_penalty = ?, last_penalty_week = ? WHERE id = ?`
-	);
-	for (const film of shortlistOf(db, week.number)) {
-		if (film.id === winnerId) continue;
-		const score = scoreFor(db, rules, film.id, week.number);
-		const cut = score - halved(score);
-		update.run(cut, cut, week.number, film.id);
-	}
-}
-
 /** §3.4, evaluated once during week close, after the winner has been removed */
 export function applyAttrition(db: DB, rules: RuleSet, week: number): void {
 	const films = db.prepare(`SELECT * FROM film WHERE status = 'active'`).all() as Film[];
@@ -154,10 +132,6 @@ export function finish(
 		iso(now),
 		week.number
 	);
-	// the winner is already out of the running, so it can never be its own casualty
-	halvePassedOver(db, rules, week, winner.id);
-	// attrition counts ballots, not scores, so a film cut a moment ago cannot be
-	// deleted the same night for the cut
 	applyAttrition(db, rules, week.number);
 	accrueBanks(db, rules, week.number);
 	markNightUsed(db, week.number, week.closes_at);

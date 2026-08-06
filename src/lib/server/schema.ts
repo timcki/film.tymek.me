@@ -45,11 +45,6 @@ CREATE TABLE IF NOT EXISTS film (
   -- cache of the current score; rebuilt wholesale by rescoreAll() inside every
   -- mutating transaction, so it can never drift from the ballot table
   score        REAL NOT NULL DEFAULT 0,
-  -- §3.5, the pass-over penalty. Ballots are never rewritten, so the score stays
-  -- recomputable and the whole rule is reversible by zeroing these three columns
-  penalty           INTEGER NOT NULL DEFAULT 0,
-  last_penalty      INTEGER NOT NULL DEFAULT 0,
-  last_penalty_week INTEGER,
   created_at   TEXT NOT NULL
 );
 
@@ -152,8 +147,5 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	['person', 'is_admin', 'INTEGER NOT NULL DEFAULT 0'],
 	['film', 'genre', 'TEXT'],
 	['film', 'runtime', 'INTEGER'],
-	['film', 'note', 'TEXT'],
-	['film', 'penalty', 'INTEGER NOT NULL DEFAULT 0'],
-	['film', 'last_penalty', 'INTEGER NOT NULL DEFAULT 0'],
-	['film', 'last_penalty_week', 'INTEGER']
+	['film', 'note', 'TEXT']
 ];
