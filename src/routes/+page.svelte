@@ -208,7 +208,6 @@
 					class="bk"
 					type="button"
 					aria-label={backer.name}
-					transition:scale={{ duration: 180, start: 0.5, easing: backOut }}
 					onpointerenter={(event) => {
 						mousing = event.pointerType === 'mouse';
 						if (mousing) peekAt(event.currentTarget, backer, false);
@@ -230,9 +229,7 @@
 						font={8}
 						titled={false}
 					/>
-					{#key backer.points}
-						<b in:scale={{ duration: 200, start: 1.7, easing: backOut }}>{backer.points}</b>
-					{/key}
+					<b>{backer.points}</b>
 				</button>
 			{/each}
 		{:else}
@@ -287,14 +284,7 @@
 			{/if}
 		{/each}
 		{#each Array(Math.max(0, left)) as _, i (i)}
-			<!-- the transition keeps every card honest in motion: spending anywhere
-			     makes this slot leave gracefully instead of blinking out -->
-			<form
-				method="POST"
-				action="?/setPoints"
-				use:enhance={submit()}
-				transition:scale={{ duration: 180, start: 0.4, easing: backOut }}
-			>
+			<form method="POST" action="?/setPoints" use:enhance={submit()}>
 				<input type="hidden" name="filmId" value={film.id} />
 				<button
 					class="pip empty"
