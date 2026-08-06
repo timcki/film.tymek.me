@@ -41,10 +41,7 @@
 
 <span
 	class="av {ring !== null ? `lv${ring}` : ''}"
-	style="background:{colour};width:{size}px;height:{size}px;flex-basis:{size}px;font-size:{font}px;--ringw:{size >=
-	60
-		? 3
-		: 2}px"
+	style="background:{colour};width:{size}px;height:{size}px;flex-basis:{size}px;font-size:{font}px;--ringw:{size >= 60 ? 3.5 : 2.5}px;--gapw:{size >= 60 ? 2 : 1.5}px"
 	title={titled ? name : undefined}
 >
 	{#if avatar}
