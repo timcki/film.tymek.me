@@ -304,6 +304,7 @@
 				<button
 					class="bk"
 					type="button"
+					style="--bkring:{backer.colour}"
 					aria-label={backer.name}
 					onpointerenter={(event) => {
 						mousing = event.pointerType === 'mouse';
@@ -329,7 +330,7 @@
 						font={8}
 						titled={false}
 					/>
-					<b class="lv{levelOf(backer.xp)}">{backer.points}</b>
+					<b>{backer.points}</b>
 				</button>
 			{/each}
 			{#if film.backers.length > 4}

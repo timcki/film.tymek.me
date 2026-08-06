@@ -395,10 +395,14 @@ button.sc {
 	height: 16px;
 	flex: 0 0 16px;
 	font-size: 8px;
+	/* a thin circle in the backer's own colour lifts the face off the pill;
+	   identity is the only hue here, the count stays plain white */
+	box-shadow: 0 0 0 1.5px var(--bkring, var(--line2));
 }
 .bk b {
 	font-variant-numeric: tabular-nums;
 	font-weight: 700;
+	color: #fff;
 }
 /* the fold: whoever did not fit, as a count that opens the sheet */
 .bk.more {
@@ -407,22 +411,6 @@ button.sc {
 	font-weight: 700;
 	font-variant-numeric: tabular-nums;
 	min-height: 22px;
-}
-/* the count on a pill wears the backer's tier, so rank shows even at 16px */
-.bk b.lv0 { color: var(--tier0); }
-.bk b.lv1 { color: var(--tier1); }
-.bk b.lv2 { color: var(--tier2); }
-.bk b.lv3 { color: var(--tier3); }
-.bk b.lv4 { color: var(--tier4); }
-.bk b.lv5 { color: var(--tier5); }
-.bk b.lv6 { color: var(--tier6); }
-.bk b.lv7 { color: var(--tier7); }
-.bk b.lv8 { color: var(--tier8); }
-.bk b.lv9 { color: var(--tier9); }
-.bk b.lv10 { color: var(--tier10); }
-.bk b.lv11 { color: var(--tier11); }
-.bk b[class*='lv'] {
-	text-shadow: 0 0 7px color-mix(in srgb, currentColor 75%, transparent);
 }
 /* placed from the pill's rect, so it is fixed and clamped rather than nested */
 .bkpop {
