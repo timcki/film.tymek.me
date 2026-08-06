@@ -39,6 +39,11 @@
 		pickedFor = null;
 	}
 
+	/** picking the name is the whole action; there is no button to go and find */
+	function saveOnPick(event: Event) {
+		(event.currentTarget as HTMLSelectElement).form?.requestSubmit();
+	}
+
 	/** the same film going up twice is a warning, not a refusal */
 	const duplicate = $derived((form as { code?: string } | null)?.code === 'dup_archival');
 
@@ -54,7 +59,7 @@
 <h2 class="ah">{A.arcH}</h2>
 <p class="ahint">{A.arcIntro}</p>
 
-<div class="bar">
+<div class="abar">
 	<span class="badge soft">{A.arcProgress(data.progress.done, data.progress.total)}</span>
 	<button class="tap" class:go={!onlyUnattributed} onclick={() => (onlyUnattributed = false)}>
 		{A.arcAllNights}
@@ -64,9 +69,9 @@
 	</button>
 </div>
 
-{#snippet filmRow(film: PageData['weeks'][number]['winner'] & {}, week: number)}
-	<div class="arow" class:unattributed={!film.attributed}>
-		<div class="ath"><Poster title={film.title} url={film.poster_url} /></div>
+{#snippet filmRow(film: NonNullable<PageData['weeks'][number]['winner']>, week: number)}
+	<div class="afilm" class:unattributed={!film.attributed}>
+		<div class="apost"><Poster title={film.title} url={film.poster_url} /></div>
 
 		<div class="abody">
 			<div class="ahead">
@@ -74,32 +79,25 @@
 				{#if film.status === 'watched'}<span class="badge">{A.arcWinner}</span>{/if}
 			</div>
 
-			<div class="who">
-				<span class="wholab">{A.arcWho}</span>
-				{#each data.people as person (person.id)}
-					<form method="POST" action="?/attribute" use:enhance={submit()}>
-						<input type="hidden" name="id" value={film.id} />
-						<input type="hidden" name="personId" value={person.id} />
-						<input type="hidden" name="week" value={week} />
-						<button
-							class="chip"
-							class:on={person.id === film.added_by}
-							class:off={!person.active}
-							title={person.name}
-						>
-							<Avatar
-								name={person.name}
-								colour={person.colour}
-								avatar={person.avatar}
-								titled={false}
-							/>
-						</button>
-					</form>
-				{/each}
-			</div>
-
 			<div class="acts">
-				<form method="POST" action="?/attribute" use:enhance={submit()}>
+				<form method="POST" action="?/attribute" use:enhance={submit()} class="awho">
+					<input type="hidden" name="id" value={film.id} />
+					<input type="hidden" name="week" value={week} />
+					<Avatar
+						name={film.added_by_face.name}
+						colour={film.added_by_face.colour}
+						avatar={film.added_by_face.avatar}
+					/>
+					<select name="personId" onchange={saveOnPick}>
+						{#each data.people as person (person.id)}
+							<option value={person.id} selected={person.id === film.added_by}>
+								{person.name}
+							</option>
+						{/each}
+					</select>
+				</form>
+
+				<form method="POST" action="?/attribute" use:enhance={submit()} class="awho">
 					<input type="hidden" name="id" value={film.id} />
 					<input type="hidden" name="personId" value={film.added_by} />
 					<label class="bankin">
@@ -121,10 +119,10 @@
 {/snippet}
 
 {#each shown as week (week.number)}
-	<section class="night">
-		<header class="nhead">
+	<section class="anight">
+		<header class="ahdr">
 			<b>{A.filWeek} {week.number}</b>
-			<span class="ndate">{formatDay(week.closes_at, data.lang)}</span>
+			<span class="adate">{formatDay(week.closes_at, data.lang)}</span>
 		</header>
 
 		{#if week.winner}
@@ -134,11 +132,11 @@
 			{@render filmRow(film, week.number)}
 		{/each}
 		{#if !week.winner && !week.proposed.length}
-			<p class="ahint">{A.arcNothing}</p>
+			<p class="ahint aempty">{A.arcNothing}</p>
 		{/if}
 
 		{#if adding === week.number}
-			<div class="addbox">
+			<div class="aadd">
 				<b>{A.arcAddH(week.number)}</b>
 
 				{#if !picked || pickedFor !== week.number}
@@ -152,12 +150,7 @@
 						}}
 					/>
 				{:else}
-					<form
-						method="POST"
-						action="?/add"
-						use:enhance={submit(() => closeAdd())}
-						class="addform"
-					>
+					<form method="POST" action="?/add" use:enhance={submit(() => closeAdd())}>
 						<input type="hidden" name="week" value={week.number} />
 						<input type="hidden" name="title" value={picked.title} />
 						<input type="hidden" name="tmdbId" value={picked.tmdbId ?? ''} />
@@ -166,24 +159,28 @@
 						<input type="hidden" name="overview" value={picked.overview} />
 						{#if duplicate}<input type="hidden" name="allowDuplicate" value="yes" />{/if}
 
-						<div class="pickrow">
-							<span class="ath"><Poster title={picked.title} url={picked.thumb} /></span>
-							<b>{picked.title}{picked.year ? ` (${picked.year})` : ''}</b>
+						<div class="afilm">
+							<div class="apost"><Poster title={picked.title} url={picked.thumb} /></div>
+							<div class="abody">
+								<div class="ahead">
+									<b>{picked.title}{picked.year ? ` (${picked.year})` : ''}</b>
+								</div>
+								<div class="acts">
+									<label class="awho">
+										{A.arcWho}
+										<select name="personId">
+											{#each data.people as person (person.id)}
+												<option value={person.id}>{person.name}</option>
+											{/each}
+										</select>
+									</label>
+									<label class="bankin">
+										<input type="checkbox" name="watched" />
+										{A.arcWasWatched}
+									</label>
+								</div>
+							</div>
 						</div>
-
-						<label class="who">
-							<span class="wholab">{A.arcWho}</span>
-							<select name="personId">
-								{#each data.people as person (person.id)}
-									<option value={person.id}>{person.name}</option>
-								{/each}
-							</select>
-						</label>
-
-						<label class="bankin">
-							<input type="checkbox" name="watched" />
-							{A.arcWasWatched}
-						</label>
 
 						<div class="acts">
 							<button type="button" class="tap" onclick={closeAdd}>{A.arcCancel}</button>
@@ -194,7 +191,7 @@
 			</div>
 		{:else}
 			<button
-				class="tap addopen"
+				class="tap aopen"
 				onclick={() => {
 					adding = week.number;
 					picked = null;
@@ -207,116 +204,3 @@
 {:else}
 	<p class="ahint">{A.arcEmpty}</p>
 {/each}
-
-<style>
-	.bar {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		flex-wrap: wrap;
-		margin: 0 0 12px;
-	}
-	.night {
-		border: 1px solid var(--line);
-		border-radius: 10px;
-		padding: 8px 10px;
-		margin: 0 0 10px;
-		background: var(--card);
-	}
-	.nhead {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		gap: 8px;
-		margin: 0 0 6px;
-	}
-	.ndate {
-		color: var(--dim);
-		font-size: 12px;
-	}
-	.arow {
-		display: flex;
-		gap: 8px;
-		padding: 6px 0;
-		border-top: 1px solid var(--line);
-	}
-	/* the work queue: anything still sitting on a stand-in account */
-	.arow.unattributed {
-		border-left: 2px solid var(--accent);
-		padding-left: 6px;
-	}
-	.ath {
-		width: 34px;
-		flex: 0 0 34px;
-	}
-	.abody {
-		flex: 1 1 auto;
-		min-width: 0;
-	}
-	.ahead {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		flex-wrap: wrap;
-	}
-	.who {
-		display: flex;
-		align-items: center;
-		gap: 3px;
-		flex-wrap: wrap;
-		margin: 4px 0;
-	}
-	.wholab {
-		color: var(--dim);
-		font-size: 11px;
-		margin-right: 3px;
-	}
-	.chip {
-		border: 2px solid transparent;
-		border-radius: 99px;
-		padding: 0;
-		background: none;
-		cursor: pointer;
-		line-height: 0;
-		opacity: 0.45;
-	}
-	.chip:hover {
-		opacity: 0.8;
-	}
-	.chip.on {
-		border-color: var(--accent);
-		opacity: 1;
-	}
-	/* somebody off the roster, kept pickable only so the backlog can leave them */
-	.chip.off {
-		opacity: 0.25;
-	}
-	.chip.off.on {
-		opacity: 0.7;
-	}
-	.acts {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		flex-wrap: wrap;
-	}
-	.addopen {
-		margin-top: 6px;
-	}
-	.addbox {
-		border-top: 1px solid var(--line);
-		margin-top: 6px;
-		padding-top: 6px;
-	}
-	.addform {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-		margin-top: 6px;
-	}
-	.pickrow {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
-</style>
