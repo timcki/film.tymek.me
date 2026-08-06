@@ -303,6 +303,18 @@ header .sub b {
 	font-variant-numeric: tabular-nums;
 	font-weight: 700;
 }
+/* the count on a pill wears the backer's tier, so rank shows even at 16px */
+.bk b.lv0 { color: var(--tier0); }
+.bk b.lv1 { color: var(--tier1); }
+.bk b.lv2 { color: var(--tier2); }
+.bk b.lv3 { color: var(--tier3); }
+.bk b.lv4 { color: var(--tier4); }
+.bk b.lv5 { color: var(--tier5); }
+.bk b.lv6 { color: var(--tier6); }
+.bk b.lv7 { color: var(--tier7); }
+.bk b[class*='lv'] {
+	text-shadow: 0 0 7px color-mix(in srgb, currentColor 75%, transparent);
+}
 /* placed from the pill's rect, so it is fixed and clamped rather than nested */
 .bkpop {
 	position: fixed;
@@ -340,6 +352,8 @@ header .sub b {
 .bkpop .bktitle {
 	color: var(--accent);
 	font-weight: 650;
+	/* the colour comes from the tier class, so the glow can simply follow it */
+	text-shadow: 0 0 11px color-mix(in srgb, currentColor 85%, transparent);
 }
 .bkpop .bktitle.lv0 { color: var(--tier0); }
 .bkpop .bktitle.lv1 { color: var(--tier1); }
@@ -531,7 +545,7 @@ header .sub b {
 	box-shadow:
 		0 0 0 var(--gapw, 1.5px) #0f1012,
 		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
-		0 0 var(--glowr, 0px) var(--glowc, transparent);
+		0 0 var(--glowr, 0px) calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) var(--glowc, transparent);
 }
 .av.lv0 {
 	--ringc: var(--tier0);
@@ -576,7 +590,7 @@ header .sub b {
 		0 0 0 var(--gapw, 1.5px) #0f1012,
 		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
 		0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) rgba(255, 244, 214, 0.85),
-		0 0 22px rgba(240, 193, 99, 0.85);
+		0 0 22px calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 2px) rgba(240, 193, 99, 0.85);
 	animation: ringpulse7 2.6s ease-in-out infinite;
 }
 @keyframes ringpulse6 {
@@ -585,13 +599,13 @@ header .sub b {
 		box-shadow:
 			0 0 0 var(--gapw, 1.5px) #0f1012,
 			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
-			0 0 14px color-mix(in srgb, var(--warn) 60%, transparent);
+			0 0 14px calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) color-mix(in srgb, var(--warn) 60%, transparent);
 	}
 	50% {
 		box-shadow:
 			0 0 0 var(--gapw, 1.5px) #0f1012,
 			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
-			0 0 24px color-mix(in srgb, var(--warn) 85%, transparent);
+			0 0 24px calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 2px) color-mix(in srgb, var(--warn) 85%, transparent);
 	}
 }
 @keyframes ringpulse7 {
@@ -601,14 +615,14 @@ header .sub b {
 			0 0 0 var(--gapw, 1.5px) #0f1012,
 			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
 			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) rgba(255, 244, 214, 0.85),
-			0 0 15px rgba(240, 193, 99, 0.65);
+			0 0 15px calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) rgba(240, 193, 99, 0.65);
 	}
 	50% {
 		box-shadow:
 			0 0 0 var(--gapw, 1.5px) #0f1012,
 			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px)) var(--ringc),
 			0 0 0 calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 1px) rgba(255, 250, 235, 1),
-			0 0 28px rgba(240, 193, 99, 1);
+			0 0 28px calc(var(--gapw, 1.5px) + var(--ringw, 2.5px) + 3px) rgba(240, 193, 99, 1);
 	}
 }
 @media (prefers-reduced-motion: reduce) {

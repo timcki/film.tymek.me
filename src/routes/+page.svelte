@@ -229,7 +229,7 @@
 						font={8}
 						titled={false}
 					/>
-					<b>{backer.points}</b>
+					<b class="lv{levelOf(backer.xp)}">{backer.points}</b>
 				</button>
 			{/each}
 		{:else}
