@@ -69,6 +69,9 @@
 	const POP_W = 156;
 	/** roughly its height, only ever used to decide whether it still fits above */
 	const POP_H = 190;
+	/** the note popup is wider and shorter: a paragraph, not a portrait */
+	const NPOP_W = 264;
+	const NPOP_H = 150;
 
 	// what the popup needs of a person; backers and nominators both satisfy it
 	type PeekFace = { name: string; colour: string; avatar: string | null; xp: number };
@@ -81,37 +84,59 @@
 		below: boolean;
 		tap: boolean;
 	} | null>(null);
+	let notePop = $state<{
+		text: string;
+		sig: string;
+		x: number;
+		y: number;
+		below: boolean;
+		tap: boolean;
+	} | null>(null);
 	let closing: ReturnType<typeof setTimeout>;
 	// a mouse opens on hover and a finger on tap. A touchscreen laptop does both,
 	// so go by the pointer that actually arrived rather than what the screen can do
 	let mousing = false;
 
-	function peekAt(pill: EventTarget | null, face: PeekFace, sub: string, tap: boolean) {
-		clearTimeout(closing);
-		if (!(pill instanceof HTMLElement)) return;
-		const box = pill.getBoundingClientRect();
-		const half = POP_W / 2;
-		const below = box.top < POP_H;
-		peek = {
-			face,
-			sub,
+	/** where a fixed popup of the given size lands, clamped to the viewport */
+	function anchorAt(el: HTMLElement, w: number, h: number) {
+		const box = el.getBoundingClientRect();
+		const half = w / 2;
+		const below = box.top < h;
+		return {
 			// clamped, or the pills at either end of the row get sliced by the viewport
 			x: Math.min(Math.max(box.left + box.width / 2, half + 8), window.innerWidth - half - 8),
 			y: below ? box.bottom : box.top,
-			below,
-			tap
+			below
 		};
+	}
+
+	function peekAt(pill: EventTarget | null, face: PeekFace, sub: string, tap: boolean) {
+		clearTimeout(closing);
+		if (!(pill instanceof HTMLElement)) return;
+		notePop = null;
+		peek = { face, sub, tap, ...anchorAt(pill, POP_W, POP_H) };
+	}
+
+	function noteAt(el: EventTarget | null, film: Film, tap: boolean) {
+		clearTimeout(closing);
+		if (!(el instanceof HTMLElement) || !film.note) return;
+		peek = null;
+		notePop = { text: film.note, sig: T.noteSig(film.addedByName), tap, ...anchorAt(el, NPOP_W, NPOP_H) };
 	}
 
 	function unpeek() {
 		clearTimeout(closing);
 		peek = null;
+		notePop = null;
 	}
 
 	// a beat of grace, so crossing the gap between two pills does not flicker
 	function unpeekSoon() {
 		clearTimeout(closing);
-		closing = setTimeout(() => (peek = null), 80);
+		closing = setTimeout(() => {
+			peek = null;
+			notePop = null;
+		}, 80);
 	}
 
 	/* ------------------------------------------------------------- sheets -- */
@@ -210,7 +235,9 @@
 {#snippet backerRow(film: Film)}
 	<span class="backers">
 		{#if film.backers.length}
-			{#each film.backers as backer (backer.person_id)}
+			<!-- the top three by points; the rest fold into a +N that opens the
+			     sheet, so the dock always keeps its room on one row -->
+			{#each film.backers.slice(0, 3) as backer (backer.person_id)}
 				<!-- a 16px face says nothing on a phone, so the pill opens a readable one -->
 				<button
 					class="bk"
@@ -243,6 +270,22 @@
 					<b class="lv{levelOf(backer.xp)}">{backer.points}</b>
 				</button>
 			{/each}
+			{#if film.backers.length > 3}
+				<button
+					class="bk more"
+					type="button"
+					aria-label={film.backers
+						.slice(3)
+						.map((b) => b.name)
+						.join(', ')}
+					onclick={() => {
+						unpeek();
+						detailId = film.id;
+					}}
+				>
+					+{film.backers.length - 3}
+				</button>
+			{/if}
 		{:else}
 			<span class="nobk">{T.noBackers}</span>
 		{/if}
@@ -370,7 +413,25 @@
 				</div>
 				<div class="sc"><b>{fmtScore(film.score)}</b><i>{T.unit(film.score, votes)}</i></div>
 			</div>
-			{#if film.note}<div class="note">{film.note}</div>{/if}
+			{#if film.note}
+				<!-- one line on the card; the full pitch opens in a quick popup -->
+				<button
+					class="note"
+					type="button"
+					onpointerenter={(event) => {
+						mousing = event.pointerType === 'mouse';
+						if (mousing) noteAt(event.currentTarget, film, false);
+					}}
+					onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+					onclick={(event) => !mousing && noteAt(event.currentTarget, film, true)}
+					onfocus={(event) => {
+						if (event.currentTarget.matches(':focus-visible')) noteAt(event.currentTarget, film, false);
+					}}
+					onblur={unpeek}
+				>
+					{film.note}
+				</button>
+			{/if}
 			<div class="ft">
 				{@render backerRow(film)}
 				{#if votes}
@@ -645,6 +706,21 @@
 		<b>{peek.face.name}</b>
 		<span class="bktitle lv{levelOf(peek.face.xp)}">{T.levels[levelOf(peek.face.xp)]}</span>
 		<span>{peek.sub}</span>
+	</div>
+{/if}
+
+{#if notePop}
+	{#if notePop.tap}
+		<button class="menu-backdrop" aria-label={T.close} onclick={unpeek}></button>
+	{/if}
+	<div
+		class="bkpop ntpop"
+		class:below={notePop.below}
+		style="left:{notePop.x}px;top:{notePop.y}px"
+		role="tooltip"
+	>
+		<p>“{notePop.text}”</p>
+		<span class="sig">{notePop.sig}</span>
 	</div>
 {/if}
 

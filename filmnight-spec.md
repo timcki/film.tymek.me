@@ -582,8 +582,10 @@ version of its rank ring; tapping it opens the same popup as a backer pill, with
 "nominated in week N" as its caption), and a
 text-only title line — title, year, runtime — that wraps cleanly. Director, genre and
 the week number live only in the detail sheet. Below the title line: the nominator's
-note if any, then avatars of everyone who has points on it, the score, and the pip dock
-(or a Vote button when `pointsPerWeek === 1`).
+note clamped to one line (tapping it opens the full pitch in a quick popup, quoted and
+signed), then one footer row that never wraps — the top three backer pills by points,
+a `+N` pill folding the rest (it opens the detail sheet), and the pip dock (or a Vote
+button when `pointsPerWeek === 1`).
 Below: the nomination box with TMDB autocomplete, the archived/dropped fold-out, watched
 history, and a "how this works" fold showing the *active* rule set's rules.
 
