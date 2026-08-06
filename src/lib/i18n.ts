@@ -345,8 +345,7 @@ const pl: Dict = {
 		if (isVotes(r)) return 'Masz jeden głos tygodniowo. Wykorzystaj go albo przepada.';
 		return `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} na tydzień. Niewykorzystane przepadają po wieczorku.`;
 	},
-	rulesChanged: (label) =>
-		`Zasady zmieniły się na „${label}” w tym tygodniu. Wszystkie wyniki przeliczono od nowa z głosów; nic nie przepadło.`,
+	rulesChanged: () => 'Małe zmiany graficzne w tym tygodniu, dajcie znać czy się podoba (:',
 
 	shortlistHead: (n) => (n === 3 ? 'Trójka na dziś' : `Czołowe ${n} na dziś`),
 	shortlistNote: (n) => `Na wieczorku sala wybiera jeden z tych ${n} ${plFilms(n)}`,
@@ -661,8 +660,7 @@ const en: Dict = {
 		if (isVotes(r)) return 'One vote a week. Use it or lose it.';
 		return `You get ${r.pointsPerWeek} points a week. Anything unspent is gone after the night.`;
 	},
-	rulesChanged: (label) =>
-		`The rules changed to “${label}” this week. Every score was recomputed from the ballots; nothing was lost.`,
+	rulesChanged: () => 'Small visual tweaks this week, tell us what you think (:',
 
 	shortlistHead: (n) => (n === 3 ? "Tonight's three" : `Tonight's top ${n}`),
 	shortlistNote: (n) => `On the night the room picks one of these ${n}`,
