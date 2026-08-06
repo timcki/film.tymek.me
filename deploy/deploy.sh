@@ -20,6 +20,7 @@ rsync -az --delete \
 	--exclude '.env' \
 	--exclude '.git' \
 	--exclude '.jj' \
+	--exclude '.claude' \
 	"$HERE/" "$HOST:/tmp/filmnight-sync/"
 
 ssh "$HOST" "sudo rsync -a --delete --exclude data /tmp/filmnight-sync/ $APP_DIR/ && sudo chown -R filmnight:filmnight $APP_DIR && rm -rf /tmp/filmnight-sync"
