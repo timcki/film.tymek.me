@@ -141,13 +141,12 @@ move is three steps:
 exists, so it only prints links for people it just created. To add someone later, put
 their name in `src/lib/server/roster.ts`, deploy, and run the seed again.
 
-If someone loses their link, they cannot recover it themselves. Send it again from the
-table below, or have them open `/me` on a device that still works and rotate.
+If someone loses their link, they cannot recover it themselves. Send it again from
+`data/identity-links.md`, or have them open `/me` on a device that still works and rotate.
 
-**These links are identities. Anyone holding one is that person.** Keep this repository
-private, and rotate from `/me` if one leaks.
-
-The links themselves live in `data/identity-links.md`, which git never sees.
+**These links are identities. Anyone holding one is that person.** They are kept in
+`data/identity-links.md`, which is gitignored and never leaves this machine; rotate from
+`/me` if one leaks.
 
 ### The archive
 
