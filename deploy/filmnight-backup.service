@@ -1,9 +1,0 @@
-[Unit]
-Description=Film Night nightly database backup
-
-[Service]
-Type=oneshot
-User=filmnight
-Group=filmnight
-ExecStart=/opt/filmnight/deploy/backup.sh
-ReadWritePaths=/var/backups/filmnight

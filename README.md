@@ -102,51 +102,55 @@ Two invariants worth keeping in mind when changing anything:
 
 ## Deployment
 
-The app runs as a systemd service on **chungus-1** (`54.37.234.58`), which also terminates
-TLS with Caddy.
+The app runs as a systemd service on **bigchungus**, a NixOS box on the tailnet.
+chungus-1 (`54.37.234.58`) still owns the certificate for `film.tymek.me` and reverse
+proxies to `bigchungus:3010`, the same way it does for the other subdomains.
+
+This repository is a flake, so a deploy is a push and a rebuild. Nothing is built on the
+box by hand and nothing is rsynced:
 
 ```sh
-./deploy/deploy.sh          # rsync, npm ci, build, restart
+jj bookmark set main -r @- && jj git push --remote origin --bookmark main
+ssh bigchungus
+cd ~/.config/nix && nix flake update filmnight    # point the lock at the new commit
+sudo nixos-rebuild switch --flake .#bigchungus --impure
 ```
 
-Native modules are compiled on the target, so `node_modules` is never rsynced.
+`nix/package.nix` compiles better-sqlite3 against the same `nodejs_24` the service runs,
+so the native module can never disagree with its runtime. The source filter there keeps
+this README and the prototypes out of the store, which is world readable.
 
 | Thing | Where |
 |---|---|
-| code | `/opt/filmnight` (owned by the `filmnight` system user) |
+| code | a store path, from the `filmnight` flake input of the nix config |
+| service | `modules/services/filmnight.nix` in `~/.config/nix`, `Restart=always` |
 | database | `/var/lib/filmnight/filmnight.db` (WAL) |
-| environment | `/etc/filmnight.env` (0640 root:filmnight, holds the TMDB token) |
-| service | `filmnight.service`, `Restart=always`, listens on `127.0.0.1:3010` |
+| environment | `/etc/filmnight.env` (0640 root:filmnight): `ORIGIN`, `RULES`, `TZ`, TMDB token |
 | backups | `filmnight-backup.timer`, nightly 04:17, 30 days in `/var/backups/filmnight` |
-| proxy | `/etc/caddy/Caddyfile`, block for `film.tymek.me` |
+| proxy | chungus-1 `/etc/caddy/Caddyfile`, `film.tymek.me` to `bigchungus:3010` |
+| firewall | 3010 is open on `tailscale0` only, so only chungus-1 can reach it |
 
-### Moving to bigchungus
-
-chungus-1 already reverse-proxies other subdomains to bigchungus over Tailscale, so the
-move is three steps:
-
-1. `HOST=bigchungus ./deploy/deploy.sh` after provisioning the same user, dirs and
-   `/etc/filmnight.env` there.
-2. Copy the database across while the service is stopped:
-   `sudo systemctl stop filmnight` on chungus-1, then
-   `sqlite3 /var/lib/filmnight/filmnight.db ".backup /tmp/fn.db"` and scp it over.
-3. In `/etc/caddy/Caddyfile`, change `reverse_proxy localhost:3010` to
-   `reverse_proxy bigchungus:3010`, then `sudo systemctl reload caddy`.
+`PORT`, `HOST`, `BODY_SIZE_LIMIT` and `ADMINS` are set in the module rather than the
+environment file. Nothing may appear in both: systemd applies `EnvironmentFile` after
+`Environment`, so the file would silently win.
 
 `ORIGIN` stays `https://film.tymek.me`, so every personal link keeps working.
 
 ### Handing out links
 
-`npm run seed` is safe to re-run: it never reissues a token for someone who already
-exists, so it only prints links for people it just created. To add someone later, put
-their name in `src/lib/server/roster.ts`, deploy, and run the seed again.
+On the box the seed is `sudo -u filmnight filmnight-seed`, a wrapper the module installs
+that reads `/etc/filmnight.env` for you. It is safe to re-run: it never reissues a token
+for someone who already exists, so it only prints links for people it just created. To add
+someone later, put their name in `src/lib/server/roster.ts`, deploy, and seed again.
 
 If someone loses their link, they cannot recover it themselves. Send it again from
 `data/identity-links.md`, or have them open `/me` on a device that still works and rotate.
 
 **These links are identities. Anyone holding one is that person.** They are kept in
 `data/identity-links.md`, which is gitignored and never leaves this machine; rotate from
-`/me` if one leaks.
+`/me` if one leaks. That file is a copy, not the source: the database is, and anyone who
+has rotated from `/me` since it was written will not match. Read a current link out of
+`person.token` rather than trusting it.
 
 ### The archive
 
@@ -179,8 +183,8 @@ when the rule set does not bank, and the change is announced on the page for tha
   night.
 - On Thursday someone should open `/host` and project the QR. Nothing breaks if nobody
   does; the highest-scoring film simply wins at 23:00.
-- Uploads need `BODY_SIZE_LIMIT` above adapter-node's 512K default; the unit sets 3M.
-  If you reinstall the service file, run `sudo systemctl daemon-reload`.
+- Uploads need `BODY_SIZE_LIMIT` above adapter-node's 512K default; the module sets 3M.
+  A `nixos-rebuild switch` reloads systemd itself, so there is nothing to do by hand.
 - Columns added after the first deploy are listed in `ADDED_COLUMNS` and applied on every
   open, guarded on `PRAGMA table_info`. Adding a column is the only migration shape that
   is supported; anything else needs doing by hand, so back up first.

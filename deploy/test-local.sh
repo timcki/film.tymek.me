@@ -5,11 +5,10 @@
 #
 #   ./deploy/test-local.sh              # fresh snapshot, then vite dev on it
 #   SNAPSHOT=0 ./deploy/test-local.sh   # reuse the last snapshot
-#   HOST=bigchungus ./deploy/test-local.sh
 #   LOCAL_ORIGIN=http://mymac.tailnet:5173 ./deploy/test-local.sh   # phone testing
 set -euo pipefail
 
-HOST=${HOST:-chungus-1}
+HOST=${HOST:-bigchungus}
 REMOTE_DB=${REMOTE_DB:-/var/lib/filmnight/filmnight.db}
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 LOCAL_DB=${LOCAL_DB:-$HERE/data/prod-copy.db}
