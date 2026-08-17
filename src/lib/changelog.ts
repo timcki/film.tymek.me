@@ -49,23 +49,25 @@ export const CHANGELOG: ChangelogEntry[] = [
 		id: 2,
 		date: '2026-08-17',
 		title: {
-			pl: 'Twój film może poczekać tydzień, jeśli ciebie nie będzie',
-			en: 'Your film can wait a week if you cannot make it'
+			pl: 'Komentarze, kto już widział, możliwość wycofania filmu z top 5',
+			en: 'Comments, who has seen it, and pulling a film from the top five'
 		},
 		body: {
 			pl: [
-				'Nie będzie cię na wieczorku, a twój film jest wysoko? Otwórz go (kliknij plakat) i daj „Niech poczeka tydzień”. Nie pójdzie wtedy pod głosowanie w sali, a jego miejsce zajmie kolejny film z listy.',
-				'Jeden film na tydzień i tylko taki, który sam zgłosiłeś. Cofnąć możesz do samego zamknięcia głosowania.',
-				'Punkty na nim tracą wartość tak samo jak wszędzie indziej, więc czekanie kosztuje: wracasz za tydzień z połową przewagi.',
-				'Wszyscy to widzą od razu (💤 na karcie), żeby zdążyli przerzucić głosy gdzie indziej. Możesz dopisać powód, wtedy nie trzeba już pisać na grupie.',
-				'Jeśli akurat wszystkie filmy z czołówki poczekają, to nie czeka żaden: sala i tak dostaje swój wieczór.'
+				'Mamy teraz top 5 zamiast top 3. Vox populi vox dei',
+				'Do każdego filmu jest teraz dodana sekcja komentarzy, zapraszam do dzielenia się swoimi opiniami o propozycjach innych uczestników 😇',
+				'Jest też możliwość zaznaczenia czy widziało się już film używając ikonki oka w prawym dolnym rogu karty',
+				'Jeśli nie będzie cię na wieczorku, a twój film jest w top 5, możesz „uśpić” swój film na ten tydzień (z komentarzem tłumaczącym dlaczego cię nie ma, tak jak np. Adam i Fitzcarraldo, które zajmowało niepotrzebnie miejsce w top 3)',
+				'Wycofać można jeden film na tydzień i tylko taki, który samemu się zgłosiło. Można anulować wycofanie z top 5 do samego zamknięcia głosowania.',
+				'Punkty na nim tracą wartość tak samo jak wszędzie indziej, więc czekanie kosztuje: wracasz za tydzień z połową przewagi.'
 			],
 			en: [
-				'Not coming to the night and your film is riding high? Open it (tap the poster) and hit "Hold it a week". It stays out of the room vote and the next film on the list takes its place.',
-				'One film a week, and only one you nominated yourself. You can undo it right up to the close.',
-				'Its points fade exactly as they would anywhere else, so waiting costs you: you come back next week with half the lead.',
-				'Everyone sees it the moment it happens (💤 on the card), so there is time to put votes somewhere else. You can add a reason, which saves writing to the group chat.',
-				'If every leading film ends up waiting, none of them does: the room gets its night regardless.'
+				'The room now picks from a top five instead of a top three. Vox populi vox dei',
+				'Every film has a comment section now; do share what you make of what everyone else has put up 😇',
+				'You can also mark a film as one you have already seen, using the eye in the bottom right corner of its card',
+				'Not coming to the night and your film is in the top five? You can put it to sleep for the week, with a note saying why you are away (Adam and Fitzcarraldo, say, which was taking up a place in the top three for nothing)',
+				'One film a week, and only one you nominated yourself. You can undo it right up to the close of voting.',
+				'Its points fade exactly as they would anywhere else, so waiting costs you: you come back next week with half the lead.'
 			]
 		}
 	}
