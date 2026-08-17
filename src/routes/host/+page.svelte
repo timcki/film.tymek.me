@@ -205,7 +205,6 @@
 		<form method="POST" action="?/close" use:enhance={submit}>
 			<button class="bigbtn">{T.hostClose}</button>
 		</form>
-		<p class="hintline">{T.hostCloseNote}</p>
 	</div>
 	{@render heldNote()}
 {/if}

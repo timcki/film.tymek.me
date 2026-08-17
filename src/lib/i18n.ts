@@ -221,7 +221,6 @@ export type Dict = {
 	hostH: string;
 	hostIdle: string;
 	hostClose: string;
-	hostCloseNote: string;
 	hostQrH: string;
 	/** said to the room off a projector, so it is an instruction, not a label */
 	hostJoinH: string;
@@ -539,8 +538,6 @@ const pl: Dict = {
 	hostH: 'Prowadzący',
 	hostIdle: 'Sala jeszcze nie głosuje.',
 	hostClose: 'Zamknij tydzień teraz',
-	hostCloseNote:
-		'Zamknięcie wcześniej jest w porządku, każdy może to zrobić. Wtedy najlepsze filmy trafiają przed salę, a ty dostajesz kod QR do wyświetlenia.',
 	hostQrH: 'Kod dla sali (można wyświetlić)',
 	hostJoinH: 'Zeskanuj, żeby głosować',
 	hostTallyH: 'Na żywo',
@@ -913,8 +910,6 @@ const en: Dict = {
 	hostH: 'Host',
 	hostIdle: 'The room is not voting yet.',
 	hostClose: 'Close the week now',
-	hostCloseNote:
-		'Closing early is fine, anyone can do it. It puts the top films in front of the room and gives you a QR to project.',
 	hostQrH: 'Room QR (safe to project)',
 	hostJoinH: 'Scan to vote',
 	hostTallyH: 'Live tally',
