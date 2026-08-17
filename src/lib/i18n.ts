@@ -88,8 +88,14 @@ export type Dict = {
 	tabYou: string;
 	tabAdmin: string;
 
+	themeAuto: string;
+	themeDark: string;
+	themeLight: string;
+
 	week: (n: number) => string;
 	closesIn: string;
+	/** the same thing with no room for a sentence, for the sticky bar */
+	closesInShort: string;
 	clock: (d: number, h: number, m: number, s: number) => string;
 	votingClosed: string;
 	roomPicking: (code: string) => string;
@@ -217,17 +223,20 @@ export type Dict = {
 	hostClose: string;
 	hostCloseNote: string;
 	hostQrH: string;
+	/** said to the room off a projector, so it is an instruction, not a label */
+	hostJoinH: string;
 	hostTallyH: string;
 	hostCastH: string;
 	hostCastPick: string;
 	hostLock: string;
 	hostWinnerH: string;
 	hostHeldH: string;
-	roomH: string;
 	roomCode: string;
 	roomWho: string;
 	roomFilter: string;
 	roomGuest: string;
+	/** the same person named rather than offered a button, for "voting as ..." */
+	roomAsGuest: string;
 	roomGuestNote: string;
 	roomVotingAs: (name: string) => string;
 	roomCheckedIn: string;
@@ -364,8 +373,13 @@ const pl: Dict = {
 	tabYou: 'Ty',
 	tabAdmin: 'Panel',
 
+	themeAuto: 'Jak w telefonie',
+	themeDark: 'Ciemny',
+	themeLight: 'Jasny',
+
 	week: (n) => `Tydzień ${n}`,
 	closesIn: 'głosowanie zamyka się za',
+	closesInShort: 'za',
 	// tiered: only the digits that matter now, the seconds tick in the last hour
 	clock: (d, h, m, s) => {
 		if (d) return `${d} ${pl3(d, 'dzień', 'dni', 'dni')}`;
@@ -528,17 +542,18 @@ const pl: Dict = {
 	hostCloseNote:
 		'Zamknięcie wcześniej jest w porządku, każdy może to zrobić. Wtedy najlepsze filmy trafiają przed salę, a ty dostajesz kod QR do wyświetlenia.',
 	hostQrH: 'Kod dla sali (można wyświetlić)',
+	hostJoinH: 'Zeskanuj, żeby głosować',
 	hostTallyH: 'Na żywo',
 	hostCastH: 'Zagłosuj za kogoś, komu padł telefon',
 	hostCastPick: 'teraz wybierz jego film',
 	hostLock: 'Zatwierdź i puszczaj film',
 	hostWinnerH: 'Dzisiaj oglądamy',
 	hostHeldH: 'Uśpione do następnego razu',
-	roomH: 'Dzisiejsza trójka',
 	roomCode: 'kod sali',
 	roomWho: 'Kto ty jesteś?',
 	roomFilter: 'zacznij pisać imię',
 	roomGuest: 'Jestem gościem',
+	roomAsGuest: 'gość',
 	roomGuestNote: 'Nie ma cię na liście? Zagłosuj jako gość, w sali też się liczy.',
 	roomVotingAs: (name) => `głosujesz jako ${name}`,
 	roomCheckedIn: 'obecność zapisana ✓',
@@ -737,8 +752,13 @@ const en: Dict = {
 	tabYou: 'You',
 	tabAdmin: 'Admin',
 
+	themeAuto: 'Match the phone',
+	themeDark: 'Dark',
+	themeLight: 'Light',
+
 	week: (n) => `Week ${n}`,
 	closesIn: 'voting closes in',
+	closesInShort: 'in',
 	// tiered: only the digits that matter now, the seconds tick in the last hour
 	clock: (d, h, m, s) =>
 		d ? `${d} ${en2(d, 'day', 'days')}` : h ? `${h} h ${m} min` : `${m}:${String(s).padStart(2, '0')}`,
@@ -896,17 +916,18 @@ const en: Dict = {
 	hostCloseNote:
 		'Closing early is fine, anyone can do it. It puts the top films in front of the room and gives you a QR to project.',
 	hostQrH: 'Room QR (safe to project)',
+	hostJoinH: 'Scan to vote',
 	hostTallyH: 'Live tally',
 	hostCastH: 'Cast for someone whose phone is dead',
 	hostCastPick: 'now pick their film',
 	hostLock: 'Lock it in and start the film',
 	hostWinnerH: 'Tonight we are watching',
 	hostHeldH: 'Asleep until another night',
-	roomH: "Tonight's three",
 	roomCode: 'room code',
 	roomWho: 'Who are you?',
 	roomFilter: 'type to filter',
 	roomGuest: "I'm a guest",
+	roomAsGuest: 'a guest',
 	roomGuestNote: 'Not on the list? Vote as a guest; it still counts in the room.',
 	roomVotingAs: (name) => `voting as ${name}`,
 	roomCheckedIn: 'checked in ✓',

@@ -1,0 +1,81 @@
+/**
+ * The light palette. app.css declares every colour the app paints as a token in
+ * :root, so a palette here is a list of tokens and nothing else: no rule may
+ * touch layout, size or spacing, or the two stop being interchangeable.
+ *
+ * Dark is the default and lives in app.css; this block is what data-theme,
+ * set on <html> from the cookie, swaps in.
+ */
+
+/* ---------------------------------------------------------------- light -----
+   Daylight: warm paper, ink rather than glow, shadows that fall instead of
+   halos that shine. The rank ramp has to be redrawn here, because twelve
+   pastels printed on cream are twelve invisible words. */
+:root[data-theme='light'] {
+	color-scheme: light;
+	--bg: #f7f0e7;
+	--wash: radial-gradient(1000px 480px at 50% -14%, rgba(226, 172, 140, 0.34), transparent 70%);
+	--card: #fffaf3;
+	--card2: #f3e9dd;
+	--sunk: #e8dccf;
+	--raise: #efe4d6;
+	--line: #e6d9c9;
+	--line2: #d8c7b3;
+	--line3: #bda88f;
+	--edge: #a89077;
+	--ink: #33292a;
+	--ink2: #5e5150;
+	--dim: #857470;
+	--dimmer: #a08e87;
+	--onbright: #2a2220;
+	--accent: #4a7fa5;
+	--accent-ink: #fffaf3;
+	--warn: #b5762f;
+	--cut: #bd6076;
+	--bad: #b34c3c;
+	--r: 16px;
+	--shadow: rgba(92, 62, 40, 0.18);
+	--shadow-soft: rgba(92, 62, 40, 0.11);
+	/* elevation on paper is a whiter sheet and a warm cast under it, never a glow */
+	--lead-tint: rgba(255, 255, 255, 0.8);
+	--lead-glow: rgba(186, 138, 96, 0.2);
+	--lead-ring: rgba(186, 138, 96, 0.16);
+	--lead-edge: rgba(120, 95, 74, 0.45);
+	--chip: #fffdf8;
+	--sheen: rgba(255, 255, 255, 0.9);
+	--onart: rgba(50, 36, 28, 0.4);
+	--scrim: rgba(58, 40, 30, 0.4);
+	/* dark toasts, so a message still arrives as an interruption */
+	--toast-bg: #33292a;
+	--toast-ink: #f7f0e7;
+	--toast-bad-bg: #7d2e21;
+	--toast-bad-ink: #ffeae4;
+	/* a white bar on cream is no bar at all, so the fresh end of the ramp is
+	   cool rather than bright, and the yellow deepens enough to be seen */
+	--burn0: #94a5ad;
+	--burn1: #dfae3c;
+	--burn2: #e0863c;
+	--burn3: #ca5544;
+	--tier0: #6f7883;
+	--tier1: #3f9668;
+	--tier2: #2f8f8b;
+	--tier3: #3d7ba8;
+	--tier4: #5a5fc0;
+	--tier5: #7d55bc;
+	--tier6: #ac4795;
+	--tier7: #bd4a5c;
+	--tier8: #b46523;
+	--tier9: #9c7314;
+	--tier10: #8f6a0f;
+	--tier11: #82600b;
+}
+
+/* the rank rings glow, and a glow on paper is a smudge; on this palette they
+   wear their colour as a plain band, and the rank titles are set in plain ink */
+:root[data-theme='light'] .av[class*='lv'] {
+	--glowr: 0px;
+}
+:root[data-theme='light'] .bkpop .bktitle,
+:root[data-theme='light'] .lrow .lname[class*='lv'] {
+	text-shadow: none;
+}

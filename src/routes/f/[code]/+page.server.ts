@@ -2,7 +2,7 @@ import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import { attended, checkIn } from '$lib/server/attendance';
-import { allPeople } from '$lib/server/people';
+import { allPeople, faceOf } from '$lib/server/people';
 import { flashVote, isExpired, runoffByCode, tally } from '$lib/server/runoffs';
 import { seenCounts } from '$lib/server/seen';
 import { ruleFail } from '$lib/server/respond';
@@ -31,6 +31,8 @@ export const load: PageServerLoad = async ({ params, locals, cookies }) => {
 			winnerFilmId: runoff.winner_film_id,
 			people: [],
 			myVote: null,
+			// the face for the bar, when the phone that scanned belongs to somebody
+			me: locals.person ? { ...faceOf(locals.person), xp: locals.person.xp } : null,
 			identified: locals.person ? locals.person.name : null,
 			checkedIn: Boolean(locals.person && attended(db, runoff.week_number, locals.person.id))
 		};
@@ -63,6 +65,8 @@ export const load: PageServerLoad = async ({ params, locals, cookies }) => {
 		winnerFilmId: null,
 		people: locals.person ? [] : allPeople(db).map((p) => ({ id: p.id, name: p.name })),
 		myVote: myVote?.film_id ?? null,
+		// the face for the bar, when the phone that scanned belongs to somebody
+		me: locals.person ? { ...faceOf(locals.person), xp: locals.person.xp } : null,
 		identified: locals.person ? locals.person.name : null,
 		checkedIn: Boolean(locals.person && attended(db, runoff.week_number, locals.person.id))
 	};

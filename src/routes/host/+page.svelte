@@ -58,17 +58,31 @@
 {/snippet}
 
 {#if data.runoff}
-	<div class="tk" style="padding-left:0;padding-right:0">
-
-		<div style="text-align:center">
-			<div class="tkqr">
-				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-				{@html data.runoff.qr}
+	<div class="tk hostroom">
+		<!-- the two things the room needs off a projector: how to get in, and how
+		     many are in already -->
+		<div class="hosttop">
+			<div class="joincard">
+				<div class="tkqr">
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+					{@html data.runoff.qr}
+				</div>
+				<div class="joinside">
+					<div class="sec">{T.hostJoinH}</div>
+					<div class="code">{data.runoff.code}</div>
+					<div class="joinlink">{data.runoff.link}</div>
+				</div>
 			</div>
-			<div class="code">{data.runoff.code}</div>
-			<div style="font-size:11.5px;color:var(--dimmer)">{data.runoff.link}</div>
+
+			<div class="hostcount">
+				<div class="turnout">
+					<b>{data.runoff.turnout}</b>
+					<span>{T.turnoutWord(data.runoff.turnout)}</span>
+				</div>
+			</div>
 		</div>
 
+		<div class="sec">{T.hostTallyH}</div>
 		<div class="tkfilms">
 			{#each data.runoff.tally as row (row.film.id)}
 				<div class="tkfilm" class:win={row.votes === best && row.votes > 0}>
@@ -86,46 +100,45 @@
 
 		{@render heldNote()}
 
-		<!-- the room filling up, big enough to read from the sofa -->
-		<div class="turnout">
-			<b>{data.runoff.turnout}</b>
-			<span>{T.turnoutWord(data.runoff.turnout)}</span>
-		</div>
-
-		<div class="sec">{T.hostCastH}</div>
-		<div class="namegrid">
-			{#each data.people as person (person.id)}
-				<button
-					class="namebtn"
-					class:on={castingFor === person.id}
-					onclick={() => (castingFor = castingFor === person.id ? '' : person.id)}
-				>
-					<Avatar name={person.name} colour={person.colour} avatar={person.avatar} />
-					{person.name}{person.voted ? ' ✓' : ''}
-				</button>
-			{/each}
-		</div>
-
-		{#if castingFor}
-			<p class="hintline">{T.hostCastPick}</p>
-			{#each data.runoff.tally as row (row.film.id)}
-				<form method="POST" action="?/voteFor" use:enhance={submit}>
-					<input type="hidden" name="personId" value={castingFor} />
-					<input type="hidden" name="filmId" value={row.film.id} />
-					<button class="pickbtn">
-						<div class="th"><Poster title={row.film.title} url={row.film.poster_url} /></div>
-						<div>
-							<b>{row.film.title}</b>
-							<span>
-								{T.votes(row.votes)} · <SeenCount n={data.runoff.seen[row.film.id] ?? 0} size={11} />
-							</span>
-						</div>
+		<!-- a rescue for one dead phone, not a thing the room should have to look
+		     at all evening: folded away until somebody needs it -->
+		<details class="castbox">
+			<summary>{T.hostCastH}</summary>
+			<div class="namegrid">
+				{#each data.people as person (person.id)}
+					<button
+						class="namebtn"
+						class:on={castingFor === person.id}
+						onclick={() => (castingFor = castingFor === person.id ? '' : person.id)}
+					>
+						<Avatar name={person.name} colour={person.colour} avatar={person.avatar} />
+						{person.name}{person.voted ? ' ✓' : ''}
 					</button>
-				</form>
-			{/each}
-		{/if}
+				{/each}
+			</div>
 
-		<form method="POST" action="?/closeRunoff" use:enhance={submit}>
+			{#if castingFor}
+				<p class="hintline">{T.hostCastPick}</p>
+				{#each data.runoff.tally as row (row.film.id)}
+					<form method="POST" action="?/voteFor" use:enhance={submit}>
+						<input type="hidden" name="personId" value={castingFor} />
+						<input type="hidden" name="filmId" value={row.film.id} />
+						<button class="pickbtn">
+							<div class="th"><Poster title={row.film.title} url={row.film.poster_url} /></div>
+							<div>
+								<b>{row.film.title}</b>
+								<span>
+									{T.votes(row.votes)} ·
+									<SeenCount n={data.runoff.seen[row.film.id] ?? 0} size={11} />
+								</span>
+							</div>
+						</button>
+					</form>
+				{/each}
+			{/if}
+		</details>
+
+		<form class="hostact" method="POST" action="?/closeRunoff" use:enhance={submit}>
 			<button class="bigbtn">{T.hostLock}</button>
 		</form>
 	</div>
@@ -186,12 +199,15 @@
 		{/if}
 	</div>
 {:else}
-	<p class="banner">{T.hostIdle}</p>
+	<!-- nothing is happening yet, so the screen is one card and one button -->
+	<div class="hostidle">
+		<p class="idlelead">{T.hostIdle}</p>
+		<form method="POST" action="?/close" use:enhance={submit}>
+			<button class="bigbtn">{T.hostClose}</button>
+		</form>
+		<p class="hintline">{T.hostCloseNote}</p>
+	</div>
 	{@render heldNote()}
-	<form method="POST" action="?/close" use:enhance={submit}>
-		<button class="bigbtn">{T.hostClose}</button>
-	</form>
-	<p class="hintline">{T.hostCloseNote}</p>
 {/if}
 
 {#if burst}

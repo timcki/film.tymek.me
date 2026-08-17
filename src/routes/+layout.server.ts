@@ -6,7 +6,8 @@ import { openRunoff } from '$lib/server/runoffs';
 import { avatarUrl, bankBalance, spentInWeek } from '$lib/server/people';
 import { langOf } from '$lib/i18n';
 import { unseenChangelog } from '$lib/changelog';
-import { LANG_COOKIE } from '../hooks.server';
+import { themeOf } from '$lib/themes';
+import { LANG_COOKIE, THEME_COOKIE } from '../hooks.server';
 
 export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	const db = getDb();
@@ -22,6 +23,9 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	const lang = langOf(cookies.get(LANG_COOKIE));
 	return {
 		lang,
+		// the palette is already on <html>; the layout only needs it to know
+		// which half of the switch is lit
+		theme: themeOf(cookies.get(THEME_COOKIE)),
 		// news this person has not dismissed yet, already said in their language
 		changelog: person
 			? unseenChangelog(person.changelog_seen).map((entry) => ({
@@ -61,6 +65,8 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 			? {
 					number: week.number,
 					status: week.status,
+					// both ends, so the header can draw how much of the round is gone
+					opensAt: week.opens_at,
 					closesAt: week.closes_at
 				}
 			: null,

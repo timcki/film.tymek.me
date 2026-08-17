@@ -3,10 +3,12 @@ import { getDb } from '$lib/server/db';
 import { isAdmin, seedAdmins } from '$lib/server/admin';
 import { personByToken } from '$lib/server/people';
 import { startScheduler } from '$lib/server/scheduler';
+import { THEME_BG, themeOf } from '$lib/themes';
 
 export const PERSON_COOKIE = 'fn_person';
 export const DEVICE_COOKIE = 'fn_device';
 export const LANG_COOKIE = 'fn_lang';
+export const THEME_COOKIE = 'fn_theme';
 /** the browser cap; re-set on every request so regular visitors never expire */
 export const COOKIE_MAX_AGE = 400 * 24 * 60 * 60;
 
@@ -68,5 +70,22 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return new Response('Not found', { status: 404 });
 	}
 
-	return resolve(event);
+	// the palette is dressed onto <html> here rather than by a script on the
+	// client, so the first paint is already the right colour, and so is the
+	// status bar tint iOS reads off the meta tag. On auto the tint is left to
+	// the phone, which is what the media-scoped pair is for
+	const theme = themeOf(event.cookies.get(THEME_COOKIE));
+	const tint =
+		theme === 'auto'
+			? `<meta name="theme-color" content="${THEME_BG.dark}" media="(prefers-color-scheme: dark)" />
+		<meta name="theme-color" content="${THEME_BG.light}" media="(prefers-color-scheme: light)" />`
+			: `<meta name="theme-color" content="${THEME_BG[theme]}" />`;
+
+	return resolve(event, {
+		transformPageChunk: ({ html }) =>
+			html
+				.replaceAll('%fn.theme%', theme)
+				.replace('%fn.scheme%', theme === 'auto' ? 'light dark' : theme)
+				.replace('%fn.tint%', tint)
+	});
 };
