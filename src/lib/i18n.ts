@@ -98,7 +98,6 @@ export type Dict = {
 	budgetHelp: (rules: RulesView) => string;
 
 	shortlistHead: (n: number) => string;
-	shortlistNote: (n: number) => string;
 	restHead: string;
 	unit: (n: number, votes: boolean) => string;
 	noBackers: string;
@@ -230,7 +229,6 @@ export type Dict = {
 	reactAdd: string;
 	dSeen: string;
 	seenBtn: string;
-	seenN: (n: number) => string;
 	commentNone: string;
 	commentPh: string;
 	commentSend: string;
@@ -365,7 +363,6 @@ const pl: Dict = {
 	},
 
 	shortlistHead: (n) => (n === 3 ? 'Trójka na dziś' : `Czołowe ${n} na dziś`),
-	shortlistNote: (n) => `Na wieczorku sala wybiera jeden z tych ${n} ${plFilms(n)}`,
 	restHead: 'Reszta listy',
 	unit: (n, votes) => (votes ? plVotes(n) : 'pkt'),
 	noBackers: '0 głosów',
@@ -518,8 +515,7 @@ const pl: Dict = {
 	reactAdd: 'Dodaj reakcję',
 	dSeen: 'Kto już widział',
 	seenBtn: 'Już widziałem',
-	seenN: (n) => `👁 ${n}`,
-	commentPh: 'Dorzuć swoje trzy grosze…',
+	commentPh: 'Napisz komentarz…',
 	commentSend: 'Dodaj komentarz',
 
 	tNominated: (title) => `Zgłoszono: ${title}`,
@@ -705,7 +701,6 @@ const en: Dict = {
 	},
 
 	shortlistHead: (n) => (n === 3 ? "Tonight's three" : `Tonight's top ${n}`),
-	shortlistNote: (n) => `On the night the room picks one of these ${n}`,
 	restHead: 'The rest',
 	unit: (n, votes) => (votes ? en2(n, 'vote', 'votes') : 'pts'),
 	noBackers: '0 votes',
@@ -857,7 +852,6 @@ const en: Dict = {
 	reactAdd: 'Add a reaction',
 	dSeen: 'Seen it before',
 	seenBtn: 'Seen it already',
-	seenN: (n) => `👁 ${n}`,
 	commentPh: 'Add your two cents…',
 	commentSend: 'Add comment',
 

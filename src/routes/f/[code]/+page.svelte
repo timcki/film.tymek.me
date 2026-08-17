@@ -4,6 +4,7 @@
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Confetti from '$lib/components/Confetti.svelte';
 	import Poster from '$lib/components/Poster.svelte';
+	import SeenCount from '$lib/components/SeenCount.svelte';
 	import { dictFor } from '$lib/i18n';
 	import { say } from '$lib/toast.svelte';
 	import type { ActionData, PageData } from './$types';
@@ -56,12 +57,10 @@
 		};
 
 	function meta(row: (typeof data.tally)[number]): string {
-		const seen = data.seen[row.film.id];
 		return [
 			row.film.year,
 			row.film.runtime ? T.minutes(row.film.runtime) : null,
-			T.votes(row.votes),
-			seen ? T.seenN(seen) : null
+			T.votes(row.votes)
 		]
 			.filter(Boolean)
 			.join(' · ');
@@ -94,12 +93,11 @@
 					{[
 						row.film.year,
 						row.film.runtime ? T.minutes(row.film.runtime) : null,
-						T.votes(row.votes),
-						data.seen[row.film.id] ? T.seenN(data.seen[row.film.id]) : null,
-						row.film.id === data.winnerFilmId ? T.roomWinner : null
+						T.votes(row.votes)
 					]
 						.filter(Boolean)
-						.join(' · ')}
+						.join(' · ')} · <SeenCount n={data.seen[row.film.id] ?? 0} size={11} />
+					{#if row.film.id === data.winnerFilmId}· {T.roomWinner}{/if}
 				</span>
 			</div>
 		</div>
@@ -140,7 +138,7 @@
 				<div class="th"><Poster title={row.film.title} url={row.film.poster_url} /></div>
 				<div>
 					<b>{row.film.title}</b>
-					<span>{meta(row)}</span>
+					<span>{meta(row)} · <SeenCount n={data.seen[row.film.id] ?? 0} size={11} /></span>
 					{#if armed === row.film.id}
 						<span class="armhint">{T.roomArm}</span>
 					{/if}

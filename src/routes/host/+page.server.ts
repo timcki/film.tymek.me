@@ -67,6 +67,8 @@ export const load: PageServerLoad = async () => {
 			)
 		: new Set<string>();
 
+	const rows = runoff ? tally(db, runoff.id) : [];
+
 	return {
 		runoff: runoff
 			? {
@@ -74,7 +76,8 @@ export const load: PageServerLoad = async () => {
 					expiresAt: runoff.expires_at,
 					link: roomLink(runoff.code),
 					qr: await qrSvg(roomLink(runoff.code), 360),
-					tally: tally(db, runoff.id),
+					tally: rows,
+					seen: seenCounts(db, rows.map((row) => row.film.id)),
 					turnout: (
 						db
 							.prepare('SELECT COUNT(*) AS n FROM runoff_ballot WHERE runoff_id = ?')

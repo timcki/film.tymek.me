@@ -108,6 +108,8 @@
 	/** the note popup is wider and shorter: a paragraph, not a portrait */
 	const NPOP_W = 264;
 	const NPOP_H = 150;
+	/** the comment peek is wider still: names, dates and tallies share its rows */
+	const CPOP_W = 340;
 
 	// what the popup needs of a person; backers and nominators both satisfy it
 	type PeekFace = { name: string; colour: string; avatar: string | null; xp: number };
@@ -221,7 +223,7 @@
 		peek = null;
 		notePop = null;
 		scorePop = null;
-		cmtPop = { film, ...anchorAt(el, NPOP_W, NPOP_H) };
+		cmtPop = { film, ...anchorAt(el, CPOP_W, NPOP_H) };
 	}
 
 	function unpeek() {
@@ -532,15 +534,6 @@
 		{:else}
 			<span class="nobk">{T.noBackers}</span>
 		{/if}
-		{#if film.atRisk && data.week}
-			<span class="warnchip">
-				{rules.attrition.kind === 'archive'
-					? T.warnFades(
-							Math.max(1, rules.attrition.afterWeeksAtZero - (data.week.number - film.added_week))
-						)
-					: T.warnDrops}
-			</span>
-		{/if}
 	</span>
 {/snippet}
 
@@ -715,37 +708,6 @@
 					slim
 				/>
 			</button>
-			<!-- the thread lives behind the poster corner: a hover peeks at it, a
-			     click or tap opens the modal where it can be read and joined. The
-			     pill stays visible at zero comments, as the invitation -->
-			<button
-				class="cbadge"
-				type="button"
-				aria-label={film.comments.length ? T.commentsH(film.comments.length) : T.commentNone}
-				onpointerenter={(event) => {
-					mousing = event.pointerType === 'mouse';
-					if (mousing) cmtsAt(event.currentTarget, film);
-				}}
-				onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
-				onclick={() => {
-					unpeek();
-					commentsOpenId = film.id;
-				}}
-			>
-				<svg
-					viewBox="0 0 24 24"
-					width="9"
-					height="9"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2.5"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				>
-					<path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-				</svg>
-				{#if film.comments.length}{film.comments.length}{/if}
-			</button>
 		</div>
 		<div class="b">
 			<div class="hd">
@@ -755,13 +717,9 @@
 					     sheet's business -->
 					<div class="ttl">
 						{film.title}
-						{#if film.year || film.runtime || film.seen.length}
+						{#if film.year || film.runtime}
 							<span class="mm">
-								{[
-									film.year,
-									film.runtime ? T.minutes(film.runtime) : null,
-									film.seen.length ? T.seenN(film.seen.length) : null
-								]
+								{[film.year, film.runtime ? T.minutes(film.runtime) : null]
 									.filter(Boolean)
 									.join(' · ')}
 							</span>
@@ -848,6 +806,73 @@
 					{@render voteTri(film)}
 				{/if}
 			</div>
+		</div>
+		<!-- the card's fine print, always present and spanning the full card:
+		     the attrition warning on the left, and on the right edge an eye
+		     that both counts who has seen the film and toggles the viewer's
+		     own mark. Indented to the text column on desktop, flush on phones -->
+		<div class="cardfoot">
+			{#if film.atRisk && data.week}
+				<span class="warnchip">
+					{rules.attrition.kind === 'archive'
+						? T.warnFades(
+								Math.max(
+									1,
+									rules.attrition.afterWeeksAtZero - (data.week.number - film.added_week)
+								)
+							)
+						: T.warnDrops}
+				</span>
+			{/if}
+			<!-- the thread's pill: a hover peeks at it, a click or tap opens the
+			     modal where it can be read and joined -->
+			<button
+				class="eyebtn cmtbtn"
+				type="button"
+				aria-label={film.comments.length ? T.commentsH(film.comments.length) : T.commentNone}
+				onpointerenter={(event) => {
+					mousing = event.pointerType === 'mouse';
+					if (mousing) cmtsAt(event.currentTarget, film);
+				}}
+				onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+				onclick={() => {
+					unpeek();
+					commentsOpenId = film.id;
+				}}
+			>
+				<svg
+					viewBox="0 0 24 24"
+					width="13"
+					height="13"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+				</svg>
+				<b>{film.comments.length}</b>
+			</button>
+			<form class="eyeform" method="POST" action="?/seen" use:enhance={submit()}>
+				<input type="hidden" name="filmId" value={film.id} />
+				<button class="eyebtn" class:on={film.seenMine} title={T.seenBtn} aria-label={T.seenBtn}>
+					<svg
+						viewBox="0 0 24 24"
+						width="14"
+						height="14"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+						<circle cx="12" cy="12" r="3" />
+					</svg>
+					<b>{film.seen.length}</b>
+				</button>
+			</form>
 		</div>
 	</div>
 {/snippet}

@@ -201,6 +201,8 @@ header .sub b {
 }
 .film {
 	display: flex;
+	/* lets the fine-print footer take a full row under both columns */
+	flex-wrap: wrap;
 	gap: 12px;
 	background: var(--card);
 	border: 1px solid var(--line);
@@ -240,32 +242,6 @@ header .sub b {
 	cursor: pointer;
 	display: block;
 	line-height: 0;
-}
-/* the comment pill on the poster's bottom corner, opposite the nominator's
-   face; always there, so an empty thread still invites a first voice */
-.cbadge {
-	position: absolute;
-	right: 4px;
-	bottom: 4px;
-	display: inline-flex;
-	align-items: center;
-	gap: 3px;
-	padding: 3px 5px;
-	border: 0;
-	border-radius: 99px;
-	background: rgba(11, 12, 14, 0.72);
-	color: #d5dae2;
-	font: 700 9.5px/1 ui-sans-serif, sans-serif;
-	font-variant-numeric: tabular-nums;
-	cursor: pointer;
-	transition: background 0.15s;
-}
-.cbadge:hover,
-.cbadge:focus-visible {
-	background: rgba(11, 12, 14, 0.92);
-}
-.cbadge svg {
-	opacity: 0.8;
 }
 .p {
 	width: 72px;
@@ -722,10 +698,21 @@ button.sc {
 
 /* the hover peek at a thread: the last few comments, shrunk to tooltip scale */
 .cmpop {
-	width: 264px;
+	width: 340px;
+	max-width: calc(100vw - 16px);
 	align-items: stretch;
 	gap: 0;
 	text-align: left;
+}
+/* names may wrap, but a date or an emoji tally never folds onto itself; a
+   crowded header row spills whole items onto the next line instead */
+.cmpop .cmt .who {
+	flex-wrap: wrap;
+}
+.cmpop .cmt .who time,
+.cmpop .rmini {
+	white-space: nowrap;
+	flex: 0 0 auto;
 }
 .cmpop .cmt {
 	margin-top: 8px;
@@ -900,6 +887,52 @@ button.sc {
 	color: var(--warn);
 	font-size: 10.5px;
 	font-weight: 650;
+}
+/* the card's fine print: warnings flush left, the pills at the right edge.
+   A full-width row of the card, under both the poster and the text */
+.cardfoot {
+	flex-basis: 100%;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: -4px;
+	padding-top: 7px;
+	border-top: 1px solid var(--line);
+}
+/* the comments pill leads the right-edge pair, the eye closes it */
+.cardfoot .cmtbtn {
+	margin-left: auto;
+}
+.cardfoot .eyeform {
+	line-height: 0;
+}
+/* seen-it in one glance: the count of everyone, the glow for the viewer */
+.eyebtn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 3px 8px;
+	background: none;
+	border: 1px solid var(--line);
+	border-radius: 99px;
+	color: var(--dim);
+	cursor: pointer;
+	transition:
+		color 0.15s,
+		border-color 0.15s;
+}
+.eyebtn:hover {
+	border-color: var(--line2);
+}
+.eyebtn.on {
+	color: var(--accent);
+	border-color: var(--accent);
+}
+.eyebtn b {
+	font-size: 10.5px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
 }
 .av {
 	width: 19px;
@@ -2079,7 +2112,10 @@ details[open] > .iconbtn {
 	overflow: hidden;
 	background: var(--card);
 	text-align: center;
-	padding-bottom: 12px;
+	/* a column, so the seen footer pins to the bottom edge on every card
+	   regardless of how many lines the title takes */
+	display: flex;
+	flex-direction: column;
 }
 .tkfilm img,
 .tkfilm .noimg {
@@ -2102,7 +2138,18 @@ details[open] > .iconbtn {
 	letter-spacing: 0.1em;
 	text-transform: uppercase;
 	margin-top: 4px;
+	margin-bottom: 12px;
 	padding: 0 8px;
+}
+/* the rewatch factor as each contender's footer, level across the row */
+.tkfilm .seen {
+	margin-top: auto;
+	padding: 7px 0 9px;
+	border-top: 1px solid var(--line);
+	font-size: 11px;
+	color: var(--dim);
+	display: flex;
+	justify-content: center;
 }
 .tkfilm.win {
 	border-color: var(--accent);

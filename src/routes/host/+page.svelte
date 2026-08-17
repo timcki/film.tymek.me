@@ -3,6 +3,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import SeenCount from '$lib/components/SeenCount.svelte';
 	import Confetti from '$lib/components/Confetti.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import { dictFor } from '$lib/i18n';
@@ -46,7 +47,6 @@
 
 {#if data.runoff}
 	<div class="tk" style="padding-left:0;padding-right:0">
-		<p class="lead">{T.shortlistNote(data.runoff.tally.length)}</p>
 
 		<div style="text-align:center">
 			<div class="tkqr">
@@ -67,6 +67,7 @@
 					{/if}
 					<div class="n">{row.votes}</div>
 					<div class="l">{row.film.title}</div>
+					<div class="seen"><SeenCount n={data.runoff.seen[row.film.id] ?? 0} size={12} /></div>
 				</div>
 			{/each}
 		</div>
@@ -99,7 +100,9 @@
 						<div class="th"><Poster title={row.film.title} url={row.film.poster_url} /></div>
 						<div>
 							<b>{row.film.title}</b>
-							<span>{T.votes(row.votes)}</span>
+							<span>
+								{T.votes(row.votes)} · <SeenCount n={data.runoff.seen[row.film.id] ?? 0} size={11} />
+							</span>
 						</div>
 					</button>
 				</form>
@@ -121,11 +124,10 @@
 			{[
 				data.winner.film.year,
 				data.winner.film.runtime ? T.minutes(data.winner.film.runtime) : null,
-				T.votes(data.winner.votes),
-				data.winner.seen ? T.seenN(data.winner.seen) : null
+				T.votes(data.winner.votes)
 			]
 				.filter(Boolean)
-				.join(' · ')}
+				.join(' · ')} · <SeenCount n={data.winner.seen} />
 		</div>
 
 		{#if data.winner.film.overview}
