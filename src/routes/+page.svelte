@@ -776,13 +776,13 @@
 					     length. The nominator sits on the poster; the rest is the
 					     sheet's business -->
 					<div class="ttl">
-						{film.title}
+						<span class="tname">{film.title}</span>
 						{#if film.year || film.runtime}
-							<span class="mm">
-								{[film.year, film.runtime ? T.minutes(film.runtime) : null]
+							<span class="mm"
+								>{[film.year, film.runtime ? T.minutes(film.runtime) : null]
 									.filter(Boolean)
-									.join(' · ')}
-							</span>
+									.join(' · ')}</span
+							>
 						{/if}
 					</div>
 					<!-- one line right under the title, ending before the coin: the
@@ -1035,7 +1035,7 @@
 				<div class="b">
 					<div class="hd">
 						<div class="ttl">
-							{film.title}
+							<span class="tname">{film.title}</span>
 							{#if film.year}<span class="mm">{film.year}</span>{/if}
 						</div>
 					</div>

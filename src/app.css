@@ -293,22 +293,37 @@ header .sub b {
 	display: flex;
 	flex-direction: column;
 }
+/* title, year and runtime hold a single line whatever the title's length: the
+   name gives up its tail to an ellipsis rather than pushing the row onto two */
 .ttl {
 	flex: 1;
 	min-width: 0;
+	display: flex;
+	align-items: baseline;
+	gap: 5px;
 	font-size: 15px;
 	font-weight: 650;
 	letter-spacing: -0.012em;
 	line-height: 1.3;
 }
-/* the quiet half of the title line: year and runtime trail the name */
+.ttl .tname {
+	/* shrinks but never grows, so the year sits beside a short title instead of
+	   drifting off to the far edge of the row */
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+/* the quiet half of the title line: year and runtime trail the name, and are
+   the part that must never be the thing that gets cut */
 .ttl .mm {
+	flex: 0 0 auto;
 	font-size: 11.5px;
 	font-weight: 500;
 	letter-spacing: 0;
 	color: var(--dim);
 	white-space: nowrap;
-	margin-left: 2px;
 }
 .sc {
 	flex: 0 0 auto;
