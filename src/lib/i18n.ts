@@ -344,11 +344,11 @@ const plRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 	});
 
 	out.push({
-		head: 'Nie będzie cię na wieczorku? Twój film może poczekać tydzień.',
+		head: 'Nie będzie cię na wieczorku? Możesz uśpić swój film na tydzień.',
 		body:
 			'Jeden film na tydzień i tylko taki, który sam zgłosiłeś. Nie idzie wtedy pod głosowanie ' +
 			'w sali, a jego miejsce zajmuje kolejny z listy. Punkty tracą na wartości normalnie, ' +
-			'więc czekanie kosztuje. Widzą to wszyscy, żeby zdążyli przerzucić głosy gdzie indziej.'
+			'więc uśpienie kosztuje. Widzą to wszyscy, żeby zdążyli przerzucić głosy gdzie indziej.'
 	});
 
 	return out;
@@ -399,20 +399,20 @@ const pl: Dict = {
 	warnFades: (n) => `znika za ${n} ${plWeeks(n)}`,
 	campaign: (n) => `${n}. tydzień kampanii`,
 
-	holdCta: 'Niech poczeka',
-	holdMine: 'Poczeka na ciebie',
-	// nie „czeka na Tymka”: imiona się odmieniają, a kropka nie
-	holdBy: (name) => `Poczeka · ${name}`,
+	holdCta: 'Uśpij',
+	holdMine: 'Uśpiony przez ciebie',
+	// nie „uśpiony przez Tymka”: imiona się odmieniają, a kropka nie
+	holdBy: (name) => `Uśpiony · ${name}`,
 	holdH: 'Nie będzie cię w tym tygodniu?',
 	holdHint: (n) =>
-		`Twój film nie pójdzie wtedy pod głosowanie w sali, a jego miejsce zajmie kolejny z listy ` +
-		`(do sali idzie ${n} ${plFilms(n)}). Punkty tracą na wartości normalnie, więc czekanie kosztuje. ` +
-		'Cofnąć możesz aż do zamknięcia głosowania.',
+		`Uśpiony film nie pójdzie pod głosowanie w sali, a jego miejsce zajmie kolejny z listy ` +
+		`(do sali idzie ${n} ${plFilms(n)}). Punkty tracą na wartości normalnie, więc uśpienie kosztuje. ` +
+		'Wycofać możesz aż do zamknięcia głosowania.',
 	holdWhyPh: 'Czemu? Zobaczą wszyscy…',
-	holdBtn: 'Niech poczeka tydzień',
+	holdBtn: 'Uśpij na tydzień',
 	holdSave: 'Zapisz powód',
-	holdRelease: 'Wróć do gry',
-	holdSpent: (title) => `W tym tygodniu czeka już ${title}.`,
+	holdRelease: 'Wycofaj',
+	holdSpent: (title) => `W tym tygodniu uśpiony jest już ${title}.`,
 	holdSig: (name) => name,
 
 	addedBy: (name, week) => `${name}, tydzień ${week}`,
@@ -533,7 +533,7 @@ const pl: Dict = {
 	hostCastPick: 'teraz wybierz jego film',
 	hostLock: 'Zatwierdź i puszczaj film',
 	hostWinnerH: 'Dzisiaj oglądamy',
-	hostHeldH: 'Czekają na kolejny raz',
+	hostHeldH: 'Uśpione do następnego razu',
 	roomH: 'Dzisiejsza trójka',
 	roomCode: 'kod sali',
 	roomWho: 'Kto ty jesteś?',
@@ -565,7 +565,7 @@ const pl: Dict = {
 	tCommented: 'Komentarz dodany',
 	tRenominated: (title) => `Zgłoszono ponownie: ${title}, start od zera`,
 	tRevived: (title) => `${title} wraca na listę`,
-	tHeld: (title) => `${title} poczeka do następnego razu`,
+	tHeld: (title) => `${title} uśpiony do następnego razu`,
 	tReleased: (title) => `${title} znowu gra o dziś`,
 	tAvatarSaved: 'Zdjęcie zapisane',
 	tAvatarRemoved: 'Zdjęcie usunięte',
@@ -613,7 +613,7 @@ const pl: Dict = {
 			case 'hold_not_active':
 				return `${p.title} nie jest na liście.`;
 			case 'hold_taken':
-				return `W tym tygodniu czeka już ${p.title}.`;
+				return `W tym tygodniu uśpiony jest już ${p.title}.`;
 			case 'empty_file':
 				return 'Pusty plik.';
 			case 'avatar_too_big':
@@ -717,7 +717,7 @@ const enRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 	});
 
 	out.push({
-		head: 'Not coming on the night? Your film can wait a week.',
+		head: 'Not coming on the night? Your film can sleep a week.',
 		body:
 			'One film a week, and only one you nominated yourself. It stays out of the room vote and ' +
 			'the next film on the list takes its place. Its points fade as usual, so waiting costs ' +
@@ -769,19 +769,19 @@ const en: Dict = {
 	warnFades: (n) => `fades in ${n} ${en2(n, 'week', 'weeks')}`,
 	campaign: (n) => `week ${n} of this campaign`,
 
-	holdCta: 'Let it wait',
-	holdMine: 'Waiting for you',
-	holdBy: (name) => `Waiting · ${name}`,
+	holdCta: 'Sleep',
+	holdMine: 'Asleep, yours',
+	holdBy: (name) => `Asleep · ${name}`,
 	holdH: 'Not going to make it this week?',
 	holdHint: (n) =>
 		`Your film then stays out of the room's vote and the next one on the list takes its place ` +
 		`(${n} ${en2(n, 'film goes', 'films go')} to the room). Its points fade as usual, so waiting costs ` +
 		'something. You can undo it right up to the close.',
 	holdWhyPh: 'Why? Everyone sees this…',
-	holdBtn: 'Hold it a week',
+	holdBtn: 'Put it to sleep for a week',
 	holdSave: 'Save the reason',
 	holdRelease: 'Put it back',
-	holdSpent: (title) => `You are already holding ${title} back this week.`,
+	holdSpent: (title) => `${title} is already asleep this week.`,
 	holdSig: (name) => name,
 
 	addedBy: (name, week) => `${name}, week ${week}`,
@@ -901,7 +901,7 @@ const en: Dict = {
 	hostCastPick: 'now pick their film',
 	hostLock: 'Lock it in and start the film',
 	hostWinnerH: 'Tonight we are watching',
-	hostHeldH: 'Waiting for another night',
+	hostHeldH: 'Asleep until another night',
 	roomH: "Tonight's three",
 	roomCode: 'room code',
 	roomWho: 'Who are you?',
@@ -933,7 +933,7 @@ const en: Dict = {
 	tCommented: 'Comment added',
 	tRenominated: (title) => `Re-nominated ${title}, starting from zero`,
 	tRevived: (title) => `${title} is back on the list`,
-	tHeld: (title) => `${title} will wait for another night`,
+	tHeld: (title) => `${title} is asleep until another night`,
 	tReleased: (title) => `${title} is in the running again`,
 	tAvatarSaved: 'Picture saved',
 	tAvatarRemoved: 'Picture removed',
