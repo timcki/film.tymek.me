@@ -23,9 +23,16 @@ if [[ "$SNAPSHOT" == 1 ]]; then
 	# for a moment so the ssh user can pull it, then removed
 	ssh "$HOST" "sudo sqlite3 $REMOTE_DB \".backup '/tmp/filmnight-test.db'\" && sudo chmod 644 /tmp/filmnight-test.db"
 	mkdir -p "$HERE/data"
+	# the -wal and -shm of the previous snapshot belong to a database that is about
+	# to be replaced. Left in place, SQLite treats them as this file's journal and
+	# replays a stranger's pages over the fresh copy: the table says 'watched' while
+	# the index on it still says 'active', the list shows films that are gone, and
+	# voting on one is refused by a server reading the row the list never saw
+	rm -f "$LOCAL_DB" "$LOCAL_DB-wal" "$LOCAL_DB-shm"
 	rsync -z "$HOST:/tmp/filmnight-test.db" "$LOCAL_DB"
 	ssh "$HOST" "sudo rm -f /tmp/filmnight-test.db"
 	echo "==> snapshot at $LOCAL_DB"
+	sqlite3 "$LOCAL_DB" 'PRAGMA integrity_check;' | head -5
 elif [[ ! -f "$LOCAL_DB" ]]; then
 	echo "no snapshot at $LOCAL_DB; run once without SNAPSHOT=0 first" >&2
 	exit 1
