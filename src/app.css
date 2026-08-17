@@ -241,6 +241,32 @@ header .sub b {
 	display: block;
 	line-height: 0;
 }
+/* the comment pill on the poster's bottom corner, opposite the nominator's
+   face; always there, so an empty thread still invites a first voice */
+.cbadge {
+	position: absolute;
+	right: 4px;
+	bottom: 4px;
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	padding: 3px 5px;
+	border: 0;
+	border-radius: 99px;
+	background: rgba(11, 12, 14, 0.72);
+	color: #d5dae2;
+	font: 700 9.5px/1 ui-sans-serif, sans-serif;
+	font-variant-numeric: tabular-nums;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+.cbadge:hover,
+.cbadge:focus-visible {
+	background: rgba(11, 12, 14, 0.92);
+}
+.cbadge svg {
+	opacity: 0.8;
+}
 .p {
 	width: 72px;
 	flex: 0 0 72px;
@@ -565,6 +591,160 @@ button.sc {
 	color: var(--dimmer);
 	margin-top: 2px;
 }
+/* the rewatch confession button sits alone under the facts */
+.seenrow {
+	margin-top: 12px;
+}
+
+/* who felt what: emoji chips wearing the faces of everyone who reacted */
+.cmt .cbody {
+	flex: 1;
+	min-width: 0;
+}
+.rrow {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px;
+	margin-top: 6px;
+}
+.rchip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 3px 8px;
+	background: var(--card2);
+	border: 1px solid var(--line);
+	border-radius: 99px;
+	font-size: 12px;
+	line-height: 1;
+	color: var(--dim);
+	cursor: pointer;
+	transition: border-color 0.15s;
+}
+.rchip:hover {
+	border-color: var(--line2);
+}
+.rchip.mine {
+	border-color: var(--accent);
+}
+.rchip .rfaces {
+	display: inline-flex;
+}
+.rchip .rfaces .av {
+	width: 14px;
+	height: 14px;
+	flex: 0 0 14px;
+	box-shadow: 0 0 0 1.5px var(--card2);
+}
+/* the faces shingle, newest peeking out from behind the older ones */
+.rchip .rfaces .av + .av {
+	margin-left: -4px;
+}
+.rchip b {
+	font-size: 10px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	color: var(--dim);
+}
+.rchip.radd {
+	color: var(--dimmer);
+	padding: 3px 7px;
+}
+.rchip.radd .plus {
+	font-size: 10px;
+	font-weight: 700;
+	margin-left: 1px;
+}
+.rpick {
+	display: flex;
+	gap: 2px;
+	margin-top: 6px;
+	padding: 4px;
+	background: var(--card2);
+	border: 1px solid var(--line2);
+	border-radius: 99px;
+	width: fit-content;
+}
+.rpick button {
+	border: 0;
+	background: none;
+	font-size: 16px;
+	line-height: 1;
+	padding: 5px 6px;
+	border-radius: 50%;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+.rpick button:hover {
+	background: var(--line);
+}
+/* read-only echo of the feelings, where tappable chips would be clutter */
+.rmini {
+	font-size: 10px;
+	color: var(--dim);
+	font-variant-numeric: tabular-nums;
+}
+
+/* the composer: the send arrow floats inside the field's bottom corner */
+.cwrite {
+	position: relative;
+}
+.cwrite .nin {
+	/* block, or the inline baseline gap under the textarea pushes the
+	   absolutely anchored arrow past the field's bottom edge */
+	display: block;
+	padding-right: 44px;
+}
+.csend {
+	position: absolute;
+	right: 7px;
+	bottom: 7px;
+	width: 28px;
+	height: 28px;
+	display: grid;
+	place-items: center;
+	border: 0;
+	border-radius: 50%;
+	background: var(--accent);
+	color: #0b0b0d;
+	cursor: pointer;
+	transition:
+		opacity 0.15s,
+		transform 0.15s;
+}
+.csend:hover:not(:disabled) {
+	transform: scale(1.08);
+}
+.csend:disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+/* the hover peek at a thread: the last few comments, shrunk to tooltip scale */
+.cmpop {
+	width: 264px;
+	align-items: stretch;
+	gap: 0;
+	text-align: left;
+}
+.cmpop .cmt {
+	margin-top: 8px;
+}
+.cmpop .cmt:first-of-type {
+	margin-top: 0;
+}
+.cmpop .cmt .who b {
+	font-size: 11px;
+}
+.cmpop .cmt p {
+	font-size: 11.5px;
+	line-height: 1.45;
+}
+.cmpop > .sig {
+	font-size: 10.5px;
+	color: var(--dimmer);
+	margin-bottom: 4px;
+}
 .dnote {
 	font-size: 13.5px;
 	color: #c5cad2;
@@ -582,6 +762,36 @@ button.sc {
 	font-size: 11.5px;
 	color: var(--dimmer);
 	margin-top: 7px;
+}
+/* the comment thread under a suggestion: small faces, small type, no ceremony */
+.cmts {
+	margin-top: 16px;
+}
+.cmt {
+	display: flex;
+	gap: 9px;
+	align-items: flex-start;
+	margin-top: 11px;
+}
+.cmt .who {
+	display: flex;
+	align-items: baseline;
+	gap: 7px;
+}
+.cmt .who b {
+	font-size: 12.5px;
+	font-weight: 650;
+}
+.cmt .who time {
+	font-size: 10.5px;
+	color: var(--dimmer);
+}
+.cmt p {
+	margin: 2px 0 0;
+	font-size: 13.5px;
+	line-height: 1.5;
+	color: #c5cad2;
+	overflow-wrap: anywhere;
 }
 .nedit {
 	display: block;
@@ -988,6 +1198,13 @@ details[open] > .iconbtn {
 	font-size: 14px;
 	font-weight: 650;
 	letter-spacing: -0.01em;
+}
+/* the thread brings page-level margins along; the modal is snugger than that */
+.cmodal .cmts {
+	margin-top: 0;
+}
+.cmodal .sec {
+	margin-top: 0;
 }
 .bkmgrid {
 	display: flex;
@@ -1893,6 +2110,40 @@ details[open] > .iconbtn {
 .tkfilm.win .n {
 	color: var(--accent);
 }
+/* the decided night on the projector: one film, said big */
+.winshow {
+	max-width: 520px;
+	margin: 0 auto;
+	text-align: center;
+	padding-top: 8px;
+}
+.winshow .wposter {
+	width: min(60vw, 260px);
+	aspect-ratio: 2/3;
+	margin: 14px auto 0;
+	border-radius: 12px;
+	overflow: hidden;
+	background: #1f2226;
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+.winshow h2 {
+	font-size: 26px;
+	letter-spacing: -0.02em;
+	margin: 16px 0 0;
+}
+.winshow .wmeta {
+	font-size: 13px;
+	color: var(--dimmer);
+	margin-top: 4px;
+}
+.winshow .over,
+.winshow .dnote {
+	text-align: left;
+}
+.winshow .cmts {
+	text-align: left;
+	margin-top: 20px;
+}
 .brow {
 	display: flex;
 	align-items: center;
@@ -1969,6 +2220,37 @@ details[open] > .iconbtn {
 .pickbtn.on {
 	border-color: var(--accent);
 	box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+/* an armed card: one more tap makes it final, so it should visibly ask */
+.pickbtn.armed {
+	border-color: var(--accent);
+	animation: cardpulse 0.9s ease-in-out infinite;
+}
+@keyframes cardpulse {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent);
+	}
+	50% {
+		box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.pickbtn.armed {
+		animation: none;
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+	}
+}
+.pickbtn:disabled {
+	cursor: default;
+	opacity: 0.55;
+}
+.pickbtn.on:disabled {
+	opacity: 1;
+}
+.pickbtn .armhint {
+	color: var(--accent);
+	font-weight: 650;
 }
 .pickbtn .th {
 	width: 44px;

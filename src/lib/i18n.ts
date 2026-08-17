@@ -208,6 +208,7 @@ export type Dict = {
 	hostCastH: string;
 	hostCastPick: string;
 	hostLock: string;
+	hostWinnerH: string;
 	roomH: string;
 	roomCode: string;
 	roomWho: string;
@@ -216,16 +217,30 @@ export type Dict = {
 	roomGuestNote: string;
 	roomVotingAs: (name: string) => string;
 	roomCheckedIn: string;
-	roomChange: string;
+	roomFinal: string;
+	roomArm: string;
+	roomLockedNote: string;
 	roomDecided: string;
 	roomWinner: string;
 	votes: (n: number) => string;
 	turnout: (n: number) => string;
 
+	commentsH: (n: number) => string;
+	commentMore: (n: number) => string;
+	reactAdd: string;
+	dSeen: string;
+	seenBtn: string;
+	seenN: (n: number) => string;
+	commentNone: string;
+	commentPh: string;
+	commentSend: string;
+
 	tNominated: (title: string) => string;
 	tVoted: (title: string) => string;
 	tUnvoted: string;
 	tNoteSaved: string;
+	tLockedIn: (title: string) => string;
+	tCommented: string;
 	tRenominated: (title: string) => string;
 	tRevived: (title: string) => string;
 	tAvatarSaved: string;
@@ -480,6 +495,7 @@ const pl: Dict = {
 	hostCastH: 'Zagłosuj za kogoś, komu padł telefon',
 	hostCastPick: 'teraz wybierz jego film',
 	hostLock: 'Zatwierdź i puszczaj film',
+	hostWinnerH: 'Dzisiaj oglądamy',
 	roomH: 'Dzisiejsza trójka',
 	roomCode: 'kod sali',
 	roomWho: 'Kto ty jesteś?',
@@ -488,16 +504,30 @@ const pl: Dict = {
 	roomGuestNote: 'Nie ma cię na liście? Zagłosuj jako gość, w sali też się liczy.',
 	roomVotingAs: (name) => `głosujesz jako ${name}`,
 	roomCheckedIn: 'obecność zapisana ✓',
-	roomChange: 'Dotknij jeszcze raz, żeby zmienić zdanie. Liczy się ostatni wybór.',
+	roomFinal: 'Jeden głos na wieczór. Co zaklepane, to zaklepane.',
+	roomArm: 'Dotknij jeszcze raz, żeby zaklepać',
+	roomLockedNote: 'Twój głos oddany. Reszta należy do sali.',
 	roomDecided: 'Dzisiejszy wieczór rozstrzygnięty.',
 	roomWinner: 'wygrywa',
 	votes: (n) => `${n} ${plVotes(n)}`,
 	turnout: (n) => `${n} ${pl3(n, 'osoba zagłosowała', 'osoby zagłosowały', 'osób zagłosowało')}`,
 
+	commentsH: (n) => `${n} ${pl3(n, 'komentarz', 'komentarze', 'komentarzy')}`,
+	commentNone: 'Nikt jeszcze nic nie napisał.',
+	commentMore: (n) => `…i jeszcze ${n}`,
+	reactAdd: 'Dodaj reakcję',
+	dSeen: 'Kto już widział',
+	seenBtn: 'Już widziałem',
+	seenN: (n) => `👁 ${n}`,
+	commentPh: 'Dorzuć swoje trzy grosze…',
+	commentSend: 'Dodaj komentarz',
+
 	tNominated: (title) => `Zgłoszono: ${title}`,
 	tVoted: (title) => `Głos na: ${title}`,
 	tUnvoted: 'Głos wycofany',
 	tNoteSaved: 'Notka zapisana',
+	tLockedIn: (title) => `Zaklepane: ${title}`,
+	tCommented: 'Komentarz dodany',
 	tRenominated: (title) => `Zgłoszono ponownie: ${title}, start od zera`,
 	tRevived: (title) => `${title} wraca na listę`,
 	tAvatarSaved: 'Zdjęcie zapisane',
@@ -555,6 +585,14 @@ const pl: Dict = {
 				return 'Głosowanie w sali wygasło.';
 			case 'film_not_in_runoff':
 				return 'Tego filmu nie ma w dzisiejszej trójce.';
+			case 'vote_locked':
+				return 'Głos w sali jest ostateczny. Jedno kliknięcie decyduje o wieczorze.';
+			case 'empty_comment':
+				return 'Napisz najpierw coś.';
+			case 'comment_too_long':
+				return `Komentarz może mieć najwyżej ${p.max} znaków.`;
+			case 'no_comment':
+				return 'Nie ma takiego komentarza.';
 			default:
 				return fallback;
 		}
@@ -796,6 +834,7 @@ const en: Dict = {
 	hostCastH: 'Cast for someone whose phone is dead',
 	hostCastPick: 'now pick their film',
 	hostLock: 'Lock it in and start the film',
+	hostWinnerH: 'Tonight we are watching',
 	roomH: "Tonight's three",
 	roomCode: 'room code',
 	roomWho: 'Who are you?',
@@ -804,16 +843,30 @@ const en: Dict = {
 	roomGuestNote: 'Not on the list? Vote as a guest; it still counts in the room.',
 	roomVotingAs: (name) => `voting as ${name}`,
 	roomCheckedIn: 'checked in ✓',
-	roomChange: 'Tap again to change your mind. Only the last tap counts.',
+	roomFinal: 'One vote for the night. Locked in is locked in.',
+	roomArm: 'Tap again to lock it in',
+	roomLockedNote: 'Your vote is in. The rest is up to the room.',
 	roomDecided: 'Tonight is decided.',
 	roomWinner: 'winner',
 	votes: (n) => `${n} ${en2(n, 'vote', 'votes')}`,
 	turnout: (n) => `${n} ${en2(n, 'person', 'people')} voted`,
 
+	commentsH: (n) => `${n} ${en2(n, 'comment', 'comments')}`,
+	commentNone: 'Nobody has said anything yet.',
+	commentMore: (n) => `…and ${n} more`,
+	reactAdd: 'Add a reaction',
+	dSeen: 'Seen it before',
+	seenBtn: 'Seen it already',
+	seenN: (n) => `👁 ${n}`,
+	commentPh: 'Add your two cents…',
+	commentSend: 'Add comment',
+
 	tNominated: (title) => `Nominated ${title}`,
 	tVoted: (title) => `Voted for ${title}`,
 	tUnvoted: 'Vote pulled back',
 	tNoteSaved: 'Note saved',
+	tLockedIn: (title) => `Locked in: ${title}`,
+	tCommented: 'Comment added',
 	tRenominated: (title) => `Re-nominated ${title}, starting from zero`,
 	tRevived: (title) => `${title} is back on the list`,
 	tAvatarSaved: 'Picture saved',

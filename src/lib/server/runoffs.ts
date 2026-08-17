@@ -53,9 +53,10 @@ export function tally(db: DB, runoffId: number): Tally[] {
 }
 
 /**
- * §7.2. One row per (runoff_id, voter_key); voting again replaces your choice.
- * Written to runoff_ballot and never to ballot: being in the room breaks a tie,
- * it does not buy influence.
+ * §7.2. One row per (runoff_id, voter_key), and the first one is final: a flash
+ * vote decides the night, so there is nothing to change your mind to. Written to
+ * runoff_ballot and never to ballot: being in the room breaks a tie, it does not
+ * buy influence.
  */
 export function flashVote(
 	db: DB,
@@ -78,17 +79,33 @@ export function flashVote(
 			.get(runoffId, filmId);
 		if (!inRunoff) throw new RuleError('film_not_in_runoff', 'that film is not in this runoff');
 
+		const existing = db
+			.prepare('SELECT film_id FROM runoff_ballot WHERE runoff_id = ? AND voter_key = ?')
+			.get(runoffId, voterKey) as { film_id: number } | undefined;
+		if (existing) {
+			// a double-tap on the same card is not a crime; a different film is
+			if (existing.film_id === filmId) return;
+			throw new RuleError('vote_locked', 'your flash vote is locked in; one tap decides the night');
+		}
+
 		db.prepare(
 			`INSERT INTO runoff_ballot (runoff_id, voter_key, person_id, film_id, created_at)
-			 VALUES (?, ?, ?, ?, ?)
-			 ON CONFLICT(runoff_id, voter_key)
-			 DO UPDATE SET film_id = excluded.film_id, person_id = excluded.person_id,
-			               created_at = excluded.created_at`
+			 VALUES (?, ?, ?, ?, ?)`
 		).run(runoffId, voterKey, personId, filmId, iso(now));
 
 		// §7.4: an identified flash vote implies being in the room
 		if (personId) checkIn(db, runoff.week_number, personId, now);
 	});
+}
+
+/** the most recently decided runoff, for the host's winner screen */
+export function latestDecidedRunoff(db: DB): Runoff | undefined {
+	return db
+		.prepare(
+			`SELECT * FROM runoff WHERE closed_at IS NOT NULL AND winner_film_id IS NOT NULL
+			 ORDER BY closed_at DESC, id DESC LIMIT 1`
+		)
+		.get() as Runoff | undefined;
 }
 
 export type RunoffResult = { kind: 'noop' } | { kind: 'winner'; film: Film };

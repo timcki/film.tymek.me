@@ -12,6 +12,8 @@ import {
 	setPoints,
 	standings
 } from '$lib/server/films';
+import { addComment, commentsOf, reactComment } from '$lib/server/comments';
+import { seenOf, toggleSeen } from '$lib/server/seen';
 import { ruleFail } from '$lib/server/respond';
 import { detailsOf } from '$lib/server/tmdb';
 
@@ -42,9 +44,25 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const backed = films.filter((film) => film.score > 0).length;
 	const shortlistCount = Math.min(rules.shortlistSize, backed);
 
+	// attached at the route level so Standing stays a scoring concern
+	const withComments = <T extends { id: number }>(rows: T[]) => {
+		const ids = rows.map((row) => row.id);
+		const byFilm = commentsOf(db, ids, person.id);
+		const seenByFilm = seenOf(db, ids);
+		return rows.map((row) => {
+			const seen = seenByFilm.get(row.id) ?? [];
+			return {
+				...row,
+				comments: byFilm.get(row.id) ?? [],
+				seen,
+				seenMine: seen.some((face) => face.id === person.id)
+			};
+		});
+	};
+
 	return {
-		films,
-		archived: standings(db, rules, week.number, person.id, 'archived'),
+		films: withComments(films),
+		archived: withComments(standings(db, rules, week.number, person.id, 'archived')),
 		dropped: filmsByStatus(db, 'dropped'),
 		shortlistCount: shortlistCount > 1 ? shortlistCount : 0,
 		nominatedThisWeek: nominatedThisWeek ?? null,
@@ -118,6 +136,46 @@ export const actions: Actions = {
 				String(form.get('note') ?? '')
 			);
 			return { noteSaved: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	comment: async ({ request, locals }) => {
+		const form = await request.formData();
+		try {
+			addComment(
+				getDb(),
+				locals.person!.id,
+				Number(form.get('filmId')),
+				String(form.get('body') ?? '')
+			);
+			return { commented: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	seen: async ({ request, locals }) => {
+		const form = await request.formData();
+		try {
+			toggleSeen(getDb(), locals.person!.id, Number(form.get('filmId')));
+			return { seenToggled: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	react: async ({ request, locals }) => {
+		const form = await request.formData();
+		try {
+			reactComment(
+				getDb(),
+				locals.person!.id,
+				Number(form.get('commentId')),
+				String(form.get('emoji') ?? '')
+			);
+			return { reacted: true };
 		} catch (error) {
 			return ruleFail(error);
 		}

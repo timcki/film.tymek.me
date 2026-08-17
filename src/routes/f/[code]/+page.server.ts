@@ -4,7 +4,8 @@ import { getDb } from '$lib/server/db';
 import { attended, checkIn } from '$lib/server/attendance';
 import { allPeople } from '$lib/server/people';
 import { flashVote, isExpired, runoffByCode, tally } from '$lib/server/runoffs';
-import { RuleError } from '$lib/server/types';
+import { seenCounts } from '$lib/server/seen';
+import { ruleFail } from '$lib/server/respond';
 import { newDeviceId } from '$lib/server/tokens';
 import { DEVICE_COOKIE } from '../../../hooks.server';
 
@@ -21,10 +22,12 @@ export const load: PageServerLoad = async ({ params, locals, cookies }) => {
 	}
 
 	if (runoff.closed_at) {
+		const rows = tally(db, runoff.id);
 		return {
 			decided: true,
 			code: runoff.code,
-			tally: tally(db, runoff.id),
+			tally: rows,
+			seen: seenCounts(db, rows.map((row) => row.film.id)),
 			winnerFilmId: runoff.winner_film_id,
 			people: [],
 			myVote: null,
@@ -51,10 +54,12 @@ export const load: PageServerLoad = async ({ params, locals, cookies }) => {
 		.prepare('SELECT film_id FROM runoff_ballot WHERE runoff_id = ? AND voter_key = ?')
 		.get(runoff.id, voterKey) as { film_id: number } | undefined;
 
+	const rows = tally(db, runoff.id);
 	return {
 		decided: false,
 		code: runoff.code,
-		tally: tally(db, runoff.id),
+		tally: rows,
+		seen: seenCounts(db, rows.map((row) => row.film.id)),
 		winnerFilmId: null,
 		people: locals.person ? [] : allPeople(db).map((p) => ({ id: p.id, name: p.name })),
 		myVote: myVote?.film_id ?? null,
@@ -80,11 +85,9 @@ export const actions: Actions = {
 
 		try {
 			flashVote(db, runoff.id, voterKey, personId, filmId);
-			return { ok: true };
+			return { ok: true, filmId };
 		} catch (err) {
-			if (err instanceof RuleError) return fail(409, { message: err.message });
-			console.error(err);
-			return fail(500, { message: 'something went wrong on the server' });
+			return ruleFail(err);
 		}
 	},
 

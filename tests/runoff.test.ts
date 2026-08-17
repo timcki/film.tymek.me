@@ -5,10 +5,12 @@ import {
 	closeRunoff,
 	flashVote,
 	isExpired,
+	latestDecidedRunoff,
 	openRunoff,
 	runoffByCode,
 	tally
 } from '../src/lib/server/runoffs.js';
+import { RuleError } from '../src/lib/server/types.js';
 import { newCode } from '../src/lib/server/tokens.js';
 import { addFilm, freshDb } from './helpers.js';
 
@@ -54,19 +56,27 @@ describe('runoff', () => {
 		expect(first).toBeDefined();
 	});
 
-	// 26. one flash vote per voter_key; voting again replaces it
-	it('voting again replaces your choice', () => {
+	// 26. one flash vote per voter_key, and the first one is final
+	it('a flash vote is final; only a same-film double-tap is forgiven', () => {
 		const { db, first, second } = tiedWeek();
 		const runoff = openRunoff(db)!;
 
 		flashVote(db, runoff.id, 'celina', 'celina', first);
-		flashVote(db, runoff.id, 'celina', 'celina', second);
+		// a double-tap on the same card is an idempotent no-op
+		expect(() => flashVote(db, runoff.id, 'celina', 'celina', first)).not.toThrow();
+		// a change of heart is not
+		expect(() => flashVote(db, runoff.id, 'celina', 'celina', second)).toThrow(RuleError);
+		try {
+			flashVote(db, runoff.id, 'celina', 'celina', second);
+		} catch (error) {
+			expect((error as RuleError).code).toBe('vote_locked');
+		}
 
 		const rows = db.prepare('SELECT * FROM runoff_ballot WHERE runoff_id = ?').all(runoff.id) as {
 			film_id: number;
 		}[];
 		expect(rows).toHaveLength(1);
-		expect(rows[0].film_id).toBe(second);
+		expect(rows[0].film_id).toBe(first);
 	});
 
 	it('a guest with no person_id can still vote on their own device key', () => {
@@ -77,6 +87,13 @@ describe('runoff', () => {
 			.prepare('SELECT person_id FROM runoff_ballot WHERE voter_key = ?')
 			.get('device-abc') as { person_id: string | null };
 		expect(row.person_id).toBeNull();
+	});
+
+	it('a guest device key is locked to its first vote the same way', () => {
+		const { db, first, second } = tiedWeek();
+		const runoff = openRunoff(db)!;
+		flashVote(db, runoff.id, 'device-abc', null, first);
+		expect(() => flashVote(db, runoff.id, 'device-abc', null, second)).toThrow(/locked/);
 	});
 
 	// 27. zero flash votes: the oldest tied film wins
@@ -120,6 +137,17 @@ describe('runoff', () => {
 		expect(weekByNumber(db, 2)!.status).toBe('open');
 
 		expect(closeRunoff(db, rules, runoff.id)).toEqual({ kind: 'noop' });
+	});
+
+	it('the decided runoff is findable afterwards, for the winner screen', () => {
+		const { db, rules, first } = tiedWeek();
+		const runoff = openRunoff(db)!;
+		expect(latestDecidedRunoff(db)).toBeUndefined();
+		closeRunoff(db, rules, runoff.id);
+		const decided = latestDecidedRunoff(db)!;
+		expect(decided.id).toBe(runoff.id);
+		expect(decided.winner_film_id).toBe(first);
+		expect(decided.closed_at).not.toBeNull();
 	});
 
 	// 30. an expired code is recognised as expired

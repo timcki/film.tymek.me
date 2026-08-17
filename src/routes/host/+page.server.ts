@@ -1,15 +1,52 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
+import type { DB } from '$lib/server/db';
 import { activeRules, origin } from '$lib/server/config';
-import { allPeople, avatarUrl } from '$lib/server/people';
+import { allPeople, avatarUrl, faceOf, personById } from '$lib/server/people';
 import { qrSvg } from '$lib/server/qr';
 import { closeWeek, currentWeek } from '$lib/server/weeks';
-import { closeRunoff, flashVote, openRunoff, tally } from '$lib/server/runoffs';
+import { closeRunoff, flashVote, latestDecidedRunoff, openRunoff, tally } from '$lib/server/runoffs';
+import { commentsOf } from '$lib/server/comments';
+import { seenCounts } from '$lib/server/seen';
+import { filmById } from '$lib/server/films';
 import { ruleFail } from '$lib/server/respond';
 
 function roomLink(code: string): string {
 	return `${origin().replace(/\/$/, '')}/f/${code}`;
+}
+
+// celebrate all evening; tomorrow the screen is a host screen again
+const WINNER_FRESH_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * The freshly decided night, for the celebration screen. closeRunoff hands the
+ * week straight to finish(), which opens the next round, so this has to come
+ * from the runoff row itself rather than the week status.
+ */
+function freshWinner(db: DB) {
+	const decided = latestDecidedRunoff(db);
+	if (!decided || Date.now() - new Date(decided.closed_at!).getTime() >= WINNER_FRESH_MS) {
+		return null;
+	}
+	const film = filmById(db, decided.winner_film_id!);
+	if (!film) return null;
+	const nominator = personById(db, film.added_by);
+	return {
+		film: {
+			id: film.id,
+			title: film.title,
+			year: film.year,
+			runtime: film.runtime,
+			posterUrl: film.poster_url,
+			overview: film.overview,
+			note: film.note
+		},
+		nominator: nominator ? { ...faceOf(nominator), xp: nominator.xp } : null,
+		comments: commentsOf(db, [film.id]).get(film.id) ?? [],
+		votes: tally(db, decided.id).find((row) => row.film.id === film.id)?.votes ?? 0,
+		seen: seenCounts(db, [film.id])[film.id] ?? 0
+	};
 }
 
 export const load: PageServerLoad = async () => {
@@ -45,6 +82,7 @@ export const load: PageServerLoad = async () => {
 					).n
 				}
 			: null,
+		winner: runoff ? null : freshWinner(db),
 		weekStatus: week?.status ?? null,
 		people: allPeople(db).map((p) => ({
 			id: p.id,

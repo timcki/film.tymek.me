@@ -93,6 +93,52 @@ describe('opening a database that predates the archive work', () => {
 		expect((db.prepare('SELECT COUNT(*) AS n FROM film').get() as { n: number }).n).toBe(2);
 	});
 
+	it('creates the film_comment table on a legacy database and keeps it usable', () => {
+		const db = legacyDb();
+		applySchema(db);
+		applySchema(db);
+		db.prepare(
+			`INSERT INTO film_comment (film_id, person_id, body, created_at) VALUES (1, 'piotr', 'brutal', ?)`
+		).run(AT);
+		expect(
+			(db.prepare('SELECT COUNT(*) AS n FROM film_comment').get() as { n: number }).n
+		).toBe(1);
+	});
+
+	it('creates the film_seen table on a legacy database and keeps one mark per person', () => {
+		const db = legacyDb();
+		applySchema(db);
+		applySchema(db);
+		db.prepare(
+			`INSERT INTO film_seen (film_id, person_id, created_at) VALUES (1, 'piotr', ?)`
+		).run(AT);
+		expect(() =>
+			db
+				.prepare(`INSERT INTO film_seen (film_id, person_id, created_at) VALUES (1, 'piotr', ?)`)
+				.run(AT)
+		).toThrow();
+	});
+
+	it('creates the comment_react table on a legacy database and keeps one feeling per person', () => {
+		const db = legacyDb();
+		applySchema(db);
+		applySchema(db);
+		db.prepare(
+			`INSERT INTO film_comment (film_id, person_id, body, created_at) VALUES (1, 'piotr', 'brutal', ?)`
+		).run(AT);
+		db.prepare(
+			`INSERT INTO comment_react (comment_id, person_id, emoji, created_at) VALUES (1, 'piotr', '💀', ?)`
+		).run(AT);
+		// the primary key keeps a repeat of the same feeling out
+		expect(() =>
+			db
+				.prepare(
+					`INSERT INTO comment_react (comment_id, person_id, emoji, created_at) VALUES (1, 'piotr', '💀', ?)`
+				)
+				.run(AT)
+		).toThrow();
+	});
+
 	it('leaves the live proposition on the list, rather than reading it as history', () => {
 		const db = legacyDb();
 		applySchema(db);

@@ -3,6 +3,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import Confetti from '$lib/components/Confetti.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import { dictFor } from '$lib/i18n';
 	import { say } from '$lib/toast.svelte';
@@ -14,6 +15,16 @@
 	const best = $derived(Math.max(0, ...(data.runoff?.tally ?? []).map((row) => row.votes)));
 
 	let castingFor = $state('');
+
+	// the reveal deserves one big burst, not one per poll
+	let celebrated = false;
+	let burst = $state(false);
+	$effect(() => {
+		if (data.winner && !celebrated) {
+			celebrated = true;
+			burst = true;
+		}
+	});
 
 	const submit: SubmitFunction = () => async ({ result, update }) => {
 		if (result.type === 'failure') {
@@ -99,10 +110,71 @@
 			<button class="bigbtn">{T.hostLock}</button>
 		</form>
 	</div>
+{:else if data.winner}
+	<div class="winshow">
+		<div class="sec">{T.hostWinnerH}</div>
+		<div class="wposter">
+			<Poster title={data.winner.film.title} url={data.winner.film.posterUrl} />
+		</div>
+		<h2>{data.winner.film.title}</h2>
+		<div class="wmeta">
+			{[
+				data.winner.film.year,
+				data.winner.film.runtime ? T.minutes(data.winner.film.runtime) : null,
+				T.votes(data.winner.votes),
+				data.winner.seen ? T.seenN(data.winner.seen) : null
+			]
+				.filter(Boolean)
+				.join(' · ')}
+		</div>
+
+		{#if data.winner.film.overview}
+			<p class="over">{data.winner.film.overview}</p>
+		{/if}
+
+		{#if data.winner.film.note && data.winner.nominator}
+			<div class="dnote">
+				“{data.winner.film.note}”<span class="sig">{T.noteSig(data.winner.nominator.name)}</span>
+			</div>
+		{/if}
+
+		{#if data.winner.comments.length}
+			<div class="cmts">
+				<div class="sec">{T.commentsH(data.winner.comments.length)}</div>
+				{#each data.winner.comments as comment (comment.id)}
+					<div class="cmt">
+						<Avatar
+							name={comment.name}
+							colour={comment.colour}
+							avatar={comment.avatar}
+							size={22}
+							font={9}
+							titled={false}
+							xp={comment.xp}
+							slim
+						/>
+						<div>
+							<div class="who">
+								<b>{comment.name}</b>
+								{#each comment.reacts as react (react.emoji)}
+									<span class="rmini">{react.emoji}{react.people.length}</span>
+								{/each}
+							</div>
+							<p>{comment.body}</p>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
 {:else}
 	<p class="banner">{T.hostIdle}</p>
 	<form method="POST" action="?/close" use:enhance={submit}>
 		<button class="bigbtn">{T.hostClose}</button>
 	</form>
 	<p class="hintline">{T.hostCloseNote}</p>
+{/if}
+
+{#if burst}
+	<Confetti count={120} duration={2400} onDone={() => (burst = false)} />
 {/if}

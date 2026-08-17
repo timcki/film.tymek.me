@@ -7,6 +7,7 @@
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import { dictFor, fmtScore, isVotes } from '$lib/i18n';
+	import { REACTIONS } from '$lib/reactions';
 	import { levelOf } from '$lib/levels';
 	import { say } from '$lib/toast.svelte';
 	import type { ActionData, PageData } from './$types';
@@ -137,6 +138,8 @@
 		below: boolean;
 		tap: boolean;
 	} | null>(null);
+	// hover preview of the thread; a click or tap opens the real modal instead
+	let cmtPop = $state<{ film: Film; x: number; y: number; below: boolean } | null>(null);
 	let closing: ReturnType<typeof setTimeout>;
 	// a mouse opens on hover and a finger on tap. A touchscreen laptop does both,
 	// so go by the pointer that actually arrived rather than what the screen can do
@@ -160,6 +163,7 @@
 		if (!(pill instanceof HTMLElement)) return;
 		notePop = null;
 		scorePop = null;
+		cmtPop = null;
 		peek = { face, sub, tap, ...anchorAt(pill, POP_W, POP_H) };
 	}
 
@@ -168,6 +172,7 @@
 		if (!(el instanceof HTMLElement) || !film.note) return;
 		peek = null;
 		scorePop = null;
+		cmtPop = null;
 		notePop = {
 			text: film.note,
 			sig: T.noteSig(film.addedByName),
@@ -183,6 +188,7 @@
 		if (!(el instanceof HTMLElement) || !film.overview) return;
 		peek = null;
 		scorePop = null;
+		cmtPop = null;
 		notePop = {
 			text: film.overview,
 			sig: '',
@@ -200,6 +206,7 @@
 		if (!film.weeklyPoints.length) return;
 		peek = null;
 		notePop = null;
+		cmtPop = null;
 		const rows = film.weeklyPoints.map((row) => {
 			const mult = rules.decayFactor ** (weekNow - row.week);
 			return { ...row, mult, contrib: row.points * mult };
@@ -207,11 +214,22 @@
 		scorePop = { rows, tap, ...anchorAt(el, NPOP_W, NPOP_H) };
 	}
 
+	/** the comment thread under the badge, read-only; the modal is for writing */
+	function cmtsAt(el: EventTarget | null, film: Film) {
+		clearTimeout(closing);
+		if (!(el instanceof HTMLElement)) return;
+		peek = null;
+		notePop = null;
+		scorePop = null;
+		cmtPop = { film, ...anchorAt(el, NPOP_W, NPOP_H) };
+	}
+
 	function unpeek() {
 		clearTimeout(closing);
 		peek = null;
 		notePop = null;
 		scorePop = null;
+		cmtPop = null;
 	}
 
 	// a beat of grace, so crossing the gap between two pills does not flicker
@@ -221,6 +239,7 @@
 			peek = null;
 			notePop = null;
 			scorePop = null;
+			cmtPop = null;
 		}, 80);
 	}
 
@@ -231,6 +250,8 @@
 	let searchOpen = $state(false);
 	// the +N fold opens every backer pill in a small modal; face popups stack on top
 	let backersOpenId = $state<number | null>(null);
+	// the badge on the poster opens the thread in a modal, for reading and writing
+	let commentsOpenId = $state<number | null>(null);
 
 	const detail = $derived(
 		detailId === null
@@ -241,6 +262,11 @@
 		backersOpenId === null
 			? null
 			: ([...data.films, ...data.archived].find((f) => f.id === backersOpenId) ?? null)
+	);
+	const commentsFilm = $derived(
+		commentsOpenId === null
+			? null
+			: ([...data.films, ...data.archived].find((f) => f.id === commentsOpenId) ?? null)
 	);
 	const anySheet = $derived(detail !== null || searchOpen);
 
@@ -321,7 +347,19 @@
 		if ('nominated' in form && form.nominated) say(T.tNominated(form.nominated));
 		if ('renominated' in form && form.renominated) say(T.tRenominated(form.renominated));
 		if ('noteSaved' in form && form.noteSaved) say(T.tNoteSaved);
+		if ('commented' in form && form.commented) say(T.tCommented);
 	});
+
+	let commentDraft = $state('');
+	// which comment's emoji picker is unfolded; one at a time is plenty
+	let pickerFor = $state<number | null>(null);
+
+	function commentDay(at: string): string {
+		return new Date(at).toLocaleDateString(data.lang === 'pl' ? 'pl-PL' : 'en-GB', {
+			day: 'numeric',
+			month: 'short'
+		});
+	}
 </script>
 
 {#snippet bkPill(backer: Film['backers'][number])}
@@ -357,6 +395,114 @@
 		/>
 		<b>{backer.points}</b>
 	</button>
+{/snippet}
+
+<!-- one thread, two homes: the detail sheet and the badge's modal -->
+{#snippet commentThread(film: { id: number; comments: Film['comments'] })}
+	<div class="cmts">
+		<div class="sec">{film.comments.length ? T.commentsH(film.comments.length) : T.commentNone}</div>
+		{#each film.comments as comment (comment.id)}
+			<div class="cmt">
+				<Avatar
+					name={comment.name}
+					colour={comment.colour}
+					avatar={comment.avatar}
+					size={22}
+					font={9}
+					titled={false}
+					xp={comment.xp}
+					slim
+				/>
+				<div class="cbody">
+					<div class="who">
+						<b>{comment.name}</b>
+						<time>{commentDay(comment.created_at)}</time>
+					</div>
+					<p>{comment.body}</p>
+					<div class="rrow">
+						{#each comment.reacts as react (react.emoji)}
+							<form method="POST" action="?/react" use:enhance={submit()}>
+								<input type="hidden" name="commentId" value={comment.id} />
+								<button
+									class="rchip"
+									class:mine={react.mine}
+									name="emoji"
+									value={react.emoji}
+									title={react.people.map((p) => p.name).join(', ')}
+								>
+									<span class="remoji">{react.emoji}</span>
+									<span class="rfaces">
+										{#each react.people.slice(0, 3) as person (person.id)}
+											<Avatar
+												name={person.name}
+												colour={person.colour}
+												avatar={person.avatar}
+												size={14}
+												font={7}
+												titled={false}
+											/>
+										{/each}
+									</span>
+									{#if react.people.length > 3}<b>+{react.people.length - 3}</b>{/if}
+								</button>
+							</form>
+						{/each}
+						<button
+							class="rchip radd"
+							type="button"
+							aria-label={T.reactAdd}
+							onclick={() => (pickerFor = pickerFor === comment.id ? null : comment.id)}
+						>
+							🍿<span class="plus">+</span>
+						</button>
+					</div>
+					{#if pickerFor === comment.id}
+						<form
+							class="rpick"
+							method="POST"
+							action="?/react"
+							use:enhance={submit(() => (pickerFor = null))}
+						>
+							<input type="hidden" name="commentId" value={comment.id} />
+							{#each REACTIONS as emoji (emoji)}
+								<button name="emoji" value={emoji}>{emoji}</button>
+							{/each}
+						</form>
+					{/if}
+				</div>
+			</div>
+		{/each}
+		<form
+			class="cwrite"
+			method="POST"
+			action="?/comment"
+			use:enhance={submit(() => (commentDraft = ''))}
+		>
+			<input type="hidden" name="filmId" value={film.id} />
+			<textarea
+				class="nin"
+				name="body"
+				rows="2"
+				maxlength="280"
+				placeholder={T.commentPh}
+				bind:value={commentDraft}
+			></textarea>
+			<button class="csend" aria-label={T.commentSend} disabled={!commentDraft.trim()}>
+				<svg
+					viewBox="0 0 24 24"
+					width="14"
+					height="14"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<path d="M12 19V5M5 12l7-7 7 7" />
+				</svg>
+			</button>
+		</form>
+	</div>
 {/snippet}
 
 {#snippet backerRow(film: Film)}
@@ -569,6 +715,37 @@
 					slim
 				/>
 			</button>
+			<!-- the thread lives behind the poster corner: a hover peeks at it, a
+			     click or tap opens the modal where it can be read and joined. The
+			     pill stays visible at zero comments, as the invitation -->
+			<button
+				class="cbadge"
+				type="button"
+				aria-label={film.comments.length ? T.commentsH(film.comments.length) : T.commentNone}
+				onpointerenter={(event) => {
+					mousing = event.pointerType === 'mouse';
+					if (mousing) cmtsAt(event.currentTarget, film);
+				}}
+				onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+				onclick={() => {
+					unpeek();
+					commentsOpenId = film.id;
+				}}
+			>
+				<svg
+					viewBox="0 0 24 24"
+					width="9"
+					height="9"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+				</svg>
+				{#if film.comments.length}{film.comments.length}{/if}
+			</button>
 		</div>
 		<div class="b">
 			<div class="hd">
@@ -578,9 +755,13 @@
 					     sheet's business -->
 					<div class="ttl">
 						{film.title}
-						{#if film.year || film.runtime}
+						{#if film.year || film.runtime || film.seen.length}
 							<span class="mm">
-								{[film.year, film.runtime ? T.minutes(film.runtime) : null]
+								{[
+									film.year,
+									film.runtime ? T.minutes(film.runtime) : null,
+									film.seen.length ? T.seenN(film.seen.length) : null
+								]
 									.filter(Boolean)
 									.join(' · ')}
 							</span>
@@ -824,7 +1005,21 @@
 							: T.dNobody}
 					</b>
 				</div>
+				<div class="fact">
+					<span>{T.dSeen}</span>
+					<b>{detail.seen.length ? detail.seen.map((s) => s.name).join(', ') : T.dNobody}</b>
+				</div>
 			</div>
+
+			<!-- owning up to a rewatch is a toggle, so a misclick is not a confession -->
+			<form class="seenrow" method="POST" action="?/seen" use:enhance={submit()}>
+				<input type="hidden" name="filmId" value={detail.id} />
+				<button class="tap" class:on={detail.seenMine}>
+					{detail.seenMine ? `✓ ${T.seenBtn}` : T.seenBtn}
+				</button>
+			</form>
+
+			{@render commentThread(detail)}
 
 			<div class="spendbar">
 				<div class="lab">
@@ -948,6 +1143,52 @@
 	</div>
 {/if}
 
+{#if cmtPop}
+	<!-- hover-only preview: the last few voices, newest at the bottom -->
+	<div class="bkpop cmpop" class:below={cmtPop.below} style="left:{cmtPop.x}px;top:{cmtPop.y}px" role="tooltip">
+		{#if cmtPop.film.comments.length}
+			{#if cmtPop.film.comments.length > 3}
+				<span class="sig">{T.commentMore(cmtPop.film.comments.length - 3)}</span>
+			{/if}
+			{#each cmtPop.film.comments.slice(-3) as comment (comment.id)}
+				<div class="cmt">
+					<Avatar
+						name={comment.name}
+						colour={comment.colour}
+						avatar={comment.avatar}
+						size={18}
+						font={8}
+						titled={false}
+						xp={comment.xp}
+						slim
+					/>
+					<div>
+						<div class="who">
+							<b>{comment.name}</b>
+							<time>{commentDay(comment.created_at)}</time>
+							{#each comment.reacts as react (react.emoji)}
+								<span class="rmini">{react.emoji}{react.people.length}</span>
+							{/each}
+						</div>
+						<p>{comment.body}</p>
+					</div>
+				</div>
+			{/each}
+		{:else}
+			<span>{T.commentNone}</span>
+		{/if}
+	</div>
+{/if}
+
+{#if commentsFilm}
+	<button class="bkm-backdrop" aria-label={T.close} onclick={() => (commentsOpenId = null)}
+	></button>
+	<div class="bkmodal cmodal" role="dialog" aria-label={commentsFilm.title}>
+		<h3>{commentsFilm.title}</h3>
+		{@render commentThread(commentsFilm)}
+	</div>
+{/if}
+
 {#if backersFilm}
 	<!-- everyone with points on the film; each pill opens the usual face popup
 	     above this modal (the popup layers sit higher on purpose) -->
@@ -995,6 +1236,7 @@
 		if (event.key !== 'Escape') return;
 		unpeek();
 		backersOpenId = null;
+		commentsOpenId = null;
 	}}
 	onpointerdown={disarmElsewhere}
 />

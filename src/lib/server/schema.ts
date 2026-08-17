@@ -157,6 +157,33 @@ CREATE TABLE IF NOT EXISTS rules_change (
   week_number INTEGER NOT NULL REFERENCES week(number),
   created_at  TEXT NOT NULL
 );
+
+-- anyone's two cents on a suggestion; permanent, unlike the nominator's note
+CREATE TABLE IF NOT EXISTS film_comment (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  film_id    INTEGER NOT NULL REFERENCES film(id),
+  person_id  TEXT    NOT NULL REFERENCES person(id),
+  body       TEXT    NOT NULL,
+  created_at TEXT    NOT NULL
+);
+CREATE INDEX IF NOT EXISTS film_comment_film ON film_comment(film_id);
+
+-- who has already seen a film, so a pick's rewatch factor is out in the open
+CREATE TABLE IF NOT EXISTS film_seen (
+  film_id    INTEGER NOT NULL REFERENCES film(id),
+  person_id  TEXT    NOT NULL REFERENCES person(id),
+  created_at TEXT    NOT NULL,
+  PRIMARY KEY (film_id, person_id)
+);
+
+-- who felt what about a comment; one of each feeling per person, retractable
+CREATE TABLE IF NOT EXISTS comment_react (
+  comment_id INTEGER NOT NULL REFERENCES film_comment(id),
+  person_id  TEXT    NOT NULL REFERENCES person(id),
+  emoji      TEXT    NOT NULL,
+  created_at TEXT    NOT NULL,
+  PRIMARY KEY (comment_id, person_id, emoji)
+);
 `;
 
 /**

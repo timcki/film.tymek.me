@@ -443,8 +443,11 @@ point is that being in the room is the credential.
 - If for some reason no name is picked (a seventh person, a guest), `voter_key` is the
   `fn_device` uuid and `person_id` is null.
 
-One row per `(runoff_id, voter_key)`; voting again **replaces** your choice until the
-runoff closes. Show a live tally to everyone on the page.
+One row per `(runoff_id, voter_key)`; ~~voting again **replaces** your choice until the
+runoff closes~~ **Revised, August 2026.** the first vote is **final**. The card arms on
+the first tap and commits on the second, so the finality is warned about; a repeat tap on
+the same film is an idempotent no-op, a different film is rejected (`vote_locked`). Show a
+live tally to everyone on the page.
 
 Flash votes are written to `runoff_ballot` and **never** to `ballot`. They do not touch
 scores, banks, or attrition. This is the single most important invariant in the runoff:
@@ -745,7 +748,7 @@ of done.
 **Runoff**
 24. A tie at the top creates a runoff and leaves the week `status='runoff'`.
 25. Flash votes never appear in `ballot` and never change any film's score.
-26. One flash vote per `voter_key`; voting again replaces it.
+26. One flash vote per `voter_key`; the first is final, a same-film repeat is a no-op.
 27. Zero flash votes → the oldest tied film wins.
 28. A tied flash vote → the oldest tied film wins.
 29. Closing the runoff finishes the week and opens the next one.
@@ -839,7 +842,10 @@ Steps 1–4 are a working system for six people. Everything after is comfort.
   not influence. Ideas that would convert presence into voting power (the underdog
   point, level perks) wait in `FUTURE_IDEAS.md` behind that same caution.
 - Attendance rewards that touch the economy. See above.
-- Comments, ratings, or a chat. There's a group chat already.
+- ~~Comments, ratings, or a chat. There's a group chat already.~~ **Revised, August
+  2026.** Comments on a suggestion landed after all (`film_comment`): members only,
+  permanent, shown in the film's detail sheet and on the host's winner screen. Ratings
+  and a chat remain out; there's a group chat already.
 - Undo of a watched film. If you watched the wrong thing, edit the database.
 
 ---
