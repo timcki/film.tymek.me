@@ -51,7 +51,6 @@
 				armed = null;
 				lockedFilm = voted ?? null;
 				burst = true;
-				say(T.tLockedIn(title));
 			}
 			await update({ reset: false });
 		};
@@ -146,7 +145,7 @@
 			</button>
 		</form>
 	{/each}
-	<p class="hintline">{locked ? T.roomLockedNote : T.roomFinal}</p>
+	{#if !locked}<p class="hintline">{T.roomFinal}</p>{/if}
 {/if}
 
 {#if burst}

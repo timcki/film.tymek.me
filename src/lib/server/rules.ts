@@ -85,10 +85,11 @@ export const RULE_SETS: Record<RuleSetId, RuleSet> = {
 		banking: false,
 		bankCap: 0,
 		scoring: 'fade',
-		decayFactor: 0.75,
+		// a vote halves every week: last week matters, a month ago is dust
+		decayFactor: 0.5,
 		attrition: { kind: 'drop', afterWeeksWithoutPoints: 2 },
 		nominationsPerWeek: 1,
-		shortlistSize: 3,
+		shortlistSize: 5,
 		voteGraceSeconds: 30
 	}
 };

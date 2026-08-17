@@ -218,11 +218,10 @@ export type Dict = {
 	roomCheckedIn: string;
 	roomFinal: string;
 	roomArm: string;
-	roomLockedNote: string;
 	roomDecided: string;
 	roomWinner: string;
 	votes: (n: number) => string;
-	turnout: (n: number) => string;
+	turnoutWord: (n: number) => string;
 
 	commentsH: (n: number) => string;
 	commentMore: (n: number) => string;
@@ -237,7 +236,6 @@ export type Dict = {
 	tVoted: (title: string) => string;
 	tUnvoted: string;
 	tNoteSaved: string;
-	tLockedIn: (title: string) => string;
 	tCommented: string;
 	tRenominated: (title: string) => string;
 	tRevived: (title: string) => string;
@@ -503,11 +501,10 @@ const pl: Dict = {
 	roomCheckedIn: 'obecność zapisana ✓',
 	roomFinal: 'Jeden głos na wieczór. Co zaklepane, to zaklepane.',
 	roomArm: 'Dotknij jeszcze raz, żeby zaklepać',
-	roomLockedNote: 'Twój głos oddany. Reszta należy do sali.',
 	roomDecided: 'Dzisiejszy wieczór rozstrzygnięty.',
 	roomWinner: 'wygrywa',
 	votes: (n) => `${n} ${plVotes(n)}`,
-	turnout: (n) => `${n} ${pl3(n, 'osoba zagłosowała', 'osoby zagłosowały', 'osób zagłosowało')}`,
+	turnoutWord: (n) => pl3(n, 'osoba zagłosowała', 'osoby zagłosowały', 'osób zagłosowało'),
 
 	commentsH: (n) => `${n} ${pl3(n, 'komentarz', 'komentarze', 'komentarzy')}`,
 	commentNone: 'Nikt jeszcze nic nie napisał.',
@@ -522,7 +519,6 @@ const pl: Dict = {
 	tVoted: (title) => `Głos na: ${title}`,
 	tUnvoted: 'Głos wycofany',
 	tNoteSaved: 'Notka zapisana',
-	tLockedIn: (title) => `Zaklepane: ${title}`,
 	tCommented: 'Komentarz dodany',
 	tRenominated: (title) => `Zgłoszono ponownie: ${title}, start od zera`,
 	tRevived: (title) => `${title} wraca na listę`,
@@ -840,11 +836,10 @@ const en: Dict = {
 	roomCheckedIn: 'checked in ✓',
 	roomFinal: 'One vote for the night. Locked in is locked in.',
 	roomArm: 'Tap again to lock it in',
-	roomLockedNote: 'Your vote is in. The rest is up to the room.',
 	roomDecided: 'Tonight is decided.',
 	roomWinner: 'winner',
 	votes: (n) => `${n} ${en2(n, 'vote', 'votes')}`,
-	turnout: (n) => `${n} ${en2(n, 'person', 'people')} voted`,
+	turnoutWord: (n) => `${en2(n, 'person', 'people')} voted`,
 
 	commentsH: (n) => `${n} ${en2(n, 'comment', 'comments')}`,
 	commentNone: 'Nobody has said anything yet.',
@@ -859,7 +854,6 @@ const en: Dict = {
 	tVoted: (title) => `Voted for ${title}`,
 	tUnvoted: 'Vote pulled back',
 	tNoteSaved: 'Note saved',
-	tLockedIn: (title) => `Locked in: ${title}`,
 	tCommented: 'Comment added',
 	tRenominated: (title) => `Re-nominated ${title}, starting from zero`,
 	tRevived: (title) => `${title} is back on the list`,

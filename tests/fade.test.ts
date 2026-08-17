@@ -18,6 +18,8 @@ function roomPicks(db: DB, rules: RuleSet, winnerId: number): void {
 }
 
 const weekly = RULE_SETS.weekly;
+// the constant under test lives in the rule set, so a retuning is not a rewrite
+const f = weekly.decayFactor;
 
 describe('fade scoring', () => {
 	it('discounts each past week geometrically', () => {
@@ -25,10 +27,10 @@ describe('fade scoring', () => {
 			[1, 4],
 			[3, 2]
 		]);
-		// 4 * 0.75^2 + 2 * 0.75^0
-		expect(score(weekly, points, 3)).toBeCloseTo(4 * 0.5625 + 2);
-		// the same ballots viewed a week later are worth 0.75 times as much
-		expect(score(weekly, points, 4)).toBeCloseTo((4 * 0.5625 + 2) * 0.75);
+		// 4 * f^2 + 2 * f^0
+		expect(score(weekly, points, 3)).toBeCloseTo(4 * f ** 2 + 2);
+		// the same ballots viewed a week later are worth f times as much
+		expect(score(weekly, points, 4)).toBeCloseTo((4 * f ** 2 + 2) * f);
 	});
 
 	it('counts an unfed film at full value in its own week', () => {
@@ -50,7 +52,7 @@ describe('fade scoring', () => {
 		castBallot(db, 2, 'bartek', film, 1);
 
 		rescoreAll(db, rules, 3);
-		expect(filmById(db, film)!.score).toBeCloseTo(2 * 0.5625 + 1 * 0.75);
+		expect(filmById(db, film)!.score).toBeCloseTo(2 * f ** 2 + 1 * f);
 	});
 });
 
@@ -65,10 +67,10 @@ describe('a room pass-over costs nothing', () => {
 
 		roomPicks(db, rules, winner);
 
-		// week 2 is open; the 4 points from week 1 are now worth 0.75 each
+		// week 2 is open; the 4 points from week 1 have faded a step
 		const kept = filmById(db, loser)!;
 		expect(kept.status).toBe('active');
-		expect(kept.score).toBeCloseTo(4 * 0.75);
+		expect(kept.score).toBeCloseTo(4 * f);
 	});
 
 	it('leaves every ballot row exactly as it was', () => {
@@ -99,6 +101,6 @@ describe('a room pass-over costs nothing', () => {
 		castBallot(db, 2, 'celina', later, 1);
 		roomPicks(db, rules, later);
 		expect(filmById(db, first)!.final_score).toBe(2);
-		expect(filmById(db, later)!.final_score).toBeCloseTo(2 * 0.75 + 1);
+		expect(filmById(db, later)!.final_score).toBeCloseTo(2 * f + 1);
 	});
 });

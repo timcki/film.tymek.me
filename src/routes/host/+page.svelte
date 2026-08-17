@@ -72,8 +72,10 @@
 			{/each}
 		</div>
 
-		<div style="font-size:12px;color:var(--dimmer);margin-top:14px">
-			{T.turnout(data.runoff.turnout)}
+		<!-- the room filling up, big enough to read from the sofa -->
+		<div class="turnout">
+			<b>{data.runoff.turnout}</b>
+			<span>{T.turnoutWord(data.runoff.turnout)}</span>
 		</div>
 
 		<div class="sec">{T.hostCastH}</div>

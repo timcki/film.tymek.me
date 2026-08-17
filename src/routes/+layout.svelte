@@ -66,7 +66,8 @@
 {#if bare}
 	<div class="wrap">{@render children()}</div>
 {:else}
-	<div class="wrap">
+	<!-- the host view is a projector or a laptop, never a phone; let it breathe -->
+	<div class="wrap" class:wide={path.startsWith('/host')}>
 		<header>
 			<div>
 				<h1>{title}</h1>
