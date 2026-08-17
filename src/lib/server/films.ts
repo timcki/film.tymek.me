@@ -7,6 +7,7 @@ import { orderFilms, titleKey } from './rules.js';
 import { iso } from './time.js';
 import { avatarUrl, bankBalance, spentInWeek } from './people.js';
 import { campaignWeeks, pointsInWindow, rescoreAll, totalPoints } from './scoring.js';
+import { heldIn, holdOf, liftHold, placeHold } from './holds.js';
 import { rexpAll } from './xp.js';
 import { requireOpenWeek } from './weeks.js';
 
@@ -107,8 +108,10 @@ export function standings(
 		 GROUP BY week_number HAVING points > 0
 		 ORDER BY week_number DESC`
 	);
+	const held = heldIn(db, currentWeek);
 	const enriched = films.map((film) => {
 		const nom = people.get(film.added_by);
+		const hold = held.get(film.id);
 		return {
 			...film,
 			backers: backersOf(db, rules, film.id, currentWeek),
@@ -125,7 +128,14 @@ export function standings(
 				xp: nom?.xp ?? 0
 			},
 			campaignWeeks: campaignWeeks(db, film.id, currentWeek),
-			atRisk: isAtRisk(db, rules, film, currentWeek)
+			atRisk: isAtRisk(db, rules, film, currentWeek),
+			held: hold
+				? {
+						personId: hold.person_id,
+						name: people.get(hold.person_id)?.name ?? hold.person_id,
+						reason: hold.reason
+					}
+				: null
 		};
 	});
 	return orderFilms(enriched);
@@ -304,6 +314,59 @@ export function renominate(db: DB, rules: RuleSet, personId: string, filmId: num
 		rescoreAll(db, rules, week.number);
 		rexpAll(db);
 		return id;
+	});
+}
+
+/**
+ * §3.5: only the nominator holds a film back, and only while it is on the list.
+ * An admin acting on somebody's behalf passes that person's id, so the row still
+ * says whose hold was spent; the audit trail says who pressed the button.
+ */
+function assertHoldable(db: DB, personId: string, filmId: number): Film {
+	const film = filmById(db, filmId);
+	if (!film) throw new RuleError('no_film', 'no such film');
+	if (film.added_by !== personId) {
+		throw new RuleError('not_your_film', 'only the person who nominated it can hold it back');
+	}
+	if (film.archival || film.status !== 'active') {
+		throw new RuleError('hold_not_active', `${film.title} is not on the list`, { title: film.title });
+	}
+	return film;
+}
+
+/**
+ * §3.5. The film sits this round out: it keeps its score, fades like everything
+ * else and stays exposed to attrition, it simply is not a candidate on the night
+ * and the film below it takes the slot. One per person per round, revocable
+ * until the round closes.
+ */
+export function holdFilm(
+	db: DB,
+	personId: string,
+	filmId: number,
+	reason: string | null = null,
+	now: Date = new Date()
+): void {
+	immediate(db, () => {
+		const week = requireOpenWeek(db, now);
+		assertHoldable(db, personId, filmId);
+		const spent = holdOf(db, week.number, personId);
+		if (spent && spent.film_id !== filmId) {
+			const other = filmById(db, spent.film_id);
+			throw new RuleError('hold_taken', `you are already holding ${other?.title ?? 'a film'} back`, {
+				title: other?.title ?? ''
+			});
+		}
+		placeHold(db, week.number, filmId, personId, cleanNote(reason), now);
+	});
+}
+
+/** back into play; free while the round is open, because it only ever adds a candidate */
+export function releaseFilm(db: DB, personId: string, filmId: number, now: Date = new Date()): void {
+	immediate(db, () => {
+		const week = requireOpenWeek(db, now);
+		assertHoldable(db, personId, filmId);
+		liftHold(db, week.number, filmId);
 	});
 }
 

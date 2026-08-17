@@ -121,6 +121,20 @@
 						<button class="tap">{A.filReassign}</button>
 					</form>
 
+					<!-- the group-chat ask, pressed on the absentee's behalf -->
+					{#if film.status === 'active'}
+						<form method="POST" action="?/hold" use:enhance={submit()}>
+							<input type="hidden" name="id" value={film.id} />
+							{#if data.held.includes(film.id)}
+								<button class="tap on">{A.filRelease}</button>
+							{:else}
+								<input type="text" name="reason" placeholder={A.filHoldWhy} maxlength="160" />
+								<input type="hidden" name="on" value="1" />
+								<button class="tap">{A.filHold}</button>
+							{/if}
+						</form>
+					{/if}
+
 					{#if film.ballots === 0}
 						<form method="POST" action="?/remove" use:enhance={submit()}>
 							<input type="hidden" name="id" value={film.id} />

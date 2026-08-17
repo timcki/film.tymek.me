@@ -120,6 +120,8 @@ export type Standing = Film & {
 	campaignWeeks: number;
 	/** true when this film is one pointless week away from attrition */
 	atRisk: boolean;
+	/** §3.5: set while the film sits this round out at its nominator's request */
+	held: { personId: string; name: string; reason: string | null } | null;
 };
 
 export type ErrorParams = Record<string, string | number>;

@@ -44,6 +44,30 @@ export const CHANGELOG: ChangelogEntry[] = [
 				'PS: proposals and ideas for better titles, other frame colours, the voting interface and so on are very welcome (:'
 			]
 		}
+	},
+	{
+		id: 2,
+		date: '2026-08-17',
+		title: {
+			pl: 'Twój film może poczekać tydzień, jeśli ciebie nie będzie',
+			en: 'Your film can wait a week if you cannot make it'
+		},
+		body: {
+			pl: [
+				'Nie będzie cię na wieczorku, a twój film jest wysoko? Otwórz go (kliknij plakat) i daj „Niech poczeka tydzień”. Nie pójdzie wtedy pod głosowanie w sali, a jego miejsce zajmie kolejny film z listy.',
+				'Jeden film na tydzień i tylko taki, który sam zgłosiłeś. Cofnąć możesz do samego zamknięcia głosowania.',
+				'Punkty na nim tracą wartość tak samo jak wszędzie indziej, więc czekanie kosztuje: wracasz za tydzień z połową przewagi.',
+				'Wszyscy to widzą od razu (💤 na karcie), żeby zdążyli przerzucić głosy gdzie indziej. Możesz dopisać powód, wtedy nie trzeba już pisać na grupie.',
+				'Jeśli akurat wszystkie filmy z czołówki poczekają, to nie czeka żaden: sala i tak dostaje swój wieczór.'
+			],
+			en: [
+				'Not coming to the night and your film is riding high? Open it (tap the poster) and hit "Hold it a week". It stays out of the room vote and the next film on the list takes its place.',
+				'One film a week, and only one you nominated yourself. You can undo it right up to the close.',
+				'Its points fade exactly as they would anywhere else, so waiting costs you: you come back next week with half the lead.',
+				'Everyone sees it the moment it happens (💤 on the card), so there is time to put votes somewhere else. You can add a reason, which saves writing to the group chat.',
+				'If every leading film ends up waiting, none of them does: the room gets its night regardless.'
+			]
+		}
 	}
 ];
 

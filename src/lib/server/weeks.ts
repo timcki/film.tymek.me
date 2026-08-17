@@ -5,6 +5,7 @@ import { RuleError } from './types.js';
 import type { RuleSet } from './rules.js';
 import { accrue, orderFilms } from './rules.js';
 import { iso } from './time.js';
+import { heldIn, ignoreHolds } from './holds.js';
 import { markNightUsed, nextNight } from './schedule.js';
 import { pointsInWindow, rescoreAll, totalPoints } from './scoring.js';
 import { rexpAll } from './xp.js';
@@ -176,7 +177,14 @@ export function closeWeek(db: DB, rules: RuleSet, now: Date = new Date()): Close
 		// points decide who the candidates are; the room decides which one we watch.
 		// Even a lone candidate goes to the room: the code on the screen doubles as
 		// the attendance sheet, and letting the runoff expire confirms the film
-		const shortlist = ranked.filter((f) => f.score > 0).slice(0, rules.shortlistSize);
+		const candidates = ranked.filter((f) => f.score > 0);
+		// §3.5: a film whose nominator asked it to wait is not a candidate tonight,
+		// and the film under it moves up. Where every candidate stepped aside none
+		// of them does: the room still gets a night and no hold is spent on it
+		const held = heldIn(db, week.number);
+		const awake = candidates.filter((f) => !held.has(f.id));
+		if (!awake.length) ignoreHolds(db, week.number);
+		const shortlist = (awake.length ? awake : candidates).slice(0, rules.shortlistSize);
 		const code = uniqueCode(db);
 		const result = db
 			.prepare(

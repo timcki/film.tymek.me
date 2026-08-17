@@ -31,7 +31,8 @@ tests). `npm run check` typechecks.
 | `src/lib/server/scoring.ts` | scores derived from the ballot table; `rescoreAll()` |
 | `src/lib/server/weeks.ts` | `closeWeek`, attrition, bank accrual, `finish` |
 | `src/lib/server/runoffs.ts` | flash votes, tally, `closeRunoff` |
-| `src/lib/server/films.ts` | `setPoints` with the 30 s grace window, `nominate`, standings |
+| `src/lib/server/films.ts` | `setPoints` with the 30 s grace window, `nominate`, standings, `holdFilm` |
+| `src/lib/server/holds.ts` | the `film_hold` table: a film sitting one round out (§3.5) |
 | `src/lib/server/attendance.ts` | check-in behind the room code, `attendedWeeks` |
 | `src/lib/server/xp.ts` | XP derived from the tables; `rexpAll()` cache rebuild |
 | `src/lib/levels.ts` | the XP ladder thresholds, shared with the client |

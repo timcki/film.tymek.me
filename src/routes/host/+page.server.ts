@@ -8,6 +8,7 @@ import { qrSvg } from '$lib/server/qr';
 import { closeWeek, currentWeek } from '$lib/server/weeks';
 import { closeRunoff, flashVote, latestDecidedRunoff, openRunoff, tally } from '$lib/server/runoffs';
 import { commentsOf } from '$lib/server/comments';
+import { heldIn } from '$lib/server/holds';
 import { seenCounts } from '$lib/server/seen';
 import { filmById } from '$lib/server/films';
 import { ruleFail } from '$lib/server/respond';
@@ -69,7 +70,18 @@ export const load: PageServerLoad = async () => {
 
 	const rows = runoff ? tally(db, runoff.id) : [];
 
+	// §3.5: before the close it tells the host what will not be on the screen,
+	// after it, why the obvious leader is missing from the shortlist
+	const held = week
+		? [...heldIn(db, week.number).values()].flatMap((hold) => {
+				const film = filmById(db, hold.film_id);
+				const who = personById(db, hold.person_id);
+				return film ? [{ title: film.title, name: who?.name ?? hold.person_id }] : [];
+			})
+		: [];
+
 	return {
+		held,
 		runoff: runoff
 			? {
 					code: runoff.code,

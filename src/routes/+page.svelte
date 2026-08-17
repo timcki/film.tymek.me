@@ -21,6 +21,17 @@
 	const open = $derived(data.week?.status === 'open');
 	const nominated = $derived(data.nominatedThisWeek);
 
+	/* ----------------------------------------------------------- shortlist -- */
+
+	const shortlist = $derived(new Set(data.shortlistIds));
+	// a held film keeps its place in the ranking, so the band is no longer a
+	// prefix: the divider goes under the last candidate, however far down it sits
+	const restStart = $derived(
+		shortlist.size ? data.films.findLastIndex((film) => shortlist.has(film.id)) + 1 : -1
+	);
+	// the film already spending the viewer's one hold, for the sheet's refusal
+	const heldTitle = $derived(data.films.find((film) => film.id === data.myHold)?.title ?? '');
+
 	/* -------------------------------------------------------- vote finality -- */
 
 	// drives the undo countdowns; 250 ms keeps the seconds display honest
@@ -200,6 +211,35 @@
 		};
 	}
 
+	/** why a film is sitting this one out, in the words of whoever asked */
+	function holdAt(el: EventTarget | null, film: Film, tap: boolean) {
+		clearTimeout(closing);
+		if (!(el instanceof HTMLElement) || !film.held?.reason) return;
+		peek = null;
+		scorePop = null;
+		cmtPop = null;
+		notePop = {
+			text: film.held.reason,
+			sig: T.holdSig(film.held.name),
+			quoted: true,
+			tap,
+			...anchorAt(el, NPOP_W, NPOP_H)
+		};
+	}
+
+	/**
+	 * §3.5: yours, still on the list, and your one hold for the round is either
+	 * unspent or already spent on this very film.
+	 */
+	function canHold(film: Film): boolean {
+		return (
+			open &&
+			film.added_by === data.person?.id &&
+			film.status === 'active' &&
+			(data.myHold === null || data.myHold === film.id)
+		);
+	}
+
 	/** the fade arithmetic behind a score, one row per week with points */
 	function scoreAt(el: EventTarget | null, film: Film, tap: boolean) {
 		clearTimeout(closing);
@@ -350,6 +390,8 @@
 		if ('renominated' in form && form.renominated) say(T.tRenominated(form.renominated));
 		if ('noteSaved' in form && form.noteSaved) say(T.tNoteSaved);
 		if ('commented' in form && form.commented) say(T.tCommented);
+		if ('held' in form && form.held) say(T.tHeld(form.held));
+		if ('released' in form && form.released) say(T.tReleased(form.released));
 	});
 
 	let commentDraft = $state('');
@@ -666,7 +708,13 @@
 {/snippet}
 
 {#snippet row(film: Film, lead: boolean, shelf: boolean)}
-	<div class="film" class:lead class:fading={film.atRisk && !shelf} class:shelf>
+	<div
+		class="film"
+		class:lead
+		class:fading={film.atRisk && !shelf}
+		class:shelf
+		class:held={Boolean(film.held)}
+	>
 		<div class="pw">
 			<button
 				class="p"
@@ -824,6 +872,36 @@
 						: T.warnDrops}
 				</span>
 			{/if}
+			<!-- §3.5. A film stepping aside is public the instant it happens, which
+			     is half the point: there is still time to put votes elsewhere. On
+			     your own candidate the chip is the one tap that does it; the reason
+			     goes on afterwards, in the sheet -->
+			{#if film.held}
+				{@const mine = film.held.personId === data.person?.id}
+				{#if film.held.reason}
+					<button
+						class="holdchip"
+						type="button"
+						onpointerenter={(event) => {
+							mousing = event.pointerType === 'mouse';
+							if (mousing) holdAt(event.currentTarget, film, false);
+						}}
+						onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+						onclick={(event) => !mousing && holdAt(event.currentTarget, film, true)}
+						onblur={unpeek}
+					>
+						💤 {mine ? T.holdMine : T.holdBy(film.held.name)}
+					</button>
+				{:else}
+					<span class="holdchip">💤 {mine ? T.holdMine : T.holdBy(film.held.name)}</span>
+				{/if}
+			{:else if lead && canHold(film)}
+				<form method="POST" action="?/hold" use:enhance={submit()}>
+					<input type="hidden" name="filmId" value={film.id} />
+					<input type="hidden" name="title" value={film.title} />
+					<button class="holdchip act">💤 {T.holdCta}</button>
+				</form>
+			{/if}
 			<!-- the thread's pill: a hover peeks at it, a click or tap opens the
 			     modal where it can be read and joined -->
 			<button
@@ -883,10 +961,10 @@
 	     new seats instead of teleporting them -->
 	{#each data.films as film, i (film.id)}
 		<div class="fwrap" animate:flip={{ duration: flipMs }}>
-			{#if data.shortlistCount && i === data.shortlistCount}
+			{#if restStart > 0 && i === restStart}
 				<div class="rest-head">{T.restHead}</div>
 			{/if}
-			{@render row(film, i < data.shortlistCount, false)}
+			{@render row(film, shortlist.has(film.id), false)}
 		</div>
 	{:else}
 		<div class="empty">{T.listEmpty}</div>
@@ -1043,6 +1121,46 @@
 					{detail.seenMine ? `✓ ${T.seenBtn}` : T.seenBtn}
 				</button>
 			</form>
+
+			<!-- §3.5: the whole mechanic, on the one screen that belongs to a single
+			     film. The reason is optional and shared, because the ask it replaces
+			     used to land in the group chat -->
+			{#if open && detail.added_by === data.person?.id && detail.status === 'active'}
+				<div class="holdbox">
+					<div class="holdh">{T.holdH}</div>
+					{#if detail.held || data.myHold === null || data.myHold === detail.id}
+						<form method="POST" action="?/hold" use:enhance={submit()}>
+							<input type="hidden" name="filmId" value={detail.id} />
+							<input type="hidden" name="title" value={detail.title} />
+							<textarea
+								class="nin"
+								name="reason"
+								rows="2"
+								maxlength="160"
+								placeholder={T.holdWhyPh}
+								value={detail.held?.reason ?? ''}
+							></textarea>
+							<div class="cbtns">
+								{#if detail.held}
+									<button class="go">{T.holdSave}</button>
+								{:else}
+									<button class="go">💤 {T.holdBtn}</button>
+								{/if}
+							</div>
+						</form>
+						{#if detail.held}
+							<form method="POST" action="?/release" use:enhance={submit()}>
+								<input type="hidden" name="filmId" value={detail.id} />
+								<input type="hidden" name="title" value={detail.title} />
+								<button class="tap on">{T.holdRelease}</button>
+							</form>
+						{/if}
+					{:else}
+						<div class="holdhint">{T.holdSpent(heldTitle)}</div>
+					{/if}
+					<div class="holdhint">{T.holdHint(rules.shortlistSize)}</div>
+				</div>
+			{/if}
 
 			{@render commentThread(detail)}
 

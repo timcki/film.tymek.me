@@ -22,6 +22,16 @@ goes back to films the attendees might actually watch.
 Waits because decay may already handle it. Add only if a persistently fed film the room
 keeps rejecting squats in the top 3.
 
+## A cap on holding
+
+A limit on how often one person may hold a film back (§3.5) — say three per eight rounds,
+read off the rule set so the rules screen states it.
+
+Waits because the fade is already the cost: a held leader returns at half strength, and
+every hold is public with a name on it. Add only if somebody turns out to be holding a
+permanent unwatched number one. Not a "twice in a row" rule, which would punish exactly
+the honest case of being away two weeks running.
+
 ## Badges
 
 Cosmetic, derived entirely from existing tables, therefore retroactive for free.

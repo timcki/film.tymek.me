@@ -176,6 +176,26 @@ CREATE TABLE IF NOT EXISTS film_seen (
   PRIMARY KEY (film_id, person_id)
 );
 
+-- §3.5: a film its nominator has asked the room to skip for one round. It keeps
+-- its score and fades like everything else; it simply is not a candidate on the
+-- night, and the film below it takes the slot. One per person per round, so
+-- stepping aside is a choice between your own films rather than a free veto
+CREATE TABLE IF NOT EXISTS film_hold (
+  week_number INTEGER NOT NULL REFERENCES week(number),
+  film_id     INTEGER NOT NULL REFERENCES film(id),
+  -- always the nominator, even when an admin placed it on their behalf: it is
+  -- their one hold for the round that is being spent
+  person_id   TEXT    NOT NULL REFERENCES person(id),
+  -- optional one-liner, the message that would otherwise go to the group chat
+  reason      TEXT,
+  -- 0 once a round has ignored it, because every candidate had stepped aside
+  applied     INTEGER NOT NULL DEFAULT 1,
+  created_at  TEXT    NOT NULL,
+  PRIMARY KEY (week_number, film_id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS film_hold_one_per_person
+  ON film_hold(week_number, person_id);
+
 -- who felt what about a comment; one of each feeling per person, retractable
 CREATE TABLE IF NOT EXISTS comment_react (
   comment_id INTEGER NOT NULL REFERENCES film_comment(id),

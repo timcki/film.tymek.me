@@ -45,6 +45,18 @@
 	});
 </script>
 
+<!-- §3.5: the room deserves to know why the obvious leader is not on the screen -->
+{#snippet heldNote()}
+	{#if data.held.length}
+		<div class="heldnote">
+			<b>{T.hostHeldH}</b>
+			{#each data.held as film (film.title)}
+				<span>💤 {film.title} · {film.name}</span>
+			{/each}
+		</div>
+	{/if}
+{/snippet}
+
 {#if data.runoff}
 	<div class="tk" style="padding-left:0;padding-right:0">
 
@@ -71,6 +83,8 @@
 				</div>
 			{/each}
 		</div>
+
+		{@render heldNote()}
 
 		<!-- the room filling up, big enough to read from the sofa -->
 		<div class="turnout">
@@ -173,6 +187,7 @@
 	</div>
 {:else}
 	<p class="banner">{T.hostIdle}</p>
+	{@render heldNote()}
 	<form method="POST" action="?/close" use:enhance={submit}>
 		<button class="bigbtn">{T.hostClose}</button>
 	</form>

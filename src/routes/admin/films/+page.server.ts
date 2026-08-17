@@ -10,6 +10,8 @@ import {
 	roundFilms,
 	setFilmStatus
 } from '$lib/server/manage';
+import { filmById, holdFilm, releaseFilm } from '$lib/server/films';
+import { heldIn } from '$lib/server/holds';
 import { allPeople } from '$lib/server/people';
 import { currentWeek } from '$lib/server/weeks';
 import { ruleFail } from '$lib/server/respond';
@@ -26,7 +28,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		films: roundFilms(db),
 		people: allPeople(db).map((p) => ({ id: p.id, name: p.name })),
 		weekNumber: week?.number ?? 1,
-		closesAt: week?.closes_at ?? null
+		closesAt: week?.closes_at ?? null,
+		held: week ? [...heldIn(db, week.number).keys()] : []
 	};
 };
 
@@ -100,6 +103,29 @@ export const actions: Actions = {
 		try {
 			reassignFilm(getDb(), id, to);
 			logAdmin(getDb(), person.id, 'film.reassign', String(id), to);
+			return { saved: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	/**
+	 * §3.5 on somebody's behalf: the ask usually arrives in the group chat from
+	 * whoever is not coming, and they may never open the site. The hold is still
+	 * theirs, spent from their one for the round; the audit row says who pressed.
+	 */
+	hold: async ({ request, locals }) => {
+		const person = requireAdmin(locals.person);
+		const form = await request.formData();
+		const id = Number(form.get('id'));
+		const on = form.get('on') !== null;
+		try {
+			const db = getDb();
+			const film = filmById(db, id);
+			if (!film) return ruleFail(new Error('no such film'));
+			if (on) holdFilm(db, film.added_by, id, (form.get('reason') as string) || null);
+			else releaseFilm(db, film.added_by, id);
+			logAdmin(db, person.id, on ? 'film.hold' : 'film.release', String(id), film.added_by);
 			return { saved: true };
 		} catch (error) {
 			return ruleFail(error);

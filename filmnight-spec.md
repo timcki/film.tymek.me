@@ -195,6 +195,37 @@ Evaluated once, during week close, **after** the winner has been removed.
   **Re-nominate** button, which creates a *new* film row starting from zero and consumes
   the re-nominator's nomination slot for that week.
 
+### 3.5 Holding a film back
+
+**Added August 2026.** Somebody who cannot make the night, and would rather the room did
+not watch their film without them, asks it to sit the round out. Until now that ask went
+to the group chat; this is the same ask, said in the app, where it can actually be acted
+on.
+
+- The **nominator** places the hold, on a film of theirs with status `active`, at any
+  point while the round is open. An admin may place or lift one on their behalf (§8.4),
+  because the ask usually arrives from someone who will not open the site; the row still
+  records the nominator, since it is their hold being spent.
+- **One per person per round.** Enforced by a unique index on
+  `film_hold(week_number, person_id)`, so it is a choice between your own films rather
+  than a free veto over the list.
+- **Revocable until the round closes.** Unlike a vote (§8.3) a hold can be lifted freely,
+  because lifting one only ever *adds* a candidate; nothing anyone else did is undone.
+- **The only effect is candidacy.** At close the held film is skipped when the shortlist
+  forms and the film below it takes the slot (§6.1). Score, fade, attrition, XP, backers
+  and history are untouched. A held leader comes back next round at half strength, and
+  that fade is the whole cost of holding.
+- **Where every candidate is held, none of them is.** The holds for that round are marked
+  `applied = 0` and the shortlist forms as though none had been placed, so the room can
+  never be handed an empty screen. The rows stay as a record of what was asked for.
+- **No cutoff.** A hold placed at 19:55 is legal, because "something came up tonight" is
+  the case the mechanic exists for. The cost is that points other people spent on the film
+  this round are stranded: votes are final, so they fade rather than return. This is why a
+  hold is public the instant it is placed — it is information the room can still act on.
+
+An optional reason of up to 160 characters rides along and is shown to everyone. It is the
+group-chat message; without somewhere to put it, people would still write it there.
+
 ---
 
 ## 4. Data model
@@ -288,6 +319,18 @@ CREATE TABLE runoff_ballot (
   created_at TEXT    NOT NULL,
   PRIMARY KEY (runoff_id, voter_key)
 );
+
+-- §3.5: a film its nominator has asked the room to skip for one round
+CREATE TABLE film_hold (
+  week_number INTEGER NOT NULL REFERENCES week(number),
+  film_id     INTEGER NOT NULL REFERENCES film(id),
+  person_id   TEXT    NOT NULL REFERENCES person(id),  -- always the nominator
+  reason      TEXT,                                    -- optional, shown to everyone
+  applied     INTEGER NOT NULL DEFAULT 1,              -- 0 once a round has ignored it
+  created_at  TEXT    NOT NULL,
+  PRIMARY KEY (week_number, film_id)
+);
+CREATE UNIQUE INDEX film_hold_one_per_person ON film_hold(week_number, person_id);
 
 -- §7.4: who was in the room on a given night
 CREATE TABLE attendance (
@@ -393,7 +436,12 @@ closeWeek(w):
       w.status = 'closed'; w.winner = null
       applyAttrition(w); accrueBanks(w); openWeek(w.number + 1)
       return
-  shortlist = standings.filter(f => f.score > 0).slice(0, rules.shortlistSize)
+  candidates = standings.filter(f => f.score > 0)
+  // §3.5: a film whose nominator asked it to wait is no candidate tonight, and the
+  // film under it moves up. Where every candidate stepped aside, none of them does
+  awake = candidates.filter(f => not held(w, f))
+  if awake is empty: mark every hold of w applied = 0
+  shortlist = (awake or candidates).slice(0, rules.shortlistSize)
   // every decided night goes to the room, even a lone candidate: the code on
   // the screen doubles as the attendance sheet, and letting the runoff expire
   // confirms the film
@@ -501,7 +549,7 @@ src/routes/
   +layout.server.ts          -> locals.person, active week, rules label
   +page.svelte               -> the list
   +page.server.ts            -> load: standings, my ballots, my budget, my nomination
-                                actions: setPoints, nominate, renominate
+                                actions: setPoints, nominate, renominate, hold, release
   u/[token]/+server.ts       -> GET: set cookie, redirect
   me/+page.svelte            -> device QR, rotate token, your stats
   me/+page.server.ts         -> actions: rotate
@@ -509,6 +557,7 @@ src/routes/
   f/[code]/+page.server.ts   -> load: runoff + tally; actions: flashVote, identify
   host/+page.svelte          -> projector view
   host/+page.server.ts       -> actions: close, closeRunoff, openRunoffManually
+  admin/films/+page.server.ts-> actions: status, edit, watched, reassign, hold, remove
   history/+page.svelte       -> watched films, per-person stats
   api/search/+server.ts      -> GET ?q= -> TMDB proxy
 ```
@@ -554,6 +603,27 @@ Raises inside one open window collapse (`prev_points` keeps the pre-window value
 the undo unwinds them all; an undo never resets `updated_at`, so it cannot stretch the
 window. The server's clock decides, as always. The UI mirrors the rule by hiding the
 minus button once `myPoints <= myFloor`.
+
+### 8.4 `hold` and `release`
+
+```
+hold(person, filmId, reason, now):
+  BEGIN IMMEDIATE
+  assert week is open and now < closes_at
+  assert film exists, is not archival, and status == 'active'
+  assert film.added_by == person                // 409 'not_your_film'
+  spent = the person's hold for this round
+  assert spent is absent or spent.film_id == filmId   // 409 'hold_taken'
+  upsert film_hold, rewriting the reason        // a repeat tap is idempotent
+  COMMIT
+```
+
+`release` is the same guards and a delete. Both take the *nominator's* id, which is what
+lets the admin route (§3.5) place one on somebody's behalf by passing `film.added_by`
+while the `audit` row records who actually pressed it.
+
+Neither touches `ballot`, `film.score`, `bank` or `person.xp`. A hold decides candidacy on
+one night and nothing else, which is the same invariant the runoff carries in §7.2.
 
 ### 8.2 `/api/search`
 
@@ -616,6 +686,18 @@ history, and a "how this works" fold showing the *active* rule set's rules.
 
 Badges on a film row: an *N-week campaign* badge when one person has backed it for 3+
 consecutive weeks, and a *fades/drops* warning when attrition is imminent.
+
+A held film (§3.5) keeps its place in the ranking — its score is its score, and moving it
+would be a lie about the standings — but renders dimmed, with a dashed border, and never
+wears the lead elevation. The shortlist band is therefore no longer a prefix of the list:
+the divider goes under the *last* candidate, so holding the third film makes the band span
+ranks one to six with a greyed row inside it. The card's fine print carries a `💤` chip
+saying whose film is waiting, tappable for the reason where there is one; on your own
+candidate, before you have held anything, that chip is instead the one tap that holds it.
+The whole control — reason, hold, release, and a line explaining the cost — lives in the
+detail sheet, which is the one screen that belongs to a single film. `/host` lists what
+stepped aside under the tally, before the close as a warning and after it as an
+explanation.
 
 **`/f/:code` — flash vote.** Enormous tap targets, the tied films as full-width cards,
 live tally, nothing else. Assume a dim room and someone holding a beer.
@@ -685,6 +767,10 @@ announces the August 2026 rules change, which satisfies the announce-for-a-week 
 |---|---|
 | Nobody votes all week | No winner. Week closes, nothing watched, next week opens. Say so on the page. |
 | Fewer than two films on the list | Fine. A lone candidate still goes to the room; the runoff closing or expiring confirms it. |
+| Someone holds a film after others have backed it | Their points stay spent and fade; votes are final (§8.3). This is why a hold is public the instant it lands — there is still time to put the rest of the week's points elsewhere. |
+| Every candidate is held in one round | No hold applies; the shortlist forms as normal and the rows are marked `applied = 0`. The room is never handed an empty screen. |
+| A held film would have been the lone candidate | Same rule: the hold is ignored and the film goes to the room. |
+| Holder turns up anyway | Nothing automatic — the shortlist formed hours earlier. The hold is on the card with their name on it all evening, which is the whole enforcement (principle 1). |
 | A film sits in the top 3 unpicked for weeks | Its points fade like everyone else's; there is no extra penalty. If the room keeps declining a persistently fed film, see the pass-over strikes idea in `FUTURE_IDEAS.md`. |
 | Everyone abstains but films have old points (`ledger`) | Highest total still wins — correct, that's the whole mechanic. |
 | Person nominates something already watched | Rejected with "we watched that in week 12". |
@@ -746,6 +832,17 @@ of done.
 21. `rolling`: a film with no points this week becomes `dropped`.
 22. `banked`: a film needs two consecutive pointless weeks to be `dropped`.
 23. Attrition runs after the winner is removed, so the winner is never also archived.
+
+**Holds (§3.5)**
+23a. A held film is skipped when the shortlist forms and the next film takes its slot.
+23b. A held film keeps its status and score, and attrition still reaches it.
+23c. Releasing it during the open round puts it back in the shortlist.
+23d. Only the nominator may hold or release; one hold per person per round, swappable.
+23e. Placing the same hold again rewrites only the reason.
+23f. A hold is refused once the week is in `runoff` or `closed`.
+23g. Where every candidate is held, none is: the shortlist is unchanged and every row for
+     that round is marked `applied = 0`.
+23h. Holds are keyed on the round, so the film is back in play the following week.
 
 **Runoff**
 24. A tie at the top creates a runoff and leaves the week `status='runoff'`.

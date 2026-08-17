@@ -6,12 +6,15 @@ import { currentWeek } from '$lib/server/weeks';
 import {
 	castOrder,
 	filmsByStatus,
+	holdFilm,
 	nominate,
+	releaseFilm,
 	renominate,
 	setNote,
 	setPoints,
 	standings
 } from '$lib/server/films';
+import { holdOf } from '$lib/server/holds';
 import { addComment, commentsOf, reactComment } from '$lib/server/comments';
 import { seenOf, toggleSeen } from '$lib/server/seen';
 import { ruleFail } from '$lib/server/respond';
@@ -27,9 +30,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 			films: [],
 			archived: [],
 			dropped: [],
-			shortlistCount: 0,
+			shortlistIds: [],
 			nominatedThisWeek: null,
-			myCastOrder: []
+			myCastOrder: [],
+			myHold: null
 		};
 	}
 
@@ -39,10 +43,15 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const films = standings(db, rules, week.number, person.id);
 
-	// the films that would go to the room if the week closed now. They sort first
-	// under §3.2, so this is only a count of how many leading rows to set apart.
-	const backed = films.filter((film) => film.score > 0).length;
-	const shortlistCount = Math.min(rules.shortlistSize, backed);
+	// the films that would go to the room if the week closed now, by the same
+	// arithmetic closeWeek uses: a held film is no candidate, and where every
+	// candidate is held none of them is. Ids rather than a count, because a held
+	// film keeps its place in the ranking and the band reaches past it
+	const candidates = films.filter((film) => film.score > 0);
+	const awake = candidates.filter((film) => !film.held);
+	const shortlistIds = (awake.length ? awake : candidates)
+		.slice(0, rules.shortlistSize)
+		.map((film) => film.id);
 
 	// attached at the route level so Standing stays a scoring concern
 	const withComments = <T extends { id: number }>(rows: T[]) => {
@@ -64,9 +73,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 		films: withComments(films),
 		archived: withComments(standings(db, rules, week.number, person.id, 'archived')),
 		dropped: filmsByStatus(db, 'dropped'),
-		shortlistCount: shortlistCount > 1 ? shortlistCount : 0,
+		// one leading card needs no divider to explain itself
+		shortlistIds: shortlistIds.length > 1 ? shortlistIds : [],
 		nominatedThisWeek: nominatedThisWeek ?? null,
-		myCastOrder: castOrder(db, person.id, week.number)
+		myCastOrder: castOrder(db, person.id, week.number),
+		myHold: holdOf(db, week.number, person.id)?.film_id ?? null
 	};
 };
 
@@ -121,6 +132,33 @@ export const actions: Actions = {
 		try {
 			renominate(getDb(), activeRules(), locals.person!.id, filmId);
 			return { renominated: String(form.get('title') ?? '') };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	hold: async ({ request, locals }) => {
+		const form = await request.formData();
+		const title = String(form.get('title') ?? '');
+		try {
+			holdFilm(
+				getDb(),
+				locals.person!.id,
+				Number(form.get('filmId')),
+				(form.get('reason') as string) || null
+			);
+			return { held: title };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	release: async ({ request, locals }) => {
+		const form = await request.formData();
+		const title = String(form.get('title') ?? '');
+		try {
+			releaseFilm(getDb(), locals.person!.id, Number(form.get('filmId')));
+			return { released: title };
 		} catch (error) {
 			return ruleFail(error);
 		}

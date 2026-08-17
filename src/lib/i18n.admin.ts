@@ -90,6 +90,10 @@ export type AdminDict = {
 	filMarkWatched: string;
 	filReassignH: string;
 	filReassign: string;
+	/* §3.5: placing somebody's hold for them, because the ask came by group chat */
+	filHold: string;
+	filHoldWhy: string;
+	filRelease: string;
 	filEmpty: string;
 
 	/* the round in play */
@@ -221,6 +225,9 @@ const pl: AdminDict = {
 	filMarkWatched: 'Zapisz jako obejrzany',
 	filReassignH: 'Zgłaszający',
 	filReassign: 'Przepisz',
+	filHold: 'Niech poczeka',
+	filHoldWhy: 'Powód (opcjonalnie)',
+	filRelease: 'Wróć do gry',
 	filEmpty: 'Brak filmów.',
 
 	rndH: 'Bieżąca runda',
@@ -281,6 +288,10 @@ const pl: AdminDict = {
 				return `Bank mieści od 0 do ${p.cap} punktów.`;
 			case 'no_film':
 				return 'Nie ma takiego filmu.';
+			case 'hold_not_active':
+				return `${p.title} nie jest na liście.`;
+			case 'hold_taken':
+				return `Ta osoba wstrzymała w tym tygodniu ${p.title}.`;
 			case 'film_has_ballots':
 				return 'Ktoś na niego głosował. Przenieś do archiwum zamiast usuwać.';
 			case 'film_watched':
@@ -398,6 +409,9 @@ const en: AdminDict = {
 	filMarkWatched: 'Record as watched',
 	filReassignH: 'Nominated by',
 	filReassign: 'Reassign',
+	filHold: 'Let it wait',
+	filHoldWhy: 'Reason (optional)',
+	filRelease: 'Put it back',
 	filEmpty: 'No films.',
 
 	rndH: 'Current round',

@@ -892,6 +892,58 @@ button.sc {
 	font-size: 10.5px;
 	font-weight: 650;
 }
+/* §3.5: a film sitting the round out. Hue-free and dashed, borrowing the vote
+   dock's grammar, where a dashed outline has always meant "not in play". It is
+   neither a warning nor a vote, so it borrows neither of their colours */
+.holdchip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 8px;
+	background: none;
+	border: 1px dashed var(--line2);
+	border-radius: 99px;
+	color: var(--dim);
+	font-size: 10.5px;
+	font-weight: 650;
+	font-family: inherit;
+	line-height: 1.6;
+	white-space: nowrap;
+}
+button.holdchip {
+	cursor: pointer;
+	transition:
+		color 0.15s,
+		border-color 0.15s;
+}
+button.holdchip:hover {
+	color: var(--ink);
+	border-color: #3f444d;
+}
+.film.held {
+	opacity: 0.66;
+	border-style: dashed;
+}
+/* the whole mechanic on the one screen that belongs to a single film */
+.holdbox {
+	margin-top: 16px;
+	padding-top: 14px;
+	border-top: 1px solid var(--line);
+}
+.holdh {
+	font-size: 13px;
+	font-weight: 650;
+	color: var(--ink);
+}
+.holdhint {
+	margin-top: 9px;
+	font-size: 11.5px;
+	line-height: 1.5;
+	color: var(--dimmer);
+}
+.holdbox .tap {
+	margin-top: 9px;
+}
 /* the card's fine print: warnings flush left, the pills at the right edge.
    A full-width row of the card, under both the poster and the text */
 .cardfoot {
@@ -2073,6 +2125,25 @@ details[open] > .iconbtn {
 .tk {
 	margin: 0 auto;
 	padding: 26px 16px;
+}
+/* §3.5: what stepped aside, quiet under the tally, so the room can see why the
+   film everyone expected is not among the candidates */
+.heldnote {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 3px;
+	margin-top: 18px;
+	text-align: center;
+	font-size: 12.5px;
+	color: var(--dim);
+}
+.heldnote b {
+	font-size: 11px;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: var(--dimmer);
+	font-weight: 600;
 }
 /* the live headcount, front and centre between the tally and the cast list */
 .turnout {
