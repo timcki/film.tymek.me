@@ -121,6 +121,8 @@
 	const NPOP_H = 150;
 	/** the comment peek is wider still: names, dates and tallies share its rows */
 	const CPOP_W = 340;
+	/** the seen list is a column of names, so it only needs room for the longest */
+	const SPOP_W = 190;
 
 	// what the popup needs of a person; backers and nominators both satisfy it
 	type PeekFace = { name: string; colour: string; avatar: string | null; xp: number };
@@ -153,6 +155,15 @@
 	} | null>(null);
 	// hover preview of the thread; a click or tap opens the real modal instead
 	let cmtPop = $state<{ film: Film; x: number; y: number; below: boolean } | null>(null);
+	// a mouse hovers it and a finger taps it open; on a tap the mark itself moves
+	// inside, so looking and owning up stay two separate gestures on a phone
+	let seenPop = $state<{
+		film: Film;
+		x: number;
+		y: number;
+		below: boolean;
+		tap: boolean;
+	} | null>(null);
 	let closing: ReturnType<typeof setTimeout>;
 	// a mouse opens on hover and a finger on tap. A touchscreen laptop does both,
 	// so go by the pointer that actually arrived rather than what the screen can do
@@ -174,18 +185,14 @@
 	function peekAt(pill: EventTarget | null, face: PeekFace, sub: string, tap: boolean) {
 		clearTimeout(closing);
 		if (!(pill instanceof HTMLElement)) return;
-		notePop = null;
-		scorePop = null;
-		cmtPop = null;
+		shutPops();
 		peek = { face, sub, tap, ...anchorAt(pill, POP_W, POP_H) };
 	}
 
 	function noteAt(el: EventTarget | null, film: Film, tap: boolean) {
 		clearTimeout(closing);
 		if (!(el instanceof HTMLElement) || !film.note) return;
-		peek = null;
-		scorePop = null;
-		cmtPop = null;
+		shutPops();
 		notePop = {
 			text: film.note,
 			sig: T.noteSig(film.addedByName),
@@ -199,9 +206,7 @@
 	function blurbAt(el: EventTarget | null, film: Film, tap: boolean) {
 		clearTimeout(closing);
 		if (!(el instanceof HTMLElement) || !film.overview) return;
-		peek = null;
-		scorePop = null;
-		cmtPop = null;
+		shutPops();
 		notePop = {
 			text: film.overview,
 			sig: '',
@@ -215,9 +220,7 @@
 	function holdAt(el: EventTarget | null, film: Film, tap: boolean) {
 		clearTimeout(closing);
 		if (!(el instanceof HTMLElement) || !film.held?.reason) return;
-		peek = null;
-		scorePop = null;
-		cmtPop = null;
+		shutPops();
 		notePop = {
 			text: film.held.reason,
 			sig: T.holdSig(film.held.name),
@@ -246,9 +249,7 @@
 		const weekNow = data.week?.number;
 		if (!(el instanceof HTMLElement) || rules.scoring !== 'fade' || !weekNow) return;
 		if (!film.weeklyPoints.length) return;
-		peek = null;
-		notePop = null;
-		cmtPop = null;
+		shutPops();
 		const rows = film.weeklyPoints.map((row) => {
 			const mult = rules.decayFactor ** (weekNow - row.week);
 			return { ...row, mult, contrib: row.points * mult };
@@ -260,29 +261,40 @@
 	function cmtsAt(el: EventTarget | null, film: Film) {
 		clearTimeout(closing);
 		if (!(el instanceof HTMLElement)) return;
-		peek = null;
-		notePop = null;
-		scorePop = null;
+		shutPops();
 		cmtPop = { film, ...anchorAt(el, CPOP_W, NPOP_H) };
 	}
 
-	function unpeek() {
+	/** who has already seen it, spelled out from the eye's count */
+	function seenAt(el: EventTarget | null, film: Film, tap: boolean) {
 		clearTimeout(closing);
+		if (!(el instanceof HTMLElement)) return;
+		// on a hover the pill already says nought and a popup repeating it would be
+		// furniture. On a tap it has to open regardless, because it is now the only
+		// way to the mark from the card
+		if (!tap && !film.seen.length) return;
+		shutPops();
+		seenPop = { film, tap, ...anchorAt(el, SPOP_W, NPOP_H) };
+	}
+
+	/** the popups are exclusive: opening one shuts the rest */
+	function shutPops() {
 		peek = null;
 		notePop = null;
 		scorePop = null;
 		cmtPop = null;
+		seenPop = null;
+	}
+
+	function unpeek() {
+		clearTimeout(closing);
+		shutPops();
 	}
 
 	// a beat of grace, so crossing the gap between two pills does not flicker
 	function unpeekSoon() {
 		clearTimeout(closing);
-		closing = setTimeout(() => {
-			peek = null;
-			notePop = null;
-			scorePop = null;
-			cmtPop = null;
-		}, 80);
+		closing = setTimeout(shutPops, 80);
 	}
 
 	/* ------------------------------------------------------------- sheets -- */
@@ -932,9 +944,28 @@
 				</svg>
 				<b>{film.comments.length}</b>
 			</button>
-			<form class="eyeform" method="POST" action="?/seen" use:enhance={submit()}>
+			<!-- the popup holds the faces it opened with, so the toggle shuts it
+			     rather than leaving a list one name out of date under the cursor -->
+			<form class="eyeform" method="POST" action="?/seen" use:enhance={submit(unpeek)}>
 				<input type="hidden" name="filmId" value={film.id} />
-				<button class="eyebtn" class:on={film.seenMine} title={T.seenBtn} aria-label={T.seenBtn}>
+				<button
+					class="eyebtn"
+					class:on={film.seenMine}
+					title={T.seenBtn}
+					aria-label={T.seenBtn}
+					onpointerenter={(event) => {
+						mousing = event.pointerType === 'mouse';
+						if (mousing) seenAt(event.currentTarget, film, false);
+					}}
+					onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+					onclick={(event) => {
+						// a finger opens the list instead of submitting; the mark is a
+						// button inside it. A mouse keeps the click it always had
+						if (mousing) return;
+						event.preventDefault();
+						seenAt(event.currentTarget, film, true);
+					}}
+				>
 					<svg
 						viewBox="0 0 24 24"
 						width="14"
@@ -1319,6 +1350,47 @@
 			{/each}
 		{:else}
 			<span>{T.commentNone}</span>
+		{/if}
+	</div>
+{/if}
+
+{#if seenPop}
+	{#if seenPop.tap}
+		<button class="menu-backdrop" aria-label={T.close} onclick={unpeek}></button>
+	{/if}
+	<!-- the eye's number, read out as the faces behind it -->
+	<div
+		class="bkpop spop"
+		class:tappable={seenPop.tap}
+		class:below={seenPop.below}
+		style="left:{seenPop.x}px;top:{seenPop.y}px"
+		role={seenPop.tap ? 'dialog' : 'tooltip'}
+	>
+		<span class="sig">{T.dSeen}</span>
+		{#each seenPop.film.seen as face (face.id)}
+			<div class="sface">
+				<Avatar
+					name={face.name}
+					colour={face.colour}
+					avatar={face.avatar}
+					size={18}
+					font={8}
+					titled={false}
+					slim
+				/>
+				<b>{face.name}</b>
+			</div>
+		{:else}
+			<span>{T.dNobody}</span>
+		{/each}
+		{#if seenPop.tap}
+			<!-- owning up lives here on a phone, since the card's tap now looks -->
+			<form method="POST" action="?/seen" use:enhance={submit(unpeek)}>
+				<input type="hidden" name="filmId" value={seenPop.film.id} />
+				<button class="tap" class:on={seenPop.film.seenMine}>
+					{seenPop.film.seenMine ? `✓ ${T.seenBtn}` : T.seenBtn}
+				</button>
+			</form>
 		{/if}
 	</div>
 {/if}

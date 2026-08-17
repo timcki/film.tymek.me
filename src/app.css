@@ -736,6 +736,44 @@ button.sc {
 	color: var(--dimmer);
 	margin-bottom: 4px;
 }
+/* the eye's hover: a column of names rather than a wall of faces, because the
+   count is already the number and this is only the reading of it */
+.spop {
+	width: 190px;
+	align-items: stretch;
+	gap: 6px;
+	text-align: left;
+}
+.spop > .sig {
+	font-size: 10px;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--dimmer);
+	font-weight: 600;
+}
+.spop .sface {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+}
+.spop .sface b {
+	font-size: 12px;
+	font-weight: 600;
+	text-align: left;
+	/* a long name wraps inside the popup rather than widening it */
+	min-width: 0;
+}
+/* .bkpop is inert by design, so a hover cannot be swallowed by its own popup.
+   The tapped one carries the seen-it mark and has to take a press */
+.spop.tappable {
+	pointer-events: auto;
+}
+.spop form {
+	margin-top: 2px;
+}
+.spop .tap {
+	width: 100%;
+}
 .dnote {
 	font-size: 13.5px;
 	color: #c5cad2;
