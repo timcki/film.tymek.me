@@ -70,6 +70,18 @@ export const CHANGELOG: ChangelogEntry[] = [
 				'Its points fade exactly as they would anywhere else, so waiting costs you: you come back next week with half the lead.'
 			]
 		}
+	},
+	{
+		id: 3,
+		date: '2026-08-17',
+		title: {
+			pl: 'Funkcja uśpienia to teraz Liberum veto',
+			en: 'The sleep button is now Liberum veto'
+		},
+		body: {
+			pl: ['Dzięki Zosia ((:'],
+			en: ['Thanks Zosia ((:']
+		}
 	}
 ];
 

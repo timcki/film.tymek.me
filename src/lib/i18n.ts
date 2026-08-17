@@ -344,7 +344,7 @@ const plRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 	});
 
 	out.push({
-		head: 'Nie będzie cię na wieczorku? Możesz uśpić swój film na tydzień.',
+		head: 'Nie będzie cię na wieczorku? Liberum veto usypia twój film na tydzień.',
 		body:
 			'Jeden film na tydzień i tylko taki, który sam zgłosiłeś. Nie idzie wtedy pod głosowanie ' +
 			'w sali, a jego miejsce zajmuje kolejny z listy. Punkty tracą na wartości normalnie, ' +
@@ -399,7 +399,7 @@ const pl: Dict = {
 	warnFades: (n) => `znika za ${n} ${plWeeks(n)}`,
 	campaign: (n) => `${n}. tydzień kampanii`,
 
-	holdCta: 'Uśpij',
+	holdCta: 'Liberum veto',
 	holdMine: 'Uśpiony przez ciebie',
 	// nie „uśpiony przez Tymka”: imiona się odmieniają, a kropka nie
 	holdBy: (name) => `Uśpiony · ${name}`,
@@ -409,7 +409,7 @@ const pl: Dict = {
 		`(do sali idzie ${n} ${plFilms(n)}). Punkty tracą na wartości normalnie, więc uśpienie kosztuje. ` +
 		'Wycofać możesz aż do zamknięcia głosowania.',
 	holdWhyPh: 'Czemu? Zobaczą wszyscy…',
-	holdBtn: 'Uśpij na tydzień',
+	holdBtn: 'Liberum veto',
 	holdSave: 'Zapisz powód',
 	holdRelease: 'Wycofaj',
 	holdSpent: (title) => `W tym tygodniu uśpiony jest już ${title}.`,
@@ -717,7 +717,7 @@ const enRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 	});
 
 	out.push({
-		head: 'Not coming on the night? Your film can sleep a week.',
+		head: 'Not coming on the night? Liberum veto puts your film to sleep for a week.',
 		body:
 			'One film a week, and only one you nominated yourself. It stays out of the room vote and ' +
 			'the next film on the list takes its place. Its points fade as usual, so waiting costs ' +
@@ -769,7 +769,7 @@ const en: Dict = {
 	warnFades: (n) => `fades in ${n} ${en2(n, 'week', 'weeks')}`,
 	campaign: (n) => `week ${n} of this campaign`,
 
-	holdCta: 'Sleep',
+	holdCta: 'Liberum veto',
 	holdMine: 'Asleep, yours',
 	holdBy: (name) => `Asleep · ${name}`,
 	holdH: 'Not going to make it this week?',
@@ -778,7 +778,7 @@ const en: Dict = {
 		`(${n} ${en2(n, 'film goes', 'films go')} to the room). Its points fade as usual, so waiting costs ` +
 		'something. You can undo it right up to the close.',
 	holdWhyPh: 'Why? Everyone sees this…',
-	holdBtn: 'Put it to sleep for a week',
+	holdBtn: 'Liberum veto',
 	holdSave: 'Save the reason',
 	holdRelease: 'Put it back',
 	holdSpent: (title) => `${title} is already asleep this week.`,
