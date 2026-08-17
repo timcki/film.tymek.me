@@ -5,7 +5,7 @@
 #
 #   ./deploy/test-local.sh              # fresh snapshot, then vite dev on it
 #   SNAPSHOT=0 ./deploy/test-local.sh   # reuse the last snapshot
-#   LOCAL_ORIGIN=http://mymac.tailnet:5173 ./deploy/test-local.sh   # phone testing
+#   LOCAL_ORIGIN=http://localhost:5173 ./deploy/test-local.sh   # stay on this machine
 set -euo pipefail
 
 HOST=${HOST:-bigchungus}
@@ -13,9 +13,32 @@ REMOTE_DB=${REMOTE_DB:-/var/lib/filmnight/filmnight.db}
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 LOCAL_DB=${LOCAL_DB:-$HERE/data/prod-copy.db}
 SNAPSHOT=${SNAPSHOT:-1}
-# what the printed links and the in-app QR codes point at; override with your
-# tailscale name to test from a phone
-LOCAL_ORIGIN=${LOCAL_ORIGIN:-http://localhost:5173}
+DEV_PORT=${DEV_PORT:-5173}
+
+# This machine's tailnet address, or nothing when tailscale is not up. Preferred
+# over the LAN address because it survives changing wifi, and over the MagicDNS
+# name because an address always resolves for a phone whether or not that phone
+# has MagicDNS switched on.
+tailnet_ip() {
+	command -v tailscale >/dev/null 2>&1 || return 1
+	local ip
+	ip=$(tailscale ip -4 2>/dev/null | head -1)
+	[[ -n "$ip" ]] || return 1
+	echo "$ip"
+}
+
+# What the printed links and the in-app QR codes are built from: /me shows a QR
+# of your personal link and /host shows one for the room, and a QR saying
+# localhost is a QR no phone can follow. Defaults to the tailnet so the codes on
+# screen are scannable; set LOCAL_ORIGIN yourself for a LAN address or localhost.
+if [[ -z "${LOCAL_ORIGIN:-}" ]]; then
+	if ip=$(tailnet_ip); then
+		LOCAL_ORIGIN="http://$ip:$DEV_PORT"
+	else
+		LOCAL_ORIGIN="http://localhost:$DEV_PORT"
+		echo "==> tailscale is not up; QR codes will point at localhost" >&2
+	fi
+fi
 
 if [[ "$SNAPSHOT" == 1 ]]; then
 	echo "==> snapshotting $HOST:$REMOTE_DB"
@@ -43,6 +66,7 @@ fi
 echo "==> personal links on the local copy:"
 sqlite3 "$LOCAL_DB" "SELECT '    ' || name || '  $LOCAL_ORIGIN/u/' || token FROM person WHERE active = 1 ORDER BY name"
 
-echo "==> starting vite dev on the prod copy, bound to 0.0.0.0 (ctrl-c to stop)"
+echo "==> starting vite dev on the prod copy at $LOCAL_ORIGIN (ctrl-c to stop)"
 cd "$HERE"
-ORIGIN="$LOCAL_ORIGIN" DATABASE_PATH="$LOCAL_DB" npm run dev -- --host
+# --port explicitly, so the port the links advertise is the port it binds
+ORIGIN="$LOCAL_ORIGIN" DATABASE_PATH="$LOCAL_DB" npm run dev -- --host --port "$DEV_PORT"
