@@ -111,7 +111,12 @@
 						class:on={castingFor === person.id}
 						onclick={() => (castingFor = castingFor === person.id ? '' : person.id)}
 					>
-						<Avatar name={person.name} colour={person.colour} avatar={person.avatar} />
+						<Avatar
+							name={person.name}
+							colour={person.colour}
+							avatar={person.avatar}
+							xp={person.xp}
+						/>
 						{person.name}{person.voted ? ' ✓' : ''}
 					</button>
 				{/each}

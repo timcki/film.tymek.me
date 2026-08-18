@@ -1533,13 +1533,19 @@ button.holdchip:hover {
 	cursor: pointer;
 	display: grid;
 	place-items: center;
-	overflow: hidden;
+	/* not hidden: the face inside clips its own picture, and this box is exactly
+	   its size, so clipping here ate the rank ring whole */
+	overflow: visible;
 }
 .iconbtn::-webkit-details-marker {
 	display: none;
 }
+/* outside the ring rather than under it: at this size the rank ring lands
+   exactly where a 2px shadow would have, and painted over it */
 details[open] > .iconbtn {
-	box-shadow: 0 0 0 2px var(--accent);
+	outline: 2px solid var(--accent);
+	outline-offset: 5px;
+	border-radius: 99px;
 }
 .menu-backdrop {
 	position: fixed;

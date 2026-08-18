@@ -39,7 +39,12 @@
 {#each data.perPerson as person (person.id)}
 	<div class="stat">
 		<span>
-			<Avatar name={person.name} colour={person.colour} avatar={person.avatar} />
+			<Avatar
+				name={person.name}
+				colour={person.colour}
+				avatar={person.avatar}
+				xp={person.xp}
+			/>
 			{person.name}
 		</span>
 		<b>

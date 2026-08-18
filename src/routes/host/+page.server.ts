@@ -104,6 +104,7 @@ export const load: PageServerLoad = async () => {
 			name: p.name,
 			colour: p.colour,
 			avatar: avatarUrl(p.id, p.avatar_updated_at),
+			xp: p.xp,
 			voted: voted.has(p.id)
 		}))
 	};

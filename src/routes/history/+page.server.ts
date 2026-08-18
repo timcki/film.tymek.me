@@ -19,6 +19,7 @@ type PersonRow = {
 	name: string;
 	colour: string;
 	avatar_updated_at: string | null;
+	xp: number;
 	watched: number;
 	nominated: number;
 };
@@ -39,7 +40,7 @@ export const load: PageServerLoad = async () => {
 	// the group's own check on whether the active rule set is being fair
 	const rows = db
 		.prepare(
-			`SELECT p.id, p.name, p.colour, p.avatar_updated_at,
+			`SELECT p.id, p.name, p.colour, p.avatar_updated_at, p.xp,
 			        COUNT(f.id) FILTER (WHERE f.status = 'watched') AS watched,
 			        COUNT(f.id) AS nominated
 			 FROM person p LEFT JOIN film f ON f.added_by = p.id
