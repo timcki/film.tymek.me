@@ -282,7 +282,13 @@
 					<span class="hpip spent">✓</span>
 				{/each}
 				{#each Array(Math.max(0, data.person.left)) as _, i (i)}
-					<span class="hpip free"></span>
+					<!-- the ring is drawn rather than bordered, exactly as the cards
+					     draw theirs: even dashes at this size -->
+					<span class="hpip free">
+						<svg viewBox="0 0 12 12" aria-hidden="true"
+							><circle cx="6" cy="6" r="5.25" pathLength="12" /></svg
+						>
+					</span>
 				{/each}
 			</button>
 			<div class="tip" style:display={tipOpen ? 'block' : 'none'}>

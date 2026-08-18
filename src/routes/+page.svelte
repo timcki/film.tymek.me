@@ -627,7 +627,12 @@
 					value={film.myPoints + 1}
 					disabled={!open}
 					aria-label={T.btnAddPoint}
-				></button>
+				>
+					<!-- drawn, not bordered: the same even ring the small docks use -->
+					<svg viewBox="0 0 36 36" aria-hidden="true"
+						><circle cx="18" cy="18" r="17.1" pathLength="30" /></svg
+					>
+				</button>
 			</form>
 		{/each}
 	</div>
