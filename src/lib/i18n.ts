@@ -71,6 +71,14 @@ function en2(n: number, one: string, many: string): string {
 	return n === 1 ? one : many;
 }
 
+/**
+ * "zostały 2 dni". The verb agrees with the numeral the same three ways the
+ * noun does, and at one it also has to agree with the noun's gender: został
+ * dzień, została godzina.
+ */
+const plLeft = (n: number, one: string, few: string, many: string, fem = false) =>
+	`${pl3(n, fem ? 'została' : 'został', 'zostały', 'zostało')} ${n} ${pl3(n, one, few, many)}`;
+
 const plWeeks = (n: number) => pl3(n, 'tydzień', 'tygodnie', 'tygodni');
 const plPoints = (n: number) => pl3(n, 'punkt', 'punkty', 'punktów');
 const plVotes = (n: number) => pl3(n, 'głos', 'głosy', 'głosów');
@@ -93,10 +101,8 @@ export type Dict = {
 	themeLight: string;
 
 	week: (n: number) => string;
-	closesIn: string;
-	/** the same thing with no room for a sentence, for the sticky bar */
-	closesInShort: string;
-	clock: (d: number, h: number, m: number, s: number) => string;
+	/** the whole phrase, verb included, because the bar has no room for a sentence around it */
+	timeLeft: (d: number, h: number, m: number, s: number) => string;
 	votingClosed: string;
 	roomPicking: (code: string) => string;
 	openRoom: string;
@@ -377,13 +383,12 @@ const pl: Dict = {
 	themeLight: 'Jasny',
 
 	week: (n) => `Tydzień ${n}`,
-	closesIn: 'głosowanie zamyka się za',
-	closesInShort: 'za',
-	// tiered: only the digits that matter now, the seconds tick in the last hour
-	clock: (d, h, m, s) => {
-		if (d) return `${d} ${pl3(d, 'dzień', 'dni', 'dni')}`;
-		if (h) return `${h} godz. ${m} min`;
-		return `${m}:${String(s).padStart(2, '0')}`;
+	// tiered: only the unit that matters now, down to seconds in the last minute
+	timeLeft: (d, h, m, s) => {
+		if (d) return plLeft(d, 'dzień', 'dni', 'dni');
+		if (h) return plLeft(h, 'godzina', 'godziny', 'godzin', true);
+		if (m) return plLeft(m, 'minuta', 'minuty', 'minut', true);
+		return plLeft(s, 'sekunda', 'sekundy', 'sekund', true);
 	},
 	votingClosed: 'głosowanie zamknięte',
 	roomPicking: (code) => `sala wybiera, kod ${code}`,
@@ -754,11 +759,15 @@ const en: Dict = {
 	themeLight: 'Light',
 
 	week: (n) => `Week ${n}`,
-	closesIn: 'voting closes in',
-	closesInShort: 'in',
-	// tiered: only the digits that matter now, the seconds tick in the last hour
-	clock: (d, h, m, s) =>
-		d ? `${d} ${en2(d, 'day', 'days')}` : h ? `${h} h ${m} min` : `${m}:${String(s).padStart(2, '0')}`,
+	// tiered: only the unit that matters now, down to seconds in the last minute
+	timeLeft: (d, h, m, s) =>
+		d
+			? `${d} ${en2(d, 'day', 'days')} left`
+			: h
+				? `${h} ${en2(h, 'hour', 'hours')} left`
+				: m
+					? `${m} min left`
+					: `${s} s left`,
 	votingClosed: 'voting is closed',
 	roomPicking: (code) => `the room is picking, code ${code}`,
 	openRoom: "Pick tonight's film",

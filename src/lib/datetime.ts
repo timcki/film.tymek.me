@@ -47,6 +47,17 @@ export function formatNight(instant: Date | string, lang: Lang): string {
 	}).format(date);
 }
 
+/** "śr, 5 sie": the night as the header says it, where the hour would not fit */
+export function formatNightDay(instant: Date | string, lang: Lang): string {
+	const date = typeof instant === 'string' ? new Date(instant) : instant;
+	return new Intl.DateTimeFormat(LOCALE[lang], {
+		timeZone: TIMEZONE,
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short'
+	}).format(date);
+}
+
 /** "5 sie 2026", for rows where the time is noise */
 export function formatDay(instant: Date | string, lang: Lang): string {
 	const date = typeof instant === 'string' ? new Date(instant) : instant;

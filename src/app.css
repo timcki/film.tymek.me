@@ -55,9 +55,11 @@
 	--toast-ink: #14151a;
 	--toast-bad-bg: #f6dedb;
 	--toast-bad-ink: #4a1a12;
-	/* the round burning down: the countdown bar uncovers this ramp as the week
-	   goes, so the colour at its leading edge is how much time is left */
-	--burn0: #eceff3;
+	/* the round burning down: the countdown wears one of these, and which one it
+	   is says how much of the week is gone. It starts green rather than grey,
+	   because the first half of a round is not an absence of news, it is time in
+	   hand, and a grey chip reads as one that has been switched off */
+	--burn0: #83c79c;
 	--burn1: #f0d066;
 	--burn2: #ef9f57;
 	--burn3: #e2685c;
@@ -139,7 +141,7 @@ header.lean {
 	z-index: 47;
 	/* out to the wrap's edges, so the bar runs the full width of the screen */
 	margin: 0 -14px;
-	padding: 13px 14px 12px;
+	padding: 13px 14px;
 	/* the page's own surface, opaque: iOS fills the status strip with
 	   theme-color, and a frosted header would have sat a shade lighter than the
 	   strip and drawn a line across the top of the screen. The wash comes along
@@ -183,33 +185,44 @@ header.lean::after {
 }
 .wkbtn {
 	display: flex;
-	align-items: baseline;
-	gap: 6px;
+	align-items: center;
+	gap: 8px;
 	background: none;
 	border: 0;
 	padding: 0;
 	font: inherit;
-	font-size: 13.5px;
+	font-size: 13px;
 	color: var(--dim);
 	cursor: help;
 	min-width: 0;
+	max-width: 100%;
+	text-align: left;
+}
+/* the night leads, because the date is what anybody does something about; the
+   time left is pressure rather than fact, so it sits behind in weight. It is
+   also the only thing here that may lose its tail: the deadline is why the bar
+   exists, and in the last hours it is the longest phrase as well */
+.wlead {
+	color: var(--ink);
+	font-size: 14.5px;
+	font-weight: 650;
+	letter-spacing: -0.01em;
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 .wkbtn b {
-	color: var(--ink);
-	font-weight: 650;
-	white-space: nowrap;
+	color: var(--ink2);
+	font-weight: 600;
 }
 .wkbtn.urgent b {
 	color: var(--warn);
 }
-/* the week number gives up its tail first: the time left never truncates */
-.wknum {
-	overflow: hidden;
-	text-overflow: ellipsis;
+.wlead,
+.wkbtn b,
+.wchip {
 	white-space: nowrap;
-}
-.wkdot {
-	flex: 0 0 auto;
 }
 .wk .tip {
 	position: absolute;
@@ -226,31 +239,46 @@ header.lean::after {
 	color: var(--ink2);
 	box-shadow: var(--lift-hi);
 }
-/* the round draining away. The fill is a window onto one ramp painted across
-   the whole track, so the tip of the bar cools from white through yellow and
-   orange into red as the week runs out; the inline background-size scales the
-   ramp back up to the track's width */
-.wbar {
-	height: 4px;
-	border-radius: 99px;
-	background: var(--raise);
-	overflow: hidden;
-	margin-top: 10px;
+/* the tip is what the chip opens, so it wears the same rung: a popup in an
+   unrelated grey reads as a different object. Mixed into the surface rather than
+   laid over it in alpha, because this one has to stay opaque over the page */
+.wk.lit .tip {
+	background: color-mix(in srgb, var(--heat) 14%, var(--raise));
+	box-shadow:
+		inset 0 0 0 1px color-mix(in srgb, var(--heat) 30%, transparent),
+		var(--lift-hi);
 }
-.wbar i {
-	display: block;
-	height: 100%;
+/* the accent belongs to the budget; in here the bold bit is the same countdown
+   the chip is showing, so it answers to the rung instead */
+.wk.lit .tip b {
+	color: var(--heat);
+}
+/* what is left of the round, worn by the words that already say it. A hairline
+   had no area to hold a colour, and a colour is the only thing the text was not
+   saying; so the bar goes and the countdown takes the heat itself */
+.wchip {
+	flex: 0 0 auto;
 	border-radius: 99px;
-	background-image: linear-gradient(
-		90deg,
-		var(--burn0),
-		var(--burn1) 55%,
-		var(--burn2) 78%,
-		var(--burn3)
-	);
-	background-repeat: no-repeat;
-	background-position: left center;
-	transition: width 1s linear;
+	padding: 4px 9px 5px;
+	font-size: 12.5px;
+	font-weight: 650;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+	color: var(--heat);
+	/* the wash alone was too thin to hold a colour at this size, so the rung is
+	   drawn round the chip as well as under it */
+	background: color-mix(in srgb, var(--heat) 24%, transparent);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--heat) 38%, transparent);
+	transition:
+		color 0.6s linear,
+		background 0.6s linear,
+		box-shadow 0.6s linear;
+}
+/* the last day stops being a tint and becomes the thing itself */
+.wchip.urgent {
+	color: var(--onbright);
+	background: var(--heat);
+	box-shadow: none;
 }
 h1 {
 	margin: 0;

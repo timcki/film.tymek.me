@@ -50,9 +50,8 @@
 	--toast-ink: #f7f0e7;
 	--toast-bad-bg: #7d2e21;
 	--toast-bad-ink: #ffeae4;
-	/* a white bar on cream is no bar at all, so the fresh end of the ramp is
-	   cool rather than bright, and the yellow deepens enough to be seen */
-	--burn0: #94a5ad;
+	/* on cream the whole ramp has to darken to be seen, and the yellow most of all */
+	--burn0: #46916a;
 	--burn1: #dfae3c;
 	--burn2: #e0863c;
 	--burn3: #ca5544;

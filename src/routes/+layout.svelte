@@ -3,7 +3,7 @@
 	import '../themes.css';
 	import { page } from '$app/state';
 	import Avatar from '$lib/components/Avatar.svelte';
-	import { formatNight } from '$lib/datetime';
+	import { formatNight, formatNightDay } from '$lib/datetime';
 	import { dictFor, isVotes, LANGS } from '$lib/i18n';
 	import { THEMES } from '$lib/themes';
 	import { toast } from '$lib/toast.svelte';
@@ -27,7 +27,7 @@
 		if (!data.week) return '';
 		const left = new Date(data.week.closesAt).getTime() - now;
 		if (left <= 0) return null;
-		return T.clock(
+		return T.timeLeft(
 			Math.floor(left / 86400000),
 			Math.floor(left / 3600000) % 24,
 			Math.floor(left / 60000) % 60,
@@ -45,12 +45,15 @@
 	const showPill = $derived(Boolean(data.person) && (path === '/' || path.startsWith('/me')));
 
 	// every page gets the compact bar, so the app has one header rather than two.
-	// The list has no name worth printing, so the round takes that slot; the
-	// others put their name there and let the round move into the tip
+	// The list has no name worth printing, so the night takes that slot, because
+	// the date is the thing anybody acts on; the others put their name there. The
+	// round's number is nobody's reason for opening this, so it waits in the tip
 	const lean = $derived(!bare && Boolean(data.week));
-	const leanLabel = $derived(path === '/' ? T.week(data.week?.number ?? 0) : title);
+	const leanLabel = $derived(
+		path === '/' && data.week ? formatNightDay(data.week.closesAt, data.lang) : title
+	);
 
-	// how much of the round is spent, as the bar under the header
+	// how much of the round is spent
 	const burnt = $derived.by(() => {
 		if (!data.week) return 0;
 		const opens = new Date(data.week.opensAt).getTime();
@@ -58,14 +61,22 @@
 		if (!(closes > opens)) return 100;
 		return Math.min(100, Math.max(0, ((now - opens) / (closes - opens)) * 100));
 	});
-	// the last day, where the bar stops being furniture and starts being a warning
+	// the last day, where the chip stops being furniture and starts being a warning
 	const urgent = $derived(
 		Boolean(data.week) && new Date(data.week!.closesAt).getTime() - now < 86400000
 	);
-	// the colour ramp is painted across the fill, which is only part of the
-	// track, so it is scaled back up to the track's width to be read at the tip
-	const ramp = $derived((100 / Math.max(burnt, 5)) * 100);
-
+	// how far through the round, as one of the ramp's colours rather than a
+	// gradient. The last day is red whatever the fraction says, because a short
+	// round can reach its final hours while the bar still reads two thirds spent
+	const heat = $derived(
+		urgent
+			? 'var(--burn3)'
+			: burnt < 55
+				? 'var(--burn0)'
+				: burnt < 78
+					? 'var(--burn1)'
+					: 'var(--burn2)'
+	);
 
 	let tipOpen = $state(false);
 	let weekTip = $state(false);
@@ -288,14 +299,21 @@
 	<!-- the host view is a projector or a laptop, never a phone; let it breathe -->
 	<div class="wrap" class:wide={path.startsWith('/host')}>
 		{#if lean && data.week}
-			<!-- the list wears its state, not its name: a face, the round, what is
-			     left of it, and a bar draining under the lot. It follows the page
-			     down, because the deadline is the reason anybody opened this -->
+			<!-- the list wears its state, not its name: a face, the night, and how
+			     long there is left to vote in, warming as that runs out. It follows
+			     the page down, because the deadline is why anybody opened this -->
 			<header class="lean">
 				<div class="hrow">
 					{@render identity()}
 
-					<div class="wk">
+					<!-- the rung lives on the pair, not the chip, so the tip the chip
+					     opens can wear it too. Only while voting is open: a round that is
+					     over has no heat left to report -->
+					<div
+						class="wk"
+						class:lit={data.week.status === 'open' && Boolean(countdown)}
+						style="--heat:{heat}"
+					>
 						<button
 							class="wkbtn"
 							class:urgent
@@ -303,34 +321,28 @@
 							onclick={() => (weekTip = !weekTip)}
 							onblur={() => (weekTip = false)}
 						>
-							<span class="wknum">{leanLabel}</span>
+							<span class="wlead">{leanLabel}</span>
 							{#if data.week.status === 'open' && countdown}
-								<span class="wkdot">·</span>
-								<b>{T.closesInShort} {countdown}</b>
+								<!-- the words are the countdown already, down to the second, so
+								     colour is all that is left to say: how much of the round has
+								     gone. A bar said it worse and got read as a rank -->
+								<span class="wchip" class:urgent>{countdown}</span>
 							{:else if data.week.status === 'runoff'}
-								<span class="wkdot">·</span>
 								<b>{T.roomPicking(data.runoffCode ?? '')}</b>
 							{:else}
-								<span class="wkdot">·</span>
 								<b>{T.votingClosed}</b>
 							{/if}
 						</button>
-						<!-- the round in full, one tap away: which week it is, and the exact
-						     night, which is no longer always a Thursday -->
+						<!-- the round in full, one tap away: which week it is, and the night
+						     down to the hour, which is no longer always Thursday at eight -->
 						<div class="tip" style:display={weekTip ? 'block' : 'none'}>
-							{T.week(data.week.number)} · {T.closesIn}
+							{T.week(data.week.number)} ·
 							<b>{countdown ?? '—'}</b> · {formatNight(data.week.closesAt, data.lang)}
 						</div>
 					</div>
 
 					{@render budget()}
 				</div>
-
-				{#if data.week.status === 'open'}
-					<div class="wbar">
-						<i style:width="{burnt}%" style:background-size="{ramp}% 100%"></i>
-					</div>
-				{/if}
 			</header>
 		{:else}
 			<header>
@@ -340,7 +352,7 @@
 						<div class="sub">
 							{T.week(data.week.number)} ·
 							{#if data.week.status === 'open' && countdown}
-								{T.closesIn} <b>{countdown}</b>
+								<b>{countdown}</b>
 								<!-- the date is no longer always a Thursday, so it is worth saying -->
 								· {formatNight(data.week.closesAt, data.lang)}
 							{:else if data.week.status === 'runoff'}
