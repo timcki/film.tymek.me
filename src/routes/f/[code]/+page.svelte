@@ -133,6 +133,9 @@
 			{T.roomVotingAs(data.people.find((p) => p.id === who)?.name ?? T.roomAsGuest)}
 		</p>
 	{/if}
+	<!-- the rule sits above the taps it governs: under the list it was read after
+	     the decision, if a phone in a dim room got that far down at all -->
+	{#if !locked}<p class="roomnote">{T.roomFinal}</p>{/if}
 	<div class="roomvote">
 		{#each data.tally as row (row.film.id)}
 			<form method="POST" action="?/flashVote" use:enhance={submit(row.film.title)}>
@@ -159,17 +162,19 @@
 					<div class="rbody">
 						<b>{row.film.title}</b>
 						<span>{meta(row)} · <SeenCount n={data.seen[row.film.id] ?? 0} size={11} /></span>
-						{#if armed === row.film.id}
-							<span class="armhint">{T.roomArm}</span>
-						{/if}
 					</div>
 					<!-- the tally, in the coin the list uses for a score -->
 					<span class="votecoin"><b>{row.votes}</b><i>{T.unit(row.votes, true)}</i></span>
+					<!-- a line of its own under the row, not squeezed into the column
+					     beside the poster: it is an instruction and has to be read at
+					     arm's length, in one go -->
+					{#if armed === row.film.id}
+						<span class="armhint">{T.roomArm}</span>
+					{/if}
 				</button>
 			</form>
 		{/each}
 	</div>
-	{#if !locked}<p class="hintline">{T.roomFinal}</p>{/if}
 {/if}
 
 {#if burst}
