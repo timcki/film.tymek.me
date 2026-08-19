@@ -1,4 +1,4 @@
-{ lib, buildNpmPackage, nodejs_24, python3 }:
+{ lib, buildNpmPackage, nodejs_24 }:
 
 buildNpmPackage {
   pname = "filmnight";
@@ -20,13 +20,12 @@ buildNpmPackage {
     ];
   };
 
-  npmDepsHash = "sha256-+RRoXdEEEB0G6EP1tpC1aWmqVmPXL7l0BS8hcCTtCDg=";
+  npmDepsHash = "sha256-EKPV4E9f2YHdAQmCaI9etYcRX2adwB8/4vaP3hlaSvQ=";
 
-  # the service runs this exact node, so the better-sqlite3 built here keeps its ABI
+  # picks the node that runs the build and the service. better-sqlite3 is N-API
+  # from 13 on and ships its own prebuilt binary, so nothing here is compiled
+  # against these headers any more, and no node-gyp (or python) is involved
   nodejs = nodejs_24;
-
-  # no network in the sandbox, so prebuild-install falls through to node-gyp
-  nativeBuildInputs = [ python3 ];
 
   # seeding is still a hand-run job on the server, and it needs a bundle
   postBuild = "npm run build:seed";
