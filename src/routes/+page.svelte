@@ -24,11 +24,20 @@
 	/* ----------------------------------------------------------- shortlist -- */
 
 	const shortlist = $derived(new Set(data.shortlistIds));
-	// a held film keeps its place in the ranking, so the band is no longer a
-	// prefix: the divider goes under the last candidate, however far down it sits
-	const restStart = $derived(
-		shortlist.size ? data.films.findLastIndex((film) => shortlist.has(film.id)) + 1 : -1
+	// §3.5: a sleeper is no candidate, so it does not sit in the candidates' half
+	// of the list. Pulling the shortlist to the front makes the band a prefix
+	// again, and the cards at the top of the screen the ones that actually go to
+	// the room. Both halves keep the §3.2 ordering, so the rest is still headed
+	// by whatever scored highest among them, sleeper or not
+	const ordered = $derived(
+		shortlist.size
+			? [
+					...data.films.filter((film) => shortlist.has(film.id)),
+					...data.films.filter((film) => !shortlist.has(film.id))
+				]
+			: data.films
 	);
+	const restStart = $derived(shortlist.size ? shortlist.size : -1);
 	// the film already spending the viewer's one hold, for the sheet's refusal
 	const heldTitle = $derived(data.films.find((film) => film.id === data.myHold)?.title ?? '');
 
@@ -561,6 +570,34 @@
 	</div>
 {/snippet}
 
+<!-- §3.5, said on the title line rather than in the fine print: a sleeper's row
+     is one line tall, and the chip trailing the title is the only place that
+     leaves the coin and the dock where every other card puts them -->
+{#snippet heldChip(film: Film)}
+	{#if film.held}
+		{@const mine = film.held.personId === data.person?.id}
+		{#if film.held.reason}
+			<button
+				class="holdchip"
+				type="button"
+				onpointerenter={(event) => {
+					mousing = event.pointerType === 'mouse';
+					if (mousing) holdAt(event.currentTarget, film, false);
+				}}
+				onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+				onclick={(event) => !mousing && holdAt(event.currentTarget, film, true)}
+				onblur={unpeek}
+			>
+				💤 <span class="holdwho">{mine ? T.holdMine : T.holdBy(film.held.name)}</span>
+			</button>
+		{:else}
+			<span class="holdchip"
+				>💤 <span class="holdwho">{mine ? T.holdMine : T.holdBy(film.held.name)}</span></span
+			>
+		{/if}
+	{/if}
+{/snippet}
+
 {#snippet backerRow(film: Film)}
 	<span class="backers">
 		{#if film.backers.length}
@@ -790,6 +827,7 @@
 							>
 						{/if}
 					</div>
+					{@render heldChip(film)}
 					<!-- one line right under the title, ending before the coin: the
 					     nominator's pitch, or the synopsis where nobody pitched -->
 					{#if film.note}
@@ -893,26 +931,7 @@
 			     is half the point: there is still time to put votes elsewhere. On
 			     your own candidate the chip is the one tap that does it; the reason
 			     goes on afterwards, in the sheet -->
-			{#if film.held}
-				{@const mine = film.held.personId === data.person?.id}
-				{#if film.held.reason}
-					<button
-						class="holdchip"
-						type="button"
-						onpointerenter={(event) => {
-							mousing = event.pointerType === 'mouse';
-							if (mousing) holdAt(event.currentTarget, film, false);
-						}}
-						onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
-						onclick={(event) => !mousing && holdAt(event.currentTarget, film, true)}
-						onblur={unpeek}
-					>
-						💤 {mine ? T.holdMine : T.holdBy(film.held.name)}
-					</button>
-				{:else}
-					<span class="holdchip">💤 {mine ? T.holdMine : T.holdBy(film.held.name)}</span>
-				{/if}
-			{:else if lead && canHold(film)}
+			{#if lead && canHold(film)}
 				<form method="POST" action="?/hold" use:enhance={submit()}>
 					<input type="hidden" name="filmId" value={film.id} />
 					<input type="hidden" name="title" value={film.title} />
@@ -995,7 +1014,7 @@
 	<!-- no banner over the trójka: the lead glow and the reszta divider say it.
 	     The wrapper exists for the flip: confirmed votes glide cards to their
 	     new seats instead of teleporting them -->
-	{#each data.films as film, i (film.id)}
+	{#each ordered as film, i (film.id)}
 		<div class="fwrap" animate:flip={{ duration: flipMs }}>
 			{#if restStart > 0 && i === restStart}
 				<div class="rest-head">{T.restHead}</div>

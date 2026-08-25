@@ -96,16 +96,17 @@ export const RULE_SETS: Record<RuleSetId, RuleSet> = {
     decayFactor: 0.5,
     attrition: { kind: 'drop', afterWeeksWithoutPoints: 2 },
     nominationsPerWeek: 1,
-    // 3 until August 2026
-    shortlistSize: 5,
+    // 5 for a fortnight in August 2026, then back: five candidates in a room of
+    // six is not a shortlist, it is the list again
+    shortlistSize: 3,
     voteGraceSeconds: 30
   }
 };
 ```
 
 `weekly` in one breath: three points a week, use them or lose them; points on a film lose
-half their value each week; the top five go to the room; votes are final after thirty
-seconds. There is no pass-over penalty; time taxes every film equally, which is the whole
+half their value each week; the top three go to the room; weekly votes are final after
+thirty seconds, though a flash vote in the room (§7.2) moves freely until it closes. There is no pass-over penalty; time taxes every film equally, which is the whole
 rotation mechanic.
 
 ### 3.1 Scoring
@@ -493,11 +494,14 @@ point is that being in the room is the credential.
 - If for some reason no name is picked (a seventh person, a guest), `voter_key` is the
   `fn_device` uuid and `person_id` is null.
 
-One row per `(runoff_id, voter_key)`; ~~voting again **replaces** your choice until the
-runoff closes~~ **Revised, August 2026.** the first vote is **final**. The card arms on
-the first tap and commits on the second, so the finality is warned about; a repeat tap on
-the same film is an idempotent no-op, a different film is rejected (`vote_locked`). Show a
-live tally to everyone on the page.
+One row per `(runoff_id, voter_key)`; voting again **replaces** your choice until the
+runoff closes. ~~**Revised, August 2026.** the first vote is **final**; the card arms on
+the first tap and commits on the second, and a different film is rejected
+(`vote_locked`).~~ **Reverted, August 2026**, and the arming ceremony with it: finality
+moved the argument to after the tap, which is the one place it cannot change anything. A
+repeat tap on the same film is an idempotent no-op; a different film moves the row,
+`created_at` and all, so it records when the choice was made rather than when its owner
+walked in. Show a live tally to everyone on the page.
 
 Flash votes are written to `runoff_ballot` and **never** to `ballot`. They do not touch
 scores, banks, or attrition. This is the single most important invariant in the runoff:

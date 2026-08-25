@@ -82,6 +82,30 @@ export const CHANGELOG: ChangelogEntry[] = [
 			pl: ['Dzięki Zosia ((:'],
 			en: ['Thanks Zosia ((:']
 		}
+	},
+	{
+		id: 4,
+		date: '2026-08-25',
+		title: {
+			pl: 'Wraca top 3, można zmieniać pick na qr głosowaniu',
+			en: 'Back to top three, and a vote in the room can be changed again'
+		},
+		body: {
+			pl: [
+				'Wracamy do top 3 filmów z 5. Przy 5 kandydatach nie było już żadnej selekcji i konkurencji między filmami. Jako że motywacją było top 3 z Fitzcarraldo którego Adam prosił o nieogladanie, wprowadzenie możliwości usypiania filmów pozwoli zawsze mieć pełne top 3.',
+				'Głos oddany przez kod QR w sali nie jest już ostateczny. Julka słusznie zauważyła że fajnie byłoby go przenieść na inny film jeśli widzimy, że pierwsze miejsce ma dla nas najgorszy z 3.',
+				'To dotyczy tylko głosowania w sali. Punkty oddawane w ciągu tygodnia dalej są ostateczne po 30 sekundach.',
+				'Uśpione filmy nie zajmują już miejsca w top 3, schodzą do reszty listy i zajmują mniej miejsca.',
+				'Jest nowy szczegółowy ekran filmu (po kliknięciu plakatu) dajcie znać co myślicie.'
+			],
+			en: [
+				'The room picks from a top three again, not a top five. We added this only because of the night where Fitzcarraldo was in the top 3 and Adam asked us not to watch it (which effectively made it a top 2). With the possibility to sleep movies the problem is gone. 5 candidates made us just vote on vaguely all the movies top 3 is more competitive and makes us think about what we vote on.',
+				"A flash vote in the room is no longer final: you can move it to another film right up until the host closes the voting. The last tap is the one that counts. Julia noticed that it'd be nice to be able to switch to the 3rd option when you see yours won't win and the one that's winning is the worst of the 3 (in your opinion).",
+				'This is the room only. Points cast during the week are still final thirty seconds after you spend them.',
+				'A sleeping film no longer takes up a place in the top three: it drops below the divider into the rest of the list as a slim row.',
+				'The film screen (tap a poster) is rebuilt: lmk what yall think'
+			]
+		}
 	}
 ];
 

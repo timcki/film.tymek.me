@@ -1214,6 +1214,84 @@ button.holdchip:hover {
 	outline-offset: -1px;
 	border-radius: var(--r);
 }
+/* §3.5: a sleeper cannot win this week, so it stops spending a candidate's
+   worth of screen. The whole row collapses into the height of a thumbnail:
+   what survives is what can still be acted on (the poster that opens the
+   sheet, the score, the dock that backs it for next week, the chip that wakes
+   it) and what goes is everything only ever read while choosing. The shelf
+   renders through the same snippet and has none of this to hide */
+.film.held:not(.shelf) {
+	padding: 8px 12px;
+	gap: 12px;
+	align-items: center;
+	/* one line: the fine print no longer claims a row of its own */
+	flex-wrap: nowrap;
+}
+/* .p carries its own width, so shrinking the wrapper alone leaves the poster
+   painting at full size and driving the card's height from inside a small box */
+.film.held:not(.shelf) .pw,
+.film.held:not(.shelf) .p {
+	flex: 0 0 36px;
+	width: 36px;
+	align-self: center;
+}
+.film.held:not(.shelf) .p {
+	border-radius: 6px;
+}
+.film.held:not(.shelf) .mm,
+.film.held:not(.shelf) .note,
+.film.held:not(.shelf) .nomface,
+.film.held:not(.shelf) .backers,
+.film.held:not(.shelf) .cardfoot {
+	display: none;
+}
+/* the title line and the dock stop stacking and share the thumbnail's height */
+.film.held:not(.shelf) .b {
+	flex-direction: row;
+	align-items: center;
+	gap: 8px;
+}
+.film.held:not(.shelf) .hd {
+	flex: 1;
+	min-width: 0;
+	align-items: center;
+	gap: 8px;
+}
+/* the reserved dot height is what keeps a vote from reflowing the list; on one
+   row the thumbnail is taller than the dock, so the card is steady without it.
+   The auto margin has to go too: in a row it drops the dock off centre */
+.film.held:not(.shelf) .ft {
+	padding-top: 0;
+	margin-top: 0;
+	min-height: 0;
+	flex: none;
+}
+.film.held:not(.shelf) .coin {
+	flex: none;
+}
+/* the chip sits under the title, at every width. Beside it, it either crushed
+   the title on a phone or left the row lopsided on a desktop; under it, it costs
+   nothing, because the thumbnail is taller than the two lines of text it makes
+   and the row's height is the thumbnail's either way. It is also the widest
+   thing on the row and misses by a couple of pixels on an ordinary name, so it
+   buys those back from its own padding rather than spending a surname on them */
+.film.held:not(.shelf) .holdchip {
+	align-self: flex-start;
+	flex: none;
+	margin-top: 3px;
+	max-width: 100%;
+	padding-left: 8px;
+	padding-right: 8px;
+}
+/* the chip's box is bounded, but its text is nowrap and would paint straight
+   through the dashed border rather than stop at it; a long nominator's name
+   gives way here instead */
+.holdchip .holdwho {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
 /* the whole mechanic on the one screen that belongs to a single film, set in
    a panel of its own rather than under a rule */
 .holdbox {
@@ -2538,8 +2616,26 @@ details[open] > .iconbtn {
 	padding: 14px;
 	gap: 16px;
 	margin-bottom: 14px;
-	/* so the arm hint can take a full line of its own below the row */
-	flex-wrap: wrap;
+	/* §7.2: one ring exists and it belongs to whichever card was tapped last, so
+	   the card being left has to give it up at the speed the new one takes it */
+	transition: box-shadow 0.18s ease;
+}
+/* the ring arriving: it overshoots once and settles, which is what makes the
+   move read as one object travelling rather than two cards repainting */
+.roomvote .pickbtn.on {
+	animation: ringsettle 0.22s ease-out;
+}
+@keyframes ringsettle {
+	from {
+		box-shadow:
+			var(--lift),
+			0 0 0 9px color-mix(in srgb, var(--accent) 0%, transparent);
+	}
+	60% {
+		box-shadow:
+			var(--lift),
+			0 0 0 3px color-mix(in srgb, var(--accent) 55%, transparent);
+	}
 }
 .roomvote .pickbtn .th {
 	width: 64px;
@@ -2588,17 +2684,41 @@ details[open] > .iconbtn {
 .pickbtn.on .votecoin i {
 	color: inherit;
 }
+/* between polls this screen is perfectly still, so a number that moved is the
+   only sign the rest of the room is still arguing; it says so itself */
+.votecoin.tick {
+	animation: coinpop 0.6s ease-out;
+}
+@keyframes coinpop {
+	0%,
+	100% {
+		transform: scale(1);
+	}
+	28% {
+		transform: scale(1.18);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.roomvote .pickbtn.on,
+	.votecoin.tick {
+		animation: none;
+	}
+}
 .roomvote .pickbtn span {
 	font-size: 12.5px;
 	margin-top: 6px;
 }
-/* the width of the whole row, so it never wraps: this is the one line telling
-   somebody their next tap counts, and it is read from across a room */
-.roomvote .pickbtn .armhint {
-	flex: 0 0 100%;
-	margin-top: 2px;
-	font-size: 14px;
-	white-space: nowrap;
+/* your pick said in a word under the title, because a 2px ring is not what a
+   phone held at arm's length in a dark room actually reads */
+.roomvote .pickbtn .mychip {
+	display: inline-block;
+	margin-top: 7px;
+	padding: 3px 10px;
+	border-radius: 99px;
+	background: color-mix(in srgb, var(--accent) 18%, transparent);
+	color: var(--accent);
+	font-size: 11.5px;
+	font-weight: 700;
 }
 /* the film the room landed on, said in a word rather than in a trailing clause */
 .winchip {
@@ -2986,41 +3106,12 @@ details[open] > .iconbtn {
 		var(--lift),
 		0 0 0 2px var(--accent);
 }
-/* an armed card: one more tap makes it final, so it should visibly ask */
-.pickbtn.armed {
-	animation: cardpulse 0.9s ease-in-out infinite;
-}
-@keyframes cardpulse {
-	0%,
-	100% {
-		box-shadow:
-			var(--lift),
-			0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent);
-	}
-	50% {
-		box-shadow:
-			var(--lift),
-			0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
-	}
-}
-@media (prefers-reduced-motion: reduce) {
-	.pickbtn.armed {
-		animation: none;
-		box-shadow:
-			var(--lift),
-			0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
-	}
-}
 .pickbtn:disabled {
 	cursor: default;
 	opacity: 0.55;
 }
 .pickbtn.on:disabled {
 	opacity: 1;
-}
-.pickbtn .armhint {
-	color: var(--accent);
-	font-weight: 650;
 }
 .pickbtn .th {
 	width: 44px;

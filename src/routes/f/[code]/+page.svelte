@@ -22,23 +22,54 @@
 		data.people.filter((p) => p.name.toLowerCase().includes(filter.trim().toLowerCase()))
 	);
 
-	// §7.2: one vote for the night, so a tap arms and only a second tap commits
-	let armed = $state<number | null>(null);
-	let armTimer: ReturnType<typeof setTimeout>;
-	function arm(filmId: number) {
-		clearTimeout(armTimer);
-		armed = filmId;
-		armTimer = setTimeout(() => (armed = null), 5000);
-	}
+	// §7.2: the vote moves until the host closes the room, so one tap is the whole
+	// ceremony. The choice is held here as well as on the server, because the poll
+	// below is four seconds behind the thumb and the ring has to move now
+	let pick = $state<number | null>(null);
+	const chosen = $derived(pick ?? data.myVote);
 
-	// the server keys myVote to the device cookie, but a vote from a shared phone
-	// is keyed to the claimed person, so the lock has to survive locally too
-	let lockedFilm = $state<number | null>(null);
+	// the server's tally is a poll old, so carry our own unlanded move into it and
+	// let the coins change under the thumb that caused them; it cancels itself out
+	// the moment the load function comes back agreeing
+	const rows = $derived(
+		data.tally.map((row) => {
+			if (chosen === data.myVote) return row;
+			if (row.film.id === chosen) return { ...row, votes: row.votes + 1 };
+			if (row.film.id === data.myVote) return { ...row, votes: row.votes - 1 };
+			return row;
+		})
+	);
+
+	// the room otherwise only moves on a poll, so a coin whose number changed is
+	// the one thing on the page that says the others are still arguing
+	let ticking = $state<Record<number, boolean>>({});
+	const counted = new Map<number, number>();
+	$effect(() => {
+		for (const row of rows) {
+			const id = row.film.id;
+			const before = counted.get(id);
+			counted.set(id, row.votes);
+			if (before === undefined || before === row.votes) continue;
+			ticking[id] = true;
+			setTimeout(() => (ticking[id] = false), 620);
+		}
+	});
+
+	// the decision is the only thing on this screen that cannot be taken back, so
+	// it is the only thing that gets confetti, and only on a phone that watched it
+	// land: arriving at a room already decided is news, not a celebration
+	let wasOpen = false;
 	let burst = $state(false);
-	const locked = $derived(lockedFilm !== null || data.myVote !== null);
+	$effect(() => {
+		if (!data.decided) wasOpen = true;
+		else if (wasOpen) {
+			wasOpen = false;
+			burst = true;
+		}
+	});
 
 	const submit =
-		(title?: string): SubmitFunction =>
+		(voted?: number): SubmitFunction =>
 		() =>
 		async ({ result, update }) => {
 			if (result.type === 'failure') {
@@ -46,12 +77,8 @@
 					| { code?: string; params?: Record<string, string | number>; message?: string }
 					| undefined;
 				say(T.error(body?.code ?? '', body?.params ?? {}, body?.message ?? ''), true);
-			}
-			if (result.type === 'success' && title) {
-				const voted = (result.data as { filmId?: number } | undefined)?.filmId;
-				armed = null;
-				lockedFilm = voted ?? null;
-				burst = true;
+				// the server kept whatever it had; the ring goes back to saying so
+				if (voted !== undefined) pick = data.myVote;
 			}
 			await update({ reset: false });
 		};
@@ -135,42 +162,30 @@
 	{/if}
 	<!-- the rule sits above the taps it governs: under the list it was read after
 	     the decision, if a phone in a dim room got that far down at all -->
-	{#if !locked}<p class="roomnote">{T.roomFinal}</p>{/if}
+	<p class="roomnote">{T.roomOpen}</p>
 	<div class="roomvote">
-		{#each data.tally as row (row.film.id)}
-			<form method="POST" action="?/flashVote" use:enhance={submit(row.film.title)}>
+		{#each rows as row (row.film.id)}
+			<form method="POST" action="?/flashVote" use:enhance={submit(row.film.id)}>
 				<input type="hidden" name="filmId" value={row.film.id} />
 				<input type="hidden" name="personId" value={who === 'guest' ? '' : who} />
+				<!-- nothing is disabled and nothing arms: the ring simply travels to
+				     whichever card was tapped last, which is the whole rule said in
+				     the only language a dark room reads -->
 				<button
 					class="pickbtn"
-					type={armed === row.film.id ? 'submit' : 'button'}
-					disabled={locked}
-					class:on={data.myVote === row.film.id || lockedFilm === row.film.id}
-					class:armed={armed === row.film.id}
-					onclick={(event) => {
-						// the arming tap has to cancel the default, and not merely leave the
-						// button typed as one that does nothing: arming flips that very type
-						// to submit, and the browser reads it back after this handler returns.
-						// Without this the first tap fires the vote and nothing is confirmed
-						if (armed !== row.film.id) {
-							event.preventDefault();
-							arm(row.film.id);
-						}
-					}}
+					class:on={chosen === row.film.id}
+					onclick={() => (pick = row.film.id)}
 				>
 					<div class="th"><Poster title={row.film.title} url={row.film.poster_url} /></div>
 					<div class="rbody">
 						<b>{row.film.title}</b>
 						<span>{meta(row)} · <SeenCount n={data.seen[row.film.id] ?? 0} size={11} /></span>
+						{#if chosen === row.film.id}
+							<span class="mychip">✓ {T.roomYourVote}</span>
+						{/if}
 					</div>
 					<!-- the tally, in the coin the list uses for a score -->
-					<span class="votecoin"><b>{row.votes}</b><i>{T.unit(row.votes, true)}</i></span>
-					<!-- a line of its own under the row, not squeezed into the column
-					     beside the poster: it is an instruction and has to be read at
-					     arm's length, in one go -->
-					{#if armed === row.film.id}
-						<span class="armhint">{T.roomArm}</span>
-					{/if}
+					<span class="votecoin" class:tick={ticking[row.film.id]}><b>{row.votes}</b><i>{T.unit(row.votes, true)}</i></span>
 				</button>
 			</form>
 		{/each}

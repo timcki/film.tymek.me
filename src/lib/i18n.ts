@@ -245,8 +245,9 @@ export type Dict = {
 	roomGuestNote: string;
 	roomVotingAs: (name: string) => string;
 	roomCheckedIn: string;
-	roomFinal: string;
-	roomArm: string;
+	/** §7.2: the one rule the room screen runs on, now that a vote can move */
+	roomOpen: string;
+	roomYourVote: string;
 	roomDecided: string;
 	roomWinner: string;
 	votes: (n: number) => string;
@@ -323,7 +324,10 @@ const plRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 
 	out.push({
 		head: 'Punktów wydanych na film nie można cofać.',
-		body: `Masz ${r.voteGraceSeconds} sekund na poprawienie pomyłki.`
+		body:
+			`Masz ${r.voteGraceSeconds} sekund na poprawienie pomyłki. ` +
+			'Dotyczy to punktów wydawanych w ciągu tygodnia: głos w sali można przenosić ' +
+			'do samego rozstrzygnięcia.'
 	});
 
 	if (r.scoring === 'fade') {
@@ -559,8 +563,8 @@ const pl: Dict = {
 	roomGuestNote: 'Nie ma cię na liście? Zagłosuj jako gość, w sali też się liczy.',
 	roomVotingAs: (name) => `głosujesz jako ${name}`,
 	roomCheckedIn: 'obecność zapisana ✓',
-	roomFinal: 'Masz jeden głos na wieczór.',
-	roomArm: 'Dotknij jeszcze raz, żeby potwierdzić',
+	roomOpen: 'Możesz zmieniać głos, dopóki sala nie zdecyduje.',
+	roomYourVote: 'twój głos',
 	roomDecided: 'Dzisiejszy wieczór rozstrzygnięty.',
 	roomWinner: 'wygrywa',
 	votes: (n) => `${n} ${plVotes(n)}`,
@@ -645,8 +649,6 @@ const pl: Dict = {
 				return 'Głosowanie w sali wygasło.';
 			case 'film_not_in_runoff':
 				return 'Tego filmu nie ma w dzisiejszej trójce.';
-			case 'vote_locked':
-				return 'Głos w sali jest ostateczny. Jedno kliknięcie decyduje o wieczorze.';
 			case 'empty_comment':
 				return 'Napisz najpierw coś.';
 			case 'comment_too_long':
@@ -699,7 +701,9 @@ const enRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 
 	out.push({
 		head: 'A cast vote cannot be taken back.',
-		body: `You get ${r.voteGraceSeconds} seconds to fix a slip, then it stands and points can only be added.`
+		body:
+			`You get ${r.voteGraceSeconds} seconds to fix a slip, then it stands and points can only ` +
+			'be added. That is the weekly points; a vote in the room moves freely until the night is decided.'
 	});
 
 	if (r.scoring === 'fade') {
@@ -935,8 +939,8 @@ const en: Dict = {
 	roomGuestNote: 'Not on the list? Vote as a guest; it still counts in the room.',
 	roomVotingAs: (name) => `voting as ${name}`,
 	roomCheckedIn: 'checked in ✓',
-	roomFinal: 'You have one vote for the night.',
-	roomArm: 'Tap again to lock it in',
+	roomOpen: 'You can change your vote until the room decides.',
+	roomYourVote: 'your vote',
 	roomDecided: 'Tonight is decided.',
 	roomWinner: 'winner',
 	votes: (n) => `${n} ${en2(n, 'vote', 'votes')}`,

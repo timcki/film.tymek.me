@@ -56,27 +56,38 @@ describe('runoff', () => {
 		expect(first).toBeDefined();
 	});
 
-	// 26. one flash vote per voter_key, and the first one is final
-	it('a flash vote is final; only a same-film double-tap is forgiven', () => {
+	// 26. one flash vote per voter_key, and voting again moves it
+	it('a flash vote moves rather than piling up a second row', () => {
 		const { db, first, second } = tiedWeek();
 		const runoff = openRunoff(db)!;
 
 		flashVote(db, runoff.id, 'celina', 'celina', first);
 		// a double-tap on the same card is an idempotent no-op
-		expect(() => flashVote(db, runoff.id, 'celina', 'celina', first)).not.toThrow();
-		// a change of heart is not
-		expect(() => flashVote(db, runoff.id, 'celina', 'celina', second)).toThrow(RuleError);
-		try {
-			flashVote(db, runoff.id, 'celina', 'celina', second);
-		} catch (error) {
-			expect((error as RuleError).code).toBe('vote_locked');
-		}
+		flashVote(db, runoff.id, 'celina', 'celina', first);
+		// and a change of heart is allowed right up to the close
+		flashVote(db, runoff.id, 'celina', 'celina', second);
 
 		const rows = db.prepare('SELECT * FROM runoff_ballot WHERE runoff_id = ?').all(runoff.id) as {
 			film_id: number;
 		}[];
 		expect(rows).toHaveLength(1);
-		expect(rows[0].film_id).toBe(first);
+		expect(rows[0].film_id).toBe(second);
+		// the tally follows the move, it does not count the abandoned film
+		expect(tally(db, runoff.id).find((t) => t.film.id === first)!.votes).toBe(0);
+	});
+
+	it('a moved flash vote is still refused once the room is decided', () => {
+		const { db, rules, first, second } = tiedWeek();
+		const runoff = openRunoff(db)!;
+		flashVote(db, runoff.id, 'celina', 'celina', first);
+		closeRunoff(db, rules, runoff.id);
+
+		expect(() => flashVote(db, runoff.id, 'celina', 'celina', second)).toThrow(RuleError);
+		try {
+			flashVote(db, runoff.id, 'celina', 'celina', second);
+		} catch (error) {
+			expect((error as RuleError).code).toBe('runoff_decided');
+		}
 	});
 
 	it('a guest with no person_id can still vote on their own device key', () => {
@@ -89,11 +100,16 @@ describe('runoff', () => {
 		expect(row.person_id).toBeNull();
 	});
 
-	it('a guest device key is locked to its first vote the same way', () => {
+	it('a guest device key can change its mind the same way', () => {
 		const { db, first, second } = tiedWeek();
 		const runoff = openRunoff(db)!;
 		flashVote(db, runoff.id, 'device-abc', null, first);
-		expect(() => flashVote(db, runoff.id, 'device-abc', null, second)).toThrow(/locked/);
+		flashVote(db, runoff.id, 'device-abc', null, second);
+		const rows = db
+			.prepare('SELECT film_id, person_id FROM runoff_ballot WHERE voter_key = ?')
+			.all('device-abc') as { film_id: number; person_id: string | null }[];
+		expect(rows).toHaveLength(1);
+		expect(rows[0]).toEqual({ film_id: second, person_id: null });
 	});
 
 	// 27. zero flash votes: the oldest tied film wins
@@ -122,6 +138,32 @@ describe('runoff', () => {
 		flashVote(db, runoff.id, 'celina', 'celina', second);
 		const result = closeRunoff(db, rules, runoff.id);
 		expect(result.kind === 'winner' && result.film.id).toBe(second);
+	});
+
+	// §7.2: the whole point of a movable vote is that the last word counts
+	it('a room that talks itself round decides on the last word', () => {
+		const { db, rules, first, second } = tiedWeek();
+		const runoff = openRunoff(db)!;
+		flashVote(db, runoff.id, 'celina', 'celina', second);
+		flashVote(db, runoff.id, 'darek', 'darek', second);
+		expect(tally(db, runoff.id)[0].film.id).toBe(second);
+
+		flashVote(db, runoff.id, 'celina', 'celina', first);
+		flashVote(db, runoff.id, 'darek', 'darek', first);
+		const result = closeRunoff(db, rules, runoff.id);
+		expect(result.kind === 'winner' && result.film.id).toBe(first);
+	});
+
+	// a move still checks its owner in; attendance is not undone by a change of heart
+	it('moving a vote leaves the attendance row alone', () => {
+		const { db, first, second } = tiedWeek();
+		const runoff = openRunoff(db)!;
+		flashVote(db, runoff.id, 'celina', 'celina', first);
+		flashVote(db, runoff.id, 'celina', 'celina', second);
+		const rows = db
+			.prepare('SELECT COUNT(*) AS n FROM attendance WHERE week_number = ? AND person_id = ?')
+			.get(runoff.week_number, 'celina') as { n: number };
+		expect(rows.n).toBe(1);
 	});
 
 	// 29. closing the runoff finishes the week and opens the next one

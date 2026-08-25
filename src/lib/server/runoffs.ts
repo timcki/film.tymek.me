@@ -53,10 +53,10 @@ export function tally(db: DB, runoffId: number): Tally[] {
 }
 
 /**
- * §7.2. One row per (runoff_id, voter_key), and the first one is final: a flash
- * vote decides the night, so there is nothing to change your mind to. Written to
- * runoff_ballot and never to ballot: being in the room breaks a tie, it does not
- * buy influence.
+ * §7.2. One row per (runoff_id, voter_key), and voting again moves it: the room
+ * argues until the host closes it, and a vote you cannot move is an argument you
+ * cannot lose. Written to runoff_ballot and never to ballot: being in the room
+ * breaks a tie, it does not buy influence.
  */
 export function flashVote(
 	db: DB,
@@ -82,16 +82,21 @@ export function flashVote(
 		const existing = db
 			.prepare('SELECT film_id FROM runoff_ballot WHERE runoff_id = ? AND voter_key = ?')
 			.get(runoffId, voterKey) as { film_id: number } | undefined;
-		if (existing) {
-			// a double-tap on the same card is not a crime; a different film is
-			if (existing.film_id === filmId) return;
-			throw new RuleError('vote_locked', 'your flash vote is locked in; one tap decides the night');
-		}
+		if (existing?.film_id === filmId) return;
 
-		db.prepare(
-			`INSERT INTO runoff_ballot (runoff_id, voter_key, person_id, film_id, created_at)
-			 VALUES (?, ?, ?, ?, ?)`
-		).run(runoffId, voterKey, personId, filmId, iso(now));
+		if (existing) {
+			// created_at moves with the choice, so the row says when this vote was
+			// actually made rather than when its owner first walked in
+			db.prepare(
+				`UPDATE runoff_ballot SET film_id = ?, person_id = ?, created_at = ?
+				 WHERE runoff_id = ? AND voter_key = ?`
+			).run(filmId, personId, iso(now), runoffId, voterKey);
+		} else {
+			db.prepare(
+				`INSERT INTO runoff_ballot (runoff_id, voter_key, person_id, film_id, created_at)
+				 VALUES (?, ?, ?, ?, ?)`
+			).run(runoffId, voterKey, personId, filmId, iso(now));
+		}
 
 		// §7.4: an identified flash vote implies being in the room
 		if (personId) checkIn(db, runoff.week_number, personId, now);

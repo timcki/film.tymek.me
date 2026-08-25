@@ -34,6 +34,8 @@ export type RuleSet = {
 	/**
 	 * §8.3: a cast vote is final. For this many seconds after a raise it can
 	 * still be unwound (double-taps on a phone are common); then it stands.
+	 * This governs the weekly ballot only; a flash vote in the room (§7.2) can
+	 * be moved freely until the runoff closes.
 	 */
 	voteGraceSeconds: number;
 };
@@ -89,7 +91,7 @@ export const RULE_SETS: Record<RuleSetId, RuleSet> = {
 		decayFactor: 0.5,
 		attrition: { kind: 'drop', afterWeeksWithoutPoints: 2 },
 		nominationsPerWeek: 1,
-		shortlistSize: 5,
+		shortlistSize: 3,
 		voteGraceSeconds: 30
 	}
 };
