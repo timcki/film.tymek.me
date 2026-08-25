@@ -4,8 +4,8 @@ buildNpmPackage {
   pname = "filmnight";
   version = "1.0.0";
 
-  # the store is world readable, so ship only what the build reads: no README
-  # (it points at the identity links), no prototypes, no tests
+  # the store is world readable, so ship only what the build reads: no README or
+  # docs (they point at the identity links), no prototypes, no tests
   src = lib.fileset.toSource {
     root = ../.;
     fileset = lib.fileset.unions [
