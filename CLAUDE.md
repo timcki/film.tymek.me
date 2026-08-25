@@ -32,6 +32,29 @@ npm run seed       # bundles scripts/seed.ts and runs it; creates roster, opens 
 First-time local setup needs `cp .env.example .env` with a TMDB v4 read token, and
 `mkdir -p data`. `ORIGIN` must be set or SvelteKit form actions fail their CSRF check.
 
+### Testing against real data
+
+`./deploy/test-local.sh` is how a change gets poked at before it ships. It takes a
+`sqlite3 .backup` of the production database over ssh to `bigchungus` (safe against the
+live WAL writer, and it never writes to production), drops the copy at
+`data/prod-copy.db`, prints every personal link on that copy, and runs `vite dev --host`
+against it. `SNAPSHOT=0` reuses the last copy instead of pulling a fresh one.
+
+- The origin defaults to this machine's **tailnet** address, not localhost, because `/me`
+  and `/host` render QR codes and a QR saying localhost is one no phone can follow. That
+  is also what makes the room screen testable from a phone. `LOCAL_ORIGIN=` overrides it.
+- Point it at `data/prod-copy.db` and nothing else. `data/filmnight.db` is the local
+  development database and `DATABASE_PATH` unset means production's filename; neither is
+  a scratch pad.
+- Print **Tymek's** link (`tymek-chmielecki`) into the conversation when starting the
+  server, so there is something to open without going digging. His own identity on his
+  own machine is his to see, and it is the admin one, so `/admin` and `/host` work from
+  it. The other twenty-odd are identities belonging to other people (see **Handle with
+  care**): leave them in the script's own output and do not repeat them anywhere that
+  persists. The tokens are real, not fixtures, so the one printed also opens production.
+- A snapshot arrives in whatever state production is in, which is usually a plain open
+  week. Reaching the runoff screen means closing the week from `/host` **on the copy**.
+
 There is no linter and no formatter config. Match the surrounding style: tabs, single
 quotes, semicolons.
 
