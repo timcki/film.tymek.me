@@ -462,6 +462,22 @@
 	</button>
 {/snippet}
 
+<!-- the backer pill with the points taken off: the sheet names people it has
+     room to name, where a card only has room to count them -->
+{#snippet facePill(face: { name: string; colour: string; avatar: string | null })}
+	<span class="bk face">
+		<Avatar
+			name={face.name}
+			colour={face.colour}
+			avatar={face.avatar}
+			size={16}
+			font={8}
+			titled={false}
+		/>
+		<b>{face.name}</b>
+	</span>
+{/snippet}
+
 <!-- one thread, two homes: the detail sheet and the badge's modal -->
 {#snippet commentThread(film: { id: number; comments: Film['comments'] })}
 	<div class="cmts">
@@ -1087,20 +1103,28 @@
 	onclick={closeSheets}
 ></button>
 
-<div class="sheet" class:on={detail !== null}>
+<div class="sheet dsheet" class:on={detail !== null}>
 	<button class="handle" aria-label="close" onclick={closeSheets}></button>
 	<div class="inner">
 		{#if detail}
-			<div class="dhero">
-				<div class="p"><Poster title={detail.title} url={detail.poster_url} /></div>
-				<div style="flex:1;min-width:0">
-					<h2>{detail.title}</h2>
-					<div class="yr">
-						{detail.year ?? ''}{#if detail.year && detail.director}
-							· {/if}{detail.director ?? ''}
+			<!-- the top of the sheet is a card like everything under it, which is
+			     what gives the coin a right edge to sit against rather than the
+			     far side of the window -->
+			<div class="dblock dtop">
+				<div class="dhero">
+					<div class="p"><Poster title={detail.title} url={detail.poster_url} /></div>
+					<div class="dh">
+						<h2>{detail.title}</h2>
+						<!-- joined in one expression: markup around the separator left
+						     the spaces to whitespace collapsing, which ate them -->
+						<div class="yr">
+							{[detail.year, detail.director].filter(Boolean).join(' · ')}
+						</div>
 					</div>
+					<!-- the same coin the list wears, one size up: a film's score should
+					     not be a different object depending on which screen says it -->
 					<button
-						class="sc"
+						class="coin dcoin"
 						type="button"
 						onpointerenter={(event) => {
 							mousing = event.pointerType === 'mouse';
@@ -1110,116 +1134,172 @@
 						onclick={(event) => !mousing && scoreAt(event.currentTarget, detail, true)}
 						onblur={unpeek}
 					>
-						<b>{fmtScore(detail.score)}</b>
-						<small>{T.unit(detail.score, votes)} · {T.sortLabel(rules)}</small>
+						<b>{fmtScore(detail.score)}</b><i>{T.unit(detail.score, votes)}</i>
 					</button>
+				</div>
+
+				<!-- the thin facts are chips: a block apiece for a genre and a runtime
+				     was a lot of ground for four words, and the nominator is a face,
+				     not a row that says one name and then stops -->
+				<div class="dmeta">
+					{#if detail.genre}<span class="mchip">{detail.genre}</span>{/if}
+					{#if detail.runtime}<span class="mchip">{T.minutes(detail.runtime)}</span>{/if}
+					{@render facePill(detail.nominator)}
+					<span class="dwhen">{T.nomPop(detail.added_week)}</span>
 				</div>
 			</div>
 
-			{#if noteEdit && detail.added_by === data.person?.id}
-				<form method="POST" action="?/setNote" use:enhance={submit(() => (noteEdit = false))}>
-					<input type="hidden" name="filmId" value={detail.id} />
-					<textarea
-						class="nin"
-						name="note"
-						rows="3"
-						maxlength="160"
-						placeholder={T.notePh}
-						value={detail.note ?? ''}
-					></textarea>
-					<div class="cbtns">
-						<button type="button" onclick={() => (noteEdit = false)}>{T.noteCancel}</button>
-						<button class="go">{T.noteSave}</button>
-					</div>
-				</form>
-			{:else}
-				{#if detail.note}
-					<div class="dnote">
-						“{detail.note}”<span class="sig">{T.noteSig(detail.addedByName)}</span>
-					</div>
-				{/if}
-				{#if detail.added_by === data.person?.id}
-					<button class="nedit" onclick={() => (noteEdit = true)}>
-						{detail.note ? T.noteEdit : T.noteAdd}
-					</button>
-				{/if}
-			{/if}
-
-			{#if detail.overview}<p class="over">{detail.overview}</p>{/if}
-
-			<div class="facts">
-				<div class="fact"><span>{T.dGenre}</span><b>{detail.genre ?? T.dEmpty}</b></div>
-				<div class="fact">
-					<span>{T.dRuntime}</span><b>{detail.runtime ? T.minutes(detail.runtime) : T.dEmpty}</b>
-				</div>
-				<div class="fact">
-					<span>{T.dAdded}</span><b>{T.addedBy(detail.addedByName, detail.added_week)}</b>
-				</div>
-				<div class="fact">
-					<span>{T.dBacked}</span>
-					<b>
-						{detail.backers.length
-							? detail.backers.map((b) => `${b.name} (${b.points})`).join(', ')
-							: T.dNobody}
-					</b>
-				</div>
-				<div class="fact">
-					<span>{T.dSeen}</span>
-					<b>{detail.seen.length ? detail.seen.map((s) => s.name).join(', ') : T.dNobody}</b>
-				</div>
-			</div>
-
-			<!-- owning up to a rewatch is a toggle, so a misclick is not a confession -->
-			<form class="seenrow" method="POST" action="?/seen" use:enhance={submit()}>
-				<input type="hidden" name="filmId" value={detail.id} />
-				<button class="tap" class:on={detail.seenMine}>
-					{detail.seenMine ? `✓ ${T.seenBtn}` : T.seenBtn}
-				</button>
-			</form>
-
-			<!-- §3.5: the whole mechanic, on the one screen that belongs to a single
-			     film. The reason is optional and shared, because the ask it replaces
-			     used to land in the group chat -->
-			{#if open && detail.added_by === data.person?.id && detail.status === 'active'}
-				<div class="holdbox">
-					<div class="holdh">{T.holdH}</div>
-					{#if detail.held || data.myHold === null || data.myHold === detail.id}
-						<form method="POST" action="?/hold" use:enhance={submit()}>
+			<!-- two columns that wrap into the one stack a phone had, so the order
+			     here is also the order a phone reads in: a rail under the poster
+			     for who pitched it and who is behind it, and the wider half for
+			     what the film is, what you can do about it, and the talk -->
+			<div class="dcols">
+				<div class="drail">
+					<!-- the pitch and the button that writes it are one block, so the
+					     button cannot end up in a column of its own -->
+					{#if noteEdit && detail.added_by === data.person?.id}
+						<form
+							class="dblock"
+							method="POST"
+							action="?/setNote"
+							use:enhance={submit(() => (noteEdit = false))}
+						>
 							<input type="hidden" name="filmId" value={detail.id} />
-							<input type="hidden" name="title" value={detail.title} />
 							<textarea
 								class="nin"
-								name="reason"
-								rows="2"
+								name="note"
+								rows="3"
 								maxlength="160"
-								placeholder={T.holdWhyPh}
-								value={detail.held?.reason ?? ''}
+								placeholder={T.notePh}
+								value={detail.note ?? ''}
 							></textarea>
 							<div class="cbtns">
-								{#if detail.held}
-									<button class="go">{T.holdSave}</button>
-								{:else}
-									<button class="go">💤 {T.holdBtn}</button>
-								{/if}
+								<button type="button" onclick={() => (noteEdit = false)}>{T.noteCancel}</button>
+								<button class="go">{T.noteSave}</button>
 							</div>
 						</form>
-						{#if detail.held}
-							<form method="POST" action="?/release" use:enhance={submit()}>
-								<input type="hidden" name="filmId" value={detail.id} />
-								<input type="hidden" name="title" value={detail.title} />
-								<button class="tap on">{T.holdRelease}</button>
-							</form>
-						{/if}
-					{:else}
-						<div class="holdhint">{T.holdSpent(heldTitle)}</div>
+					{:else if detail.note || detail.added_by === data.person?.id}
+						<div class="dblock pitch">
+							{#if detail.note}
+								<div class="dnote">
+									“{detail.note}”<span class="sig">{T.noteSig(detail.addedByName)}</span>
+								</div>
+							{/if}
+							{#if detail.added_by === data.person?.id}
+								<button class="nedit" onclick={() => (noteEdit = true)}>
+									{detail.note ? T.noteEdit : T.noteAdd}
+								</button>
+							{/if}
+						</div>
 					{/if}
-					<div class="holdhint">{T.holdHint(rules.shortlistSize)}</div>
+
+					<!-- both people questions in one block: apart, "nikt" cost a whole card
+					     to say nothing, and the two are read as one thought anyway. The
+					     label takes a line of its own as soon as there is anybody to
+					     name, so a crowd wraps across the block instead of queueing up
+					     behind it -->
+					<div class="dblock">
+						<div class="dsec">
+							<div class="drow">
+								<span class="dlab">{T.dBacked}</span>
+								{#if !detail.backers.length}<span class="dnone">{T.dNobody}</span>{/if}
+							</div>
+							{#if detail.backers.length}
+								<div class="dpeople">
+									{#each detail.backers as backer (backer.person_id)}
+										{@render bkPill(backer)}
+									{/each}
+								</div>
+							{/if}
+						</div>
+						<!-- owning up to a rewatch is a toggle, so a misclick is not a
+						     confession; it sits with the faces it would join -->
+						<div class="dsec">
+							<div class="drow">
+								<span class="dlab">{T.dSeen}</span>
+								{#if !detail.seen.length}<span class="dnone">{T.dNobody}</span>{/if}
+								<form method="POST" action="?/seen" use:enhance={submit()}>
+									<input type="hidden" name="filmId" value={detail.id} />
+									<button class="tap" class:on={detail.seenMine}>
+										{detail.seenMine ? `✓ ${T.seenBtn}` : T.seenBtn}
+									</button>
+								</form>
+							</div>
+							{#if detail.seen.length}
+								<div class="dpeople">
+									{#each detail.seen as face (face.id)}
+										{@render facePill(face)}
+									{/each}
+								</div>
+							{/if}
+						</div>
+					</div>
 				</div>
-			{/if}
 
-			{@render commentThread(detail)}
+				<div class="dmain">
+					{#if detail.overview}
+						<div class="dblock"><p class="over">{detail.overview}</p></div>
+					{/if}
 
-			<div class="spendbar">
+					<!-- §3.5: the whole mechanic, on the one screen that belongs to a single
+					     film. The reason is optional and shared, because the ask it replaces
+					     used to land in the group chat -->
+					{#if open && detail.added_by === data.person?.id && detail.status === 'active'}
+						<div class="holdbox">
+							<!-- the heading carries the way out, the way a block's heading
+							     carries its control everywhere else on this sheet -->
+							<div class="holdh">
+								<span>{T.holdH}</span>
+								{#if detail.held}
+									<form method="POST" action="?/release" use:enhance={submit()}>
+										<input type="hidden" name="filmId" value={detail.id} />
+										<input type="hidden" name="title" value={detail.title} />
+										<button class="tap">{T.holdRelease}</button>
+									</form>
+								{/if}
+							</div>
+							<!-- what it costs, read before the button rather than after it -->
+							<div class="holdhint">{T.holdHint(rules.shortlistSize)}</div>
+							{#if detail.held || data.myHold === null || data.myHold === detail.id}
+								<form method="POST" action="?/hold" use:enhance={submit()}>
+									<input type="hidden" name="filmId" value={detail.id} />
+									<input type="hidden" name="title" value={detail.title} />
+									<textarea
+										class="nin"
+										name="reason"
+										rows="2"
+										maxlength="160"
+										placeholder={T.holdWhyPh}
+										value={detail.held?.reason ?? ''}
+									></textarea>
+									<div class="cbtns">
+										{#if detail.held}
+											<button class="go">{T.holdSave}</button>
+										{:else}
+											<button class="go">💤 {T.holdBtn}</button>
+										{/if}
+									</div>
+								</form>
+							{:else}
+								<div class="holdhint">{T.holdSpent(heldTitle)}</div>
+							{/if}
+						</div>
+					{/if}
+
+
+					<div class="dblock">{@render commentThread(detail)}</div>
+				</div>
+			</div>
+
+		{/if}
+	</div>
+
+	<!-- the dock is a child of the sheet and not of its measure, so it reaches
+	     the sheet's own edges and sits flush against the bottom of the screen;
+	     its contents keep the column the rest of the sheet reads on -->
+	{#if detail}
+		<div class="spendbar">
+			<div class="inner">
 				<div class="lab">
 					{#if detail.myPoints}
 						<b>{T.dYours(detail.myPoints, votes)}</b>
@@ -1230,8 +1310,8 @@
 				</div>
 				{@render pipDock(detail)}
 			</div>
-		{/if}
-	</div>
+		</div>
+	{/if}
 </div>
 
 <div class="sheet" class:on={searchOpen}>

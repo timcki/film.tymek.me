@@ -560,33 +560,6 @@ header .sub b {
 	color: var(--dim);
 	white-space: nowrap;
 }
-.sc {
-	flex: 0 0 auto;
-	text-align: right;
-	line-height: 1;
-}
-/* the sheet's score is a button now: same tap, same maths popup as the coin */
-button.sc {
-	background: none;
-	border: 0;
-	padding: 0;
-	color: inherit;
-	cursor: pointer;
-}
-.sc b {
-	font-size: 21px;
-	font-weight: 800;
-	font-variant-numeric: tabular-nums;
-}
-.sc i {
-	display: block;
-	font-style: normal;
-	font-size: 9.5px;
-	letter-spacing: 0;
-	color: var(--dim);
-	font-weight: 600;
-	margin-top: 3px;
-}
 /* the score as a coin: the vote dots' big sibling, hue-free so blue can
    keep meaning "your votes" and nothing else. Tapping it opens the maths */
 .coin {
@@ -821,9 +794,6 @@ button.sc {
 	margin-top: 2px;
 }
 /* the rewatch confession button sits alone under the facts */
-.seenrow {
-	margin-top: 12px;
-}
 
 /* who felt what: emoji chips wearing the faces of everyone who reacted */
 .cmt .cbody {
@@ -1029,8 +999,8 @@ button.sc {
 	color: var(--ink2);
 	line-height: 1.55;
 	font-style: italic;
-	margin: 14px 0 0;
-	padding: 13px 15px;
+	margin: 12px 0 0;
+	padding: 14px 16px;
 	background: color-mix(in srgb, var(--sunk) 70%, transparent);
 	border-left: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
 	border-radius: 4px 14px 14px 4px;
@@ -1293,26 +1263,46 @@ button.holdchip:hover {
 	white-space: nowrap;
 }
 /* the whole mechanic on the one screen that belongs to a single film, set in
-   a panel of its own rather than under a rule */
+   a panel of its own rather than under a rule. The one card here that is a
+   lever and not a fact, so it takes a breath of the accent to say so */
 .holdbox {
-	margin-top: 16px;
-	padding: 14px 16px 16px;
-	border-radius: 14px;
-	background: color-mix(in srgb, var(--sunk) 65%, transparent);
+	margin-top: 12px;
+	padding: 14px;
+	border-radius: 16px;
+	background: color-mix(in srgb, var(--accent) 6%, var(--sunk));
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 13%, transparent);
 }
 .holdh {
+	display: flex;
+	align-items: center;
+	gap: 10px;
 	font-size: 13px;
 	font-weight: 650;
 	color: var(--ink);
 }
+.holdh form {
+	margin-left: auto;
+}
 .holdhint {
-	margin-top: 9px;
+	margin-top: 7px;
 	font-size: 11.5px;
 	line-height: 1.5;
 	color: var(--dimmer);
 }
-.holdbox .tap {
-	margin-top: 9px;
+/* a textarea on a card this close in tone to it needs its own ground */
+.holdbox .nin,
+.dblock .nin {
+	background: var(--raise);
+}
+/* the veto is one deliberate act, not a full-width slab of accent */
+.holdbox .cbtns {
+	justify-content: flex-end;
+	margin-top: 10px;
+}
+.holdbox .cbtns button {
+	flex: 0 0 auto;
+	padding: 10px 18px;
+	font-size: 13px;
 }
 /* the card's fine print: warnings flush left, the pills at the right edge.
    A full-width row of the card, under both the poster and the text */
@@ -1846,6 +1836,88 @@ details[open] > .iconbtn {
 	margin: 0 auto;
 	padding: 0 16px;
 }
+/* a film has enough to say to fill a panel; the list stays one column because a
+   ranking is a column, but this is not a ranking */
+.dsheet .inner {
+	max-width: 880px;
+}
+/* two columns rather than a flat grid: the blocks are not peers, and a grid of
+   equal tracks left whichever one came last sitting alone with two tracks of
+   nothing beside it. Flex wrap collapses the pair into the stack a phone had,
+   which keeps this file free of width breakpoints */
+.dcols {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 12px;
+	margin-top: 12px;
+}
+.dmain {
+	flex: 1 1 400px;
+	min-width: 0;
+}
+.drail {
+	flex: 1 1 270px;
+	min-width: 0;
+}
+/* the column supplies the gap above its first card */
+.dcols > * > :first-child {
+	margin-top: 0;
+}
+/* the pitch block holds the quote and the button that writes it, so the quote
+   drops the outer ground it used to carry alone, and the rounding with it */
+.dblock.pitch .dnote {
+	margin: 0;
+	background: none;
+	border-radius: 0;
+	padding: 0 0 0 12px;
+}
+/* the facts that are four words, on one line, as chips */
+.dmeta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 8px;
+	margin-top: 12px;
+}
+.mchip {
+	padding: 5px 11px;
+	border-radius: 99px;
+	background: color-mix(in srgb, var(--sunk) 70%, transparent);
+	color: var(--ink2);
+	font-size: 11.5px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+/* a labelled line inside a block, for the two people questions that are one
+   thought and were two cards */
+.drow {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 7px 9px;
+}
+/* one labelled section; its faces sit under the label rather than after it, so
+   twenty of them wrap across the block instead of running out of line. Both
+   gaps are tight, because a label and the faces it names are one thing and the
+   band between them was reading wider than the gap between whole cards */
+.dsec + .dsec {
+	margin-top: 10px;
+}
+.drow + .dpeople {
+	margin-top: 7px;
+}
+.dlab {
+	flex: 0 0 auto;
+	font-size: 13px;
+	/* the body's leading around a one-line label is half the gap under it */
+	line-height: 1.25;
+	font-weight: 650;
+	color: var(--dim);
+}
+.drow form {
+	margin-left: auto;
+}
 .handle {
 	display: block;
 	width: 44px;
@@ -1861,16 +1933,48 @@ details[open] > .iconbtn {
 	background: var(--edge);
 }
 
+/* the hero and the chips under it are one card, so the coin sits against an
+   edge of its own instead of the far side of the window */
+.dtop {
+	margin-top: 4px;
+	padding: 16px;
+	border-radius: 20px;
+}
+.dtop .dhero {
+	padding: 0;
+}
+.dtop .dmeta {
+	margin-top: 14px;
+}
 .dhero {
 	display: flex;
+	align-items: center;
 	gap: 14px;
 	padding: 12px 0 4px;
 }
 .dhero .p {
 	width: 96px;
 	flex: 0 0 96px;
-	border-radius: 10px;
+	border-radius: 12px;
 	cursor: default;
+	/* the sheet's poster sits on the page like a card, not in a hole in it */
+	box-shadow: var(--lift);
+}
+.dhero .dh {
+	flex: 1;
+	min-width: 0;
+}
+/* the list's coin at the size a hero can carry */
+.dcoin {
+	width: 58px;
+	height: 58px;
+	flex: none;
+}
+.dcoin b {
+	font-size: 18px;
+}
+.dcoin i {
+	font-size: 9px;
 }
 .dhero h2 {
 	margin: 0;
@@ -1883,58 +1987,104 @@ details[open] > .iconbtn {
 	font-size: 13px;
 	margin-top: 4px;
 }
-.dhero .sc {
-	margin-top: 10px;
-	text-align: left;
-}
-.dhero .sc b {
-	font-size: 26px;
-}
-.dhero .sc small {
-	display: block;
-	font-size: 11px;
-	letter-spacing: 0;
-	color: var(--dim);
-	font-weight: 600;
-	margin-top: 4px;
-}
 .over {
 	color: var(--dim);
 	font-size: 13px;
 	line-height: 1.55;
 	margin: 12px 0 0;
 }
+/* inside a block the block supplies the space; /host uses .over on its own */
+.dblock .over {
+	margin: 0;
+}
 /* the facts, banded rather than ruled: every other row takes a shade so the
    eye can still track a long line across to its value */
-.facts {
-	margin: 14px 0 0;
-	font-size: 13px;
+/* the sheet in the card language, one level up: each part of a film gets its
+   own block on the sheet's ground, told apart by elevation the way the cards
+   are, rather than by a rule or a run of label-and-value rows */
+.dblock {
+	margin-top: 12px;
+	padding: 14px;
+	border-radius: 16px;
+	background: color-mix(in srgb, var(--sunk) 70%, transparent);
 }
-.fact {
+/* the block's own heading; it carries a control on the right where the block
+   has one to carry, which is why it is a row and not a line of text */
+.dbh {
 	display: flex;
+	align-items: center;
 	justify-content: space-between;
-	gap: 14px;
-	padding: 10px 12px;
-	border-radius: 10px;
+	gap: 12px;
+	margin-bottom: 10px;
+	font-size: 13px;
+	font-weight: 650;
 	color: var(--dim);
 }
-.fact:nth-of-type(odd) {
-	background: color-mix(in srgb, var(--sunk) 55%, transparent);
+/* the thread arrives with the heading it wears in its other home, the modal */
+.dblock .sec {
+	margin: 0 0 10px;
 }
-.fact b {
-	color: var(--ink);
+.dpeople {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+/* the chips' own padding insets their text; without the same inset this one
+   wraps to a second line that starts further left than the line above it */
+.dwhen {
+	padding: 5px 11px;
+	font-size: 11.5px;
+	color: var(--dimmer);
+}
+.dnone {
+	font-size: 12.5px;
+	color: var(--dimmer);
+}
+/* the backer pill with a name where its points would be */
+.bk.face {
+	cursor: default;
+}
+.bk.face b {
+	font-size: 11.5px;
 	font-weight: 600;
-	text-align: right;
 }
 .spendbar {
 	display: flex;
 	align-items: center;
 	gap: 12px;
-	margin: 16px 0 4px;
+	margin: 12px 0 4px;
 	background: color-mix(in srgb, var(--sunk) 70%, transparent);
 	border: 0;
 	border-radius: 16px;
-	padding: 12px 14px;
+	padding: 14px;
+}
+/* the one thing this screen is for, kept where a thumb already is however far
+   down the thread you have read. Flush to the bottom of the screen and to the
+   sheet's own edges: floated off the bottom by even a few pixels it reads as a
+   card that failed to reach the address bar rather than as a dock. Opaque,
+   because a translucent ground would have the comments scrolling through it */
+.dsheet .spendbar {
+	display: block;
+	position: sticky;
+	bottom: 0;
+	z-index: 2;
+	margin: 12px 0 0;
+	border-radius: 0;
+	padding: 14px 0 calc(14px + env(safe-area-inset-bottom));
+	background: color-mix(in srgb, var(--sunk) 70%, var(--card));
+	box-shadow: 0 -12px 22px -14px var(--shadow);
+}
+/* .inner puts the dock's contents on the same column as the sheet's */
+.dsheet .spendbar .inner {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+/* the sheet's own bottom padding would leave the dock hovering short of the
+   edge at the end of the scroll; the dock carries the safe area instead */
+.dsheet {
+	padding-bottom: 0;
 }
 .spendbar .lab {
 	flex: 1;
