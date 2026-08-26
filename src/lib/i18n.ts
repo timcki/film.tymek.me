@@ -158,6 +158,8 @@ export type Dict = {
 	sortLabel: (rules: RulesView) => string;
 	minutes: (n: number) => string;
 	fadeNote: (rules: RulesView) => string;
+	/** what the score fades to next week if nobody spends anything more on it */
+	scoreNext: string;
 
 	noteQ: string;
 	notePh: string;
@@ -467,6 +469,7 @@ const pl: Dict = {
 	},
 	minutes: (n) => `${n} min`,
 	fadeNote: (r) => `Punkty tracą ${fadePercent(r)}% wartości co tydzień`,
+	scoreNext: 'Za tydzień',
 
 	noteQ: 'Dlaczego ten film? (opcjonalnie)',
 	notePh: 'Krótka notka dla reszty…',
@@ -842,6 +845,7 @@ const en: Dict = {
 	},
 	minutes: (n) => `${n} min`,
 	fadeNote: (r) => `Points lose ${fadePercent(r)}% of their value each week`,
+	scoreNext: 'Next week',
 
 	noteQ: 'Why this one? (optional)',
 	notePh: 'A short note for the others…',

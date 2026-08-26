@@ -41,9 +41,30 @@ function backersOf(db: DB, rules: RuleSet, filmId: number, currentWeek: number):
 			 HAVING points > 0
 			 ORDER BY points DESC, p.name COLLATE NOCASE`
 		)
-		.all(...params) as (Omit<Backer, 'avatar'> & { avatar_updated_at: string | null })[];
+		.all(...params) as (Omit<Backer, 'avatar' | 'weekly'> & {
+		avatar_updated_at: string | null;
+	})[];
+	// the same window the total is taken over, split by week: a face on a card
+	// can then say when it put its points in and not only how many
+	const weekRows = db
+		.prepare(
+			`SELECT b.person_id, b.week_number AS week, SUM(b.points) AS points
+			 FROM ballot b
+			 WHERE b.film_id = ? ${clause}
+			 GROUP BY b.person_id, b.week_number
+			 HAVING points > 0
+			 ORDER BY week DESC`
+		)
+		.all(...params) as { person_id: string; week: number; points: number }[];
+	const weekly = new Map<string, { week: number; points: number }[]>();
+	for (const { person_id, ...row } of weekRows) {
+		const list = weekly.get(person_id);
+		if (list) list.push(row);
+		else weekly.set(person_id, [row]);
+	}
 	return rows.map(({ avatar_updated_at, ...backer }) => ({
 		...backer,
+		weekly: weekly.get(backer.person_id) ?? [],
 		avatar: avatarUrl(backer.person_id, avatar_updated_at)
 	}));
 }

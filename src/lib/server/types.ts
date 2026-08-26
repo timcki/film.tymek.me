@@ -98,6 +98,8 @@ export type Backer = {
 	name: string;
 	colour: string;
 	points: number;
+	/** the same points split by the week they were cast in, newest first */
+	weekly: { week: number; points: number }[];
 	/** the person's cached XP, for the level title on their face */
 	xp: number;
 	avatar: string | null;
@@ -113,7 +115,7 @@ export type Standing = Film & {
 	myGraceUntil: string | null;
 	addedByName: string;
 	/** the nominator as a face, for the pill in the card's title line */
-	nominator: Omit<Backer, 'points'>;
+	nominator: Omit<Backer, 'points' | 'weekly'>;
 	/** per-week point totals, oldest last, for the score-breakdown popup */
 	weeklyPoints: { week: number; points: number }[];
 	/** consecutive weeks a single person has backed this film, §9 badge */

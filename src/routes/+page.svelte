@@ -136,9 +136,12 @@
 	// what the popup needs of a person; backers and nominators both satisfy it
 	type PeekFace = { name: string; colour: string; avatar: string | null; xp: number };
 
+	type WeekPoints = { week: number; points: number };
 	let peek = $state<{
 		face: PeekFace;
 		sub: string;
+		/** empty for a face that is not counting anything, like a nominator */
+		rows: WeekPoints[];
 		x: number;
 		y: number;
 		below: boolean;
@@ -157,6 +160,8 @@
 	type ScoreRow = { week: number; points: number; mult: number; contrib: number };
 	let scorePop = $state<{
 		rows: ScoreRow[];
+		/** the same sum one week older, which is what it will be if nobody votes */
+		next: number;
 		x: number;
 		y: number;
 		below: boolean;
@@ -191,11 +196,19 @@
 		};
 	}
 
-	function peekAt(pill: EventTarget | null, face: PeekFace, sub: string, tap: boolean) {
+	function peekAt(
+		pill: EventTarget | null,
+		face: PeekFace,
+		sub: string,
+		tap: boolean,
+		rows: WeekPoints[] = []
+	) {
 		clearTimeout(closing);
 		if (!(pill instanceof HTMLElement)) return;
 		shutPops();
-		peek = { face, sub, tap, ...anchorAt(pill, POP_W, POP_H) };
+		// each week costs the popup a row, and the guess at its height is what
+		// decides whether it can still open upwards
+		peek = { face, sub, rows, tap, ...anchorAt(pill, POP_W, POP_H + rows.length * 17) };
 	}
 
 	function noteAt(el: EventTarget | null, film: Film, tap: boolean) {
@@ -263,7 +276,8 @@
 			const mult = rules.decayFactor ** (weekNow - row.week);
 			return { ...row, mult, contrib: row.points * mult };
 		});
-		scorePop = { rows, tap, ...anchorAt(el, NPOP_W, NPOP_H) };
+		const total = rows.reduce((sum, row) => sum + row.contrib, 0);
+		scorePop = { rows, next: total * rules.decayFactor, tap, ...anchorAt(el, NPOP_W, NPOP_H) };
 	}
 
 	/** the comment thread under the badge, read-only; the modal is for writing */
@@ -437,16 +451,34 @@
 		onpointerenter={(event) => {
 			mousing = event.pointerType === 'mouse';
 			if (mousing)
-				peekAt(event.currentTarget, backer, `${backer.points} ${T.unit(backer.points, votes)}`, false);
+				peekAt(
+					event.currentTarget,
+					backer,
+					`${backer.points} ${T.unit(backer.points, votes)}`,
+					false,
+					backer.weekly
+				);
 		}}
 		onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
 		onclick={(event) =>
 			!mousing &&
-			peekAt(event.currentTarget, backer, `${backer.points} ${T.unit(backer.points, votes)}`, true)}
+			peekAt(
+				event.currentTarget,
+				backer,
+				`${backer.points} ${T.unit(backer.points, votes)}`,
+				true,
+				backer.weekly
+			)}
 		onfocus={(event) => {
 			// a tap focuses too, and would fight the click handler for the same pill
 			if (event.currentTarget.matches(':focus-visible'))
-				peekAt(event.currentTarget, backer, `${backer.points} ${T.unit(backer.points, votes)}`, false);
+				peekAt(
+					event.currentTarget,
+					backer,
+					`${backer.points} ${T.unit(backer.points, votes)}`,
+					false,
+					backer.weekly
+				);
 		}}
 		onblur={unpeek}
 	>
@@ -1403,6 +1435,17 @@
 		<b>{peek.face.name}</b>
 		<span class="bktitle lv{levelOf(peek.face.xp)}">{T.levels[levelOf(peek.face.xp)]}</span>
 		<span>{peek.sub}</span>
+		<!-- the total above, and under it the weeks it was actually spent across -->
+		{#if peek.rows.length}
+			<div class="bkweeks">
+				{#each peek.rows as row (row.week)}
+					<div class="srow">
+						<span>{T.week(row.week)}</span>
+						<b>{row.points}</b>
+					</div>
+				{/each}
+			</div>
+		{/if}
 	</div>
 {/if}
 
@@ -1543,6 +1586,11 @@
 				</b>
 			</div>
 		{/each}
+		<!-- where the number lands next week if nothing more is spent on it -->
+		<div class="srow next">
+			<span>{T.scoreNext}</span>
+			<b>≈ {fmtScore(scorePop.next)}</b>
+		</div>
 		<span class="sig">{T.fadeNote(rules)}</span>
 	</div>
 {/if}
