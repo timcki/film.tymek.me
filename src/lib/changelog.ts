@@ -93,7 +93,7 @@ export const CHANGELOG: ChangelogEntry[] = [
 		body: {
 			pl: [
 				'Wracamy do top 3 filmów z 5. Przy 5 kandydatach nie było już żadnej selekcji i konkurencji między filmami. Jako że motywacją było top 3 z Fitzcarraldo którego Adam prosił o nieogladanie, wprowadzenie możliwości usypiania filmów pozwoli zawsze mieć pełne top 3.',
-				'Głos oddany przez kod QR w sali nie jest już ostateczny. Julka słusznie zauważyła że fajnie byłoby go przenieść na inny film jeśli widzimy, że pierwsze miejsce ma dla nas najgorszy z 3.',
+				'Głos oddany przez kod QR w sali nie jest już ostateczny. Julka słusznie zauważyła że fajnie byłoby go przenieść na inny film jeśli widzimy, że aktualne pierwsze miejsce jest dla nas najgorsze z 3.',
 				'To dotyczy tylko głosowania w sali. Punkty oddawane w ciągu tygodnia dalej są ostateczne po 30 sekundach.',
 				'Uśpione filmy nie zajmują już miejsca w top 3, schodzą do reszty listy i zajmują mniej miejsca.',
 				'Jest nowy szczegółowy ekran filmu (po kliknięciu plakatu) dajcie znać co myślicie.'
