@@ -27,6 +27,7 @@ npm run test:watch
 npm run check      # svelte-kit sync && svelte-check; must be 0 errors
 npm run build      # adapter-node output into build/
 npm run seed       # bundles scripts/seed.ts and runs it; creates roster, opens week 1
+npm run anonymise -- <source.db> <out.db>   # builds the public demo's database
 ```
 
 First-time local setup needs `cp .env.example .env` with a TMDB v4 read token, and
@@ -54,6 +55,12 @@ against it. `SNAPSHOT=0` reuses the last copy instead of pulling a fresh one.
   persists. The tokens are real, not fixtures, so the one printed also opens production.
 - A snapshot arrives in whatever state production is in, which is usually a plain open
   week. Reaching the runoff screen means closing the week from `/host` **on the copy**.
+
+`./deploy/test-demo.sh` does the same for the public demo, one step longer: snapshot,
+anonymise, then `vite dev` with `DEMO=1` against the anonymised copy. The demo is a
+separate service on a separate subdomain serving a database with nobody real in it, so
+the anonymiser is the load-bearing piece and `tests/demo.test.ts` is what holds it to
+that. `docs/operations.md` has the service, the hourly refresh and its failure contract.
 
 There is no linter and no formatter config. Match the surrounding style: tabs, single
 quotes, semicolons.

@@ -92,6 +92,111 @@ announce a rule change that never happened.
 The script is a one-off and refuses to run against a database that does not have exactly
 one week numbered 1, so it cannot be applied twice.
 
+## The demo
+
+<https://demo.film.tymek.me> is this same code, run by a second service against a
+database with nobody real in it, so the app can be linked from a portfolio without
+handing a stranger twenty-two people's names, faces and comments.
+
+The privacy here is by absence, not by masking. Names reach the browser from seven or
+eight places, and a masking layer inside the live app would have to catch every one of
+them forever. Instead the demo's process opens a file that never had any of it:
+`scripts/anonymise.ts` rewrites a snapshot into made-up people, drops the avatars,
+swaps every line of free text for a canned one, and vacuums, so the old bytes are not
+even in the freed pages. What stays real is the part worth showing: titles, posters,
+directors, every score, every ballot, the whole week history including the archive, XP,
+ranks, the fairness table and the rule set.
+
+It is a subdomain rather than `/demo` on the real one because SvelteKit's `base` is
+fixed at build time: every internal link would walk out of a path prefix straight into
+the gated app, and `origin()` would put the wrong host into the QR codes.
+
+Both units live in `modules/services/filmnight.nix` in `~/.config/nix`, which is not this
+repository, so they are described here rather than checked in.
+
+### The service
+
+`filmnight-demo`, alongside `filmnight` and pointed at the same store path:
+
+| Setting | Value |
+|---|---|
+| `PORT` | `3011` |
+| `DATABASE_PATH` | `/var/lib/filmnight-demo/demo.db` |
+| `ORIGIN` | `https://demo.film.tymek.me` |
+| `DEMO` | `1` |
+| `DEMO_HOME` | wherever the portfolio lives, for the link back |
+| `RULES` | the same value as production, or the rules screen describes a different app |
+| `TMDB_READ_TOKEN` | the same token; `/api/search` is rate limited per address in demo |
+| `ADMINS` | **unset** |
+
+`ADMINS` is deliberately absent. The anonymiser preserves `is_admin`, so the demo already
+has an admin to switch to, and the ids in `ADMINS` do not exist in that database anyway.
+
+Its firewall rule is the same shape as the app's: 3011 open on `tailscale0` only, so
+chungus-1 is the only thing that can reach it. It gets no backup timer; there is nothing
+in it worth keeping.
+
+Nothing in the demo needs `BODY_SIZE_LIMIT` raised, because uploads are refused there.
+The in-process scheduler runs as usual, so a demo week really does close and a runoff
+really does resolve; the hourly rebuild simply puts it back.
+
+### The refresh
+
+`filmnight-demo-refresh.timer`, hourly, running the service below as root. Give the unit
+`RuntimeDirectory=filmnight-demo-refresh` with mode `0700`, so the snapshot of the real
+database spends its short life in `/run` and never in a directory the demo user can read:
+
+```sh
+set -euo pipefail
+work=/run/filmnight-demo-refresh
+trap 'rm -f "$work"/*' EXIT
+
+sqlite3 /var/lib/filmnight/filmnight.db ".backup '$work/snapshot.db'"
+"$node" "$anonymise" "$work/snapshot.db" "$work/next.db"
+
+install -o filmnight-demo -g filmnight-demo -m 0640 "$work/next.db" \
+    /var/lib/filmnight-demo/demo.db
+rm -f /var/lib/filmnight-demo/demo.db-wal /var/lib/filmnight-demo/demo.db-shm
+systemctl restart filmnight-demo
+```
+
+`$node` and `$anonymise` are Nix interpolations of `${nodejs_24}/bin/node` and
+`${filmnight}/lib/filmnight/anonymise.mjs`: the same node and the same store path the
+service itself runs from. `nix/package.nix` bundles the script beside `seed.mjs`.
+
+`.backup` is safe against the live WAL writer and never writes to production. Everything
+after it is `set -e`, and that is the whole failure contract: the anonymiser writes no
+output at all unless its verification passed, so a failed run swaps nothing in and
+restarts nothing, and the previous demo database keeps serving. A stale demo is fine. A
+leaking one is not.
+
+The one false alarm worth knowing about: the verification looks for every source name in
+every column, and `tmdb_cache` and `film.overview` are left alone because they are public
+film data. A director or a synopsis that happens to contain somebody's full name will
+therefore stop the run and name the column it found it in. That is the check working; the
+call about what to do with it is yours.
+
+The `-wal` removal matters for the same reason it does in `deploy/test-local.sh`: a
+journal left beside the new file belongs to the database it replaced, and SQLite would
+replay it over the fresh copy.
+
+### The proxy
+
+On chungus-1, in `/etc/caddy/Caddyfile`, the block in `deploy/Caddyfile.snippet`:
+
+```
+demo.film.tymek.me {
+	encode zstd gzip
+	reverse_proxy bigchungus:3011
+}
+```
+
+### Trying it first
+
+`./deploy/test-demo.sh` does all of it here: snapshot, anonymise, serve with `DEMO=1`.
+`SNAPSHOT=0` re-anonymises the snapshot already on disk. The snapshot and the demo copy
+are two different files on purpose, and only the second one is ever served.
+
 ## Notes
 
 - The scheduler is in-process and wakes every minute. Closing a week is idempotent and

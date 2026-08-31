@@ -27,8 +27,12 @@ buildNpmPackage {
   # against these headers any more, and no node-gyp (or python) is involved
   nodejs = nodejs_24;
 
-  # seeding is still a hand-run job on the server, and it needs a bundle
-  postBuild = "npm run build:seed";
+  # seeding is still a hand-run job on the server, and the demo's hourly refresh
+  # runs the anonymiser out of the store; both need a bundle
+  postBuild = ''
+    npm run build:seed
+    npm run build:anonymise
+  '';
 
   # adapter-node leaves better-sqlite3 and qrcode as runtime imports, so the
   # production tree has to travel with the build
@@ -39,6 +43,7 @@ buildNpmPackage {
     mkdir -p $out/lib/filmnight
     cp -r build node_modules package.json $out/lib/filmnight/
     cp .seed/seed.mjs $out/lib/filmnight/seed.mjs
+    cp .seed/anonymise.mjs $out/lib/filmnight/anonymise.mjs
 
     runHook postInstall
   '';

@@ -6,3 +6,12 @@ film.tymek.me {
 	encode zstd gzip
 	reverse_proxy bigchungus:3010
 }
+
+# the public demo: the same code, a second service, and a database with nobody
+# real in it. Its own subdomain rather than a path under the one above, because
+# SvelteKit's base is fixed at build time and every internal link would walk out
+# of a prefix straight into the gated app.
+demo.film.tymek.me {
+	encode zstd gzip
+	reverse_proxy bigchungus:3011
+}
