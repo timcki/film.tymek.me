@@ -1,6 +1,6 @@
 import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
-import { activeRules, origin } from '$lib/server/config';
+import { activeRules, isDemo, origin } from '$lib/server/config';
 import { bankBalance, clearAvatar, rotateToken, setAvatar } from '$lib/server/people';
 import { currentWeek } from '$lib/server/weeks';
 import { XP, xpBreakdown } from '$lib/server/xp';
@@ -92,6 +92,9 @@ export const actions: Actions = {
 		const form = await request.formData();
 		const file = form.get('picture');
 		try {
+			// the demo is a public door, and whatever a stranger uploads would sit on
+			// somebody else's face until the next hourly rebuild
+			if (isDemo()) throw new RuleError('demo_no_upload', 'the demo does not take uploads');
 			if (!(file instanceof File)) throw new RuleError('empty_file', 'no file was sent');
 			setAvatar(getDb(), locals.person!.id, new Uint8Array(await file.arrayBuffer()));
 			return { avatarSaved: true };

@@ -1,6 +1,7 @@
 import type { LayoutServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
-import { activeRules } from '$lib/server/config';
+import { activeRules, demoHome, isDemo } from '$lib/server/config';
+import { PERSONAS, personas, type PersonaKind } from '$lib/server/demo';
 import { currentWeek } from '$lib/server/weeks';
 import { openRunoff } from '$lib/server/runoffs';
 import { avatarUrl, bankBalance, spentInWeek } from '$lib/server/people';
@@ -21,8 +22,24 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	const budget = rules.banking ? balance : rules.pointsPerWeek;
 
 	const lang = langOf(cookies.get(LANG_COOKIE));
+
+	// the demo's bar has to say who you currently are, which means naming the
+	// three it can offer and which of them is holding the phone
+	const cast = isDemo() ? personas(db) : null;
+	const demo = cast
+		? {
+				home: demoHome(),
+				who: (PERSONAS.find((kind) => cast[kind]?.id === person?.id) ?? null) as PersonaKind | null,
+				offer: PERSONAS.filter((kind) => cast[kind]).map((kind) => ({
+					kind,
+					name: cast[kind]!.name
+				}))
+			}
+		: null;
+
 	return {
 		lang,
+		demo,
 		// the palette is already on <html>; the layout only needs it to know
 		// which half of the switch is lit
 		theme: themeOf(cookies.get(THEME_COOKIE)),

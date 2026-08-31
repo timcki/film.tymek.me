@@ -79,6 +79,11 @@
 					: 'var(--burn2)'
 	);
 
+	// which of the demo's three people the bar is offering; only ever rendered
+	// when the server said this is the demo, so the real app never sees it
+	const personaLabel = (kind: 'member' | 'admin' | 'fresh') =>
+		kind === 'admin' ? T.demoAdmin : kind === 'fresh' ? T.demoFresh : T.demoMember;
+
 	let tipOpen = $state(false);
 	let weekTip = $state(false);
 	let menuOpen = $state(false);
@@ -112,6 +117,31 @@
 </script>
 
 <svelte:head><title>{T.appTitle}</title></svelte:head>
+
+{#if data.demo}
+	<!-- the demo says what it is before it says anything else, and it says it on
+	     every page: the room screen and the back office are the two a stranger is
+	     most likely to mistake for somebody's real evening -->
+	<div class="demobar">
+		<div class="demoin">
+			<p><b>{T.demoWhat}</b> {T.demoResets}</p>
+			<div class="demoas">
+				<span>{T.demoAs}</span>
+				{#each data.demo.offer as persona (persona.kind)}
+					<a
+						class="demopill"
+						class:on={data.demo.who === persona.kind}
+						href="/demo/as?who={persona.kind}&to={encodeURIComponent(path)}"
+						>{personaLabel(persona.kind)}: {persona.name.split(' ')[0]}</a
+					>
+				{/each}
+				{#if data.demo.home}
+					<a class="demohome" href={data.demo.home}>{T.demoHome}</a>
+				{/if}
+			</div>
+		</div>
+	</div>
+{/if}
 
 <!-- the face and everything behind it, shared by both headers -->
 {#snippet identity()}

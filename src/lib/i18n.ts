@@ -336,6 +336,15 @@ export type Dict = {
 	tAvatarSaved: string;
 	tAvatarRemoved: string;
 
+	/** the public demo's standing disclaimer, and the three people it can be */
+	demoWhat: string;
+	demoResets: string;
+	demoAs: string;
+	demoMember: string;
+	demoAdmin: string;
+	demoFresh: string;
+	demoHome: string;
+
 	error: (code: string, params: ErrorParams, fallback: string) => string;
 };
 
@@ -713,6 +722,15 @@ const pl: Dict = {
 	tAvatarSaved: 'Zdjęcie zapisane',
 	tAvatarRemoved: 'Zdjęcie usunięte',
 
+	demoWhat:
+		'To jest demo. Imiona, twarze i komentarze są zmyślone; filmy, wyniki, punkty i cała historia są prawdziwe.',
+	demoResets: 'Kopia odtwarza się co godzinę, więc możesz tu klikać do woli.',
+	demoAs: 'jesteś jako',
+	demoMember: 'uczestnik',
+	demoAdmin: 'admin',
+	demoFresh: 'ktoś, kto jeszcze nie głosował',
+	demoHome: 'wróć do portfolio',
+
 	error: (code, p, fallback) => {
 		switch (code) {
 			case 'no_week':
@@ -777,6 +795,8 @@ const pl: Dict = {
 				return `Komentarz może mieć najwyżej ${p.max} znaków.`;
 			case 'no_comment':
 				return 'Nie ma takiego komentarza.';
+			case 'demo_no_upload':
+				return 'W demo nie wgrywamy zdjęć.';
 			default:
 				return fallback;
 		}
@@ -1148,6 +1168,15 @@ const en: Dict = {
 	tReleased: (title) => `${title} is in the running again`,
 	tAvatarSaved: 'Picture saved',
 	tAvatarRemoved: 'Picture removed',
+
+	demoWhat:
+		'This is a demo. The names, the faces and the comments are invented; the films, the scores, the points and the whole history are real.',
+	demoResets: 'The copy is rebuilt every hour, so click anything you like.',
+	demoAs: 'you are',
+	demoMember: 'a member',
+	demoAdmin: 'the admin',
+	demoFresh: 'someone who has not voted yet',
+	demoHome: 'back to the portfolio',
 
 	error: (_code, _params, fallback) => fallback
 };

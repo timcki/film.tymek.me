@@ -1,6 +1,8 @@
 import type { Handle } from '@sveltejs/kit';
 import { getDb } from '$lib/server/db';
 import { isAdmin, seedAdmins } from '$lib/server/admin';
+import { isDemo } from '$lib/server/config';
+import { demoDefault } from '$lib/server/demo';
 import { personByToken } from '$lib/server/people';
 import { startScheduler } from '$lib/server/scheduler';
 import { THEME_BG, themeOf } from '$lib/themes';
@@ -41,10 +43,24 @@ const LOCKED_OUT = `<!doctype html>
 <p>Open your personal link to get in.</p>
 </main></body></html>`;
 
+/**
+ * The demo is a public door, and a search engine indexing made-up people saying
+ * made-up things about real films helps nobody. Set on every response, the early
+ * ones included, rather than only on the pages that render.
+ */
+function unindexed(response: Response): Response {
+	if (isDemo()) response.headers.set('X-Robots-Tag', 'noindex');
+	return response;
+}
+
 export const handle: Handle = async ({ event, resolve }) => {
 	const db = getDb();
 	const token = event.cookies.get(PERSON_COOKIE);
-	const person = token ? (personByToken(db, token) ?? null) : null;
+	let person = token ? (personByToken(db, token) ?? null) : null;
+	// the demo has nobody to lock out: a visitor arriving without a link is handed
+	// one of its made-up people and carries on down the ordinary code path, so
+	// nothing below here has to know which of the two apps it is running in
+	if (!person && isDemo()) person = demoDefault(db);
 	event.locals.person = person;
 	event.locals.deviceId = event.cookies.get(DEVICE_COOKIE) ?? null;
 
@@ -59,15 +75,17 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	if (!person && !isOpenRoute(event.url.pathname)) {
-		return new Response(LOCKED_OUT, {
-			status: 401,
-			headers: { 'content-type': 'text/html; charset=utf-8' }
-		});
+		return unindexed(
+			new Response(LOCKED_OUT, {
+				status: 401,
+				headers: { 'content-type': 'text/html; charset=utf-8' }
+			})
+		);
 	}
 
 	// nobody else needs to learn that /admin is a page; each route checks again
 	if (event.url.pathname.startsWith('/admin') && !isAdmin(person)) {
-		return new Response('Not found', { status: 404 });
+		return unindexed(new Response('Not found', { status: 404 }));
 	}
 
 	// the palette is dressed onto <html> here rather than by a script on the
@@ -81,11 +99,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 		<meta name="theme-color" content="${THEME_BG.light}" media="(prefers-color-scheme: light)" />`
 			: `<meta name="theme-color" content="${THEME_BG[theme]}" />`;
 
-	return resolve(event, {
-		transformPageChunk: ({ html }) =>
-			html
-				.replaceAll('%fn.theme%', theme)
-				.replace('%fn.scheme%', theme === 'auto' ? 'light dark' : theme)
-				.replace('%fn.tint%', tint)
-	});
+	return unindexed(
+		await resolve(event, {
+			transformPageChunk: ({ html }) =>
+				html
+					.replaceAll('%fn.theme%', theme)
+					.replace('%fn.scheme%', theme === 'auto' ? 'light dark' : theme)
+					.replace('%fn.tint%', tint)
+		})
+	);
 };

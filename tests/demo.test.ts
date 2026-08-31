@@ -23,7 +23,8 @@ import { checkIn } from '../src/lib/server/attendance.js';
 import { addNight } from '../src/lib/server/schedule.js';
 import { logAdmin } from '../src/lib/server/admin.js';
 import { rexpAll } from '../src/lib/server/xp.js';
-import { addFilm, castBallot, ensureWeek } from './helpers.js';
+import { demoDefault, personas } from '../src/lib/server/demo.js';
+import { addFilm, castBallot, ensureWeek, freshDb } from './helpers.js';
 
 const NOW = new Date('2026-08-03T10:00:00Z');
 const rules = RULE_SETS.banked;
@@ -37,12 +38,12 @@ const ARCHIVE_ID = 'archiwum';
  * output can only mean the anonymiser missed it.
  */
 const CAST = [
-	{ name: 'Dorota Wilczyńska', token: 'tokenDorotaWilczynska1', xpSeed: 0 },
-	{ name: 'Marek Osiecki', token: 'tokenMarekOsiecki22222', xpSeed: 1 },
-	{ name: 'Halina Brzoza', token: 'tokenHalinaBrzoza33333', xpSeed: 2 },
-	{ name: 'Paweł Truszczyński', token: 'tokenPawelTruszczyns44', xpSeed: 3 },
-	{ name: 'Kamil Zdunek', token: 'tokenKamilZdunek555555', xpSeed: 4 },
-	{ name: 'Renata Pilarczyk', token: 'tokenRenataPilarczyk66', xpSeed: 5 }
+	{ name: 'Dorota Wilczyńska', token: 'tokenDorotaWilczynska1' },
+	{ name: 'Marek Osiecki', token: 'tokenMarekOsiecki22222' },
+	{ name: 'Halina Brzoza', token: 'tokenHalinaBrzoza33333' },
+	{ name: 'Paweł Truszczyński', token: 'tokenPawelTruszczyns44' },
+	{ name: 'Kamil Zdunek', token: 'tokenKamilZdunek555555' },
+	{ name: 'Renata Pilarczyk', token: 'tokenRenataPilarczyk66' }
 ];
 
 /** what people wrote, in every length bucket the replacement pools have */
@@ -394,5 +395,63 @@ describe('the anonymiser', () => {
 	it('refuses to write over the database it is reading', () => {
 		expect(() => anonymise(source, source)).toThrow(/overwrite the source/);
 		expect(existsSync(source)).toBe(true);
+	});
+});
+
+/**
+ * The demo never forks the app's logic; it only decides who is holding the
+ * phone. Which makes picking that person the whole of the demo's own behaviour.
+ */
+describe('who the demo hands a visitor', () => {
+	it('lands on a regular member and never on the admin', () => {
+		const { db } = freshDb();
+		db.prepare(`UPDATE person SET is_admin = 1 WHERE id = 'ala'`).run();
+
+		const cast = personas(db);
+		expect(cast.admin?.id).toBe('ala');
+		expect(cast.member?.is_admin).toBe(0);
+		expect(demoDefault(db)?.id).toBe(cast.member?.id);
+		expect(demoDefault(db)?.id).not.toBe('ala');
+	});
+
+	it('offers somebody who has not voted, so a full budget is one tap away', () => {
+		const { db } = freshDb();
+		db.prepare(`UPDATE person SET is_admin = 1 WHERE id = 'ala'`).run();
+		const film = addFilm(db, 'Stalker', 'bartek', 1);
+		// everybody but darek and beyond has spent something this week
+		for (const person of ['bartek', 'celina']) castBallot(db, 1, person, film, 1);
+
+		const cast = personas(db);
+		expect(cast.member?.id).toBe('bartek');
+		const fresh = cast.fresh!;
+		expect(fresh.id).not.toBe(cast.member?.id);
+		expect(fresh.id).not.toBe(cast.admin?.id);
+		expect(
+			db
+				.prepare('SELECT COUNT(*) AS n FROM ballot WHERE person_id = ? AND week_number = 1')
+				.get(fresh.id)
+		).toEqual({ n: 0 });
+	});
+
+	it('picks the same three every time, so an hourly rebuild is not a reshuffle', () => {
+		const { db } = freshDb();
+		const once = personas(db);
+		const twice = personas(db);
+		expect([once.member?.id, once.admin?.id, once.fresh?.id]).toEqual([
+			twice.member?.id,
+			twice.admin?.id,
+			twice.fresh?.id
+		]);
+	});
+
+	it('still finds a third face when the whole room has already voted', () => {
+		const { db } = freshDb();
+		const film = addFilm(db, 'Playtime', 'ala', 1);
+		for (const person of ['ala', 'bartek', 'celina', 'darek', 'ewa', 'filip']) {
+			castBallot(db, 1, person, film, 1);
+		}
+		const cast = personas(db);
+		expect(cast.fresh).toBeDefined();
+		expect(cast.fresh?.id).not.toBe(cast.member?.id);
 	});
 });
