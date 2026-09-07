@@ -1,6 +1,5 @@
 import type { PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
-import { avatarUrl } from '$lib/server/people';
 
 type WatchedRow = {
 	id: number;
@@ -12,16 +11,6 @@ type WatchedRow = {
 	/** null for the nights that predate the app, where nobody spent anything */
 	final_score: number | null;
 	added_by_name: string;
-};
-
-type PersonRow = {
-	id: string;
-	name: string;
-	colour: string;
-	avatar_updated_at: string | null;
-	xp: number;
-	watched: number;
-	nominated: number;
 };
 
 export const load: PageServerLoad = async () => {
@@ -37,29 +26,20 @@ export const load: PageServerLoad = async () => {
 		)
 		.all() as WatchedRow[];
 
-	// the group's own check on whether the active rule set is being fair
-	const rows = db
-		.prepare(
-			`SELECT p.id, p.name, p.colour, p.avatar_updated_at, p.xp,
-			        COUNT(f.id) FILTER (WHERE f.status = 'watched') AS watched,
-			        COUNT(f.id) AS nominated
-			 FROM person p LEFT JOIN film f ON f.added_by = p.id
-			 WHERE p.active = 1
-			 GROUP BY p.id
-			 ORDER BY watched DESC, nominated DESC, p.name COLLATE NOCASE`
-		)
-		.all() as PersonRow[];
-
-	const perPerson = rows.map(({ avatar_updated_at, ...person }) => ({
-		...person,
-		avatar: avatarUrl(person.id, avatar_updated_at)
-	}));
-
+	// rounds that went by without a film. Counted off the films rather than off
+	// week.winner_film_id, which an admin moving a night's film around leaves
+	// pointing at nothing while the film itself still names the week it was seen
 	const weeksWithoutWinner = (
 		db
-			.prepare(`SELECT COUNT(*) AS n FROM week WHERE status = 'closed' AND winner_film_id IS NULL`)
+			.prepare(
+				`SELECT COUNT(*) AS n FROM week w
+				 WHERE w.status = 'closed'
+				   AND NOT EXISTS (
+				     SELECT 1 FROM film f WHERE f.status = 'watched' AND f.watched_week = w.number
+				   )`
+			)
 			.get() as { n: number }
 	).n;
 
-	return { watched, perPerson, weeksWithoutWinner };
+	return { watched, weeksWithoutWinner };
 };

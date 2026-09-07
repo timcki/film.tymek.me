@@ -1,0 +1,385 @@
+<script lang="ts">
+	import Avatar from '$lib/components/Avatar.svelte';
+	import FacePeek, { peekFor, type Peek } from '$lib/components/FacePeek.svelte';
+	import Bars, { type Bar } from '$lib/components/chart/Bars.svelte';
+	import Columns from '$lib/components/chart/Columns.svelte';
+	import Matrix, { type Pin } from '$lib/components/chart/Matrix.svelte';
+	import Split, { type Slice } from '$lib/components/chart/Split.svelte';
+	import Strip from '$lib/components/chart/Strip.svelte';
+	import { bandLabel, bandOf, bandsFor } from '$lib/bands';
+	import { dictFor, isVotes } from '$lib/i18n';
+	import { shortNames } from '$lib/names';
+	import type { PageData } from './$types';
+
+	let { data }: { data: PageData } = $props();
+
+	const T = $derived(dictFor(data.lang));
+	const votes = $derived(isVotes(data.rules));
+	const counts = $derived(data.counts);
+	/** nothing that counts ballots has anything to say until somebody has voted */
+	const voted = $derived(counts.ballots > 0);
+
+	const href = (next: { lens?: string; era?: string }) =>
+		`?lens=${next.lens ?? data.lens}&era=${next.era ?? data.era}`;
+
+	// a chart row has space for a first name; where two people share one it gets
+	// as much of the rest as it takes to be somebody's
+	const short = $derived(shortNames(data.engagement.map((row) => row.person)));
+	const labelOf = (person: { id: string; name: string }) =>
+		short.get(person.id) ?? person.name.split(' ')[0];
+
+	/**
+	 * The two pieces of state that are not in the URL, and the two things a face
+	 * can be asked. Pressing a row picks that person: their row fills in, every
+	 * other one steps back, and the card at the top of the lens says who it is
+	 * and what they have done. Pointing at the picture only asks who that is, so
+	 * it opens the portrait the rest of the app opens and nothing else moves.
+	 */
+	let lit = $state<string | null>(null);
+	const pick = (key: string) => (lit = lit === key ? null : key);
+
+	let peek = $state<Peek | null>(null);
+	let peeking = $state<string | null>(null);
+	function hover(key: string, el: EventTarget | null, on: boolean) {
+		if (!on) {
+			// a pointer leaving one face on its way to the next must not shut the
+			// one it is arriving at, so only the face that opened it may close it
+			if (peeking === key) {
+				peeking = null;
+				peek = null;
+			}
+			return;
+		}
+		const person = data.engagement.find((row) => row.person.id === key)?.person;
+		if (!person) return;
+		peeking = key;
+		peek = peekFor(el, person, '', false);
+	}
+
+	/** a bucket opened to see which films are actually in it */
+	let openBucket = $state<string | null>(null);
+	const filmsIn = $derived.by(() => {
+		if (!openBucket) return [];
+		const all = [...data.decades, ...data.genres, ...data.directors];
+		const ids = all.find((bucket) => bucket.key === openBucket)?.films ?? [];
+		return ids.map((id) => data.films.find((film) => film.id === id)).filter((f) => f != null);
+	});
+
+	const columns = $derived(
+		data.rounds.map((round) => ({
+			key: String(round.week),
+			label: String(round.week),
+			voted: round.voters,
+			attended: round.attended,
+			// the round still running has not finished collecting either number
+			open: round.week === data.window.to && !round.winnerTitle
+		}))
+	);
+
+	const opennessSlices = $derived<Slice[]>(
+		data.openness.map((row) => ({
+			key: row.person.id,
+			name: row.person.name,
+			label: labelOf(row.person),
+			colour: row.person.colour,
+			avatar: row.person.avatar,
+			xp: row.person.xp,
+			left: row.othersWhenLive,
+			right: row.ownWhenLive,
+			ranked: row.eligible
+		}))
+	);
+	/** the room's own figure, drawn through every bar so a row is read against it */
+	const opennessAverage = $derived.by(() => {
+		const rows = data.openness.filter((row) => row.eligible);
+		const theirs = rows.reduce((sum, row) => sum + row.othersWhenLive, 0);
+		const all = rows.reduce((sum, row) => sum + row.ownWhenLive + row.othersWhenLive, 0);
+		return all ? theirs / all : null;
+	});
+
+	/**
+	 * Every bar is drawn out of the same total, the nights in the window, so the
+	 * percentages are shares of one thing and add up to a hundred between them.
+	 */
+	const nightSlices = $derived<Slice[]>(
+		data.nights.map((row) => ({
+			key: row.person.id,
+			name: row.person.name,
+			label: labelOf(row.person),
+			colour: row.person.colour,
+			avatar: row.person.avatar,
+			xp: row.person.xp,
+			left: row.nights,
+			right: Math.max(0, counts.nights - row.nights),
+			text: `${row.nights}`
+		}))
+	);
+
+	const lanes = $derived(
+		data.timing.map((row) => ({
+			key: row.person.id,
+			name: row.person.name,
+			label: labelOf(row.person),
+			colour: row.person.colour,
+			avatar: row.person.avatar,
+			xp: row.person.xp,
+			marks: row.marks,
+			at: row.median
+		}))
+	);
+
+	/**
+	 * Both axes are counts out of what the window holds, banded into four so the
+	 * grid keeps its shape whether the group has played five rounds or fifty. The
+	 * bands are labelled with the counts themselves, because an adverb cannot be
+	 * checked against anything and a number can.
+	 */
+	const votedBands = $derived(bandsFor(counts.rounds));
+	const nightBands = $derived(bandsFor(counts.nights));
+
+	/** everything the page knows about the person whose row is filled in */
+	const focus = $derived.by(() => {
+		if (!lit) return null;
+		const engaged = data.engagement.find((row) => row.person.id === lit);
+		if (!engaged) return null;
+		return {
+			engaged,
+			open: data.openness.find((row) => row.person.id === lit),
+			nights: data.nights.find((row) => row.person.id === lit),
+			when: data.timing.find((row) => row.person.id === lit)
+		};
+	});
+
+	const grid = $derived.by(() => {
+		const cells: Pin[][][] = nightBands.map(() => votedBands.map(() => [] as Pin[]));
+		for (const row of data.engagement) {
+			// row 0 is the top of the grid, which is the busiest band
+			const y = nightBands.length - 1 - bandOf(row.nightsAttended, counts.nights);
+			const x = bandOf(row.roundsVoted, counts.rounds);
+			cells[y][x].push({
+				key: row.person.id,
+				name: row.person.name,
+				colour: row.person.colour,
+				avatar: row.person.avatar,
+				xp: row.person.xp
+			});
+		}
+		return cells;
+	});
+
+	/* ------------------------------------------------------------ the films -- */
+
+	/** which chart the open bucket came from, so its films are listed under it */
+	const from = (buckets: { key: string }[]) =>
+		openBucket !== null && buckets.some((bucket) => bucket.key === openBucket);
+	const openBar = (key: string) => (openBucket = openBucket === key ? null : key);
+
+	const decadeBars = $derived<Bar[]>(
+		data.decades.map((bucket) => ({
+			key: bucket.key,
+			label: bucket.label,
+			value: bucket.films.length
+		}))
+	);
+	const genreBars = $derived<Bar[]>(
+		data.genres.slice(0, 12).map((bucket) => ({
+			key: bucket.key,
+			label: bucket.label,
+			value: bucket.films.length
+		}))
+	);
+	const directorBars = $derived<Bar[]>(
+		data.directors.map((bucket) => ({
+			key: bucket.key,
+			label: bucket.label,
+			value: bucket.films.length
+		}))
+	);
+
+	/** twenty-minute bands: fine enough to show the shape, coarse enough to have one */
+	const runtimeBars = $derived.by<Bar[]>(() => {
+		const spread = data.runtimes;
+		if (!spread) return [];
+		const step = 20;
+		const first = Math.floor(spread.min / step) * step;
+		const last = Math.floor(spread.max / step) * step;
+		const out: Bar[] = [];
+		for (let low = first; low <= last; low += step) {
+			out.push({
+				key: String(low),
+				label: `${low}-${low + step - 1}`,
+				value: spread.films.filter((f) => f.runtime >= low && f.runtime < low + step).length
+			});
+		}
+		return out;
+	});
+</script>
+
+<nav class="seg lenses">
+	<a href={href({ lens: 'people' })} class:on={data.lens === 'people'}>{T.lensPeople}</a>
+	<a href={href({ lens: 'films' })} class:on={data.lens === 'films'}>{T.lensFilms}</a>
+</nav>
+
+{#if data.lens === 'people'}
+	<div class="erabar">
+		<nav class="seg small">
+			<a href={href({ era: 'app' })} class:on={data.era === 'app'}>{T.eraApp}</a>
+			<a href={href({ era: 'all' })} class:on={data.era === 'all'}>{T.eraAll}</a>
+		</nav>
+		<p class="explain">
+			{data.era === 'app'
+				? T.eraNoteApp(data.window.from, data.window.to)
+				: T.eraNoteAll(data.window.from, data.window.to)}
+		</p>
+	</div>
+
+	{#if focus}
+		<div class="pcard">
+			<span class="who">
+				<Avatar
+					name={focus.engaged.person.name}
+					colour={focus.engaged.person.colour}
+					avatar={focus.engaged.person.avatar}
+					xp={focus.engaged.person.xp}
+					size={34}
+					font={13}
+					titled={false}
+				/>
+				<b>{focus.engaged.person.name}</b>
+				<button class="clear" onclick={() => (lit = null)} aria-label={T.close}>×</button>
+			</span>
+			<div class="pstats">
+				<span>{focus.engaged.roundsVoted}<i>{T.engageX}</i></span>
+				<span>{focus.engaged.nightsAttended}<i>{T.engageY}</i></span>
+				<span>{focus.engaged.points}<i>{T.unit(focus.engaged.points, votes)}</i></span>
+				{#if focus.nights}
+					<span>{focus.nights.nights}<i>{T.thWatched}</i></span>
+				{/if}
+				{#if focus.open?.eligible}
+					<span
+						>{Math.round(
+							(focus.open.othersWhenLive /
+								(focus.open.ownWhenLive + focus.open.othersWhenLive)) *
+								100
+						)}%<i>{T.openH}</i></span
+					>
+				{/if}
+				{#if focus.when && focus.when.median !== null}
+					<span>{Math.round(focus.when.median * 100)}%<i>{T.timingH}</i></span>
+				{/if}
+			</div>
+		</div>
+	{/if}
+
+	<div class="sec">{T.roundsH}</div>
+	<p class="explain">{T.roundsSub}</p>
+	<Columns
+		{columns}
+		roster={counts.roster}
+		votedLabel={T.keyVoted}
+		attendedLabel={T.keyAttended}
+		rosterLabel={T.keyRoster}
+	/>
+
+	{#if !voted}
+		<p class="explain big">{T.statsEmpty}</p>
+	{:else}
+		<div class="sec">{T.openH}</div>
+		<p class="explain">{T.openSub(votes)}</p>
+		{#if opennessAverage !== null}
+			<p class="explain key">
+				<span class="k theirs">{T.openTheirs}</span>
+				<span class="k mine">{T.openMine}</span>
+				<span class="k rule">{T.openAvg(Math.round(opennessAverage * 100))}</span>
+			</p>
+		{/if}
+		<Split
+			slices={opennessSlices}
+			average={opennessAverage}
+			{lit}
+			onpick={pick}
+			onface={hover}
+		/>
+		<div class="sec">{T.fairH}</div>
+		<Split
+			slices={nightSlices}
+			leftColour="var(--burn0)"
+			average={null}
+			{lit}
+			onpick={pick}
+			onface={hover}
+		/>
+
+		<div class="sec">{T.timingH}</div>
+		<p class="explain">{T.timingSub}</p>
+		<Strip
+			{lanes}
+			ticks={[
+				{ at: 0, label: T.tickOpens },
+				{ at: 0.5, label: T.tickHalf },
+				{ at: 1, label: T.tickCloses }
+			]}
+			{lit}
+			onpick={pick}
+			onface={hover}
+		/>
+
+		<div class="sec">{T.engageH}</div>
+		<Matrix
+			{grid}
+			xLabels={votedBands.map(bandLabel)}
+			yLabels={[...nightBands].reverse().map(bandLabel)}
+			xTitle={T.engageX}
+			yTitle={T.engageY}
+			{lit}
+			onpick={pick}
+			onface={hover}
+		/>
+	{/if}
+{:else}
+	<div class="sec">{T.decadeH}</div>
+	<Bars bars={decadeBars} lit={openBucket} onpick={openBar} />
+	{#if from(data.decades)}{@render picked()}{/if}
+
+	<div class="sec">{T.genreH}</div>
+	<p class="explain">{T.genreSub}</p>
+	<Bars bars={genreBars} colour="var(--tier5)" lit={openBucket} onpick={openBar} />
+	{#if from(data.genres)}{@render picked()}{/if}
+
+	<div class="sec">{T.directorH}</div>
+	{#if directorBars.length}
+		<Bars bars={directorBars} colour="var(--tier1)" lit={openBucket} onpick={openBar} />
+		{#if from(data.directors)}{@render picked()}{/if}
+	{:else}
+		<p class="explain">{T.directorNone}</p>
+	{/if}
+
+	<div class="sec">{T.runtimeH}</div>
+	{#if data.runtimes}
+		<p class="explain">
+			{T.runtimeSub(data.runtimes.min, data.runtimes.max, Math.round(data.runtimes.mean))}
+		</p>
+		<Bars bars={runtimeBars} colour="var(--warn)" />
+	{/if}
+
+{/if}
+
+<!-- what is actually in the bar somebody just tapped, listed under that chart -->
+{#snippet picked()}
+	<div class="picked">
+		{#each filmsIn as film (film.id)}
+			<div class="stat">
+				<span>{film.title}{film.year ? ` (${film.year})` : ''}</span>
+				<b>{T.week(film.week)}</b>
+			</div>
+		{/each}
+	</div>
+{/snippet}
+
+<!-- hover only: it never opens on a tap, so it has no backdrop to dismiss and
+     never stands between a finger and the row it is trying to press -->
+{#if peek}
+	<FacePeek {peek} lang={data.lang} onclose={() => (peek = null)} />
+{/if}
+
+<svelte:window onkeydown={(event) => event.key === 'Escape' && (lit = null)} />

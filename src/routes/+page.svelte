@@ -5,6 +5,12 @@
 	import { backOut } from 'svelte/easing';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import FacePeek, {
+		anchorAt,
+		peekFor,
+		type Peek,
+		type PeekFace
+	} from '$lib/components/FacePeek.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import { dictFor, fmtScore, isVotes } from '$lib/i18n';
 	import { REACTIONS } from '$lib/reactions';
@@ -121,10 +127,6 @@
 
 	/* ------------------------------------------------------------ backers -- */
 
-	/** width of .bkpop; the clamp needs it before the popup has been laid out */
-	const POP_W = 156;
-	/** roughly its height, only ever used to decide whether it still fits above */
-	const POP_H = 190;
 	/** the note popup is wider and shorter: a paragraph, not a portrait */
 	const NPOP_W = 264;
 	const NPOP_H = 150;
@@ -133,20 +135,8 @@
 	/** the seen list is a column of names, so it only needs room for the longest */
 	const SPOP_W = 190;
 
-	// what the popup needs of a person; backers and nominators both satisfy it
-	type PeekFace = { name: string; colour: string; avatar: string | null; xp: number };
-
 	type WeekPoints = { week: number; points: number };
-	let peek = $state<{
-		face: PeekFace;
-		sub: string;
-		/** empty for a face that is not counting anything, like a nominator */
-		rows: WeekPoints[];
-		x: number;
-		y: number;
-		below: boolean;
-		tap: boolean;
-	} | null>(null);
+	let peek = $state<Peek | null>(null);
 	let notePop = $state<{
 		text: string;
 		sig: string;
@@ -183,19 +173,6 @@
 	// so go by the pointer that actually arrived rather than what the screen can do
 	let mousing = false;
 
-	/** where a fixed popup of the given size lands, clamped to the viewport */
-	function anchorAt(el: HTMLElement, w: number, h: number) {
-		const box = el.getBoundingClientRect();
-		const half = w / 2;
-		const below = box.top < h;
-		return {
-			// clamped, or the pills at either end of the row get sliced by the viewport
-			x: Math.min(Math.max(box.left + box.width / 2, half + 8), window.innerWidth - half - 8),
-			y: below ? box.bottom : box.top,
-			below
-		};
-	}
-
 	function peekAt(
 		pill: EventTarget | null,
 		face: PeekFace,
@@ -204,11 +181,16 @@
 		rows: WeekPoints[] = []
 	) {
 		clearTimeout(closing);
-		if (!(pill instanceof HTMLElement)) return;
+		const next = peekFor(
+			pill,
+			face,
+			sub,
+			tap,
+			rows.map((row) => ({ label: T.week(row.week), value: String(row.points) }))
+		);
+		if (!next) return;
 		shutPops();
-		// each week costs the popup a row, and the guess at its height is what
-		// decides whether it can still open upwards
-		peek = { face, sub, rows, tap, ...anchorAt(pill, POP_W, POP_H + rows.length * 17) };
+		peek = next;
 	}
 
 	function noteAt(el: EventTarget | null, film: Film, tap: boolean) {
@@ -1418,35 +1400,7 @@
 <!-- ----------------------------------------------------------- backers -- -->
 
 {#if peek}
-	{#if peek.tap}
-		<!-- only a tap needs one; on a hover pointer it would swallow the pointerleave -->
-		<button class="menu-backdrop" aria-label={T.close} onclick={unpeek}></button>
-	{/if}
-	<div class="bkpop" class:below={peek.below} style="left:{peek.x}px;top:{peek.y}px" role="tooltip">
-		<Avatar
-			name={peek.face.name}
-			colour={peek.face.colour}
-			avatar={peek.face.avatar}
-			size={116}
-			font={40}
-			titled={false}
-			xp={peek.face.xp}
-		/>
-		<b>{peek.face.name}</b>
-		<span class="bktitle lv{levelOf(peek.face.xp)}">{T.levels[levelOf(peek.face.xp)]}</span>
-		<span>{peek.sub}</span>
-		<!-- the total above, and under it the weeks it was actually spent across -->
-		{#if peek.rows.length}
-			<div class="bkweeks">
-				{#each peek.rows as row (row.week)}
-					<div class="srow">
-						<span>{T.week(row.week)}</span>
-						<b>{row.points}</b>
-					</div>
-				{/each}
-			</div>
-		{/if}
-	</div>
+	<FacePeek {peek} lang={data.lang} onclose={unpeek} />
 {/if}
 
 {#if notePop}

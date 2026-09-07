@@ -25,7 +25,11 @@
 		 * a row and not a jewellery box
 		 */
 		xp?: number | null;
-		/** a quieter ring for faces resting on artwork: thinner band, less glow */
+		/**
+	 * A quieter ring: thinner band, less glow. For faces resting on artwork,
+	 * where the full frame would shout over the poster, and for the small faces
+	 * packed into a chart, where a 2.5px band on a 19px head is most of the head
+	 */
 		slim?: boolean;
 	} = $props();
 

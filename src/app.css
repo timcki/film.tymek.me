@@ -3734,3 +3734,157 @@ details[open] > .iconbtn {
 	color: var(--dimmer);
 	white-space: nowrap;
 }
+
+/* --------------------------------------------------------------- statistics -- */
+
+/* the two switches the statistics screen runs on. Links rather than buttons, so
+   a view survives having no JavaScript and can be sent to somebody as it was read */
+.seg {
+	display: flex;
+	gap: 3px;
+	background: var(--sunk);
+	border-radius: 12px;
+	padding: 3px;
+	margin-top: 6px;
+}
+.seg a {
+	flex: 1;
+	text-align: center;
+	padding: 8px 10px;
+	border-radius: 9px;
+	font-size: 13px;
+	font-weight: 650;
+	color: var(--dim);
+	text-decoration: none;
+	white-space: nowrap;
+}
+.seg a.on {
+	background: var(--chip);
+	color: var(--ink);
+	box-shadow: var(--lift);
+}
+.seg.small a {
+	padding: 6px 9px;
+	font-size: 11.5px;
+}
+.erabar {
+	margin-top: 14px;
+}
+
+/* the sentence under a heading that says what the figure above it is counting.
+   Prose, not a pitch, so it wraps and keeps its full height */
+.explain {
+	margin: 2px 0 10px;
+	font-size: 11.5px;
+	line-height: 1.5;
+	color: var(--dim);
+}
+.explain.big {
+	margin: 20px 0;
+	text-align: center;
+	color: var(--dimmer);
+}
+.explain.key {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 12px;
+	align-items: center;
+}
+.explain .k {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	white-space: nowrap;
+}
+.explain .k::before {
+	content: '';
+	width: 9px;
+	height: 9px;
+	border-radius: 3px;
+}
+/* the lit half of the bar leads the key, whichever half a figure lights up */
+.explain .k.theirs::before {
+	background: var(--accent);
+}
+.explain .k.mine::before {
+	background: var(--line3);
+}
+.explain .k.rule::before {
+	width: 2px;
+	height: 11px;
+	border-radius: 2px;
+	background: var(--edge);
+}
+
+/* the person the lens is currently being read through. Sticky, because the
+   lens is four charts long and a card that answered a press two screens above
+   is a card nobody sees answer it. It parks below the lean header (56px) and
+   below the 16px fade the header trails, or that gradient would wash across the
+   card's top edge; the header itself stays above this on purpose */
+.pcard {
+	position: sticky;
+	top: 72px;
+	z-index: 40;
+	background: var(--card);
+	border-radius: var(--r);
+	padding: 12px 14px;
+	box-shadow: var(--lift-hi);
+	margin-top: 6px;
+}
+.pcard .who {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 15px;
+}
+.pcard .who b {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.pcard .clear {
+	background: none;
+	border: 0;
+	color: var(--dim);
+	font-size: 20px;
+	line-height: 1;
+	padding: 2px 4px;
+	cursor: pointer;
+	flex: 0 0 auto;
+}
+.pcard .pstats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+	gap: 8px;
+	margin-top: 10px;
+}
+.pcard .pstats span {
+	display: flex;
+	flex-direction: column;
+	font-size: 16px;
+	font-weight: 650;
+	font-variant-numeric: tabular-nums;
+	min-width: 0;
+}
+.pcard .pstats i {
+	font-style: normal;
+	font-size: 10px;
+	font-weight: 400;
+	color: var(--dim);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* what is actually inside the bar somebody just tapped */
+.picked {
+	margin-top: 8px;
+	border-left: 2px solid var(--line2);
+	padding-left: 8px;
+}
+.picked .stat {
+	font-size: 12.5px;
+	padding: 7px 8px;
+}

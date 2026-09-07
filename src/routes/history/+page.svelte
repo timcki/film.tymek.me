@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Avatar from '$lib/components/Avatar.svelte';
 	import { dictFor, fmtScore, isVotes } from '$lib/i18n';
 	import type { PageData } from './$types';
 
@@ -7,7 +6,6 @@
 
 	const T = $derived(dictFor(data.lang));
 	const votes = $derived(isVotes(data.rules));
-	const total = $derived(Math.max(1, data.watched.length));
 </script>
 
 <div class="wgrid">
@@ -35,21 +33,5 @@
 	<p class="banner">{T.noWinners(data.weeksWithoutWinner)}</p>
 {/if}
 
-<div class="sec">{T.fairH}</div>
-{#each data.perPerson as person (person.id)}
-	<div class="stat">
-		<span>
-			<Avatar
-				name={person.name}
-				colour={person.colour}
-				avatar={person.avatar}
-				xp={person.xp}
-			/>
-			{person.name}
-		</span>
-		<b>
-			{person.watched}
-			<span class="pct">({Math.round((person.watched / total) * 100)}%)</span>
-		</b>
-	</div>
-{/each}
+<!-- the wall is the archive; everything that counts anything lives one tap away -->
+<p class="banner accent"><a href="/stats">{T.statsLink}</a></p>

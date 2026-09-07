@@ -18,8 +18,9 @@ behind a personal link.
 ## Stack
 
 SvelteKit 2, Svelte 5 runes, TypeScript, and better-sqlite3 in one process, served by
-adapter-node behind Caddy. No ORM, no client state library, no auth provider. The whole
-thing is a flake, so a release is a push and a `nixos-rebuild`. 199 tests, no CI, and one
+adapter-node behind Caddy. No ORM, no client state library, no auth provider, and no chart
+library either: the statistics screen is CSS and a handful of small components. The whole
+thing is a flake, so a release is a push and a `nixos-rebuild`. 230 tests, no CI, and one
 external call: a TMDB lookup when you nominate.
 
 ## Four decisions it was built around
@@ -65,6 +66,7 @@ npm run dev
 | `src/lib/server/rules.ts` | the four rule sets: scoring, fade, budgets, ordering |
 | `src/lib/server/weeks.ts` | opening, closing, attrition, bank accrual |
 | `src/lib/server/runoffs.ts` | the Thursday room vote |
+| `src/lib/server/stats.ts` | every figure the statistics screen draws |
 | `src/lib/i18n.ts` | every string the app says about itself |
 | `docs/operations.md` | deploying, backups, handing out links |
 | `CLAUDE.md` | the invariants, for anyone (or anything) editing this |

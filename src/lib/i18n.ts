@@ -188,6 +188,50 @@ export type Dict = {
 	thWatched: string;
 	noWinners: (n: number) => string;
 
+	/* --------------------------------------------------- the statistics screen -- */
+	tabStats: string;
+	statsH: string;
+	statsLink: string;
+	lensPeople: string;
+	lensFilms: string;
+	eraApp: string;
+	eraAll: string;
+	eraNoteApp: (from: number, to: number) => string;
+	eraNoteAll: (from: number, to: number) => string;
+	statsEmpty: string;
+
+	roundsH: string;
+	roundsSub: string;
+	keyVoted: string;
+	keyAttended: string;
+	keyRoster: string;
+
+	openH: string;
+	openSub: (votes: boolean) => string;
+	openMine: string;
+	openTheirs: string;
+	openAvg: (pct: number) => string;
+	openRaw: (theirs: number, mine: number) => string;
+
+
+	timingH: string;
+	timingSub: string;
+	tickOpens: string;
+	tickHalf: string;
+	tickCloses: string;
+
+	engageH: string;
+	engageX: string;
+	engageY: string;
+
+	decadeH: string;
+	genreH: string;
+	genreSub: string;
+	directorH: string;
+	directorNone: string;
+	runtimeH: string;
+	runtimeSub: (min: number, max: number, mean: number) => string;
+
 	youLang: string;
 	youPhoto: string;
 	youPhone: string;
@@ -497,6 +541,52 @@ const pl: Dict = {
 	thNominated: 'Zgłoszone',
 	thWatched: 'Obejrzane',
 	noWinners: (n) => `${n} ${plWeeks(n)} zamknięto bez głosów, więc nic nie oglądaliśmy.`,
+
+	tabStats: 'Statystyki',
+	statsH: 'Statystyki',
+	statsLink: 'Zobacz liczby',
+	lensPeople: 'Ludzie',
+	lensFilms: 'Filmy',
+	eraApp: 'Od startu apki',
+	eraAll: 'Cała historia',
+	eraNoteApp: (from, to) =>
+		`Rundy ${from}-${to}. Wieczory sprzed apki nie mają oddanych głosów, więc średnia z nich nic by nie znaczyła.`,
+	eraNoteAll: (from, to) =>
+		`Rundy ${from}-${to}, razem z wieczorami sprzed apki. Głosy są tylko z późniejszych rund, więc wszystko, co je liczy, wygląda tu rzadziej.`,
+	statsEmpty: 'Za mało rund, żeby cokolwiek z tego wyczytać.',
+
+	roundsH: 'Kto się pojawia',
+	roundsSub: 'Ilu zagłosowało i ilu przyszło, runda po rundzie.',
+	keyVoted: 'Zagłosowało',
+	keyAttended: 'Przyszło',
+	keyRoster: 'Wszyscy',
+
+	openH: 'Otwartość',
+	openSub: (votes) =>
+		`Ile ${votes ? 'głosów' : 'punktów'} każdy oddaje na cudze zgłoszenia, a ile na własne.`,
+	openTheirs: 'Na cudze',
+	openMine: 'Na swoje',
+	openAvg: (pct) => `Średnia: ${pct}%`,
+	openRaw: (theirs, mine) => `${theirs} na cudze, ${mine} na swoje`,
+
+
+	timingH: 'Kiedy padają głosy',
+	timingSub: 'Kropka: kiedy w tygodniu padł głos. Kreska: kiedy pada średnio.',
+	tickOpens: 'otwarcie',
+	tickHalf: 'połowa',
+	tickCloses: 'deadline',
+
+	engageH: 'Kto głosuje i kto przychodzi',
+	engageX: 'rundy z głosem',
+	engageY: 'wieczory na miejscu',
+
+	decadeH: 'Dekady',
+	genreH: 'Gatunki',
+	genreSub: 'Film liczy się w każdym swoim gatunku, więc sumy są większe niż liczba filmów.',
+	directorH: 'Reżyserzy do których wracamy',
+	directorNone: 'Jeszcze do nikogo nie wróciliśmy.',
+	runtimeH: 'Długości',
+	runtimeSub: (min, max, mean) => `Od ${min} do ${max} minut, typowo ${mean}.`,
 
 	youLang: 'Język',
 	youPhoto: 'Zdjęcie profilowe',
@@ -874,6 +964,52 @@ const en: Dict = {
 	thWatched: 'Watched',
 	noWinners: (n) =>
 		`${n} ${en2(n, 'week', 'weeks')} closed with nobody voting, so nothing was watched.`,
+
+	tabStats: 'Stats',
+	statsH: 'Statistics',
+	statsLink: 'See the numbers',
+	lensPeople: 'People',
+	lensFilms: 'Films',
+	eraApp: 'Since the app',
+	eraAll: 'All time',
+	eraNoteApp: (from, to) =>
+		`Rounds ${from}-${to}. The nights before the app have no ballots behind them, so an average taken over those would mean nothing.`,
+	eraNoteAll: (from, to) =>
+		`Rounds ${from}-${to}, the nights before the app included. Ballots only exist for the later rounds, so anything counted in votes looks thinner here.`,
+	statsEmpty: 'Not enough rounds to read anything into yet.',
+
+	roundsH: 'Who shows up',
+	roundsSub: 'How many voted and how many came, round by round.',
+	keyVoted: 'Voted',
+	keyAttended: 'In the room',
+	keyRoster: 'The roster',
+
+	openH: 'Openness',
+	openSub: (votes) =>
+		`How much of each person's ${votes ? 'voting' : 'spending'} goes to everyone else's films, and how much to the ones they nominated themselves.`,
+	openTheirs: "Other people's",
+	openMine: 'Own films',
+	openAvg: (pct) => `Average: ${pct}%`,
+	openRaw: (theirs, mine) => `${theirs} on other people's, ${mine} on their own`,
+
+
+	timingH: 'When the votes land',
+	timingSub: 'A dot: when in the week a vote was cast. The pip: when one usually is.',
+	tickOpens: 'opens',
+	tickHalf: 'halfway',
+	tickCloses: 'deadline',
+
+	engageH: 'Who votes and who turns up',
+	engageX: 'rounds voted in',
+	engageY: 'nights in the room',
+
+	decadeH: 'Decades',
+	genreH: 'Genres',
+	genreSub: 'A film counts under each of its genres, so these add up to more than the films.',
+	directorH: 'Directors we come back to',
+	directorNone: 'Nobody twice yet.',
+	runtimeH: 'Runtimes',
+	runtimeSub: (min, max, mean) => `From ${min} to ${max} minutes, typically ${mean}.`,
 
 	youLang: 'Language',
 	youPhoto: 'Profile picture',

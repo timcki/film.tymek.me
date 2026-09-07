@@ -22,7 +22,7 @@ Four documents carry the intent, and they are worth reading before changing beha
 
 ```sh
 npm run dev        # vite dev server
-npm test           # vitest, the acceptance suite (24 files)
+npm test           # vitest, the acceptance suite (25 files)
 npm run test:watch
 npm run check      # svelte-kit sync && svelte-check; must be 0 errors
 npm run build      # adapter-node output into build/
@@ -79,7 +79,15 @@ Breaking any of these is how this app goes subtly wrong rather than loudly wrong
 6. **Rule violations travel as a code plus parameters**, said in the reader's language at
    the edge, falling back to English for an unknown code. Do not return a rendered
    sentence from a server module.
-7. **Adding a column is the only supported migration shape.** Put it in `ADDED_COLUMNS`
+7. **A statistic is a query, never a stored counter.** Everything the `/stats` screen
+   draws lives in `src/lib/server/stats.ts` as a pure function of `(db, window)`, so it is
+   retroactive to week 1 and cannot drift. Each figure takes the window it is counted
+   over rather than reading one: the group's history has two halves, the nights that
+   predate the app (a winner and a nominator, no ballots at all) and the rounds since,
+   and averaging across the two says nothing true. That is what the era switch is for.
+   Winners are read off `film.watched_week`, not off `week.winner_film_id`, which an
+   admin moving a night's film around leaves pointing at nothing.
+8. **Adding a column is the only supported migration shape.** Put it in `ADDED_COLUMNS`
    in `src/lib/server/schema.ts`; it is applied on every open, guarded on
    `PRAGMA table_info`. Anything else needs doing by hand against a backup.
 

@@ -37,6 +37,7 @@
 
 	const title = $derived.by(() => {
 		if (path.startsWith('/history')) return T.watchedH;
+		if (path.startsWith('/stats')) return T.statsH;
 		if (path.startsWith('/me')) return (data.person?.name ?? T.tabYou).split(' ')[0];
 		if (path.startsWith('/host')) return T.hostH;
 		return T.appTitle;
@@ -168,6 +169,21 @@
 						>
 					</span>
 					{T.tabSeen}
+				</a>
+				<a href="/stats" class:on={path.startsWith('/stats')}>
+					<span class="ic">
+						<svg
+							width="17"
+							height="17"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.9"
+							stroke-linecap="round"
+							><path d="M5 20V12M12 20V5M19 20v-5" /></svg
+						>
+					</span>
+					{T.tabStats}
 				</a>
 				<a href="/me" class:on={path.startsWith('/me')}>
 					<span class="ic">
