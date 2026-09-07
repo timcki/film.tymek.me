@@ -214,7 +214,7 @@ export type Dict = {
 	pickHint: string;
 	openMine: string;
 	openTheirs: string;
-	openAvg: (pct: number) => string;
+	avgOf: (value: string) => string;
 	openRaw: (theirs: number, mine: number) => string;
 
 
@@ -228,15 +228,17 @@ export type Dict = {
 	engageX: string;
 	engageY: string;
 
-	/** "2 rundy": the wait a film puts in before it gets a night */
-	roundsN: (n: number) => string;
-	screenH: string;
-	screenSub: (nights: number) => string;
-	screenWait: string;
-	screenLongest: string;
-	screenScore: string;
-	screenBest: string;
-	screenWaiting: string;
+	/** the compact units the fact cards are written in */
+	weeksShort: (n: number) => string;
+	factsH: string;
+	factLongest: string;
+	factShortest: string;
+	factOldest: string;
+	factWait: string;
+	factLongestWait: string;
+	factScore: string;
+	factBest: string;
+	factWaiting: string;
 
 	decadeH: string;
 	genreH: string;
@@ -577,12 +579,12 @@ const pl: Dict = {
 
 	openH: 'Otwartość na propozycje innych',
 	openTag: 'Otwartość',
-	pickHint: 'Naciśnij na czyjś rząd żeby podświetlić jego statystyki.',
+	pickHint: 'Naciśnij na rząd żeby podświetlić statystyki.',
 	openSub: (votes) =>
 		`Ile ${votes ? 'głosów' : 'punktów'} każdy oddaje na cudze zgłoszenia, a ile na własne.`,
 	openTheirs: 'Na cudze',
 	openMine: 'Na swoje',
-	openAvg: (pct) => `Średnia: ${pct}%`,
+	avgOf: (value) => `Średnia: ${value}`,
 	openRaw: (theirs, mine) => `${theirs} na cudze, ${mine} na swoje`,
 
 
@@ -596,15 +598,16 @@ const pl: Dict = {
 	engageX: 'rundy z głosem',
 	engageY: 'wieczory na miejscu',
 
-	roundsN: (n) => `${n} ${pl3(n, 'runda', 'rundy', 'rund')}`,
-	screenH: 'Zanim film trafi na ekran',
-	screenSub: (nights) =>
-		`Z ${nights} ${pl3(nights, 'wieczoru', 'wieczorów', 'wieczorów')}, które rozstrzygnęła apka.`,
-	screenWait: 'Średnio czeka',
-	screenLongest: 'Najdłużej czekał',
-	screenScore: 'Średnio wygrywa z',
-	screenBest: 'Najwyższy wynik',
-	screenWaiting: 'Najdłużej czeka teraz',
+	weeksShort: (n) => `${n} tyg`,
+	factsH: 'W liczbach',
+	factLongest: 'Najdłuższy',
+	factShortest: 'Najkrótszy',
+	factOldest: 'Najstarszy',
+	factWait: 'Średnio czeka',
+	factLongestWait: 'Najdłużej czekał',
+	factScore: 'Średnio wygrywa z',
+	factBest: 'Najwyższy wynik',
+	factWaiting: 'Najdłużej czeka',
 
 	decadeH: 'Dekady',
 	genreH: 'Gatunki',
@@ -1012,12 +1015,12 @@ const en: Dict = {
 
 	openH: "Openness to other people's picks",
 	openTag: 'Openness',
-	pickHint: "Press somebody's row to light up their stats.",
+	pickHint: 'Press a row to light up its stats.',
 	openSub: (votes) =>
 		`How much of each person's ${votes ? 'voting' : 'spending'} goes to everyone else's films, and how much to the ones they nominated themselves.`,
 	openTheirs: "Other people's",
 	openMine: 'Own films',
-	openAvg: (pct) => `Average: ${pct}%`,
+	avgOf: (value) => `Average: ${value}`,
 	openRaw: (theirs, mine) => `${theirs} on other people's, ${mine} on their own`,
 
 
@@ -1031,14 +1034,16 @@ const en: Dict = {
 	engageX: 'rounds voted in',
 	engageY: 'nights in the room',
 
-	roundsN: (n) => `${n} ${en2(n, 'round', 'rounds')}`,
-	screenH: 'Before a film reaches the screen',
-	screenSub: (nights) => `Over the ${nights} ${en2(nights, 'night', 'nights')} the app itself resolved.`,
-	screenWait: 'Typical wait',
-	screenLongest: 'Longest wait',
-	screenScore: 'Typically wins with',
-	screenBest: 'Highest score',
-	screenWaiting: 'Longest on the list now',
+	weeksShort: (n) => `${n} ${en2(n, 'wk', 'wks')}`,
+	factsH: 'In numbers',
+	factLongest: 'Longest',
+	factShortest: 'Shortest',
+	factOldest: 'Oldest',
+	factWait: 'Typical wait',
+	factLongestWait: 'Longest wait',
+	factScore: 'Typically wins with',
+	factBest: 'Highest score',
+	factWaiting: 'Longest on the list',
 
 	decadeH: 'Decades',
 	genreH: 'Genres',

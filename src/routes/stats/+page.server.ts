@@ -11,6 +11,7 @@ import {
 	openness,
 	whoseNights,
 	roundRows,
+	filmFacts,
 	runtimes,
 	screenStats,
 	timing,
@@ -45,6 +46,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		genres: byGenre(films),
 		directors: byDirector(films),
 		runtimes: runtimes(films),
+		facts: filmFacts(films),
 		screen: screenStats(db)
 	};
 };

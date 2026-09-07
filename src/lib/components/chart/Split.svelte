@@ -17,8 +17,6 @@
 		right: number;
 		/** what goes in the value column; the left share as a percentage by default */
 		text?: string;
-		/** off where the measure cannot apply to this person at all */
-		ranked?: boolean;
 	};
 </script>
 
@@ -51,7 +49,7 @@
 	};
 </script>
 
-{#snippet row(slice: Slice, ranked: boolean)}
+{#snippet row(slice: Slice)}
 	<span class="who">
 		<!-- a picture of a person, and on a mouse a bigger one; the row's own
 		     button is what a keyboard or a finger uses -->
@@ -77,34 +75,28 @@
 	</span>
 
 	<span class="track">
-		{#if ranked}
-			<i style="width:{pct(slice) * 100}%;background:{leftColour}"></i>
-			<i class="rest" style="width:{(1 - pct(slice)) * 100}%;background:{rightColour}"></i>
-			{#if average !== null}
-				<span class="avg" style="left:{average * 100}%"></span>
-			{/if}
+		<i style="width:{pct(slice) * 100}%;background:{leftColour}"></i>
+		<i class="rest" style="width:{(1 - pct(slice)) * 100}%;background:{rightColour}"></i>
+		{#if average !== null}
+			<span class="avg" style="left:{average * 100}%"></span>
 		{/if}
 	</span>
 
-	<b>{ranked ? (slice.text ?? `${Math.round(pct(slice) * 100)}%`) : '\u2014'}</b>
+	<b>{slice.text ?? `${Math.round(pct(slice) * 100)}%`}</b>
 {/snippet}
 
 <div class="split" class:picking={lit !== null}>
 	{#each slices as slice (slice.key)}
-		{@const ranked = slice.ranked !== false}
 		{#if onpick}
 			<button
 				class="row"
-				class:unranked={!ranked}
 				class:lit={lit === slice.key}
 				onclick={(event) => onpick(slice.key, event.currentTarget)}
 			>
-				{@render row(slice, ranked)}
+				{@render row(slice)}
 			</button>
 		{:else}
-			<div class="row" class:unranked={!ranked} class:lit={lit === slice.key}>
-				{@render row(slice, ranked)}
-			</div>
+			<div class="row" class:lit={lit === slice.key}>{@render row(slice)}</div>
 		{/if}
 	{/each}
 </div>
@@ -128,9 +120,6 @@
 		font: inherit;
 		text-align: left;
 		width: 100%;
-	}
-	.row.unranked {
-		opacity: 0.4;
 	}
 	/* the row you pressed lights up rather than merely surviving the dimming: a
 	   selection that is only the absence of fading reads as the page breaking */

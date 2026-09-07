@@ -151,109 +151,53 @@ export function roundRows(db: DB, window: Window): RoundRow[] {
 
 export type OpennessRow = {
 	person: PersonCard;
-	/** points spent on films this person nominated, over every round in the window */
+	/** points spent on films this person nominated */
 	own: number;
 	/** points spent on everybody else's, which is what the figure is a share of */
 	others: number;
-	/**
-	 * The same split, but counting only the rounds where a film of their own was
-	 * actually on the list. Somebody who has never nominated cannot vote for
-	 * themselves, and scoring them a spotless zero against everybody who has
-	 * would be a ranking of who nominates, not of who is loyal to their own.
-	 */
-	ownWhenLive: number;
-	othersWhenLive: number;
-	/**
-	 * False for somebody who never had a nomination of their own on the list
-	 * while they were voting. They cannot back themselves, so a flawless zero
-	 * says nothing about them and they are kept out of the ranking rather than
-	 * given a score they did not earn.
-	 */
-	eligible: boolean;
 };
 
 /**
- * Rounds in the window where this person had a nomination of their own on the
- * list: added by then, and not yet watched. Attrition is not replayed, because
- * nothing records the round a film was dropped in; a film that was dropped only
- * widens the denominator, which errs towards nobody looking worse than they are.
+ * How much of what somebody spends goes to films that are not theirs.
+ *
+ * Somebody who has never nominated scores a clean hundred per cent, which is
+ * the plain truth about them: every point they have spent went to somebody
+ * else's film. An earlier version counted only the rounds where a person had a
+ * nomination of their own on the list, on the grounds that you cannot resist a
+ * temptation you never had, and left everybody else out of the ranking. That
+ * bought a fairness nobody asked for at the price of a chart that could not
+ * place half the room.
  */
-function liveRoundsByPerson(db: DB, window: Window): Map<string, Set<number>> {
-	const films = db
-		.prepare(
-			`SELECT added_by, added_week, watched_week FROM film WHERE archival = 0`
-		)
-		.all() as { added_by: string; added_week: number; watched_week: number | null }[];
-
-	const out = new Map<string, Set<number>>();
-	for (const film of films) {
-		let weeks = out.get(film.added_by);
-		if (!weeks) out.set(film.added_by, (weeks = new Set()));
-		const last = film.watched_week ?? window.to;
-		for (let week = Math.max(film.added_week, window.from); week <= Math.min(last, window.to); week++) {
-			weeks.add(week);
-		}
-	}
-	return out;
-}
-
 export function openness(db: DB, window: Window): OpennessRow[] {
 	const cards = people(db);
-	const live = liveRoundsByPerson(db, window);
 	const rows = db
 		.prepare(
-			`SELECT b.person_id, b.week_number, b.points, f.added_by
+			`SELECT b.person_id, SUM(b.points) AS points, (f.added_by = b.person_id) AS mine
 			 FROM ballot b JOIN film f ON f.id = b.film_id
-			 WHERE b.week_number BETWEEN ? AND ?`
+			 WHERE b.week_number BETWEEN ? AND ?
+			 GROUP BY b.person_id, mine`
 		)
-		.all(window.from, window.to) as {
-		person_id: string;
-		week_number: number;
-		points: number;
-		added_by: string;
-	}[];
+		.all(window.from, window.to) as { person_id: string; points: number; mine: number }[];
 
 	const out = new Map<string, OpennessRow>();
 	for (const row of rows) {
 		const person = cards.get(row.person_id);
 		if (!person) continue;
 		let entry = out.get(row.person_id);
-		if (!entry) {
-			out.set(
-				row.person_id,
-				(entry = {
-					person,
-					own: 0,
-					others: 0,
-					ownWhenLive: 0,
-					othersWhenLive: 0,
-					eligible: false
-				})
-			);
-		}
-		const mine = row.added_by === row.person_id;
-		if (mine) entry.own += row.points;
+		if (!entry) out.set(row.person_id, (entry = { person, own: 0, others: 0 }));
+		if (row.mine) entry.own += row.points;
 		else entry.others += row.points;
-		if (live.get(row.person_id)?.has(row.week_number)) {
-			entry.eligible = true;
-			if (mine) entry.ownWhenLive += row.points;
-			else entry.othersWhenLive += row.points;
-		}
 	}
 
-	// the rankable people first, then everyone the figure has nothing to say about
 	return [...out.values()].sort(
-		(a, b) =>
-			Number(b.eligible) - Number(a.eligible) ||
-			openShare(b) - openShare(a) ||
-			b.own + b.others - (a.own + a.others)
+		(a, b) => openShare(b) - openShare(a) || b.own + b.others - (a.own + a.others)
 	);
 }
 
-/** the headline number: what went to other people, out of what could have gone anywhere */
+/** the headline number: what went to other people, out of everything they spent */
 export function openShare(row: OpennessRow): number {
-	const total = row.ownWhenLive + row.othersWhenLive;
-	return total ? row.othersWhenLive / total : 0;
+	const total = row.own + row.others;
+	return total ? row.others / total : 0;
 }
 
 export type NightsRow = {
@@ -537,66 +481,133 @@ export function runtimes(films: WatchedFilm[]): RuntimeSpread | null {
 	};
 }
 
-export type Named = { title: string; value: number };
+/** one film as a bar: its poster is the label, the number is the length */
+export type FilmBar = {
+	id: number;
+	title: string;
+	posterUrl: string | null;
+	value: number;
+};
 
 export type ScreenStats = {
 	/**
 	 * Nights the app itself resolved, which is the only honest basis for any of
 	 * this. A backfilled record was written down as nominated and watched in the
-	 * same week, so counting those would put the typical wait at nothing and the
-	 * typical winning score at zero.
+	 * same week and carries no score, so counting those would put the typical
+	 * wait at nothing and the typical winner at no points at all.
 	 */
 	nights: number;
-	/** rounds between a film going up and reaching the screen */
+	/** rounds each of them spent on the list before reaching the screen */
+	waits: FilmBar[];
 	meanWait: number;
-	longestWait: Named | null;
+	/** what each of them won with */
+	scores: FilmBar[];
 	meanScore: number;
-	bestScore: Named | null;
-	/** the film that has been on the list longest without getting a night */
-	waitingLongest: Named | null;
+	/** films still on the list, and how long each has been on it */
+	waiting: FilmBar[];
 };
+
+export type FilmFacts = {
+	longest: FilmBar | null;
+	shortest: FilmBar | null;
+	oldest: FilmBar | null;
+};
+
+/**
+ * The canon's extremes. The charts below them draw distributions; these are
+ * the facts a distribution cannot say, which is the ones with a film's name
+ * attached.
+ */
+export function filmFacts(films: WatchedFilm[]): FilmFacts {
+	const bar = (film: WatchedFilm, value: number): FilmBar => ({
+		id: film.id,
+		title: film.title,
+		posterUrl: film.posterUrl,
+		value
+	});
+	const pick = (
+		rows: WatchedFilm[],
+		of: (film: WatchedFilm) => number | null,
+		beats: (a: number, b: number) => boolean
+	) => {
+		let best: { film: WatchedFilm; value: number } | null = null;
+		for (const film of rows) {
+			const value = of(film);
+			if (value === null || value <= 0) continue;
+			if (!best || beats(value, best.value)) best = { film, value };
+		}
+		return best ? bar(best.film, best.value) : null;
+	};
+
+	return {
+		longest: pick(films, (film) => film.runtime, (a, b) => a > b),
+		shortest: pick(films, (film) => film.runtime, (a, b) => a < b),
+		oldest: pick(films, (film) => film.year, (a, b) => a < b)
+	};
+}
 
 /** what it takes for a film to get watched: how long it waits and what it wins with */
 export function screenStats(db: DB): ScreenStats | null {
 	const won = db
 		.prepare(
-			`SELECT title, added_week, watched_week, final_score FROM film
-			 WHERE status = 'watched' AND final_score IS NOT NULL AND watched_week IS NOT NULL
-			 ORDER BY final_score DESC`
+			`SELECT id, title, poster_url, added_week, watched_week, final_score FROM film
+			 WHERE status = 'watched' AND final_score IS NOT NULL AND watched_week IS NOT NULL`
 		)
 		.all() as {
+		id: number;
 		title: string;
+		poster_url: string | null;
 		added_week: number;
 		watched_week: number;
 		final_score: number;
 	}[];
 	if (!won.length) return null;
 
-	const waits = won.map((film) => ({
-		title: film.title,
-		value: Math.max(0, film.watched_week - film.added_week)
-	}));
 	const mean = (values: number[]) => values.reduce((sum, n) => sum + n, 0) / values.length;
+	const longest = (a: FilmBar, b: FilmBar) => b.value - a.value || a.title.localeCompare(b.title);
 
-	// the oldest film still on the list, measured against the round now open
+	const waits = won
+		.map((film) => ({
+			id: film.id,
+			title: film.title,
+			posterUrl: film.poster_url,
+			value: Math.max(0, film.watched_week - film.added_week)
+		}))
+		.sort(longest);
+	const scores = won
+		.map((film) => ({
+			id: film.id,
+			title: film.title,
+			posterUrl: film.poster_url,
+			value: film.final_score
+		}))
+		.sort(longest);
+
+	// still on the list, measured against the round that is open now
 	const now = latestWeek(db);
-	const oldest = db
-		.prepare(
-			`SELECT title, added_week FROM film
-			 WHERE status = 'active' AND archival = 0
-			 ORDER BY added_week, id LIMIT 1`
-		)
-		.get() as { title: string; added_week: number } | undefined;
+	const waiting = (
+		db
+			.prepare(
+				`SELECT id, title, poster_url, added_week FROM film
+				 WHERE status = 'active' AND archival = 0`
+			)
+			.all() as { id: number; title: string; poster_url: string | null; added_week: number }[]
+	)
+		.map((film) => ({
+			id: film.id,
+			title: film.title,
+			posterUrl: film.poster_url,
+			value: Math.max(0, now - film.added_week)
+		}))
+		.sort(longest);
 
 	return {
 		nights: won.length,
-		meanWait: mean(waits.map((w) => w.value)),
-		longestWait: waits.reduce((top, w) => (w.value > top.value ? w : top), waits[0]),
-		meanScore: mean(won.map((film) => film.final_score)),
-		bestScore: { title: won[0].title, value: won[0].final_score },
-		waitingLongest: oldest
-			? { title: oldest.title, value: Math.max(0, now - oldest.added_week) }
-			: null
+		waits,
+		meanWait: mean(waits.map((film) => film.value)),
+		scores,
+		meanScore: mean(scores.map((film) => film.value)),
+		waiting
 	};
 }
 

@@ -9,6 +9,7 @@ import {
 	byGenre,
 	counts,
 	engagement,
+	filmFacts,
 	eraOf,
 	lensOf,
 	openness,
@@ -151,46 +152,43 @@ describe('openness', () => {
 		expect(openShare(bartek)).toBe(0);
 	});
 
-	it('ranks the most open first', () => {
-		const { db } = scenario();
-		const ranked = openness(db, ALL).filter((row) => row.eligible);
-		expect(ranked.map((row) => row.person.id)).toEqual(['ala', 'bartek']);
-	});
-
-	it('leaves out somebody who never had a film of their own to pass over', () => {
+	/**
+	 * Somebody who has never nominated has put every point they own on somebody
+	 * else's film, which is what the figure measures and what it should say. An
+	 * earlier version counted only the rounds where a person had a film of their
+	 * own up and left everybody else out of the ranking entirely.
+	 */
+	it('gives somebody who has never nominated a clean hundred per cent', () => {
 		const { db } = scenario();
 		const celina = openness(db, ALL).find((row) => row.person.id === 'celina')!;
-		expect(celina.eligible).toBe(false);
+		expect(celina.own).toBe(0);
 		expect(celina.others).toBe(2);
-		// and a flawless hundred percent is never mistaken for a ranking
-		expect(celina.ownWhenLive + celina.othersWhenLive).toBe(0);
+		expect(openShare(celina)).toBe(1);
 	});
 
-	it('sorts the rankable people above the ones the figure cannot rank', () => {
+	it('ranks the most open first', () => {
 		const { db } = scenario();
-		const rows = openness(db, ALL);
-		expect(rows.map((row) => row.eligible)).toEqual([...rows.map((r) => r.eligible)].sort().reverse());
-		expect(rows[rows.length - 1].person.id).toBe('celina');
+		expect(openness(db, ALL).map((row) => row.person.id)).toEqual([
+			'celina',
+			'ala',
+			'bartek'
+		]);
 	});
 
-	/**
-	 * A round spent while your own film was already watched is a round you had
-	 * nothing of your own to pass over, and must not count in your favour.
-	 */
-	it('only counts the rounds a nomination of theirs was actually on the list', () => {
+	it('leaves out anybody who has not voted at all', () => {
+		const { db } = scenario();
+		expect(openness(db, ALL).some((row) => row.person.id === 'darek')).toBe(false);
+	});
+
+	it('counts only the rounds inside the window', () => {
 		const { db } = freshDb();
 		const mine = addFilm(db, 'Mine', 'ala', 1);
 		const theirs = addFilm(db, 'Theirs', 'bartek', 1);
-		watch(db, mine, 1);
 		castBallot(db, 1, 'ala', mine, 1);
 		castBallot(db, 2, 'ala', theirs, 1);
 
-		const ala = openness(db, ALL).find((row) => row.person.id === 'ala')!;
-		expect(ala.own).toBe(1);
-		expect(ala.others).toBe(1);
-		// week 2 is past the night her film was watched on, so it is not counted
-		expect(ala.ownWhenLive).toBe(1);
-		expect(ala.othersWhenLive).toBe(0);
+		expect(openShare(openness(db, { from: 1, to: 1 })[0])).toBe(0);
+		expect(openShare(openness(db, { from: 2, to: 2 })[0])).toBe(1);
 	});
 });
 
@@ -448,9 +446,16 @@ describe('what it takes for a film to reach the screen', () => {
 
 		expect(stats.nights).toBe(2);
 		expect(stats.meanWait).toBe(2.5);
-		expect(stats.longestWait).toEqual({ title: 'Patient', value: 4 });
 		expect(stats.meanScore).toBe(6);
-		expect(stats.bestScore).toEqual({ title: 'Quick', value: 9 });
+		// each chart is ordered longest first, so the extreme reads off the top
+		expect(stats.waits.map((film) => [film.title, film.value])).toEqual([
+			['Patient', 4],
+			['Quick', 1]
+		]);
+		expect(stats.scores.map((film) => [film.title, film.value])).toEqual([
+			['Quick', 9],
+			['Patient', 3]
+		]);
 	});
 
 	/**
@@ -472,19 +477,50 @@ describe('what it takes for a film to reach the screen', () => {
 		expect(stats.meanScore).toBe(8);
 	});
 
-	it('names the film that has been on the list longest with nothing to show', () => {
+	it('ranks the films still on the list by how long they have been on it', () => {
 		const { db } = freshDb();
 		won(db, 'Watched', 1, 2, 5);
 		for (const week of [5, 6]) ensureWeek(db, week);
 		addFilm(db, 'Still waiting', 'bartek', 2);
 		addFilm(db, 'Newer', 'celina', 5);
 
-		expect(screenStats(db)!.waitingLongest).toEqual({ title: 'Still waiting', value: 4 });
+		expect(screenStats(db)!.waiting.map((film) => [film.title, film.value])).toEqual([
+			['Still waiting', 4],
+			['Newer', 1]
+		]);
 	});
 
 	it('says nothing at all before the app has resolved a night', () => {
 		const { db } = freshDb();
 		addFilm(db, 'Up for it', 'ala', 1);
 		expect(screenStats(db)).toBeNull();
+	});
+});
+
+describe('the canon\'s extremes', () => {
+	it('names the longest, the shortest and the oldest', () => {
+		const facts = filmFacts([
+			film({ id: 1, title: 'Epic', runtime: 183, year: 1979 }),
+			film({ id: 2, title: 'Brief', runtime: 71, year: 1985 }),
+			film({ id: 3, title: 'Ancient', runtime: 120, year: 1953 })
+		]);
+		expect(facts.longest).toMatchObject({ title: 'Epic', value: 183 });
+		expect(facts.shortest).toMatchObject({ title: 'Brief', value: 71 });
+		expect(facts.oldest).toMatchObject({ title: 'Ancient', value: 1953 });
+	});
+
+	/** TMDB has given us everything so far, but a hand-added film need not have */
+	it('skips the films missing the figure it is looking for', () => {
+		const facts = filmFacts([
+			film({ id: 1, title: 'Timed', runtime: 100, year: null }),
+			film({ id: 2, title: 'Untimed', runtime: null, year: 1960 })
+		]);
+		expect(facts.longest).toMatchObject({ title: 'Timed' });
+		expect(facts.shortest).toMatchObject({ title: 'Timed' });
+		expect(facts.oldest).toMatchObject({ title: 'Untimed' });
+	});
+
+	it('says nothing at all about an empty canon', () => {
+		expect(filmFacts([])).toEqual({ longest: null, shortest: null, oldest: null });
 	});
 });

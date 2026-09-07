@@ -5,6 +5,7 @@
 	import Columns from '$lib/components/chart/Columns.svelte';
 	import Matrix, { type Pin } from '$lib/components/chart/Matrix.svelte';
 	import Split, { type Slice } from '$lib/components/chart/Split.svelte';
+	import StatCards, { type StatCard } from '$lib/components/chart/StatCards.svelte';
 	import Strip from '$lib/components/chart/Strip.svelte';
 	import { bandLabel, bandOf, bandsFor } from '$lib/bands';
 	import { dictFor, fmtScore, isVotes } from '$lib/i18n';
@@ -84,16 +85,14 @@
 			colour: row.person.colour,
 			avatar: row.person.avatar,
 			xp: row.person.xp,
-			left: row.othersWhenLive,
-			right: row.ownWhenLive,
-			ranked: row.eligible
+			left: row.others,
+			right: row.own
 		}))
 	);
 	/** the room's own figure, drawn through every bar so a row is read against it */
 	const opennessAverage = $derived.by(() => {
-		const rows = data.openness.filter((row) => row.eligible);
-		const theirs = rows.reduce((sum, row) => sum + row.othersWhenLive, 0);
-		const all = rows.reduce((sum, row) => sum + row.ownWhenLive + row.othersWhenLive, 0);
+		const theirs = data.openness.reduce((sum, row) => sum + row.others, 0);
+		const all = data.openness.reduce((sum, row) => sum + row.own + row.others, 0);
 		return all ? theirs / all : null;
 	});
 
@@ -168,6 +167,83 @@
 	});
 
 	/* ------------------------------------------------------------ the films -- */
+
+	/**
+	 * The canon's extremes, and what it takes to get watched. The charts below
+	 * draw distributions; these are the facts a distribution cannot say, which
+	 * is the ones with a film's name on them.
+	 */
+	const facts = $derived.by<StatCard[]>(() => {
+		const f = data.facts;
+		const screen = data.screen;
+		const out: StatCard[] = [];
+		const film = (row: { title: string; posterUrl: string | null }) => ({
+			title: row.title,
+			posterUrl: row.posterUrl
+		});
+
+		if (f.longest) {
+			out.push({
+				key: 'longest',
+				value: T.minutes(f.longest.value),
+				label: T.factLongest,
+				film: film(f.longest)
+			});
+		}
+		if (f.shortest) {
+			out.push({
+				key: 'shortest',
+				value: T.minutes(f.shortest.value),
+				label: T.factShortest,
+				film: film(f.shortest)
+			});
+		}
+		if (f.oldest) {
+			out.push({
+				key: 'oldest',
+				value: String(f.oldest.value),
+				label: T.factOldest,
+				film: film(f.oldest)
+			});
+		}
+		if (!screen) return out;
+
+		out.push({
+			key: 'wait',
+			value: T.weeksShort(Math.round(screen.meanWait)),
+			label: T.factWait
+		});
+		if (screen.waits.length) {
+			out.push({
+				key: 'longestwait',
+				value: T.weeksShort(screen.waits[0].value),
+				label: T.factLongestWait,
+				film: film(screen.waits[0])
+			});
+		}
+		out.push({
+			key: 'score',
+			value: `${fmtScore(screen.meanScore)} ${T.unit(screen.meanScore, votes)}`,
+			label: T.factScore
+		});
+		if (screen.scores.length) {
+			out.push({
+				key: 'best',
+				value: `${fmtScore(screen.scores[0].value)} ${T.unit(screen.scores[0].value, votes)}`,
+				label: T.factBest,
+				film: film(screen.scores[0])
+			});
+		}
+		if (screen.waiting.length) {
+			out.push({
+				key: 'waiting',
+				value: T.weeksShort(screen.waiting[0].value),
+				label: T.factWaiting,
+				film: film(screen.waiting[0])
+			});
+		}
+		return out;
+	});
 
 	/** which chart the open bucket came from, so its films are listed under it */
 	const from = (buckets: { key: string }[]) =>
@@ -255,12 +331,10 @@
 				{#if focus.nights}
 					<span>{focus.nights.nights}<i>{T.thWatched}</i></span>
 				{/if}
-				{#if focus.open?.eligible}
+				{#if focus.open && focus.open.own + focus.open.others > 0}
 					<span
 						>{Math.round(
-							(focus.open.othersWhenLive /
-								(focus.open.ownWhenLive + focus.open.othersWhenLive)) *
-								100
+							(focus.open.others / (focus.open.own + focus.open.others)) * 100
 						)}%<i>{T.openTag}</i></span
 					>
 				{/if}
@@ -313,7 +387,7 @@
 			<p class="explain key">
 				<span class="k theirs">{T.openTheirs}</span>
 				<span class="k mine">{T.openMine}</span>
-				<span class="k rule">{T.openAvg(Math.round(opennessAverage * 100))}</span>
+				<span class="k rule">{T.avgOf(`${Math.round(opennessAverage * 100)}%`)}</span>
 			</p>
 		{/if}
 		<Split
@@ -360,40 +434,8 @@
 		/>
 	{/if}
 {:else}
-	{#if data.screen}
-		{@const screen = data.screen}
-		<div class="sec">{T.screenH}</div>
-		<p class="explain">{T.screenSub(screen.nights)}</p>
-		<div class="stat">
-			<span>{T.screenWait}</span>
-			<b>{T.roundsN(Math.round(screen.meanWait))}</b>
-		</div>
-		{#if screen.longestWait}
-			<div class="stat">
-				<span>{T.screenLongest}</span>
-				<b>{screen.longestWait.title} · {T.roundsN(screen.longestWait.value)}</b>
-			</div>
-		{/if}
-		<div class="stat">
-			<span>{T.screenScore}</span>
-			<b>{fmtScore(screen.meanScore)} {T.unit(screen.meanScore, votes)}</b>
-		</div>
-		{#if screen.bestScore}
-			<div class="stat">
-				<span>{T.screenBest}</span>
-				<b>
-					{screen.bestScore.title} · {fmtScore(screen.bestScore.value)}
-					{T.unit(screen.bestScore.value, votes)}
-				</b>
-			</div>
-		{/if}
-		{#if screen.waitingLongest}
-			<div class="stat">
-				<span>{T.screenWaiting}</span>
-				<b>{screen.waitingLongest.title} · {T.roundsN(screen.waitingLongest.value)}</b>
-			</div>
-		{/if}
-	{/if}
+	<div class="sec">{T.factsH}</div>
+	<StatCards cards={facts} />
 
 	<div class="sec">{T.decadeH}</div>
 	<Bars bars={decadeBars} lit={openBucket} onpick={openBar} />
