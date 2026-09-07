@@ -149,12 +149,26 @@ export function roundRows(db: DB, window: Window): RoundRow[] {
 
 /* ---------------------------------------------------------------- people -- */
 
+/** one film somebody spent on, and whether spending on it was open or not */
+export type SpendRow = {
+	id: number;
+	title: string;
+	mine: boolean;
+	points: number;
+};
+
 export type OpennessRow = {
 	person: PersonCard;
 	/** points spent on films this person nominated */
 	own: number;
 	/** points spent on everybody else's, which is what the figure is a share of */
 	others: number;
+	/**
+	 * Every film the points went on, biggest first. A percentage on its own is
+	 * something to be taken on trust; this is the arithmetic behind it, so the
+	 * card that reports the figure can also show its working.
+	 */
+	films: SpendRow[];
 };
 
 /**
@@ -170,23 +184,35 @@ export type OpennessRow = {
  */
 export function openness(db: DB, window: Window): OpennessRow[] {
 	const cards = people(db);
+	// grouped per film rather than per person, so the same rows serve the total
+	// and the working behind it
 	const rows = db
 		.prepare(
-			`SELECT b.person_id, SUM(b.points) AS points, (f.added_by = b.person_id) AS mine
+			`SELECT b.person_id, f.id, f.title, SUM(b.points) AS points,
+			        (f.added_by = b.person_id) AS mine
 			 FROM ballot b JOIN film f ON f.id = b.film_id
 			 WHERE b.week_number BETWEEN ? AND ?
-			 GROUP BY b.person_id, mine`
+			 GROUP BY b.person_id, f.id
+			 ORDER BY points DESC, f.title`
 		)
-		.all(window.from, window.to) as { person_id: string; points: number; mine: number }[];
+		.all(window.from, window.to) as {
+		person_id: string;
+		id: number;
+		title: string;
+		points: number;
+		mine: number;
+	}[];
 
 	const out = new Map<string, OpennessRow>();
 	for (const row of rows) {
 		const person = cards.get(row.person_id);
 		if (!person) continue;
 		let entry = out.get(row.person_id);
-		if (!entry) out.set(row.person_id, (entry = { person, own: 0, others: 0 }));
-		if (row.mine) entry.own += row.points;
+		if (!entry) out.set(row.person_id, (entry = { person, own: 0, others: 0, films: [] }));
+		const mine = Boolean(row.mine);
+		if (mine) entry.own += row.points;
 		else entry.others += row.points;
+		entry.films.push({ id: row.id, title: row.title, mine, points: row.points });
 	}
 
 	return [...out.values()].sort(

@@ -175,6 +175,33 @@ describe('openness', () => {
 		]);
 	});
 
+	/** the percentage has to be checkable against the films it was made from */
+	it('shows the working: every film the points went on, biggest first', () => {
+		const { db } = scenario();
+		const ala = openness(db, ALL).find((row) => row.person.id === 'ala')!;
+		expect(ala.films).toEqual([
+			{ id: expect.any(Number), title: 'Hers', mine: true, points: 2 },
+			{ id: expect.any(Number), title: 'His', mine: false, points: 1 }
+		]);
+		// and the halves of the fraction are the halves of that list
+		const sum = (mine: boolean) =>
+			ala.films.filter((film) => film.mine === mine).reduce((n, film) => n + film.points, 0);
+		expect(sum(false)).toBe(ala.others);
+		expect(sum(true)).toBe(ala.own);
+	});
+
+	it('adds up the rounds a film was backed across into one row', () => {
+		const { db } = freshDb();
+		const one = addFilm(db, 'Campaign', 'bartek', 1);
+		castBallot(db, 1, 'ala', one, 2);
+		castBallot(db, 2, 'ala', one, 3);
+
+		const ala = openness(db, ALL)[0];
+		expect(ala.films).toEqual([
+			{ id: one, title: 'Campaign', mine: false, points: 5 }
+		]);
+	});
+
 	it('leaves out anybody who has not voted at all', () => {
 		const { db } = scenario();
 		expect(openness(db, ALL).some((row) => row.person.id === 'darek')).toBe(false);

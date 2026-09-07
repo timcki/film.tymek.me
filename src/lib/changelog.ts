@@ -116,20 +116,12 @@ export const CHANGELOG: ChangelogEntry[] = [
 		},
 		body: {
 			pl: [
-				'W menu pod zdjęciem profilowym jest nowa zakładka Statystyki, w dwóch widokach: Ludzie i Filmy.',
-				'Otwartość: ile punktów każdy oddaje na cudze zgłoszenia, a ile na własne. Przez każdy słupek przechodzi kreska ze średnią wszystkich, więc widać, kto jest po której jej stronie.',
-				'Kiedy padają głosy: każda kropka to jeden głos ustawiony tam, gdzie w rundzie padł, od otwarcia do deadline’u. Widać, kto głosuje pierwszego dnia, a kto pięć minut przed seansem.',
-				'Do tego frekwencja runda po rundzie, siatka „kto głosuje i kto przychodzi”, i cały kanon w liczbach: dekady, gatunki, długości i reżyserzy do których wracamy. Kliknięcie słupka pokazuje, jakie filmy w nim siedzą.',
-				'Kliknięcie wiersza wybiera tę osobę: jej wiersz się podświetla, reszta przygasa, a u góry zostaje karta z jej liczbami, która jedzie razem z ekranem. Najechanie myszką na samo zdjęcie pokazuje je w powiększeniu, tak jak na liście.',
-				'Wszystko jest policzone z tego, co już było w bazie, więc działa wstecz od pierwszego tygodnia. Wieczory sprzed apki nie mają oddanych głosów, dlatego domyślnie liczymy od rundy, w której zaczęliśmy głosować; przełącznik u góry pokazuje całą historię.'
+				'W menu pod zdjęciem profilowym jest nowa zakładka Statystyki, z dwoma widokami: Ludzie i Filmy. Można sobie popatrzeć kto kiedy i na co głosuje i jakie rodzaje filmów oglądamy (:',
+				'Wieczory sprzed apki nie mają oddanych głosów, więc domyślnie liczymy od tygodnia w którym zaczęliśmy głosować. Przełącznik u góry pokazuje całą historię.'
 			],
 			en: [
-				'There is a new Statistics tab in the menu under your profile picture, in two views: People and Films.',
-				'Openness: how much of each person\'s spending goes to everyone else\'s films, and how much to the ones they nominated themselves. The room\'s own average is drawn through every bar, so you can see who sits on which side of it.',
-				'When the votes land: every dot is one ballot, placed where in the round it was cast, from the round opening to the deadline. It shows who votes on day one and who votes five minutes before the film starts.',
-				'Plus turnout round by round, a grid of who votes against who turns up, and the whole canon in numbers: decades, genres, runtimes and the directors we come back to. Tapping a bar shows which films are in it.',
-				'Pressing a row picks that person: their row fills in, the rest step back, and a card with their numbers stays at the top of the screen as you scroll. Pointing at the picture itself shows it bigger, the same way it does on the list.',
-				'All of it is counted from what was already in the database, so it reaches back to week one. The nights before the app have no ballots behind them, so the default view starts at the round we began voting in; the switch at the top shows the whole history.'
+				'There is a new Statistics tab in the menu under your profile picture, with two views: People and Films. You can have a look at who votes when and on what, and what kinds of films we watch (:',
+				'The nights before the app have no ballots behind them, so by default we count from the week we started voting in. The switch at the top shows the whole history.'
 			]
 		}
 	}

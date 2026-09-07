@@ -342,6 +342,28 @@
 					<span>{Math.round(focus.when.median * 100)}%<i>{T.timingH}</i></span>
 				{/if}
 			</div>
+
+			<!-- the arithmetic behind the openness figure, so the percentage is
+			     something to be read rather than taken on trust -->
+			{#if focus.open && focus.open.own + focus.open.others > 0}
+				<div class="pbreak">
+					{#each [{ mine: false, total: focus.open.others }, { mine: true, total: focus.open.own }] as group (group.mine)}
+						{@const spent = focus.open.films.filter((film) => film.mine === group.mine)}
+						{#if spent.length}
+							<div class="ghead" class:mine={group.mine}>
+								<span>{group.mine ? T.openMine : T.openTheirs}</span>
+								<b>{group.total}</b>
+							</div>
+							{#each spent as film (film.id)}
+								<div class="grow">
+									<span>{film.title}</span>
+									<b>{film.points}</b>
+								</div>
+							{/each}
+						{/if}
+					{/each}
+				</div>
+			{/if}
 		</div>
 	{/if}
 

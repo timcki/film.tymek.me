@@ -3895,6 +3895,71 @@ details[open] > .iconbtn {
 	white-space: nowrap;
 }
 
+/* the working behind the openness figure: the two halves of the fraction and
+   the films each is made of. Capped and scrollable, because the card it sits in
+   follows the reader down the page and must not grow to fill the screen */
+.pbreak {
+	margin-top: 12px;
+	border-top: 1px solid var(--line);
+	padding-top: 8px;
+	max-height: 152px;
+	overflow-y: auto;
+	/* the gutter is kept whether or not the bar is there, so the numbers do not
+	   shuffle sideways when a list turns out to be long enough to scroll; the
+	   padding is what stops an overlay bar sitting on top of them */
+	scrollbar-gutter: stable;
+	padding-right: 10px;
+	scrollbar-width: thin;
+	scrollbar-color: var(--line3) transparent;
+}
+/* the same thin bar for the engines that do not read scrollbar-width */
+.pbreak::-webkit-scrollbar {
+	width: 6px;
+}
+.pbreak::-webkit-scrollbar-thumb {
+	background: var(--line3);
+	border-radius: 99px;
+}
+.pbreak::-webkit-scrollbar-track {
+	background: transparent;
+}
+.ghead,
+.grow {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 12px;
+	font-variant-numeric: tabular-nums;
+}
+.ghead {
+	font-size: 11px;
+	font-weight: 650;
+	color: var(--accent);
+	margin: 6px 0 3px;
+}
+.ghead:first-child {
+	margin-top: 0;
+}
+/* the half that is somebody's own films wears the colour that half of the bar
+   wears, so the list and the chart above it are plainly the same figure */
+.ghead.mine {
+	color: var(--dim);
+}
+.grow {
+	font-size: 12px;
+	color: var(--ink2);
+	padding: 2px 0 2px 10px;
+}
+.grow span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.grow b {
+	color: var(--dim);
+	font-weight: 650;
+}
+
 /* what is actually inside the bar somebody just tapped */
 .picked {
 	margin-top: 8px;
