@@ -15,6 +15,7 @@ import {
 	whoseNights,
 	roundRows,
 	runtimes,
+	screenStats,
 	openShare,
 	timing,
 	watchedFilms,
@@ -424,5 +425,66 @@ describe('the bands the engagement grid is cut into', () => {
 				expect(index).toBeLessThan(width);
 			}
 		}
+	});
+});
+
+describe('what it takes for a film to reach the screen', () => {
+	/** a night the app resolved: it has a score behind it */
+	function won(db: DB, title: string, added: number, watched: number, score: number) {
+		ensureWeek(db, added);
+		ensureWeek(db, watched);
+		const id = addFilm(db, title, 'ala', added);
+		db.prepare(
+			`UPDATE film SET status = 'watched', watched_week = ?, final_score = ? WHERE id = ?`
+		).run(watched, score, id);
+		return id;
+	}
+
+	it('averages the wait and the winning score, and names both extremes', () => {
+		const { db } = freshDb();
+		won(db, 'Quick', 4, 5, 9);
+		won(db, 'Patient', 1, 5, 3);
+		const stats = screenStats(db)!;
+
+		expect(stats.nights).toBe(2);
+		expect(stats.meanWait).toBe(2.5);
+		expect(stats.longestWait).toEqual({ title: 'Patient', value: 4 });
+		expect(stats.meanScore).toBe(6);
+		expect(stats.bestScore).toEqual({ title: 'Quick', value: 9 });
+	});
+
+	/**
+	 * A backfilled night was written down as nominated and watched in the same
+	 * week and carries no score, so counting those would put the typical wait at
+	 * nothing and the typical winner at zero points.
+	 */
+	it('is counted only over the nights the app itself resolved', () => {
+		const { db } = freshDb();
+		won(db, 'Real', 1, 3, 8);
+		const old = addFilm(db, 'Backfilled', 'bartek', 1);
+		db.prepare(
+			`UPDATE film SET status = 'watched', watched_week = 1, archival = 1 WHERE id = ?`
+		).run(old);
+
+		const stats = screenStats(db)!;
+		expect(stats.nights).toBe(1);
+		expect(stats.meanWait).toBe(2);
+		expect(stats.meanScore).toBe(8);
+	});
+
+	it('names the film that has been on the list longest with nothing to show', () => {
+		const { db } = freshDb();
+		won(db, 'Watched', 1, 2, 5);
+		for (const week of [5, 6]) ensureWeek(db, week);
+		addFilm(db, 'Still waiting', 'bartek', 2);
+		addFilm(db, 'Newer', 'celina', 5);
+
+		expect(screenStats(db)!.waitingLongest).toEqual({ title: 'Still waiting', value: 4 });
+	});
+
+	it('says nothing at all before the app has resolved a night', () => {
+		const { db } = freshDb();
+		addFilm(db, 'Up for it', 'ala', 1);
+		expect(screenStats(db)).toBeNull();
 	});
 });

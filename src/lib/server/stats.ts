@@ -537,6 +537,69 @@ export function runtimes(films: WatchedFilm[]): RuntimeSpread | null {
 	};
 }
 
+export type Named = { title: string; value: number };
+
+export type ScreenStats = {
+	/**
+	 * Nights the app itself resolved, which is the only honest basis for any of
+	 * this. A backfilled record was written down as nominated and watched in the
+	 * same week, so counting those would put the typical wait at nothing and the
+	 * typical winning score at zero.
+	 */
+	nights: number;
+	/** rounds between a film going up and reaching the screen */
+	meanWait: number;
+	longestWait: Named | null;
+	meanScore: number;
+	bestScore: Named | null;
+	/** the film that has been on the list longest without getting a night */
+	waitingLongest: Named | null;
+};
+
+/** what it takes for a film to get watched: how long it waits and what it wins with */
+export function screenStats(db: DB): ScreenStats | null {
+	const won = db
+		.prepare(
+			`SELECT title, added_week, watched_week, final_score FROM film
+			 WHERE status = 'watched' AND final_score IS NOT NULL AND watched_week IS NOT NULL
+			 ORDER BY final_score DESC`
+		)
+		.all() as {
+		title: string;
+		added_week: number;
+		watched_week: number;
+		final_score: number;
+	}[];
+	if (!won.length) return null;
+
+	const waits = won.map((film) => ({
+		title: film.title,
+		value: Math.max(0, film.watched_week - film.added_week)
+	}));
+	const mean = (values: number[]) => values.reduce((sum, n) => sum + n, 0) / values.length;
+
+	// the oldest film still on the list, measured against the round now open
+	const now = latestWeek(db);
+	const oldest = db
+		.prepare(
+			`SELECT title, added_week FROM film
+			 WHERE status = 'active' AND archival = 0
+			 ORDER BY added_week, id LIMIT 1`
+		)
+		.get() as { title: string; added_week: number } | undefined;
+
+	return {
+		nights: won.length,
+		meanWait: mean(waits.map((w) => w.value)),
+		longestWait: waits.reduce((top, w) => (w.value > top.value ? w : top), waits[0]),
+		meanScore: mean(won.map((film) => film.final_score)),
+		bestScore: { title: won[0].title, value: won[0].final_score },
+		waitingLongest: oldest
+			? { title: oldest.title, value: Math.max(0, now - oldest.added_week) }
+			: null
+	};
+}
+
 /* ------------------------------------------------------------------ lens -- */
 
 /**

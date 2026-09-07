@@ -207,7 +207,11 @@ export type Dict = {
 	keyRoster: string;
 
 	openH: string;
+	/** the same figure named for a card label, where the heading would not fit */
+	openTag: string;
 	openSub: (votes: boolean) => string;
+	/** shown until somebody has been picked, and gone once they have */
+	pickHint: string;
 	openMine: string;
 	openTheirs: string;
 	openAvg: (pct: number) => string;
@@ -223,6 +227,16 @@ export type Dict = {
 	engageH: string;
 	engageX: string;
 	engageY: string;
+
+	/** "2 rundy": the wait a film puts in before it gets a night */
+	roundsN: (n: number) => string;
+	screenH: string;
+	screenSub: (nights: number) => string;
+	screenWait: string;
+	screenLongest: string;
+	screenScore: string;
+	screenBest: string;
+	screenWaiting: string;
 
 	decadeH: string;
 	genreH: string;
@@ -561,7 +575,9 @@ const pl: Dict = {
 	keyAttended: 'Przyszło',
 	keyRoster: 'Wszyscy',
 
-	openH: 'Otwartość',
+	openH: 'Otwartość na propozycje innych',
+	openTag: 'Otwartość',
+	pickHint: 'Naciśnij na czyjś rząd żeby podświetlić jego statystyki.',
 	openSub: (votes) =>
 		`Ile ${votes ? 'głosów' : 'punktów'} każdy oddaje na cudze zgłoszenia, a ile na własne.`,
 	openTheirs: 'Na cudze',
@@ -579,6 +595,16 @@ const pl: Dict = {
 	engageH: 'Kto głosuje i kto przychodzi',
 	engageX: 'rundy z głosem',
 	engageY: 'wieczory na miejscu',
+
+	roundsN: (n) => `${n} ${pl3(n, 'runda', 'rundy', 'rund')}`,
+	screenH: 'Zanim film trafi na ekran',
+	screenSub: (nights) =>
+		`Z ${nights} ${pl3(nights, 'wieczoru', 'wieczorów', 'wieczorów')}, które rozstrzygnęła apka.`,
+	screenWait: 'Średnio czeka',
+	screenLongest: 'Najdłużej czekał',
+	screenScore: 'Średnio wygrywa z',
+	screenBest: 'Najwyższy wynik',
+	screenWaiting: 'Najdłużej czeka teraz',
 
 	decadeH: 'Dekady',
 	genreH: 'Gatunki',
@@ -984,7 +1010,9 @@ const en: Dict = {
 	keyAttended: 'In the room',
 	keyRoster: 'The roster',
 
-	openH: 'Openness',
+	openH: "Openness to other people's picks",
+	openTag: 'Openness',
+	pickHint: "Press somebody's row to light up their stats.",
 	openSub: (votes) =>
 		`How much of each person's ${votes ? 'voting' : 'spending'} goes to everyone else's films, and how much to the ones they nominated themselves.`,
 	openTheirs: "Other people's",
@@ -1002,6 +1030,15 @@ const en: Dict = {
 	engageH: 'Who votes and who turns up',
 	engageX: 'rounds voted in',
 	engageY: 'nights in the room',
+
+	roundsN: (n) => `${n} ${en2(n, 'round', 'rounds')}`,
+	screenH: 'Before a film reaches the screen',
+	screenSub: (nights) => `Over the ${nights} ${en2(nights, 'night', 'nights')} the app itself resolved.`,
+	screenWait: 'Typical wait',
+	screenLongest: 'Longest wait',
+	screenScore: 'Typically wins with',
+	screenBest: 'Highest score',
+	screenWaiting: 'Longest on the list now',
 
 	decadeH: 'Decades',
 	genreH: 'Genres',

@@ -12,6 +12,7 @@ import {
 	whoseNights,
 	roundRows,
 	runtimes,
+	screenStats,
 	timing,
 	watchedFilms,
 	windowFor
@@ -43,6 +44,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		decades: byDecade(films),
 		genres: byGenre(films),
 		directors: byDirector(films),
-		runtimes: runtimes(films)
+		runtimes: runtimes(films),
+		screen: screenStats(db)
 	};
 };

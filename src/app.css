@@ -3816,6 +3816,23 @@ details[open] > .iconbtn {
 	background: var(--edge);
 }
 
+/* the one line that says the rows can be pressed. Accented rather than dim,
+   because it is an invitation and not a footnote, and it is only ever on
+   screen until somebody takes it */
+.hint {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	margin: 0 0 8px;
+	font-size: 11.5px;
+	line-height: 1.4;
+	color: var(--accent);
+}
+.hint svg {
+	flex: 0 0 auto;
+	opacity: 0.85;
+}
+
 /* the person the lens is currently being read through. Sticky, because the
    lens is four charts long and a card that answered a press two screens above
    is a card nobody sees answer it. It parks below the lean header (56px) and

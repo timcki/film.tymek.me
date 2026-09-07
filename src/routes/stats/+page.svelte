@@ -7,7 +7,7 @@
 	import Split, { type Slice } from '$lib/components/chart/Split.svelte';
 	import Strip from '$lib/components/chart/Strip.svelte';
 	import { bandLabel, bandOf, bandsFor } from '$lib/bands';
-	import { dictFor, isVotes } from '$lib/i18n';
+	import { dictFor, fmtScore, isVotes } from '$lib/i18n';
 	import { shortNames } from '$lib/names';
 	import type { PageData } from './$types';
 
@@ -261,7 +261,7 @@
 							(focus.open.othersWhenLive /
 								(focus.open.ownWhenLive + focus.open.othersWhenLive)) *
 								100
-						)}%<i>{T.openH}</i></span
+						)}%<i>{T.openTag}</i></span
 					>
 				{/if}
 				{#if focus.when && focus.when.median !== null}
@@ -286,6 +286,29 @@
 	{:else}
 		<div class="sec">{T.openH}</div>
 		<p class="explain">{T.openSub(votes)}</p>
+		<!-- the invitation, spent the moment it is taken: once a row has been
+		     pressed the card above says what pressing one does -->
+		{#if !lit}
+			<p class="hint">
+				<svg
+					width="15"
+					height="15"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.9"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					aria-hidden="true"
+					><path d="M9 11V5.5a1.8 1.8 0 0 1 3.6 0V11" /><path
+						d="M12.6 11V9.4a1.7 1.7 0 0 1 3.4 0V11"
+					/><path d="M16 11v-.8a1.7 1.7 0 0 1 3.4 0V15a5.4 5.4 0 0 1-5.4 5.4h-1.7" /><path
+						d="M12.6 20.4a5.4 5.4 0 0 1-4-1.9l-3-3.4a1.8 1.8 0 0 1 2.6-2.4L9 13.6"
+					/></svg
+				>
+				{T.pickHint}
+			</p>
+		{/if}
 		{#if opennessAverage !== null}
 			<p class="explain key">
 				<span class="k theirs">{T.openTheirs}</span>
@@ -337,6 +360,41 @@
 		/>
 	{/if}
 {:else}
+	{#if data.screen}
+		{@const screen = data.screen}
+		<div class="sec">{T.screenH}</div>
+		<p class="explain">{T.screenSub(screen.nights)}</p>
+		<div class="stat">
+			<span>{T.screenWait}</span>
+			<b>{T.roundsN(Math.round(screen.meanWait))}</b>
+		</div>
+		{#if screen.longestWait}
+			<div class="stat">
+				<span>{T.screenLongest}</span>
+				<b>{screen.longestWait.title} · {T.roundsN(screen.longestWait.value)}</b>
+			</div>
+		{/if}
+		<div class="stat">
+			<span>{T.screenScore}</span>
+			<b>{fmtScore(screen.meanScore)} {T.unit(screen.meanScore, votes)}</b>
+		</div>
+		{#if screen.bestScore}
+			<div class="stat">
+				<span>{T.screenBest}</span>
+				<b>
+					{screen.bestScore.title} · {fmtScore(screen.bestScore.value)}
+					{T.unit(screen.bestScore.value, votes)}
+				</b>
+			</div>
+		{/if}
+		{#if screen.waitingLongest}
+			<div class="stat">
+				<span>{T.screenWaiting}</span>
+				<b>{screen.waitingLongest.title} · {T.roundsN(screen.waitingLongest.value)}</b>
+			</div>
+		{/if}
+	{/if}
+
 	<div class="sec">{T.decadeH}</div>
 	<Bars bars={decadeBars} lit={openBucket} onpick={openBar} />
 	{#if from(data.decades)}{@render picked()}{/if}
