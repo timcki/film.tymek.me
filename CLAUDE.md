@@ -60,7 +60,9 @@ against it. `SNAPSHOT=0` reuses the last copy instead of pulling a fresh one.
 anonymise, then `vite dev` with `DEMO=1` against the anonymised copy. The demo is a
 separate service on a separate subdomain serving a database with nobody real in it, so
 the anonymiser is the load-bearing piece and `tests/demo.test.ts` is what holds it to
-that. `docs/operations.md` has the service, the hourly refresh and its failure contract.
+that. Its root shows the same gate the real app shows a stranger; `/demo` is the door
+that hands out a persona. `docs/operations.md` has the service, the hourly refresh and
+its failure contract.
 
 There is no linter and no formatter config. Match the surrounding style: tabs, single
 quotes, semicolons.

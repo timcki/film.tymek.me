@@ -9,6 +9,7 @@ import { newToken, slugify } from './tokens.js';
 import { rescoreAll, scoreFor } from './scoring.js';
 import { rexpAll } from './xp.js';
 import { avatarUrl } from './people.js';
+import { cleanNote, cleanOverview, cleanPoster, cleanTitle } from './films.js';
 
 /**
  * Everything the admin screens can change. Kept apart from films.ts and
@@ -353,8 +354,7 @@ export type FilmEdit = {
 export function editFilm(db: DB, id: number, edit: FilmEdit): void {
 	immediate(db, () => {
 		filmOr404(db, id);
-		const title = edit.title.trim();
-		if (!title) throw new RuleError('no_title', 'give the film a title');
+		const title = cleanTitle(edit.title);
 		const clash = db
 			.prepare(`SELECT id FROM film WHERE title_key = ? AND id != ? AND status != 'dropped'`)
 			.get(titleKey(title), id) as { id: number } | undefined;
@@ -369,8 +369,8 @@ export function editFilm(db: DB, id: number, edit: FilmEdit): void {
 			edit.director?.trim() || null,
 			edit.genre?.trim() || null,
 			edit.runtime,
-			edit.posterUrl?.trim() || null,
-			edit.note?.trim() || null,
+			cleanPoster(edit.posterUrl),
+			cleanNote(edit.note),
 			id
 		);
 	});
@@ -490,8 +490,7 @@ export type ArchivalFilm = {
  */
 export function addArchivalFilm(db: DB, film: ArchivalFilm): number {
 	return immediate(db, () => {
-		const title = film.title.trim();
-		if (!title) throw new RuleError('no_title', 'give the film a title');
+		const title = cleanTitle(film.title);
 		personOr404(db, film.personId);
 		weekOr404(db, film.week);
 
@@ -533,8 +532,8 @@ export function addArchivalFilm(db: DB, film: ArchivalFilm): number {
 				film.genre,
 				film.runtime,
 				film.tmdbId,
-				film.posterUrl,
-				film.overview,
+				cleanPoster(film.posterUrl),
+				cleanOverview(film.overview),
 				film.personId,
 				film.week,
 				film.watched ? 'watched' : 'active',

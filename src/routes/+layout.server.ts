@@ -21,7 +21,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	const spent = person && week ? spentInWeek(db, person.id, week.number) : 0;
 	const budget = rules.banking ? balance : rules.pointsPerWeek;
 
-	const lang = langOf(cookies.get(LANG_COOKIE));
+	const lang = langOf(cookies.get(LANG_COOKIE), isDemo() ? 'en' : 'pl');
 
 	// the demo's bar has to say who you currently are, which means naming the
 	// three it can offer and which of them is holding the phone

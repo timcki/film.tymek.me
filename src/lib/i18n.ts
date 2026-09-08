@@ -13,8 +13,14 @@ export function isLang(value: string | undefined | null): value is Lang {
 	return value === 'pl' || value === 'en';
 }
 
-export function langOf(value: string | undefined | null): Lang {
-	return isLang(value) ? value : 'pl';
+/**
+ * The reader's language, Polish unless they have said otherwise. The fallback is
+ * an argument because the demo answers this differently: the twenty-two speak
+ * Polish, and whoever a portfolio sends is being shown the app rather than using
+ * it, so English is the better first screen there.
+ */
+export function langOf(value: string | undefined | null, fallback: Lang = 'pl'): Lang {
+	return isLang(value) ? value : fallback;
 }
 
 /**
@@ -767,6 +773,12 @@ const pl: Dict = {
 				return `Zostało ci ${p.left} z ${p.allowance}, więc ${p.points} to za dużo.`;
 			case 'note_too_long':
 				return `Notka może mieć najwyżej ${p.max} znaków.`;
+			case 'title_too_long':
+				return `Tytuł może mieć najwyżej ${p.max} znaków.`;
+			case 'overview_too_long':
+				return `Opis może mieć najwyżej ${p.max} znaków.`;
+			case 'bad_poster':
+				return 'Plakat musi pochodzić z TMDB.';
 			case 'not_your_note':
 				return 'Notkę zmienia tylko ten, kto zgłosił film.';
 			case 'not_your_film':
@@ -797,6 +809,8 @@ const pl: Dict = {
 				return 'Nie ma takiego komentarza.';
 			case 'demo_no_upload':
 				return 'W demo nie wgrywamy zdjęć.';
+			case 'demo_no_rotate':
+				return 'W demo nie ma linków do zmiany.';
 			default:
 				return fallback;
 		}

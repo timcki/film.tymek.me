@@ -77,6 +77,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
 	// §5.3: invalidates the old link everywhere, and re-authenticates this device
 	rotate: async ({ locals, cookies, url }) => {
+		// the demo's people are shared, so rotating one is not a person securing
+		// their own link: it takes everybody else reading over that shoulder back
+		// to the default persona, and there is no lost link to replace anyway
+		if (isDemo()) return ruleFail(new RuleError('demo_no_rotate', 'the demo has no links to roll'));
 		const token = rotateToken(getDb(), locals.person!.id);
 		cookies.set(PERSON_COOKIE, token, {
 			httpOnly: true,

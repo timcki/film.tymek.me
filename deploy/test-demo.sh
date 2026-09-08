@@ -71,7 +71,8 @@ sqlite3 "$DEMO_DB" "SELECT '    ' || name FROM person WHERE active = 1 ORDER BY 
 echo "    ..."
 
 echo "==> starting the demo at $LOCAL_ORIGIN (ctrl-c to stop)"
-echo "    open it with no cookie to land as a regular member; the bar switches persona"
+echo "    the root shows the gate a stranger meets; $LOCAL_ORIGIN/demo is the way in"
+echo "    once inside, the bar switches persona"
 # --port explicitly, so the port the QR codes advertise is the port it binds
 DEMO=1 DEMO_HOME="$DEMO_HOME" ORIGIN="$LOCAL_ORIGIN" DATABASE_PATH="$DEMO_DB" \
 	npm run dev -- --host --port "$DEV_PORT"

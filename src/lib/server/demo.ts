@@ -8,9 +8,10 @@ import { currentWeek } from './weeks.js';
  * rules, it only decides which of the made-up people is holding the phone.
  *
  * Three, because three states are worth seeing. A regular member is the app as
- * twenty of the twenty-two experience it; the admin is the only way to reach
- * /admin and /host; and somebody who has not voted this week is the only way to
- * see a full budget, which is otherwise a state you have to wait a week for.
+ * twenty of the twenty-two experience it; the admin is the only way to reach the
+ * back office, /host being open to anyone holding a link here as it is there; and
+ * somebody who has not voted this week is the only way to see a full budget,
+ * which is otherwise a state you have to wait a week for.
  */
 export type PersonaKind = 'member' | 'admin' | 'fresh';
 

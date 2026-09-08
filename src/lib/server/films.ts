@@ -202,6 +202,54 @@ export function cleanNote(note: string | null | undefined): string | null {
 	return trimmed;
 }
 
+/**
+ * What a film row will accept in the fields a person types rather than picks.
+ * On the real app these arrive from the TMDB picker and the caps never bite; the
+ * demo is a public door onto the same actions, and an unbounded column behind a
+ * public door is a column somebody fills.
+ */
+export const TITLE_MAX = 200;
+export const OVERVIEW_MAX = 2000;
+
+/** where a poster may be hosted, which is the one host TMDB serves them from */
+export const POSTER_PREFIX = 'https://image.tmdb.org/t/p/';
+
+export function cleanTitle(title: string | null | undefined): string {
+	const trimmed = (title ?? '').trim().replace(/\s+/g, ' ');
+	if (!trimmed) throw new RuleError('no_title', 'give the film a title');
+	if (trimmed.length > TITLE_MAX) {
+		throw new RuleError('title_too_long', `keep the title under ${TITLE_MAX} characters`, {
+			max: TITLE_MAX
+		});
+	}
+	return trimmed;
+}
+
+export function cleanOverview(overview: string | null | undefined): string | null {
+	const trimmed = (overview ?? '').trim();
+	if (!trimmed) return null;
+	if (trimmed.length > OVERVIEW_MAX) {
+		throw new RuleError('overview_too_long', `keep the summary under ${OVERVIEW_MAX} characters`, {
+			max: OVERVIEW_MAX
+		});
+	}
+	return trimmed;
+}
+
+/**
+ * A poster is the one field a person hands us that the browser then fetches, so
+ * it is the one that has to name its host. Anything else would let whoever filled
+ * the form choose what every reader's browser calls and what it shows them.
+ */
+export function cleanPoster(url: string | null | undefined): string | null {
+	const trimmed = (url ?? '').trim();
+	if (!trimmed) return null;
+	if (!trimmed.startsWith(POSTER_PREFIX)) {
+		throw new RuleError('bad_poster', 'a poster has to come from TMDB', { host: POSTER_PREFIX });
+	}
+	return trimmed;
+}
+
 function duplicate(clash: Film): RuleError {
 	if (clash.status === 'watched') {
 		return new RuleError('dup_watched', `we watched ${clash.title} in week ${clash.watched_week}`, {
@@ -263,6 +311,7 @@ function assertNominationSlot(db: DB, rules: RuleSet, personId: string, week: nu
 }
 
 function insertFilm(db: DB, input: NominationInput, personId: string, week: number): number {
+	const title = cleanTitle(input.title);
 	const result = db
 		.prepare(
 			`INSERT INTO film (title, title_key, year, director, genre, runtime, tmdb_id, poster_url,
@@ -270,15 +319,15 @@ function insertFilm(db: DB, input: NominationInput, personId: string, week: numb
 			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0, ?)`
 		)
 		.run(
-			input.title.trim(),
-			titleKey(input.title),
+			title,
+			titleKey(title),
 			input.year ?? null,
 			input.director ?? null,
 			input.genre ?? null,
 			input.runtime ?? null,
 			input.tmdbId ?? null,
-			input.posterUrl ?? null,
-			input.overview ?? null,
+			cleanPoster(input.posterUrl),
+			cleanOverview(input.overview),
 			cleanNote(input.note),
 			personId,
 			week,

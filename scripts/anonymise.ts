@@ -26,6 +26,7 @@ import { pathToFileURL } from 'node:url';
 import Database from 'better-sqlite3';
 import type { DB } from '../src/lib/server/db.ts';
 import { slugify } from '../src/lib/server/tokens.ts';
+import { latestChangelogId } from '../src/lib/changelog.ts';
 
 /**
  * Fixed, so the fake cast is the same person to person after every hourly
@@ -162,52 +163,56 @@ const FAMILY_NAMES = [
 /* --------------------------------------------------------------- the talk -- */
 
 /**
- * What the demo says instead of what anybody actually wrote. Bucketed by the
- * length of the line being replaced, so a card that carried two words still
- * carries two words and a comment thread keeps the shape it had.
+ * What the demo says instead of what anybody actually wrote. Lorem ipsum rather
+ * than plausible opinions, because a demo full of invented film takes reads as
+ * twenty-two people's real ones, and nobody looking at it can tell which. Filler
+ * that announces itself cannot be mistaken for anybody.
+ *
+ * Bucketed by the length of the line being replaced, so a card that carried two
+ * words still carries two words and a comment thread keeps the shape it had.
  */
 const TINY = [
-	'Jasne.',
-	'Zgoda.',
-	'Tak!',
-	'Może być.',
-	'Nie wiem.',
-	'Popieram.',
-	'Czemu nie.',
-	'Widziałem.',
-	'Sure.',
-	'Chętnie.'
+	'Lorem.',
+	'Ipsum.',
+	'Dolor sit.',
+	'Sit amet.',
+	'Amet!',
+	'Enim ad.',
+	'Ut enim.',
+	'Quis?',
+	'Sed do.',
+	'Nam quis.'
 ];
 
 const SHORT = [
-	'Jestem za, dawno chciałem to zobaczyć.',
-	'Widziałem w kinie, robi wrażenie.',
-	'Trochę za długi jak na czwartek.',
-	'Klasyk, nie ma o czym dyskutować.',
-	'Może innym razem, dziś nie mam siły.',
-	'Zdecydowanie na tak.',
-	'Nie mój klimat, ale niech będzie.',
-	'Świetne zdjęcia, fabuła słabsza.',
-	'Ktoś ma do tego napisy?',
-	'Fine by me, I have not seen it.'
+	'Lorem ipsum dolor sit amet, elit.',
+	'Consectetur adipiscing elit sed do.',
+	'Sed do eiusmod tempor incididunt.',
+	'Ut labore et dolore magna aliqua.',
+	'Ut enim ad minim veniam, quis.',
+	'Nostrud exercitation ullamco laboris.',
+	'Duis aute irure dolor in voluptate.',
+	'Excepteur sint occaecat cupidatat.',
+	'Non proident, sunt in culpa qui.',
+	'Officia deserunt mollit anim id est.'
 ];
 
 const MEDIUM = [
-	'Widziałem dawno temu i pamiętam głównie zdjęcia, chętnie obejrzę jeszcze raz.',
-	'Uprzedzam, że pierwsza godzina jest bardzo powolna, ale potem to się spina.',
-	'Zgłaszam, bo od dawna wisi na liście i nikt go jeszcze nie wybrał.',
-	'Jak dla mnie trochę przereklamowany, ale rozumiem, czemu ludzie go lubią.',
-	'Zostawmy to na tydzień, w którym będzie nas więcej niż pięć osób.',
-	'Sprawdziłem wczoraj, napisy są dostępne i wersja jest w porządku.',
-	'This one shows up on every list and none of us has actually watched it.',
-	'Ostatnio oglądałem coś tego reżysera i było naprawdę dobre, więc dorzucam.'
+	'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore.',
+	'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo.',
+	'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.',
+	'Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est.',
+	'Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.',
+	'Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur.',
+	'Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.',
+	'At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum.'
 ];
 
 const LONG = [
-	'Obejrzałem to w zeszłym roku i do dziś wracam do kilku scen. Nie jest to łatwy seans, ale jeśli ktoś ma ochotę na coś powolnego i ładnego, to jest bardzo dobry wybór na czwartek.',
-	'Uprzedzam lojalnie: trwa prawie trzy godziny i pierwsza z nich niewiele wyjaśnia. Warto jednak wytrzymać, bo końcówka tłumaczy wszystko, co wcześniej wydawało się przypadkowe.',
-	'Proponuję to od kilku tygodni i chyba w końcu się uda. Reżyser robi rzeczy, których nikt inny nie próbuje, a zdjęcia wyglądają lepiej niż większość tego, co ostatnio widzieliśmy razem.',
-	'I have wanted to see this for years and never got around to it, which is exactly what this list is for. It is long, but everyone I know who has seen it says the same thing about the last twenty minutes.'
+	'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+	'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
+	'Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.',
+	'Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.'
 ];
 
 function poolFor(length: number): string[] {
@@ -461,13 +466,17 @@ export function anonymise(sourcePath: string, outPath: string): AnonymiseReport 
 		const stageToken = db!.prepare('UPDATE person SET token = ? WHERE id = ?');
 		personIds.forEach((id, index) => stageToken.run(`~fn~t${index}`, identities.get(id)!.id));
 
+		// caught up rather than reset: a visitor's first paint should be the app, not
+		// a modal of everything that ever changed, and the first one to dismiss it
+		// would be dismissing it for everybody else on that shared persona anyway
 		const dress = db!.prepare(
 			`UPDATE person SET name = ?, token = ?, avatar = NULL, avatar_mime = NULL,
-			                   avatar_updated_at = NULL, changelog_seen = 0
+			                   avatar_updated_at = NULL, changelog_seen = ?
 			 WHERE id = ?`
 		);
+		const caughtUp = latestChangelogId();
 		for (const identity of identities.values()) {
-			dress.run(identity.name, identity.token, identity.id);
+			dress.run(identity.name, identity.token, caughtUp, identity.id);
 		}
 
 		// what is left in target is a film id or a timestamp: harmless, but it was

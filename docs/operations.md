@@ -102,10 +102,25 @@ The privacy here is by absence, not by masking. Names reach the browser from sev
 eight places, and a masking layer inside the live app would have to catch every one of
 them forever. Instead the demo's process opens a file that never had any of it:
 `scripts/anonymise.ts` rewrites a snapshot into made-up people, drops the avatars,
-swaps every line of free text for a canned one, and vacuums, so the old bytes are not
+swaps every line of free text for lorem ipsum, and vacuums, so the old bytes are not
 even in the freed pages. What stays real is the part worth showing: titles, posters,
 directors, every score, every ballot, the whole week history including the archive, XP,
 ranks, the fairness table and the rule set.
+
+The demo keeps the gate. Its root answers a visitor holding nothing with the same
+locked-out page the real app does, because being invite-only is the thing that shapes
+everything behind it, and a showcase that opened straight onto the app would be hiding
+the reason it looks the way it does. `/demo` is the door: it hands over one of the
+made-up people and redirects to the root, and it is the only place that hands anybody
+anything. Link the portfolio at `/demo` rather than at the root, or at
+`/demo/as?who=admin` to open on the back office. Somebody already carrying a persona
+keeps it when they pass the door again; the bar is what swaps who you are.
+
+The filler is lorem ipsum rather than plausible film talk on purpose. Invented opinions
+in the right register read as twenty-two real people's, and a visitor has no way to tell
+which half of a comment thread was made up; filler that announces itself has no such
+problem. The demo also opens in English, since whoever a portfolio sends is being shown
+the app rather than using it, and the language switch still works from there.
 
 It is a subdomain rather than `/demo` on the real one because SvelteKit's `base` is
 fixed at build time: every internal link would walk out of a path prefix straight into
@@ -127,6 +142,8 @@ repository, so they are described here rather than checked in.
 | `DEMO_HOME` | wherever the portfolio lives, for the link back |
 | `RULES` | the same value as production, or the rules screen describes a different app |
 | `TMDB_READ_TOKEN` | the same token; `/api/search` is rate limited per address in demo |
+| `ADDRESS_HEADER` | `X-Forwarded-For` |
+| `XFF_DEPTH` | `1` |
 | `ADMINS` | **unset** |
 
 `ADMINS` is deliberately absent. The anonymiser preserves `is_admin`, so the demo already
@@ -136,9 +153,37 @@ Its firewall rule is the same shape as the app's: 3011 open on `tailscale0` only
 chungus-1 is the only thing that can reach it. It gets no backup timer; there is nothing
 in it worth keeping.
 
+`ADDRESS_HEADER` is what makes the two ceilings in the demo mean anything. Without it
+adapter-node reports the socket peer, which behind Caddy is Caddy: every visitor would
+share one bucket and one person's clicking would lock out the next. Caddy's
+`reverse_proxy` sets `X-Forwarded-For` itself, and `XFF_DEPTH` is 1 because chungus-1 is
+the only hop in front. Both ceilings are generous enough that a person clicking around
+never meets them: 20 TMDB searches and 40 writes a minute.
+
 Nothing in the demo needs `BODY_SIZE_LIMIT` raised, because uploads are refused there.
 The in-process scheduler runs as usual, so a demo week really does close and a runoff
 really does resolve; the hourly rebuild simply puts it back.
+
+### What a visitor may write
+
+A visitor is handed a made-up person, so every action in the app is open to them and
+that is the point: voting, nominating, commenting and the back office all work, and the
+hourly rebuild takes it back. Two things they may not do, and one they may not choose.
+
+Avatars are refused, because a stranger's picture would sit on somebody's face for an
+hour. Rolling a link is refused, because the demo's people are shared and one visitor
+rotating a persona would drop everyone else reading over that shoulder back to the
+default one. And a poster may only be a `https://image.tmdb.org/t/p/` URL: it is the one
+field a person hands us that every reader's browser then goes and fetches, so leaving it
+open would let whoever filled the form pick both what the page shows and who gets told
+about each visitor. That last one is enforced for everybody, demo or not, since nothing
+but the TMDB picker was ever supposed to fill it.
+
+Free text is bounded rather than refused, because a demo nobody can type into is not
+worth showing: a comment is 280 characters, a note 160, a title 200 and a summary 2000,
+all of which the real app was already living inside. What a visitor writes stands under
+a made-up name until the next rebuild, and the write ceiling is what keeps that to a
+line or two rather than a wall.
 
 ### The refresh
 

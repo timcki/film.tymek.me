@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { titleKey } from '../src/lib/server/rules.js';
-import { filmById, nominate, renominate } from '../src/lib/server/films.js';
+import {
+	OVERVIEW_MAX,
+	TITLE_MAX,
+	filmById,
+	nominate,
+	renominate
+} from '../src/lib/server/films.js';
 import { openWeek } from '../src/lib/server/weeks.js';
 import { addFilm, ensureWeek, freshDb, nominateAs } from './helpers.js';
 
@@ -73,5 +79,63 @@ describe('nominations', () => {
 		const old = addFilm(db, 'Stalker', 'ala', 1);
 		db.prepare(`UPDATE film SET status = 'dropped' WHERE id = ?`).run(old);
 		expect(() => nominateAs(db, rules, 'bartek', 'Stalker')).not.toThrow();
+	});
+});
+
+describe('what a nomination may carry', () => {
+	// the demo is a public door onto this action, so these fields stopped being
+	// whatever the TMDB picker happened to send and became what the row will take
+	it('takes a poster from TMDB', () => {
+		const { db, rules } = freshDb('banked');
+		const id = nominate(db, rules, 'ala', {
+			title: 'Stalker',
+			posterUrl: 'https://image.tmdb.org/t/p/w342/abc.jpg'
+		});
+		expect(filmById(db, id)?.poster_url).toBe('https://image.tmdb.org/t/p/w342/abc.jpg');
+	});
+
+	it('refuses a poster hosted anywhere else, which the browser would go and fetch', () => {
+		const { db, rules } = freshDb('banked');
+		expect(() =>
+			nominate(db, rules, 'ala', {
+				title: 'Stalker',
+				posterUrl: 'http://attacker.example/tracker.gif'
+			})
+		).toThrow(/TMDB/);
+	});
+
+	it('refuses a poster that only starts like one', () => {
+		const { db, rules } = freshDb('banked');
+		expect(() =>
+			nominate(db, rules, 'ala', {
+				title: 'Stalker',
+				posterUrl: 'https://image.tmdb.org.attacker.example/t/p/w342/abc.jpg'
+			})
+		).toThrow(/TMDB/);
+	});
+
+	it('keeps no poster as no poster', () => {
+		const { db, rules } = freshDb('banked');
+		const id = nominate(db, rules, 'ala', { title: 'Stalker', posterUrl: '  ' });
+		expect(filmById(db, id)?.poster_url).toBeNull();
+	});
+
+	it('refuses a title longer than the column was ever meant to hold', () => {
+		const { db, rules } = freshDb('banked');
+		expect(() =>
+			nominate(db, rules, 'ala', { title: 'x'.repeat(TITLE_MAX + 1) })
+		).toThrow(/under 200/);
+	});
+
+	it('refuses a summary longer than the column was ever meant to hold', () => {
+		const { db, rules } = freshDb('banked');
+		expect(() =>
+			nominate(db, rules, 'ala', { title: 'Stalker', overview: 'x'.repeat(OVERVIEW_MAX + 1) })
+		).toThrow(/under 2000/);
+	});
+
+	it('still refuses a blank title, by the same route as before', () => {
+		const { db, rules } = freshDb('banked');
+		expect(() => nominate(db, rules, 'ala', { title: '   ' })).toThrow(/give the film a title/);
 	});
 });

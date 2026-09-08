@@ -179,6 +179,26 @@ describe('curating the films', () => {
 		expect(fixed.year).toBe(1972);
 	});
 
+	// the demo's admin persona reaches this form too, and it writes the one field
+	// every reader's browser then goes and fetches
+	it('holds an admin edit to the same poster host as a nomination', () => {
+		const { db } = freshDb('banked');
+		const film = addFilm(db, 'Stalker', 'ala', 1);
+		const edit = {
+			title: 'Stalker',
+			year: null,
+			director: null,
+			genre: null,
+			runtime: null,
+			posterUrl: 'http://attacker.example/tracker.gif',
+			note: null
+		};
+		expect(() => editFilm(db, film, edit)).toThrow(/TMDB/);
+
+		editFilm(db, film, { ...edit, posterUrl: 'https://image.tmdb.org/t/p/w342/abc.jpg' });
+		expect(filmById(db, film)!.poster_url).toBe('https://image.tmdb.org/t/p/w342/abc.jpg');
+	});
+
 	it('lists every film whatever its status', () => {
 		const { db } = freshDb('banked');
 		addFilm(db, 'One', 'ala', 1);

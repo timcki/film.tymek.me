@@ -24,6 +24,8 @@ import { addNight } from '../src/lib/server/schedule.js';
 import { logAdmin } from '../src/lib/server/admin.js';
 import { rexpAll } from '../src/lib/server/xp.js';
 import { demoDefault, personas } from '../src/lib/server/demo.js';
+import { latestChangelogId } from '../src/lib/changelog.js';
+import { limiter } from '../src/lib/server/ratelimit.js';
 import { addFilm, castBallot, ensureWeek, freshDb } from './helpers.js';
 
 const NOW = new Date('2026-08-03T10:00:00Z');
@@ -372,12 +374,14 @@ describe('the anonymiser', () => {
 		second.close();
 	});
 
-	it('shows the changelog to whoever wanders in', () => {
+	it('catches the cast up on the changelog, so nobody lands under a modal', () => {
 		anonymise(source, out);
 		const db = new Database(out, { readonly: true });
-		expect(db.prepare('SELECT COUNT(*) AS n FROM person WHERE changelog_seen != 0').get()).toEqual({
-			n: 0
-		});
+		expect(
+			db
+				.prepare('SELECT COUNT(*) AS n FROM person WHERE changelog_seen != ?')
+				.get(latestChangelogId())
+		).toEqual({ n: 0 });
 		db.close();
 	});
 
@@ -453,5 +457,38 @@ describe('who the demo hands a visitor', () => {
 		const cast = personas(db);
 		expect(cast.fresh).toBeDefined();
 		expect(cast.fresh?.id).not.toBe(cast.member?.id);
+	});
+});
+
+describe('the ceilings the demo runs behind', () => {
+	// a person clicking around never meets these; a script pointed at the door
+	// meets them long before the hourly rebuild would have cleaned up after it
+	it('lets a caller through up to the ceiling and no further', () => {
+		const over = limiter(3);
+		expect([1, 2, 3].map(() => over('1.2.3.4', 1000))).toEqual([false, false, false]);
+		expect(over('1.2.3.4', 1000)).toBe(true);
+	});
+
+	it('counts each caller separately, so one visitor cannot lock out the next', () => {
+		const over = limiter(2);
+		over('1.2.3.4', 1000);
+		over('1.2.3.4', 1000);
+		expect(over('1.2.3.4', 1000)).toBe(true);
+		expect(over('5.6.7.8', 1000)).toBe(false);
+	});
+
+	it('opens again once the window has passed', () => {
+		const over = limiter(1, 60_000);
+		expect(over('1.2.3.4', 1000)).toBe(false);
+		expect(over('1.2.3.4', 2000)).toBe(true);
+		expect(over('1.2.3.4', 61_001)).toBe(false);
+	});
+
+	it('forgets a caller that has gone quiet, rather than growing forever', () => {
+		const over = limiter(1, 60_000);
+		over('1.2.3.4', 1000);
+		// a later caller sweeps the expired buckets on its way in
+		over('5.6.7.8', 61_001);
+		expect(over('1.2.3.4', 61_001)).toBe(false);
 	});
 });

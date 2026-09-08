@@ -2,8 +2,8 @@ import type { Handle } from '@sveltejs/kit';
 import { getDb } from '$lib/server/db';
 import { isAdmin, seedAdmins } from '$lib/server/admin';
 import { isDemo } from '$lib/server/config';
-import { demoDefault } from '$lib/server/demo';
 import { personByToken } from '$lib/server/people';
+import { limiter } from '$lib/server/ratelimit';
 import { startScheduler } from '$lib/server/scheduler';
 import { THEME_BG, themeOf } from '$lib/themes';
 
@@ -25,7 +25,12 @@ startScheduler();
 
 /** the runoff is reachable without a personal link: being in the room is the credential */
 function isOpenRoute(pathname: string): boolean {
-	return pathname.startsWith('/u/') || pathname.startsWith('/f/') || pathname === '/favicon.ico';
+	if (pathname.startsWith('/u/') || pathname.startsWith('/f/') || pathname === '/favicon.ico') {
+		return true;
+	}
+	// the demo's own door, which is the one thing a visitor arrives holding nothing
+	// for; everything behind it is the ordinary app reading an ordinary person
+	return isDemo() && (pathname === '/demo' || pathname.startsWith('/demo/'));
 }
 
 const LOCKED_OUT = `<!doctype html>
@@ -44,6 +49,28 @@ const LOCKED_OUT = `<!doctype html>
 </main></body></html>`;
 
 /**
+ * The same door, on the demo, where it is worth standing in front of: an invite
+ * is how this app actually greets a stranger, and a showcase that skipped it
+ * would be hiding the part that explains why the rest looks the way it does.
+ * The way in is a link rather than a code, because there is nobody to ask.
+ */
+const DEMO_DOOR = LOCKED_OUT.replace(
+	'</main>',
+	`<p style="margin-top:1.4rem"><a href="/demo" style="color:#eef0f3">Open the demo &rarr;</a></p>
+<p style="font-size:.85rem">No link needed, and nobody you meet inside is real.</p>
+</main>`
+);
+
+/**
+ * Everything a visitor writes in the demo is written under one of its made-up
+ * people and stands until the next hourly rebuild, so the ceiling is on writing
+ * at all rather than on any one action: a person clicking around comes nowhere
+ * near it, and a script pointed at the door gives up well before the hour is out.
+ */
+const WRITES_PER_MINUTE = 40;
+const overWriteRate = limiter(WRITES_PER_MINUTE);
+
+/**
  * The demo is a public door, and a search engine indexing made-up people saying
  * made-up things about real films helps nobody. Set on every response, the early
  * ones included, rather than only on the pages that render.
@@ -56,11 +83,7 @@ function unindexed(response: Response): Response {
 export const handle: Handle = async ({ event, resolve }) => {
 	const db = getDb();
 	const token = event.cookies.get(PERSON_COOKIE);
-	let person = token ? (personByToken(db, token) ?? null) : null;
-	// the demo has nobody to lock out: a visitor arriving without a link is handed
-	// one of its made-up people and carries on down the ordinary code path, so
-	// nothing below here has to know which of the two apps it is running in
-	if (!person && isDemo()) person = demoDefault(db);
+	const person = token ? (personByToken(db, token) ?? null) : null;
 	event.locals.person = person;
 	event.locals.deviceId = event.cookies.get(DEVICE_COOKIE) ?? null;
 
@@ -74,9 +97,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 		});
 	}
 
+	if (
+		isDemo() &&
+		event.request.method !== 'GET' &&
+		event.request.method !== 'HEAD' &&
+		overWriteRate(event.getClientAddress(), Date.now())
+	) {
+		return unindexed(new Response('Too many writes; give it a minute', { status: 429 }));
+	}
+
 	if (!person && !isOpenRoute(event.url.pathname)) {
 		return unindexed(
-			new Response(LOCKED_OUT, {
+			new Response(isDemo() ? DEMO_DOOR : LOCKED_OUT, {
 				status: 401,
 				headers: { 'content-type': 'text/html; charset=utf-8' }
 			})
