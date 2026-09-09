@@ -23,6 +23,10 @@ sudo nixos-rebuild switch --flake .#bigchungus --impure
 filter is an allowlist, which keeps this file, the README and the prototypes out of the
 store, which is world readable.
 
+The demo is a second unit in the same configuration, so that one rebuild moves both and
+the demo can never be running older code than the app. What it does not share is the
+database; see **The demo**.
+
 | Thing | Where |
 |---|---|
 | code | a store path, from the `filmnight` flake input of the nix config |
@@ -139,12 +143,19 @@ repository, so they are described here rather than checked in.
 | `DATABASE_PATH` | `/var/lib/filmnight-demo/demo.db` |
 | `ORIGIN` | `https://demo.film.tymek.me` |
 | `DEMO` | `1` |
-| `DEMO_HOME` | wherever the portfolio lives, for the link back |
+| `DEMO_HOME` | `https://tymek.me`, the portfolio the bar links back to |
 | `RULES` | the same value as production, or the rules screen describes a different app |
 | `TMDB_READ_TOKEN` | the same token; `/api/search` is rate limited per address in demo |
 | `ADDRESS_HEADER` | `X-Forwarded-For` |
 | `XFF_DEPTH` | `1` |
 | `ADMINS` | **unset** |
+
+`PORT`, `HOST`, `DATABASE_PATH`, `DEMO`, `ADDRESS_HEADER` and `XFF_DEPTH` live in the
+unit. `ORIGIN`, `DEMO_HOME`, `RULES`, `TZ` and the TMDB token live in
+`/etc/filmnight-demo.env` (0600 root:root), the last three copied out of
+`/etc/filmnight.env` so the demo describes the same rule set the real app runs. Nothing
+may appear in both, for the reason it may not for the app: `EnvironmentFile` wins over
+`Environment`.
 
 `ADMINS` is deliberately absent. The anonymiser preserves `is_admin`, so the demo already
 has an admin to switch to, and the ids in `ADMINS` do not exist in that database anyway.
