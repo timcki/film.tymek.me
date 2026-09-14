@@ -121,13 +121,19 @@ builders that bypass slot checks. Prefer them over hand-rolled inserts.
 
 ## Deployment
 
-Push and rebuild; nothing is built on the box by hand and nothing is rsynced. The full
-procedure, the systemd layout, and the backup and restore steps are in
-`docs/operations.md`.
+Pushing `main` is the deploy. bigchungus rebuilds nightly from the nix config on tangled
+and resolves this flake to `main` rather than to a pin, so there is no lock to bump and
+no second repository to remember; `ssh bigchungus switchn` applies it now instead of at
+04:30. `curl -s https://film.tymek.me/healthz` says which commit is actually running,
+which is the only trustworthy answer to "did it land". The full procedure, the systemd
+layout, and the backup and restore steps are in `docs/operations.md`.
 
-Two things to remember when changing packaging: `nix/package.nix` pins the build and the
-service to the same `nodejs_24`, and its source filter is an allowlist, so a new top-level
-file stays out of the world-readable store until you add it there on purpose.
+Three things to remember when changing packaging: `nix/package.nix` pins the build and
+the service to the same `nodejs_24`; its source filter is an allowlist, so a new
+top-level file stays out of the world-readable store until you add it there on purpose;
+and `doCheck` runs `npm run check` and `npm test` inside the build, which is what makes
+following `main` unattended safe. A revision that fails either does not build, so it
+cannot deploy. Do not turn that off to get a deploy out.
 
 ## Handle with care
 

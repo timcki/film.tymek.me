@@ -9,19 +9,56 @@ The app runs as a systemd service on **bigchungus**, a NixOS box on the tailnet.
 chungus-1 (`54.37.234.58`) owns the certificate for `film.tymek.me` and reverse proxies
 to `bigchungus:3010`, the same way it does for the other subdomains.
 
-This repository is a flake, so a deploy is a push and a rebuild. Nothing is built on the
-box by hand and nothing is rsynced:
+**Pushing `main` here is the deploy.** Nothing is built on the box by hand and nothing is
+rsynced. bigchungus rebuilds itself nightly at 04:30 from the nix config on tangled, and
+that rebuild resolves this flake to whatever `main` is at the time:
 
 ```sh
 jj bookmark set main -r @- && jj git push --remote origin --bookmark main
-ssh bigchungus
-cd ~/.config/nix && nix flake update filmnight    # point the lock at the new commit
-sudo nixos-rebuild switch --flake .#bigchungus --impure
 ```
+
+To apply it now rather than at 04:30, `ssh bigchungus switchn`, which builds the same
+pushed configuration with the same override. Either way, ask what landed:
+
+```sh
+curl -s https://film.tymek.me/healthz
+# {"ok":true,"rev":"323dedee…","rules":"weekly","demo":false,"db":"ok"}
+```
+
+`rev` is the commit the running process was built from, out of the flake input the store
+path was built from. Compare it with `jj log`: if they differ the deploy did not happen,
+whatever the terminal said at the time. `/healthz` is outside the gate, because a check
+only the people behind the gate can make is one nobody makes.
+
+### Why there is no `nix flake update filmnight` any more
+
+There used to be, and it was a trap. The box follows
+`git+https://tangled.org/tymek.me/nix`, so the lock **committed there** is the only lock
+it reads, while `switchn` used to build the working copy on the box. Running
+`nix flake update filmnight` in that working copy and switching therefore produced a
+deploy that worked until 04:30 and then silently reverted to the committed pin. That is
+how the stats screen and the whole demo sat unbuilt for a fortnight with a working copy
+insisting otherwise, and the shape of it would repeat for any input.
+
+So `filmnight` is not pinned for this box. Both the nightly upgrade and `switchn` pass
+`--override-input filmnight` at this repository and take `main`, and `switchn` builds the
+pushed configuration rather than the working copy, so there is one source of truth and
+an unpushed change cannot masquerade as a deploy.
+
+What makes following `main` unattended safe is `doCheck` in `nix/package.nix`: the
+acceptance suite and `svelte-check` run inside the build. A revision that fails either
+produces no store path, so it cannot become the running system; the upgrade fails, the
+previous system keeps serving, and the failure is reported. A red `main` is a deploy that
+does not happen, not a broken one.
+
+**To pin deliberately** — a rollback, or holding a revision back — drop the
+`--override-input` flag in `modules/machines/bigchungus.nix` and pin the lock as before,
+committed and pushed with the rest of the config.
 
 `nix/package.nix` pins the build to the same `nodejs_24` the service runs. Its source
 filter is an allowlist, which keeps this file, the README and the prototypes out of the
-store, which is world readable.
+store, which is world readable. `tests/` is in the allowlist because `doCheck` reads it;
+nothing in it is private, and it stays out of the installed output either way.
 
 The demo is a second unit in the same configuration, so that one rebuild moves both and
 the demo can never be running older code than the app. What it does not share is the
@@ -29,20 +66,33 @@ database; see **The demo**.
 
 | Thing | Where |
 |---|---|
-| code | a store path, from the `filmnight` flake input of the nix config |
+| code | a store path, built from this repository's `main` at rebuild time |
 | service | `modules/services/filmnight.nix` in `~/.config/nix`, `Restart=always` |
 | database | `/var/lib/filmnight/filmnight.db` (WAL) |
 | environment | `/etc/filmnight.env` (0640 root:filmnight): `ORIGIN`, `RULES`, `TZ`, TMDB token |
+| revision | `FILMNIGHT_REV` in the unit, from the flake input; read back at `/healthz` |
 | backups | `filmnight-backup.timer`, nightly 04:17, 30 days in `/var/backups/filmnight` |
 | proxy | chungus-1 `/etc/caddy/Caddyfile`, `film.tymek.me` to `bigchungus:3010` |
 | firewall | 3010 is open on `tailscale0` only, so only chungus-1 can reach it |
 
-`PORT`, `HOST`, `BODY_SIZE_LIMIT` and `ADMINS` are set in the module rather than the
-environment file. Nothing may appear in both: systemd applies `EnvironmentFile` after
-`Environment`, so the file would silently win.
+`PORT`, `HOST`, `BODY_SIZE_LIMIT`, `ADMINS` and `FILMNIGHT_REV` are set in the module
+rather than the environment file. Nothing may appear in both: systemd applies
+`EnvironmentFile` after `Environment`, so the file would silently win.
 
 `ORIGIN` stays `https://film.tymek.me`, so every personal link keeps working.
 
+### When something breaks
+
+Nothing on the box used to say so. `filmnight-demo-refresh` failed every hour for four
+days without a word, which is the same class of problem as the silent revert: the failure
+was discoverable and nobody was told.
+
+Every unit here now carries `onFailure = [ "unit-failure@%n.service" ]`, which records
+what failed and when, and the shell greeting on bigchungus prints anything outstanding at
+login, along with a deploy that is behind. `unit-failure@` is the only place that knows
+how a failure is delivered, so adding push is a change in one file; see
+`modules/services/unit-failure.nix` in the nix config. `filmnight-failures` lists what is
+outstanding and `filmnight-failures --clear` empties it.
 ## Handing out links
 
 On the box the seed is `sudo -u filmnight filmnight-seed`, a wrapper the module installs
@@ -148,11 +198,12 @@ repository, so they are described here rather than checked in.
 | `TMDB_READ_TOKEN` | the same token; `/api/search` is rate limited per address in demo |
 | `ADDRESS_HEADER` | `X-Forwarded-For` |
 | `XFF_DEPTH` | `1` |
+| `FILMNIGHT_REV` | the same commit as the app; `demo.film.tymek.me/healthz` reads it back |
 | `ADMINS` | **unset** |
 
-`PORT`, `HOST`, `DATABASE_PATH`, `DEMO`, `ADDRESS_HEADER` and `XFF_DEPTH` live in the
-unit. `ORIGIN`, `DEMO_HOME`, `RULES`, `TZ` and the TMDB token live in
-`/etc/filmnight-demo.env` (0600 root:root), the last three copied out of
+`PORT`, `HOST`, `DATABASE_PATH`, `DEMO`, `ADDRESS_HEADER`, `XFF_DEPTH` and
+`FILMNIGHT_REV` live in the unit. `ORIGIN`, `DEMO_HOME`, `RULES`, `TZ` and the TMDB
+token live in `/etc/filmnight-demo.env` (0600 root:root), the last three copied out of
 `/etc/filmnight.env` so the demo describes the same rule set the real app runs. Nothing
 may appear in both, for the reason it may not for the app: `EnvironmentFile` wins over
 `Environment`.
@@ -235,6 +286,10 @@ call about what to do with it is yours.
 The `-wal` removal matters for the same reason it does in `deploy/test-local.sh`: a
 journal left beside the new file belongs to the database it replaced, and SQLite would
 replay it over the fresh copy.
+
+Because a failed run is silent by design, the unit carries `onFailure`: an hour of
+staleness is fine and a day of it is not, and the difference between the two used to be
+whether anybody happened to look. See **When something breaks**.
 
 ### The proxy
 
