@@ -5,17 +5,20 @@ buildNpmPackage {
   version = "1.0.0";
 
   # the store is world readable, so ship only what the build reads: no README or
-  # docs (they point at the identity links), no prototypes, no tests
+  # docs (they point at the identity links), no prototypes. The tests are here
+  # because the build does read them; see doCheck
   src = lib.fileset.toSource {
     root = ../.;
     fileset = lib.fileset.unions [
       ../src
       ../static
       ../scripts
+      ../tests
       ../package.json
       ../package-lock.json
       ../tsconfig.json
       ../vite.config.ts
+      ../vitest.config.ts
       ../.npmrc
     ];
   };
@@ -32,6 +35,19 @@ buildNpmPackage {
   postBuild = ''
     npm run build:seed
     npm run build:anonymise
+  '';
+
+  # the deploy gate, and the reason bigchungus can follow this repository's main
+  # unattended: a revision that fails the suite or the type check does not build,
+  # so it cannot become the running system. Runs before the dev dependencies are
+  # pruned, and takes a couple of seconds
+  doCheck = true;
+
+  checkPhase = ''
+    runHook preCheck
+    npm run check
+    npm test
+    runHook postCheck
   '';
 
   # adapter-node leaves better-sqlite3 and qrcode as runtime imports, so the
