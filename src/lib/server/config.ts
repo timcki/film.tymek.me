@@ -19,6 +19,17 @@ export function isDemo(): boolean {
 	return process.env.DEMO === '1';
 }
 
+/**
+ * The commit this process was built from, put into the unit's environment out of
+ * the same flake input the store path was built from, so what is deployed is a
+ * question the running app answers rather than one a store path has to be dug
+ * through to settle. Unset in development, where the answer is whatever the
+ * working tree says right now.
+ */
+export function revision(): string {
+	return process.env.FILMNIGHT_REV || 'dev';
+}
+
 /** where the demo's bar points back to, so a visitor can find the portfolio again */
 export function demoHome(): string | null {
 	return process.env.DEMO_HOME || null;

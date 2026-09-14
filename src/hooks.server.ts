@@ -28,6 +28,10 @@ function isOpenRoute(pathname: string): boolean {
 	if (pathname.startsWith('/u/') || pathname.startsWith('/f/') || pathname === '/favicon.ico') {
 		return true;
 	}
+	// what commit is deployed and which rule set it runs, which the gate has no
+	// business withholding: both are public already, and a check only the people
+	// behind the gate can make is one nobody makes
+	if (pathname === '/healthz') return true;
 	// the demo's own door, which is the one thing a visitor arrives holding nothing
 	// for; everything behind it is the ordinary app reading an ordinary person
 	return isDemo() && (pathname === '/demo' || pathname.startsWith('/demo/'));
