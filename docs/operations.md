@@ -91,8 +91,8 @@ Every unit here now carries `onFailure = [ "unit-failure@%n.service" ]`, which r
 what failed and when, and the shell greeting on bigchungus prints anything outstanding at
 login, along with a deploy that is behind. `unit-failure@` is the only place that knows
 how a failure is delivered, so adding push is a change in one file; see
-`modules/services/unit-failure.nix` in the nix config. `filmnight-failures` lists what is
-outstanding and `filmnight-failures --clear` empties it.
+`modules/services/unit-failure.nix` in the nix config. `unit-failures` lists what is
+outstanding, and `unit-failures --clear` empties the spool once it has been dealt with.
 ## Handing out links
 
 On the box the seed is `sudo -u filmnight filmnight-seed`, a wrapper the module installs
