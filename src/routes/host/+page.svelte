@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { invalidate, invalidateAll } from '$app/navigation';
 	import { pollRoom } from '$lib/room-poll';
+	import { votePulse } from '$lib/vote-pulse';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import SeenCount from '$lib/components/SeenCount.svelte';
@@ -16,6 +17,7 @@
 	const T = $derived(dictFor(data.lang));
 	const best = $derived(Math.max(0, ...(data.runoff?.tally ?? []).map((row) => row.votes)));
 	const roomOpen = $derived(Boolean(data.runoff));
+	const rows = $derived([...(data.runoff?.tally ?? [])].sort((a, b) => a.film.id - b.film.id));
 
 	let castingFor = $state('');
 
@@ -89,14 +91,14 @@
 
 		<div class="sec">{T.hostTallyH}</div>
 		<div class="tkfilms">
-			{#each data.runoff.tally as row (row.film.id)}
+			{#each rows as row (row.film.id)}
 				<div class="tkfilm" class:win={row.votes === best && row.votes > 0}>
 					{#if row.film.poster_url}
 						<img src={row.film.poster_url} alt="" />
 					{:else}
 						<div class="noimg"></div>
 					{/if}
-					<div class="n">{row.votes}</div>
+					<div class="n" use:votePulse={row.votes}>{row.votes}</div>
 					<div class="l">{row.film.title}</div>
 					{#if row.film.runtime}
 						<div class="seen">{T.minutes(row.film.runtime)}</div>

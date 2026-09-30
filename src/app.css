@@ -2792,23 +2792,6 @@ details[open] > .iconbtn {
 	   the card being left has to give it up at the speed the new one takes it */
 	transition: box-shadow 0.18s ease;
 }
-/* the ring arriving: it overshoots once and settles, which is what makes the
-   move read as one object travelling rather than two cards repainting */
-.roomvote .pickbtn.on {
-	animation: ringsettle 0.22s ease-out;
-}
-@keyframes ringsettle {
-	from {
-		box-shadow:
-			var(--lift),
-			0 0 0 9px color-mix(in srgb, var(--accent) 0%, transparent);
-	}
-	60% {
-		box-shadow:
-			var(--lift),
-			0 0 0 3px color-mix(in srgb, var(--accent) 55%, transparent);
-	}
-}
 .roomvote .pickbtn .th {
 	width: 64px;
 	flex: 0 0 64px;
@@ -2856,24 +2839,10 @@ details[open] > .iconbtn {
 .pickbtn.on .votecoin i {
 	color: inherit;
 }
-/* between polls this screen is perfectly still, so a number that moved is the
-   only sign the rest of the room is still arguing; it says so itself */
-.votecoin.tick {
-	animation: coinpop 0.6s ease-out;
-}
-@keyframes coinpop {
-	0%,
-	100% {
-		transform: scale(1);
-	}
-	28% {
-		transform: scale(1.18);
-	}
-}
 @media (prefers-reduced-motion: reduce) {
-	.roomvote .pickbtn.on,
-	.votecoin.tick {
-		animation: none;
+	.roomvote .pickbtn,
+	.roomvote .pickbtn .mychip {
+		transition: none;
 	}
 }
 .roomvote .pickbtn span {
@@ -2891,6 +2860,9 @@ details[open] > .iconbtn {
 	color: var(--accent);
 	font-size: 11.5px;
 	font-weight: 700;
+}
+.roomvote .pickbtn:not(.on) .mychip {
+	visibility: hidden;
 }
 /* the film the room landed on, said in a word rather than in a trailing clause */
 .winchip {

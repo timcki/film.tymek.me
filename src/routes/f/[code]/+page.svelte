@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { invalidate, invalidateAll } from '$app/navigation';
 	import { pollRoom } from '$lib/room-poll';
+	import { votePulse } from '$lib/vote-pulse';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Confetti from '$lib/components/Confetti.svelte';
@@ -33,28 +34,13 @@
 	// let the coins change under the thumb that caused them; it cancels itself out
 	// the moment the load function comes back agreeing
 	const rows = $derived(
-		data.tally.map((row) => {
+		[...data.tally].sort((a, b) => a.film.id - b.film.id).map((row) => {
 			if (chosen === data.myVote) return row;
 			if (row.film.id === chosen) return { ...row, votes: row.votes + 1 };
 			if (row.film.id === data.myVote) return { ...row, votes: row.votes - 1 };
 			return row;
 		})
 	);
-
-	// the room otherwise only moves on a poll, so a coin whose number changed is
-	// the one thing on the page that says the others are still arguing
-	let ticking = $state<Record<number, boolean>>({});
-	const counted = new Map<number, number>();
-	$effect(() => {
-		for (const row of rows) {
-			const id = row.film.id;
-			const before = counted.get(id);
-			counted.set(id, row.votes);
-			if (before === undefined || before === row.votes) continue;
-			ticking[id] = true;
-			setTimeout(() => (ticking[id] = false), 620);
-		}
-	});
 
 	// the decision is the only thing on this screen that cannot be taken back, so
 	// it is the only thing that gets confetti, and only on a phone that watched it
@@ -178,18 +164,17 @@
 				<button
 					class="pickbtn"
 					class:on={chosen === row.film.id}
+					aria-pressed={chosen === row.film.id}
 					onclick={() => (pick = row.film.id)}
 				>
 					<div class="th"><Poster title={row.film.title} url={row.film.poster_url} /></div>
 					<div class="rbody">
 						<b>{row.film.title}</b>
 						<span>{meta(row)} · <SeenCount n={data.seen[row.film.id] ?? 0} size={11} /></span>
-						{#if chosen === row.film.id}
-							<span class="mychip">✓ {T.roomYourVote}</span>
-						{/if}
+						<span class="mychip" aria-hidden={chosen !== row.film.id}>✓ {T.roomYourVote}</span>
 					</div>
 					<!-- the tally, in the coin the list uses for a score -->
-					<span class="votecoin" class:tick={ticking[row.film.id]}><b>{row.votes}</b><i>{T.unit(row.votes, true)}</i></span>
+					<span class="votecoin"><b use:votePulse={row.votes}>{row.votes}</b><i>{T.unit(row.votes, true)}</i></span>
 				</button>
 			</form>
 		{/each}
