@@ -10,7 +10,8 @@ import { newDeviceId } from '$lib/server/tokens';
 import { DEVICE_COOKIE } from '../../../hooks.server';
 
 /** §7.2: reachable without a personal link. Being in the room is the credential. */
-export const load: PageServerLoad = async ({ params, locals, cookies }) => {
+export const load: PageServerLoad = async ({ params, locals, cookies, depends }) => {
+	depends('app:room');
 	const db = getDb();
 	const runoff = runoffByCode(db, params.code);
 	if (!runoff) error(404, 'no runoff with that code');

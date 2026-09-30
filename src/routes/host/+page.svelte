@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidate, invalidateAll } from '$app/navigation';
+	import { pollRoom } from '$lib/room-poll';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import SeenCount from '$lib/components/SeenCount.svelte';
@@ -14,6 +15,7 @@
 
 	const T = $derived(dictFor(data.lang));
 	const best = $derived(Math.max(0, ...(data.runoff?.tally ?? []).map((row) => row.votes)));
+	const roomOpen = $derived(Boolean(data.runoff));
 
 	let castingFor = $state('');
 
@@ -39,9 +41,12 @@
 
 	// the projector should show the room filling up without anyone touching it
 	$effect(() => {
-		if (!data.runoff) return;
-		const timer = setInterval(() => invalidateAll(), 4000);
-		return () => clearInterval(timer);
+		if (!roomOpen) return;
+		return pollRoom(async () => {
+			await invalidate('app:room');
+			// refresh the next week's header once, when someone else closes the room
+			if (!data.runoff) await invalidateAll();
+		});
 	});
 </script>
 
@@ -93,7 +98,9 @@
 					{/if}
 					<div class="n">{row.votes}</div>
 					<div class="l">{row.film.title}</div>
-					<div class="seen"><SeenCount n={data.runoff.seen[row.film.id] ?? 0} size={12} /></div>
+					{#if row.film.runtime}
+						<div class="seen">{T.minutes(row.film.runtime)}</div>
+					{/if}
 				</div>
 			{/each}
 		</div>

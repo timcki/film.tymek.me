@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidate, invalidateAll } from '$app/navigation';
+	import { pollRoom } from '$lib/room-poll';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Confetti from '$lib/components/Confetti.svelte';
@@ -23,8 +24,8 @@
 	);
 
 	// §7.2: the vote moves until the host closes the room, so one tap is the whole
-	// ceremony. The choice is held here as well as on the server, because the poll
-	// below is four seconds behind the thumb and the ring has to move now
+	// ceremony. the choice is held here as well as on the server, because even a
+	// fast poll is behind the thumb and the ring has to move now
 	let pick = $state<number | null>(null);
 	const chosen = $derived(pick ?? data.myVote);
 
@@ -93,8 +94,11 @@
 	// keep the tally live for everyone looking at the page
 	$effect(() => {
 		if (data.decided) return;
-		const timer = setInterval(() => invalidateAll(), 4000);
-		return () => clearInterval(timer);
+		return pollRoom(async () => {
+			await invalidate('app:room');
+			// the next week's navigation must catch up before the phone leaves the room
+			if (data.decided) await invalidateAll();
+		});
 	});
 </script>
 

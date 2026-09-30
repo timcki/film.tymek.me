@@ -20,6 +20,9 @@ function roomLink(code: string): string {
 // celebrate all evening; tomorrow the screen is a host screen again
 const WINNER_FRESH_MS = 12 * 60 * 60 * 1000;
 
+// only the current room's QR is retained, not one entry per historical room
+let roomQr: { link: string; svg: Promise<string> } | undefined;
+
 /**
  * The freshly decided night, for the celebration screen. closeRunoff hands the
  * week straight to finish(), which opens the next round, so this has to come
@@ -50,10 +53,13 @@ function freshWinner(db: DB) {
 	};
 }
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ depends }) => {
+	depends('app:room');
 	const db = getDb();
 	const runoff = openRunoff(db);
 	const week = currentWeek(db);
+	const link = runoff ? roomLink(runoff.code) : null;
+	if (link && roomQr?.link !== link) roomQr = { link, svg: qrSvg(link, 360) };
 
 	// who has already voted, so the host can see the room fill up
 	const voted = runoff
@@ -86,8 +92,8 @@ export const load: PageServerLoad = async () => {
 			? {
 					code: runoff.code,
 					expiresAt: runoff.expires_at,
-					link: roomLink(runoff.code),
-					qr: await qrSvg(roomLink(runoff.code), 360),
+					link: link!,
+					qr: await roomQr!.svg,
 					tally: rows,
 					seen: seenCounts(db, rows.map((row) => row.film.id)),
 					turnout: (
