@@ -111,140 +111,156 @@
 	});
 </script>
 
-<div class="sec">{T.youPhoto}</div>
-<div class="photo">
-	<!-- .av gives the wrapper the rank ring; --ringw 3px because it is a big face -->
-	<span class="big av lv{level}" style="background:{person.colour};--ringw:3.5px;--gapw:2px">
-		{#if person.avatar}
-			<img src={person.avatar} alt="" />
-		{:else}
-			<Avatar name={person.name} colour={person.colour} size={76} font={26} />
-		{/if}
-	</span>
-	<div>
-		<div class="acts">
-			<!-- no-JS path: the same input inside a plain multipart form -->
-			<form method="POST" action="?/avatar" enctype="multipart/form-data" use:enhance={submit}>
-				<input
-					bind:this={fileInput}
-					type="file"
-					name="picture"
-					accept="image/jpeg,image/png,image/webp"
-					onchange={onPicked}
-				/>
-				<button type="button" class="tap" disabled={uploading} onclick={() => fileInput?.click()}>
-					{person.avatar ? T.avatarChange : T.avatarPick}
-				</button>
-				<noscript><button class="tap">{T.avatarPick}</button></noscript>
-			</form>
-			{#if person.avatar}
-				<form method="POST" action="?/removeAvatar" use:enhance={submit}>
-					<button class="tap">{T.avatarRemove}</button>
-				</form>
-			{/if}
-		</div>
-		<p class="hintline">{T.avatarHint}</p>
-	</div>
-</div>
-
-<div class="sec">{T.youLang}</div>
-<div class="lang" style="display:inline-flex">
-	{#each LANGS as code (code)}
-		<form method="POST" action="/lang?/set">
-			<input type="hidden" name="lang" value={code} />
-			<input type="hidden" name="to" value="/me" />
-			<button class:on={data.lang === code} style="padding:7px 14px">
-				{code === 'pl' ? 'POLSKI' : 'ENGLISH'}
-			</button>
-		</form>
-	{/each}
-</div>
-
-<div class="sec">{T.youPhone}</div>
-<div class="qrcard">
-	<div class="q">
-		<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-		{@html data.qr}
-	</div>
-	<div class="tx">{T.qrBody}</div>
-</div>
-<div class="linkbox">{data.link}</div>
-
-<div class="sec">{T.youXp}</div>
-<div class="xpcard">
-	<div class="xphead">
-		<b class="xptitle">{T.levels[level]}</b>
-		<span class="xptotal">{data.xp.total} XP</span>
-	</div>
-	{#if nextAt !== null}
-		<div class="xpbar">
-			<i style="width:{Math.round(((data.xp.total - LEVELS[level]) / (nextAt - LEVELS[level])) * 100)}%"
-			></i>
-		</div>
-		<div class="xpnext">{T.xpNext(nextAt - data.xp.total)}</div>
-	{:else}
-		<div class="xpnext">{T.xpTop}</div>
-	{/if}
-	{#each xpRows as row (row.label)}
-		{#if row.count > 0}
-			<div class="stat">
-				<span>{row.label} · {row.count} × {row.per}</span><b>{row.count * row.per}</b>
-			</div>
-		{/if}
-	{/each}
-
-	<div class="lheader">{T.xpLadder}</div>
-	<div class="ladder">
-		{#each T.levels as name, i (name)}
-			<div class="lrow" class:now={i === level} class:todo={i > level}>
-				{#if i === level}
-					<!-- your own face sits on your rung, wearing the ring it earned -->
-					<Avatar
-						name={person.name}
-						colour={person.colour}
-						avatar={person.avatar}
-						size={26}
-						font={10}
-						titled={false}
-						xp={data.xp.total}
-					/>
+<!-- each block is a panel: nothing at all on a phone, a card on a desktop,
+     where they pair up beside the tall experience ladder (app.css) -->
+<div class="sboard me">
+	<section class="spanel me-id">
+		<div class="sec">{T.youPhoto}</div>
+		<div class="photo">
+			<!-- .av gives the wrapper the rank ring; --ringw 3px because it is a big face -->
+			<span class="big av lv{level}" style="background:{person.colour};--ringw:3.5px;--gapw:2px">
+				{#if person.avatar}
+					<img src={person.avatar} alt="" />
 				{:else}
-					<span class="av swatch lv{i}"></span>
+					<Avatar name={person.name} colour={person.colour} size={76} font={26} />
 				{/if}
-				<b class="lname lv{i}">{name}</b>
-				<span class="lxp">{LEVELS[i]} XP</span>
+			</span>
+			<div>
+				<div class="acts">
+					<!-- no-JS path: the same input inside a plain multipart form -->
+					<form method="POST" action="?/avatar" enctype="multipart/form-data" use:enhance={submit}>
+						<input
+							bind:this={fileInput}
+							type="file"
+							name="picture"
+							accept="image/jpeg,image/png,image/webp"
+							onchange={onPicked}
+						/>
+						<button type="button" class="tap" disabled={uploading} onclick={() => fileInput?.click()}>
+							{person.avatar ? T.avatarChange : T.avatarPick}
+						</button>
+						<noscript><button class="tap">{T.avatarPick}</button></noscript>
+					</form>
+					{#if person.avatar}
+						<form method="POST" action="?/removeAvatar" use:enhance={submit}>
+							<button class="tap">{T.avatarRemove}</button>
+						</form>
+					{/if}
+				</div>
+				<p class="hintline">{T.avatarHint}</p>
 			</div>
-		{/each}
-	</div>
+		</div>
+
+		<div class="sec">{T.youLang}</div>
+		<div class="lang" style="display:inline-flex">
+			{#each LANGS as code (code)}
+				<form method="POST" action="/lang?/set">
+					<input type="hidden" name="lang" value={code} />
+					<input type="hidden" name="to" value="/me" />
+					<button class:on={data.lang === code} style="padding:7px 14px">
+						{code === 'pl' ? 'POLSKI' : 'ENGLISH'}
+					</button>
+				</form>
+			{/each}
+		</div>
+	</section>
+
+	<section class="spanel me-phone">
+		<div class="sec">{T.youPhone}</div>
+		<div class="qrcard">
+			<div class="q">
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+				{@html data.qr}
+			</div>
+			<div class="tx">{T.qrBody}</div>
+		</div>
+		<div class="linkbox">{data.link}</div>
+	</section>
+
+	<section class="spanel me-xp">
+		<div class="sec">{T.youXp}</div>
+		<div class="xpcard">
+			<div class="xphead">
+				<b class="xptitle">{T.levels[level]}</b>
+				<span class="xptotal">{data.xp.total} XP</span>
+			</div>
+			{#if nextAt !== null}
+				<div class="xpbar">
+					<i style="width:{Math.round(((data.xp.total - LEVELS[level]) / (nextAt - LEVELS[level])) * 100)}%"
+					></i>
+				</div>
+				<div class="xpnext">{T.xpNext(nextAt - data.xp.total)}</div>
+			{:else}
+				<div class="xpnext">{T.xpTop}</div>
+			{/if}
+			{#each xpRows as row (row.label)}
+				{#if row.count > 0}
+					<div class="stat">
+						<span>{row.label} · {row.count} × {row.per}</span><b>{row.count * row.per}</b>
+					</div>
+				{/if}
+			{/each}
+
+			<div class="lheader">{T.xpLadder}</div>
+			<div class="ladder">
+				{#each T.levels as name, i (name)}
+					<div class="lrow" class:now={i === level} class:todo={i > level}>
+						{#if i === level}
+							<!-- your own face sits on your rung, wearing the ring it earned -->
+							<Avatar
+								name={person.name}
+								colour={person.colour}
+								avatar={person.avatar}
+								size={26}
+								font={10}
+								titled={false}
+								xp={data.xp.total}
+							/>
+						{:else}
+							<span class="av swatch lv{i}"></span>
+						{/if}
+						<b class="lname lv{i}">{name}</b>
+						<span class="lxp">{LEVELS[i]} XP</span>
+					</div>
+				{/each}
+			</div>
+		</div>
+	</section>
+
+	<section class="spanel me-stats">
+		<div class="sec">{T.youStats}</div>
+		<div class="stat"><span>{T.statPoints}</span><b>{data.stats.spent}</b></div>
+		<div class="stat"><span>{T.statWatched}</span><b>{data.stats.nominatedWatched}</b></div>
+		<div class="stat"><span>{T.statCampaign}</span><b>{data.stats.longestCampaign}</b></div>
+		<div class="stat">
+			<span>{T.statNom}</span><b>{data.stats.nominatedThisWeek ? T.vUsed : T.vOpen}</b>
+		</div>
+		{#if data.stats.bank !== null}
+			<div class="stat"><span>{T.statBank}</span><b>{data.stats.bank}</b></div>
+		{/if}
+		<div class="stat"><span>{T.statRules}</span><b>{data.rules.label}</b></div>
+	</section>
+
+	<section class="spanel me-rules">
+		<div class="sec">{T.youRules}</div>
+		<ol style="padding-left:18px;margin:0;font-size:13.5px;color:var(--dim);line-height:1.6">
+			{#each T.rules(data.rules, data.week?.closesAt) as rule (rule.head)}
+				<li style="margin-bottom:9px">
+					<b style="color:var(--ink)">{rule.head}</b>
+					{rule.body}
+				</li>
+			{/each}
+		</ol>
+	</section>
+
+	<section class="spanel me-rotate">
+		<div class="sec">{T.rotateH}</div>
+		{#if form && 'rotated' in form && form.rotated}
+			<p class="banner accent">{T.rotated}</p>
+		{/if}
+		<form method="POST" action="?/rotate" use:enhance={submit}>
+			<button class="tap">{T.rotateBtn}</button>
+		</form>
+		<p class="danger">{T.rotateNote}</p>
+	</section>
 </div>
-
-<div class="sec">{T.youStats}</div>
-<div class="stat"><span>{T.statPoints}</span><b>{data.stats.spent}</b></div>
-<div class="stat"><span>{T.statWatched}</span><b>{data.stats.nominatedWatched}</b></div>
-<div class="stat"><span>{T.statCampaign}</span><b>{data.stats.longestCampaign}</b></div>
-<div class="stat">
-	<span>{T.statNom}</span><b>{data.stats.nominatedThisWeek ? T.vUsed : T.vOpen}</b>
-</div>
-{#if data.stats.bank !== null}
-	<div class="stat"><span>{T.statBank}</span><b>{data.stats.bank}</b></div>
-{/if}
-<div class="stat"><span>{T.statRules}</span><b>{data.rules.label}</b></div>
-
-<div class="sec">{T.youRules}</div>
-<ol style="padding-left:18px;margin:0;font-size:13.5px;color:var(--dim);line-height:1.6">
-	{#each T.rules(data.rules, data.week?.closesAt) as rule (rule.head)}
-		<li style="margin-bottom:9px">
-			<b style="color:var(--ink)">{rule.head}</b>
-			{rule.body}
-		</li>
-	{/each}
-</ol>
-
-<div class="sec">{T.rotateH}</div>
-{#if form && 'rotated' in form && form.rotated}
-	<p class="banner accent">{T.rotated}</p>
-{/if}
-<form method="POST" action="?/rotate" use:enhance={submit}>
-	<button class="tap">{T.rotateBtn}</button>
-</form>
-<p class="danger">{T.rotateNote}</p>

@@ -1616,11 +1616,13 @@ button.holdchip:hover {
    what lets a card that wins its way up glide into the podium rather than
    vanish from one list and appear in another */
 @media (min-width: 960px) {
-	.wrap.home {
+	/* the pages that have more to show than a column holds: the list, the
+	   stats and the wall of what was watched */
+	.wrap.roomy {
 		max-width: 1180px;
 		padding: 0 24px;
 	}
-	.wrap.home header.lean {
+	.wrap.roomy header.lean {
 		margin: 0 -24px;
 		padding: 13px 24px;
 	}
@@ -1709,12 +1711,101 @@ button.holdchip:hover {
 /* and where a third of the page is as wide as a phone, the rest go three
    across as well, each card the size it was drawn at */
 @media (min-width: 1280px) {
-	.wrap.home {
+	.wrap.roomy {
 		max-width: 1320px;
 	}
 	.wrap.home .fwrap,
 	.wrap.home .list > .film {
 		grid-column: span 2;
+	}
+}
+
+/* ---------- the stats board and the wall, on a desktop ----------
+   On a phone a stats panel is not there at all (display: contents), so the page
+   is the column it always was. Wider, every chart becomes a card and they pair
+   up: the two charts with a row per person side by side, so one person can be
+   read across both, the short ones together, and the charts that are about
+   time (the rounds, the stat tiles) across the full width. The order is set
+   here rather than in the markup, so the phone keeps its reading order */
+.spanel {
+	display: contents;
+}
+@media (min-width: 960px) {
+	.sboard {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 18px;
+		margin-top: 18px;
+		align-items: stretch;
+	}
+	.spanel {
+		display: block;
+		min-width: 0;
+		background: var(--card);
+		border-radius: var(--r);
+		box-shadow: var(--lift);
+		padding: 18px 22px 20px;
+	}
+	.spanel.wide,
+	.sboard > .explain {
+		grid-column: 1 / -1;
+	}
+	.spanel > .sec:first-child {
+		margin-top: 0;
+	}
+	.spanel.open {
+		order: 1;
+	}
+	.spanel.timing {
+		order: 2;
+	}
+	.spanel.fair {
+		order: 3;
+	}
+	.spanel.engage {
+		order: 4;
+	}
+	/* the stat tiles four across: packed as tightly as they fit, the eighth
+	   sat alone on a row of its own */
+	.sboard .spanel .cards {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+	/* the profile: who you are and the phone link side by side, then the
+	   experience ladder, which is the tall one, down the left with everything
+	   else stacked beside it */
+	.sboard.me .me-id {
+		grid-column: 1;
+	}
+	.sboard.me .me-phone {
+		grid-column: 2;
+	}
+	.sboard.me .me-xp {
+		grid-column: 1;
+		grid-row: 2 / span 3;
+	}
+	.sboard.me .me-stats {
+		grid-column: 2;
+		grid-row: 2;
+	}
+	.sboard.me .me-rules {
+		grid-column: 2;
+		grid-row: 3;
+	}
+	.sboard.me .me-rotate {
+		grid-column: 2;
+		grid-row: 4;
+	}
+	/* the panel is the card now; the blocks inside stop being cards of their own */
+	.spanel .xpcard,
+	.spanel .qrcard {
+		background: none;
+		box-shadow: none;
+		padding: 0;
+	}
+	/* the wall: as many posters across as the page holds */
+	.wrap.roomy .wgrid {
+		grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+		gap: 14px;
 	}
 }
 

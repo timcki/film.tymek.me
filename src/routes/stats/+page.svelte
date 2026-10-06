@@ -367,123 +367,149 @@
 		</div>
 	{/if}
 
-	<div class="sec">{T.roundsH}</div>
-	<p class="explain">{T.roundsSub}</p>
-	<Columns
-		{columns}
-		roster={counts.roster}
-		votedLabel={T.keyVoted}
-		attendedLabel={T.keyAttended}
-		rosterLabel={T.keyRoster}
-	/>
+	<!-- each chart is a panel: on a phone a panel is nothing at all and the page
+	     is the column it always was; on a desktop they become cards, paired up
+	     two to a row (app.css, "the stats board") -->
+	<div class="sboard">
+		<section class="spanel wide">
+			<div class="sec">{T.roundsH}</div>
+			<p class="explain">{T.roundsSub}</p>
+			<Columns
+				{columns}
+				roster={counts.roster}
+				votedLabel={T.keyVoted}
+				attendedLabel={T.keyAttended}
+				rosterLabel={T.keyRoster}
+			/>
+		</section>
 
-	{#if !voted}
-		<p class="explain big">{T.statsEmpty}</p>
-	{:else}
-		<div class="sec">{T.openH}</div>
-		<p class="explain">{T.openSub(votes)}</p>
-		<!-- the invitation, spent the moment it is taken: once a row has been
-		     pressed the card above says what pressing one does -->
-		{#if !lit}
-			<p class="hint">
-				<svg
-					width="15"
-					height="15"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.9"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					aria-hidden="true"
-					><path d="M9 11V5.5a1.8 1.8 0 0 1 3.6 0V11" /><path
-						d="M12.6 11V9.4a1.7 1.7 0 0 1 3.4 0V11"
-					/><path d="M16 11v-.8a1.7 1.7 0 0 1 3.4 0V15a5.4 5.4 0 0 1-5.4 5.4h-1.7" /><path
-						d="M12.6 20.4a5.4 5.4 0 0 1-4-1.9l-3-3.4a1.8 1.8 0 0 1 2.6-2.4L9 13.6"
-					/></svg
-				>
-				{T.pickHint}
-			</p>
+		{#if !voted}
+			<p class="explain big">{T.statsEmpty}</p>
+		{:else}
+			<section class="spanel open">
+				<div class="sec">{T.openH}</div>
+				<p class="explain">{T.openSub(votes)}</p>
+				<!-- the invitation, spent the moment it is taken: once a row has been
+				     pressed the card above says what pressing one does -->
+				{#if !lit}
+					<p class="hint">
+						<svg
+							width="15"
+							height="15"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.9"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"
+							><path d="M9 11V5.5a1.8 1.8 0 0 1 3.6 0V11" /><path
+								d="M12.6 11V9.4a1.7 1.7 0 0 1 3.4 0V11"
+							/><path d="M16 11v-.8a1.7 1.7 0 0 1 3.4 0V15a5.4 5.4 0 0 1-5.4 5.4h-1.7" /><path
+								d="M12.6 20.4a5.4 5.4 0 0 1-4-1.9l-3-3.4a1.8 1.8 0 0 1 2.6-2.4L9 13.6"
+							/></svg
+						>
+						{T.pickHint}
+					</p>
+				{/if}
+				{#if opennessAverage !== null}
+					<p class="explain key">
+						<span class="k theirs">{T.openTheirs}</span>
+						<span class="k mine">{T.openMine}</span>
+						<span class="k rule">{T.avgOf(`${Math.round(opennessAverage * 100)}%`)}</span>
+					</p>
+				{/if}
+				<Split
+					slices={opennessSlices}
+					average={opennessAverage}
+					{lit}
+					onpick={pick}
+					onface={hover}
+				/>
+			</section>
+			<section class="spanel fair">
+				<div class="sec">{T.fairH}</div>
+				<Split
+					slices={nightSlices}
+					leftColour="var(--burn0)"
+					average={null}
+					{lit}
+					onpick={pick}
+					onface={hover}
+				/>
+			</section>
+
+			<section class="spanel timing">
+				<div class="sec">{T.timingH}</div>
+				<p class="explain">{T.timingSub}</p>
+				<Strip
+					{lanes}
+					ticks={[
+						{ at: 0, label: T.tickOpens },
+						{ at: 0.5, label: T.tickHalf },
+						{ at: 1, label: T.tickCloses }
+					]}
+					{lit}
+					onpick={pick}
+					onface={hover}
+				/>
+			</section>
+
+			<section class="spanel engage">
+				<div class="sec">{T.engageH}</div>
+				<Matrix
+					{grid}
+					xLabels={votedBands.map(bandLabel)}
+					yLabels={[...nightBands].reverse().map(bandLabel)}
+					xTitle={T.engageX}
+					yTitle={T.engageY}
+					{lit}
+					onpick={pick}
+					onface={hover}
+				/>
+			</section>
 		{/if}
-		{#if opennessAverage !== null}
-			<p class="explain key">
-				<span class="k theirs">{T.openTheirs}</span>
-				<span class="k mine">{T.openMine}</span>
-				<span class="k rule">{T.avgOf(`${Math.round(opennessAverage * 100)}%`)}</span>
-			</p>
-		{/if}
-		<Split
-			slices={opennessSlices}
-			average={opennessAverage}
-			{lit}
-			onpick={pick}
-			onface={hover}
-		/>
-		<div class="sec">{T.fairH}</div>
-		<Split
-			slices={nightSlices}
-			leftColour="var(--burn0)"
-			average={null}
-			{lit}
-			onpick={pick}
-			onface={hover}
-		/>
-
-		<div class="sec">{T.timingH}</div>
-		<p class="explain">{T.timingSub}</p>
-		<Strip
-			{lanes}
-			ticks={[
-				{ at: 0, label: T.tickOpens },
-				{ at: 0.5, label: T.tickHalf },
-				{ at: 1, label: T.tickCloses }
-			]}
-			{lit}
-			onpick={pick}
-			onface={hover}
-		/>
-
-		<div class="sec">{T.engageH}</div>
-		<Matrix
-			{grid}
-			xLabels={votedBands.map(bandLabel)}
-			yLabels={[...nightBands].reverse().map(bandLabel)}
-			xTitle={T.engageX}
-			yTitle={T.engageY}
-			{lit}
-			onpick={pick}
-			onface={hover}
-		/>
-	{/if}
+	</div>
 {:else}
-	<div class="sec">{T.factsH}</div>
-	<StatCards cards={facts} />
+	<div class="sboard">
+		<section class="spanel wide">
+			<div class="sec">{T.factsH}</div>
+			<StatCards cards={facts} />
+		</section>
 
-	<div class="sec">{T.decadeH}</div>
-	<Bars bars={decadeBars} lit={openBucket} onpick={openBar} />
-	{#if from(data.decades)}{@render picked()}{/if}
+		<section class="spanel">
+			<div class="sec">{T.decadeH}</div>
+			<Bars bars={decadeBars} lit={openBucket} onpick={openBar} />
+			{#if from(data.decades)}{@render picked()}{/if}
+		</section>
 
-	<div class="sec">{T.genreH}</div>
-	<p class="explain">{T.genreSub}</p>
-	<Bars bars={genreBars} colour="var(--tier5)" lit={openBucket} onpick={openBar} />
-	{#if from(data.genres)}{@render picked()}{/if}
+		<section class="spanel">
+			<div class="sec">{T.genreH}</div>
+			<p class="explain">{T.genreSub}</p>
+			<Bars bars={genreBars} colour="var(--tier5)" lit={openBucket} onpick={openBar} />
+			{#if from(data.genres)}{@render picked()}{/if}
+		</section>
 
-	<div class="sec">{T.directorH}</div>
-	{#if directorBars.length}
-		<Bars bars={directorBars} colour="var(--tier1)" lit={openBucket} onpick={openBar} />
-		{#if from(data.directors)}{@render picked()}{/if}
-	{:else}
-		<p class="explain">{T.directorNone}</p>
-	{/if}
+		<section class="spanel">
+			<div class="sec">{T.directorH}</div>
+			{#if directorBars.length}
+				<Bars bars={directorBars} colour="var(--tier1)" lit={openBucket} onpick={openBar} />
+				{#if from(data.directors)}{@render picked()}{/if}
+			{:else}
+				<p class="explain">{T.directorNone}</p>
+			{/if}
+		</section>
 
-	<div class="sec">{T.runtimeH}</div>
-	{#if data.runtimes}
-		<p class="explain">
-			{T.runtimeSub(data.runtimes.min, data.runtimes.max, Math.round(data.runtimes.mean))}
-		</p>
-		<Bars bars={runtimeBars} colour="var(--warn)" />
-	{/if}
-
+		<section class="spanel">
+			<div class="sec">{T.runtimeH}</div>
+			{#if data.runtimes}
+				<p class="explain">
+					{T.runtimeSub(data.runtimes.min, data.runtimes.max, Math.round(data.runtimes.mean))}
+				</p>
+				<Bars bars={runtimeBars} colour="var(--warn)" />
+			{/if}
+		</section>
+	</div>
 {/if}
 
 <!-- what is actually in the bar somebody just tapped, listed under that chart -->
