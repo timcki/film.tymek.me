@@ -2413,6 +2413,10 @@ details[open] > .iconbtn {
 	color: var(--accent-ink);
 }
 .tdot.set i {
+	/* a box of its own, centred in the dot: inline, the drawn check sat on the
+	   text line's baseline and missed the middle of a 12px dot */
+	display: grid;
+	place-items: center;
 	font-style: normal;
 	font-size: 7px;
 	font-weight: 800;

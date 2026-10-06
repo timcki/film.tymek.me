@@ -7,6 +7,7 @@
 	import { dictFor, isVotes, LANGS } from '$lib/i18n';
 	import { THEMES } from '$lib/themes';
 	import Banana from '$lib/components/Banana.svelte';
+	import Check from '$lib/components/Check.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import type { LayoutServerData } from './$types';
 
@@ -338,7 +339,7 @@
 				onblur={() => (tipOpen = false)}
 			>
 				{#each Array(Math.max(0, data.person.spent)) as _, i (i)}
-					<span class="hpip spent">{#if data.banana}<Banana />{:else}✓{/if}</span>
+					<span class="hpip spent">{#if data.banana}<Banana />{:else}<Check />{/if}</span>
 				{/each}
 				{#each Array(Math.max(0, data.person.left)) as _, i (i)}
 					<!-- the ring is drawn rather than bordered, exactly as the cards

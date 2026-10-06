@@ -17,6 +17,7 @@
 	import { REACTIONS } from '$lib/reactions';
 	import { levelOf } from '$lib/levels';
 	import Banana from '$lib/components/Banana.svelte';
+	import Check from '$lib/components/Check.svelte';
 	import { say } from '$lib/toast.svelte';
 	import { watchLive } from '$lib/live-poll';
 	import { votePulse } from '$lib/vote-pulse';
@@ -754,7 +755,7 @@
 					</button>
 				</form>
 			{:else}
-				<span class="pip set"><i>{#if data.banana}<Banana />{:else}✓{/if}</i></span>
+				<span class="pip set"><i>{#if data.banana}<Banana />{:else}<Check />{/if}</i></span>
 			{/if}
 		{/each}
 		{#each Array(Math.max(0, left)) as _, i (i)}
@@ -803,7 +804,7 @@
 		{#each Array(entry.points) as _, i (i)}
 			{#if entry.filmId === film.id}
 				<span class="tdot set" in:scale={{ duration: 260, start: 0.3, easing: backOut }}
-					><i>{#if data.banana}<Banana />{:else}✓{/if}</i></span
+					><i>{#if data.banana}<Banana />{:else}<Check />{/if}</i></span
 				>
 			{:else}
 				<span class="tdot busy"></span>
