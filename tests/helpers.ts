@@ -2,8 +2,9 @@ import { openDatabase, type DB } from '../src/lib/server/db.js';
 import { RULE_SETS, titleKey, type RuleSetId, type RuleSet } from '../src/lib/server/rules.js';
 import { iso, nextDeadline } from '../src/lib/server/time.js';
 import { newToken } from '../src/lib/server/tokens.js';
-import { nominate, type NominationInput } from '../src/lib/server/films.js';
-import { openWeek } from '../src/lib/server/weeks.js';
+import { nominate, setPoints, type NominationInput } from '../src/lib/server/films.js';
+import { closeWeek, openWeek } from '../src/lib/server/weeks.js';
+import { flashVote, openRunoff } from '../src/lib/server/runoffs.js';
 
 export const PEOPLE = ['ala', 'bartek', 'celina', 'darek', 'ewa', 'filip'];
 
@@ -105,4 +106,22 @@ export function nominateAs(
 	extra: Partial<NominationInput> = {}
 ): number {
 	return nominate(db, rules, personId, { title, ...extra });
+}
+
+/** three films level at the top and a room open on them; `cast` ranks as fresh guests */
+export function rankedRoom() {
+	const { db, rules } = freshDb('weekly');
+	const films = ['A', 'B', 'C'].map((title, i) => {
+		const person = ['ala', 'bartek', 'celina'][i];
+		const id = addFilm(db, title, person, 1);
+		setPoints(db, rules, person, id, 1);
+		return id;
+	});
+	closeWeek(db, rules);
+	const runoff = openRunoff(db)!;
+	let voter = 0;
+	const cast = (order: number[], count = 1) => {
+		for (let i = 0; i < count; i++) flashVote(db, runoff.id, `guest-${voter++}`, null, order);
+	};
+	return { db, rules, runoff, films, cast };
 }

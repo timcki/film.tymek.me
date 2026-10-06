@@ -96,8 +96,8 @@ describe('the weekly shortlist', () => {
 
 		closeWeek(db, rules);
 		const runoff = openRunoff(db)!;
-		flashVote(db, runoff.id, 'celina', 'celina', inTheRoom);
-		flashVote(db, runoff.id, 'darek', 'darek', inTheRoom);
+		flashVote(db, runoff.id, 'celina', 'celina', [inTheRoom, onPoints]);
+		flashVote(db, runoff.id, 'darek', 'darek', [inTheRoom, onPoints]);
 
 		const result = closeRunoff(db, rules, runoff.id);
 		expect(result.kind === 'winner' && result.film.id).toBe(inTheRoom);

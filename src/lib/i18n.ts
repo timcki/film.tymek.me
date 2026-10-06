@@ -303,6 +303,33 @@ export type Dict = {
 	hostCastPick: string;
 	hostLock: string;
 	hostWinnerH: string;
+	hostWhy: string;
+	hostPairwiseWin: string;
+	hostPointsWin: string;
+	hostNoVotes: string;
+	hostOnlyFilm: string;
+	hostFirstChoices: string;
+	hostRankPoints: string;
+	hostRankings: string;
+	hostRankingGuest: (n: number) => string;
+	hostLegacyRanking: string;
+	hostTotalsNote: string;
+	hostComparison: (winner: string, other: string) => string;
+	hostPairSource: string;
+	hostTriangleHint: string;
+	hostPreferred: (n: number) => string;
+	hostPairWin: string;
+	hostPairLoss: string;
+	hostPairTie: string;
+	hostPairEmpty: string;
+	/** one side of a head-to-head, said as the people it is made of */
+	hostPairPeople: (n: number, film: string, other: string) => string;
+	hostPairHint: string;
+	hostPairClear: string;
+	hostReplay: string;
+	hostRevealClosed: string;
+	hostRevealGo: string;
+	hostRevealCounting: string;
 	hostHeldH: string;
 	roomCode: string;
 	roomWho: string;
@@ -313,11 +340,25 @@ export type Dict = {
 	roomGuestNote: string;
 	roomVotingAs: (name: string) => string;
 	roomCheckedIn: string;
-	/** §7.2: the one rule the room screen runs on, now that a vote can move */
+	/** §7.2: private rankings remain editable until close. */
 	roomOpen: string;
-	roomYourVote: string;
+	roomRankHint: string;
+	roomRankSave: string;
+	roomRankSaved: string;
+	roomRankUnsaved: string;
+	roomRankReset: string;
+	roomRankPosition: (n: number) => string;
+	roomRankProgress: (n: number, total: number) => string;
+	roomRankRules: (n: number) => string;
+	roomResults: string;
+	roomFirstChoices: (n: number) => string;
+	roomRankPoints: (n: number) => string;
+	roomPair: (title: string, preferred: number, opposed: number) => string;
 	roomDecided: string;
 	roomWinner: string;
+	/** §7.2: a closed room whose count has not yet run on the projector */
+	roomLookUp: string;
+	roomLookUpSub: string;
 	votes: (n: number) => string;
 	turnoutWord: (n: number) => string;
 
@@ -435,6 +476,8 @@ const plRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 			`Terminy ustala kalendarz, więc wieczorek może wypaść w inny dzień niż zwykle. ` +
 			`${r.shortlistSize} ${plFilms(r.shortlistSize)} z największą liczbą punktów trafiają do głosowania. ` +
 			'Kod QR pojawia się na ekranie i głos mają tylko ci, którzy przyszli. ' +
+			'Każdy układa filmy od najlepszego do najsłabszego. Rankingi są prywatne do zamknięcia głosowania. ' +
+			'Wygrywa film preferowany przez większość w każdej parze; jeśli takiego nie ma, decydują punkty za miejsca, potem kolejność listy. ' +
 			'Jeśli nikt nie zagłosuje, wygrywa najwyższy wynik.'
 	});
 
@@ -686,11 +729,37 @@ const pl: Dict = {
 	hostClose: 'Zamknij tydzień teraz',
 	hostQrH: 'Kod dla sali (można wyświetlić)',
 	hostJoinH: 'Zeskanuj, żeby głosować',
-	hostTallyH: 'Na żywo',
+	hostTallyH: 'Filmy na dziś',
 	hostCastH: 'Zagłosuj za kogoś, komu padł telefon',
-	hostCastPick: 'teraz wybierz jego film',
+	hostCastPick: 'Ułóż filmy w jego kolejności. Nie rób tego na projektorze, jeśli ranking ma pozostać prywatny.',
 	hostLock: 'Zatwierdź i puszczaj film',
 	hostWinnerH: 'Dzisiaj oglądamy',
+	hostWhy: 'Dlaczego ten film?',
+	hostPairwiseWin: 'Więcej osób wolało ten film od każdego z pozostałych. To porównania parami rozstrzygnęły głosowanie, nie sama liczba pierwszych miejsc.',
+	hostPointsWin: 'Żaden film nie wygrał wszystkich porównań parami. Rozstrzygnęły punkty za miejsca; przy remisie decyduje wynik tygodniowy, potem starsze zgłoszenie.',
+	hostNoVotes: 'Nikt nie zagłosował. Wybraliśmy film według wyniku tygodniowego, a przy remisie według starszeństwa zgłoszenia.',
+	hostOnlyFilm: 'W finale był tylko jeden film, więc sala go potwierdziła.',
+	hostFirstChoices: 'Pierwsze miejsca',
+	hostRankPoints: 'Punkty za miejsca',
+	hostRankings: 'Jak głosowali uczestnicy',
+	hostRankingGuest: (n) => `Gość ${n}`,
+	hostLegacyRanking: 'Starsze głosowanie: zapisano tylko pierwszy wybór.',
+	hostTotalsNote: 'Pierwsze miejsca pokazują ulubione filmy. Punkty za miejsca rozstrzygają tylko wtedy, gdy nie ma zwycięzcy wszystkich porównań parami.',
+	hostComparison: (winner, other) => `${winner} czy ${other}?`,
+	hostPairSource: 'Każda para wynika z zapisanych rankingów. To nie są osobne głosowania.',
+	hostTriangleHint: 'Strzałka wskazuje film, który wolało więcej osób. Wynik: zwycięzca pary : przegrany. Linia przerywana oznacza remis.',
+	hostPreferred: (n) => `${n} ${pl3(n, 'osoba wybrała', 'osoby wybrały', 'osób wybrało')} ten film`,
+	hostPairWin: '✓ Wygrywa tę parę',
+	hostPairLoss: 'Przegrywa',
+	hostPairTie: 'Remis',
+	hostPairEmpty: 'Brak głosów',
+	hostPairPeople: (n, film, other) => `${n} ${pl3(n, 'osoba woli', 'osoby wolą', 'osób woli')} ${film} od ${other}`,
+	hostPairHint: 'Kliknij wynik pary, żeby zobaczyć, kto jak zagłosował.',
+	hostPairClear: 'Pokaż wszystkich',
+	hostReplay: 'Policz jeszcze raz',
+	hostRevealClosed: 'Głosowanie zamknięte',
+	hostRevealGo: 'Liczymy!',
+	hostRevealCounting: 'Liczymy głosy',
 	hostHeldH: 'Uśpione do następnego razu',
 	roomCode: 'kod sali',
 	roomWho: 'Kto ty jesteś?',
@@ -700,10 +769,23 @@ const pl: Dict = {
 	roomGuestNote: 'Nie ma cię na liście? Zagłosuj jako gość, w sali też się liczy.',
 	roomVotingAs: (name) => `głosujesz jako ${name}`,
 	roomCheckedIn: 'obecność zapisana ✓',
-	roomOpen: 'Możesz zmieniać głos, dopóki sala nie zdecyduje.',
-	roomYourVote: 'twój głos',
+	roomOpen: 'Ranking jest prywatny do zamknięcia głosowania. Potem pokażemy wyniki i ranking każdej osoby z jej imieniem. Do zamknięcia możesz go zmieniać.',
+	roomRankHint: 'Dotykaj filmów od najlepszego do najsłabszego. Dotknij wybranego ponownie, żeby usunąć go z kolejności.',
+	roomRankSave: 'Zapisz ranking',
+	roomRankSaved: 'Ranking zapisany ✓',
+	roomRankUnsaved: 'Zmiany niezapisane. Poprzedni ranking nadal się liczy.',
+	roomRankReset: 'Ułóż od nowa',
+	roomRankPosition: (n) => `miejsce ${n}`,
+	roomRankProgress: (n, total) => `Ułożono ${n} z ${total}`,
+	roomRankRules: (n) => `Wygrywa film, który większość woli od każdego z pozostałych. Jeśli takiego nie ma, sumujemy punkty za miejsca (${Array.from({ length: n }, (_, i) => n - 1 - i).join('/')}). Dalszy remis rozstrzyga wynik tygodniowy, potem starsze zgłoszenie.`,
+	roomResults: 'Jak wybraliśmy film',
+	roomFirstChoices: (n) => `Na pierwszym miejscu: ${n}`,
+	roomRankPoints: (n) => `Punkty za miejsca: ${n}`,
+	roomPair: (title, preferred, opposed) => `vs ${title}: ${preferred} do ${opposed}`,
 	roomDecided: 'Dzisiejszy wieczór rozstrzygnięty.',
 	roomWinner: 'wygrywa',
+	roomLookUp: 'Patrz na ekran',
+	roomLookUpSub: 'Głosowanie zamknięte. Wynik pojawi się tutaj, kiedy sala zobaczy go na ekranie.',
 	votes: (n) => `${n} ${plVotes(n)}`,
 	turnoutWord: (n) => pl3(n, 'osoba zagłosowała', 'osoby zagłosowały', 'osób zagłosowało'),
 
@@ -801,6 +883,8 @@ const pl: Dict = {
 				return 'Głosowanie w sali wygasło.';
 			case 'film_not_in_runoff':
 				return 'Tego filmu nie ma w dzisiejszej trójce.';
+			case 'invalid_ranking':
+				return 'Ułóż wszystkie filmy, każdy dokładnie raz.';
 			case 'empty_comment':
 				return 'Napisz najpierw coś.';
 			case 'comment_too_long':
@@ -890,6 +974,8 @@ const enRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 			'The dates come from the calendar, so a film night can land on a different day than usual. ' +
 			`The ${r.shortlistSize} films with the most points go to the vote. ` +
 			'A QR goes up on the screen and only the people who turned up get a say. ' +
+			'Everyone ranks the films from favourite to least favourite, privately until voting closes. ' +
+			'A film preferred by a majority in every head-to-head wins; otherwise ranked points decide, then shortlist order. ' +
 			'If nobody votes, the highest score wins.'
 	});
 
@@ -1141,11 +1227,37 @@ const en: Dict = {
 	hostClose: 'Close the week now',
 	hostQrH: 'Room QR (safe to project)',
 	hostJoinH: 'Scan to vote',
-	hostTallyH: 'Live tally',
+	hostTallyH: "Tonight's shortlist",
 	hostCastH: 'Cast for someone whose phone is dead',
-	hostCastPick: 'now pick their film',
+	hostCastPick: 'Enter their ranking. Use a screen that is not projected if they want it kept private.',
 	hostLock: 'Lock it in and start the film',
 	hostWinnerH: 'Tonight we are watching',
+	hostWhy: 'Why this film won',
+	hostPairwiseWin: 'More voters preferred this film to each alternative. Those head-to-head comparisons decided the winner, not first choices alone.',
+	hostPointsWin: 'No film won every head-to-head. Ranked points decided instead; tied points use the weekly score, then the older nomination.',
+	hostNoVotes: 'Nobody voted. The weekly score decided, with older nominations breaking a tie.',
+	hostOnlyFilm: 'There was only one shortlisted film, so the room confirmed it.',
+	hostFirstChoices: 'First choices',
+	hostRankPoints: 'Ranked points',
+	hostRankings: 'How everyone voted',
+	hostRankingGuest: (n) => `Guest ${n}`,
+	hostLegacyRanking: 'Older ballot: only the first choice was recorded.',
+	hostTotalsNote: 'First choices show favourites. Ranked points decide only when no film wins every head-to-head.',
+	hostComparison: (winner, other) => `${winner} or ${other}?`,
+	hostPairSource: 'Each pair comes from the saved rankings. These are not separate votes.',
+	hostTriangleHint: 'Arrows point to the film more people preferred. Score: pair winner : loser. A dashed line means a tie.',
+	hostPreferred: (n) => `${n} preferred this film`,
+	hostPairWin: '✓ Wins this pair',
+	hostPairLoss: 'Loses',
+	hostPairTie: 'Tie',
+	hostPairEmpty: 'No votes',
+	hostPairPeople: (n, film, other) => `${n} ${n === 1 ? 'person prefers' : 'people prefer'} ${film} to ${other}`,
+	hostPairHint: 'Click a pair’s score to see who voted which way.',
+	hostPairClear: 'Show everyone',
+	hostReplay: 'Count again',
+	hostRevealClosed: 'Voting is closed',
+	hostRevealGo: 'Count the votes!',
+	hostRevealCounting: 'Counting the votes',
 	hostHeldH: 'Asleep until another night',
 	roomCode: 'room code',
 	roomWho: 'Who are you?',
@@ -1155,10 +1267,23 @@ const en: Dict = {
 	roomGuestNote: 'Not on the list? Vote as a guest; it still counts in the room.',
 	roomVotingAs: (name) => `voting as ${name}`,
 	roomCheckedIn: 'checked in ✓',
-	roomOpen: 'You can change your vote until the room decides.',
-	roomYourVote: 'your vote',
+	roomOpen: 'Your ranking is private until voting closes. Afterwards, results and each person’s named ranking are revealed. You can change it until close.',
+	roomRankHint: 'Tap films from favourite to least favourite. Tap a ranked film again to remove it from the order.',
+	roomRankSave: 'Save ranking',
+	roomRankSaved: 'Ranking saved ✓',
+	roomRankUnsaved: 'Unsaved changes. Your previous ranking still counts.',
+	roomRankReset: 'Start over',
+	roomRankPosition: (n) => `rank ${n}`,
+	roomRankProgress: (n, total) => `${n} of ${total} ranked`,
+	roomRankRules: (n) => `A film preferred by a majority to every other film wins. Otherwise we add ranked points (${Array.from({ length: n }, (_, i) => n - 1 - i).join('/')}). Any remaining tie goes to the higher weekly score, then the older nomination.`,
+	roomResults: 'How we chose the film',
+	roomFirstChoices: (n) => `First choices: ${n}`,
+	roomRankPoints: (n) => `Ranked points: ${n}`,
+	roomPair: (title, preferred, opposed) => `vs ${title}: ${preferred} to ${opposed}`,
 	roomDecided: 'Tonight is decided.',
 	roomWinner: 'winner',
+	roomLookUp: 'Look at the screen',
+	roomLookUpSub: 'Voting is closed. The result shows up here once the room has seen it on the screen.',
 	votes: (n) => `${n} ${en2(n, 'vote', 'votes')}`,
 	turnoutWord: (n) => `${en2(n, 'person', 'people')} voted`,
 

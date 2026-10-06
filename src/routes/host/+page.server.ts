@@ -6,7 +6,7 @@ import { activeRules, origin } from '$lib/server/config';
 import { allPeople, avatarUrl, faceOf, personById } from '$lib/server/people';
 import { qrSvg } from '$lib/server/qr';
 import { closeWeek, currentWeek } from '$lib/server/weeks';
-import { closeRunoff, flashVote, latestDecidedRunoff, openRunoff, tally } from '$lib/server/runoffs';
+import { closeRunoff, flashVote, latestDecidedRunoff, openRunoff, publicTally, revealedRankings, startReveal, turnout } from '$lib/server/runoffs';
 import { commentsOf } from '$lib/server/comments';
 import { heldIn } from '$lib/server/holds';
 import { seenCounts } from '$lib/server/seen';
@@ -48,7 +48,11 @@ function freshWinner(db: DB) {
 		},
 		nominator: nominator ? { ...faceOf(nominator), xp: nominator.xp } : null,
 		comments: commentsOf(db, [film.id]).get(film.id) ?? [],
-		votes: tally(db, decided.id).find((row) => row.film.id === film.id)?.votes ?? 0,
+		code: decided.code,
+		revealedAt: decided.revealed_at,
+		results: publicTally(db, decided),
+		rankings: revealedRankings(db, decided.id),
+		turnout: turnout(db, decided.id),
 		seen: seenCounts(db, [film.id])[film.id] ?? 0
 	};
 }
@@ -61,20 +65,7 @@ export const load: PageServerLoad = async ({ depends }) => {
 	const link = runoff ? roomLink(runoff.code) : null;
 	if (link && roomQr?.link !== link) roomQr = { link, svg: qrSvg(link, 360) };
 
-	// who has already voted, so the host can see the room fill up
-	const voted = runoff
-		? new Set(
-				(
-					db
-						.prepare(
-							'SELECT person_id FROM runoff_ballot WHERE runoff_id = ? AND person_id IS NOT NULL'
-						)
-						.all(runoff.id) as { person_id: string }[]
-				).map((row) => row.person_id)
-			)
-		: new Set<string>();
-
-	const rows = runoff ? tally(db, runoff.id) : [];
+	const rows = runoff ? publicTally(db, runoff) : [];
 
 	// §3.5: before the close it tells the host what will not be on the screen,
 	// after it, why the obvious leader is missing from the shortlist
@@ -96,11 +87,7 @@ export const load: PageServerLoad = async ({ depends }) => {
 					qr: await roomQr!.svg,
 					tally: rows,
 					seen: seenCounts(db, rows.map((row) => row.film.id)),
-					turnout: (
-						db
-							.prepare('SELECT COUNT(*) AS n FROM runoff_ballot WHERE runoff_id = ?')
-							.get(runoff.id) as { n: number }
-					).n
+					turnout: turnout(db, runoff.id)
 				}
 			: null,
 		winner: runoff ? null : freshWinner(db),
@@ -110,8 +97,7 @@ export const load: PageServerLoad = async ({ depends }) => {
 			name: p.name,
 			colour: p.colour,
 			avatar: avatarUrl(p.id, p.avatar_updated_at),
-			xp: p.xp,
-			voted: voted.has(p.id)
+			xp: p.xp
 		}))
 	};
 };
@@ -133,6 +119,17 @@ export const actions: Actions = {
 		return { closedRunoff: result.kind };
 	},
 
+	// §7.2: the count on the projector, and the clock the phones wait on
+	reveal: async () => {
+		const db = getDb();
+		const decided = latestDecidedRunoff(db);
+		if (!decided) {
+			return fail(409, { code: 'no_runoff', params: {}, message: 'no room vote is open' });
+		}
+		startReveal(db, decided.id);
+		return { revealed: true };
+	},
+
 	// the host casts on behalf of someone whose phone is dead
 	voteFor: async ({ request }) => {
 		const db = getDb();
@@ -142,9 +139,9 @@ export const actions: Actions = {
 		}
 		const form = await request.formData();
 		const personId = String(form.get('personId') ?? '');
-		const filmId = Number(form.get('filmId'));
+		const ranking = form.getAll('filmId').map(Number);
 		try {
-			flashVote(db, runoff.id, personId, personId, filmId);
+			flashVote(db, runoff.id, personId, personId, ranking);
 			return { ok: true };
 		} catch (error) {
 			return ruleFail(error);

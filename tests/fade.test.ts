@@ -13,7 +13,8 @@ function roomPicks(db: DB, rules: RuleSet, winnerId: number): void {
 	const result = closeWeek(db, rules);
 	if (result.kind !== 'runoff') return;
 	const runoff = openRunoff(db)!;
-	flashVote(db, runoff.id, 'someone-in-the-room', null, winnerId);
+	flashVote(db, runoff.id, 'someone-in-the-room', null,
+		[winnerId, ...result.films.map((f) => f.id).filter((id) => id !== winnerId)]);
 	closeRunoff(db, rules, runoff.id);
 }
 

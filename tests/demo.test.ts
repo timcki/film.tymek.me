@@ -154,9 +154,9 @@ function buildFixture(path: string): void {
 		inherent,
 		stalker
 	);
-	flashVote(db, 1, dorota, dorota, stalker, NOW);
+	flashVote(db, 1, dorota, dorota, [stalker, inherent], NOW);
 	// a guest in the room votes on a device uuid rather than as anybody
-	flashVote(db, 1, '3f1c9b52-6a44-4d0e-8a1f-2c5d7e9b0a13', null, inherent, NOW);
+	flashVote(db, 1, '3f1c9b52-6a44-4d0e-8a1f-2c5d7e9b0a13', null, [inherent, stalker], NOW);
 
 	db.prepare('INSERT INTO tmdb_cache (query, body, fetched_at) VALUES (?, ?, ?)').run(
 		'stalker',

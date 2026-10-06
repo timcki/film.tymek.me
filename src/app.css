@@ -3126,49 +3126,6 @@ details[open] > .iconbtn {
 .tkfilm.win .n {
 	color: var(--accent);
 }
-/* the decided night on the projector: one film, said big. This screen is a
-   moment rather than a page, so it is the one place that leaves the phone's
-   measure behind and uses the room's */
-.winshow {
-	max-width: 720px;
-	margin: 0 auto;
-	text-align: center;
-	padding-top: 8px;
-}
-.winshow > .sec {
-	font-size: 15px;
-	margin-bottom: 0;
-}
-.winshow .wposter {
-	width: min(70vw, 320px);
-	aspect-ratio: 2/3;
-	margin: 18px auto 0;
-	border-radius: 16px;
-	overflow: hidden;
-	background: var(--raise);
-	box-shadow:
-		var(--lift),
-		0 26px 60px -22px var(--shadow);
-}
-.winshow h2 {
-	font-size: 32px;
-	letter-spacing: -0.02em;
-	margin: 20px 0 0;
-	line-height: 1.15;
-}
-.winshow .wmeta {
-	font-size: 14.5px;
-	color: var(--dim);
-	margin-top: 6px;
-}
-.winshow .over,
-.winshow .dnote {
-	text-align: left;
-}
-.winshow .cmts {
-	text-align: left;
-	margin-top: 20px;
-}
 .brow {
 	display: flex;
 	align-items: center;

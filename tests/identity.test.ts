@@ -51,7 +51,7 @@ describe('identity', () => {
 
 		const runoff = openRunoff(db)!;
 		// no person_id at all: a guest on a device key
-		expect(() => flashVote(db, runoff.id, 'device-xyz', null, first)).not.toThrow();
+		expect(() => flashVote(db, runoff.id, 'device-xyz', null, [first, second])).not.toThrow();
 
 		// a weekly ballot always needs a real person; the foreign key sees to it
 		expect(() => setPoints(db, rules, 'nobody', first, 1)).toThrow();

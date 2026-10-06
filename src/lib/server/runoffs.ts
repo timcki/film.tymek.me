@@ -5,10 +5,17 @@ import { RuleError } from './types.js';
 import type { RuleSet } from './rules.js';
 import { orderFilms } from './rules.js';
 import { checkIn } from './attendance.js';
+import { avatarUrl } from './people.js';
 import { iso } from './time.js';
 import { finish, weekByNumber } from './weeks.js';
 
-export type Tally = { film: Film & { score: number }; votes: number };
+export type Tally = {
+	film: Film;
+	votes: number;
+	points: number;
+	beatsAll: boolean;
+	comparisons: { filmId: number; preferred: number; opposed: number }[];
+};
 
 export function runoffByCode(db: DB, code: string): Runoff | undefined {
 	return db.prepare('SELECT * FROM runoff WHERE code = ?').get(code.toUpperCase()) as
@@ -34,36 +41,86 @@ export function isExpired(runoff: Runoff, now: Date = new Date()): boolean {
 	return now.getTime() >= new Date(runoff.expires_at).getTime();
 }
 
-/** live tally, ordered the way the runoff will actually be resolved */
+/** §7.3: a strict pairwise winner, otherwise ranked points, then §3.2 ordering. */
 export function tally(db: DB, runoffId: number): Tally[] {
-	const counts = new Map(
-		(
-			db
-				.prepare(
-					'SELECT film_id, COUNT(*) AS votes FROM runoff_ballot WHERE runoff_id = ? GROUP BY film_id'
-				)
-				.all(runoffId) as { film_id: number; votes: number }[]
-		).map((r) => [r.film_id, r.votes])
-	);
 	const films = orderFilms(runoffFilms(db, runoffId));
-	// §7.3: flash votes desc, then the §3.2 ordering, which orderFilms already applied
-	return films
-		.map((film) => ({ film, votes: counts.get(film.id) ?? 0 }))
-		.sort((a, b) => b.votes - a.votes || films.indexOf(a.film) - films.indexOf(b.film));
+	const ballots = db.prepare('SELECT film_id, ranking FROM runoff_ballot WHERE runoff_id = ?')
+		.all(runoffId) as { film_id: number; ranking: string | null }[];
+	// legacy ballots express no preference between the unranked films
+	const rankings: number[][] = ballots.map((b) => b.ranking ? JSON.parse(b.ranking) : [b.film_id]);
+	const rank = (ranking: number[], id: number) => {
+		const index = ranking.indexOf(id);
+		return index < 0 ? films.length - 1 : index;
+	};
+	return films.map((film) => {
+		const comparisons = films.filter((other) => other.id !== film.id).map((other) => ({
+			filmId: other.id,
+			preferred: rankings.filter((r) => rank(r, film.id) < rank(r, other.id)).length,
+			opposed: rankings.filter((r) => rank(r, film.id) > rank(r, other.id)).length
+		}));
+		return {
+			film,
+			votes: rankings.filter((r) => r[0] === film.id).length,
+			points: rankings.reduce((sum, r) => sum + films.length - 1 - rank(r, film.id), 0),
+			beatsAll: comparisons.every((c) => c.preferred > c.opposed),
+			comparisons
+		};
+	}).sort((a, b) => Number(b.beatsAll) - Number(a.beatsAll) || b.points - a.points);
+}
+
+/** §7.2: no totals or result-dependent ordering leave the server before close. */
+export function publicTally(db: DB, runoff: Runoff) {
+	if (runoff.closed_at) {
+		// weekly scores keep changing; the recorded winner does not
+		return tally(db, runoff.id).sort((a, b) =>
+			Number(b.film.id === runoff.winner_film_id) - Number(a.film.id === runoff.winner_film_id));
+	}
+	return runoffFilms(db, runoff.id).sort((a, b) => a.id - b.id).map((film) => ({
+		film, votes: null, points: null, beatsAll: null, comparisons: null
+	}));
+}
+
+export function turnout(db: DB, runoffId: number): number {
+	return (db.prepare('SELECT COUNT(*) AS n FROM runoff_ballot WHERE runoff_id = ?')
+		.get(runoffId) as { n: number }).n;
+}
+
+/** §7.2: named ballots are public only after the stored room has closed. */
+export function revealedRankings(db: DB, runoffId: number) {
+	const rows = db.prepare(`
+		SELECT p.name, p.id AS person_id, p.colour, p.xp, p.avatar_updated_at, b.film_id, b.ranking
+		FROM runoff_ballot b
+		JOIN runoff r ON r.id = b.runoff_id
+		LEFT JOIN person p ON p.id = b.person_id
+		WHERE r.id = ? AND r.closed_at IS NOT NULL
+		ORDER BY p.name IS NULL, p.name COLLATE NOCASE, b.rowid
+	`).all(runoffId) as { name: string | null; person_id: string | null; colour: string | null; xp: number | null; avatar_updated_at: string | null; film_id: number; ranking: string | null }[];
+	return rows.map((row) => ({
+		name: row.name,
+		colour: row.colour,
+		xp: row.xp,
+		avatar: row.person_id ? avatarUrl(row.person_id, row.avatar_updated_at) : null,
+		ranking: row.ranking ? JSON.parse(row.ranking) as number[] : [row.film_id],
+		legacy: row.ranking === null
+	}));
+}
+
+export function myRanking(db: DB, runoffId: number, voterKey: string): number[] {
+	const ballot = db.prepare('SELECT film_id, ranking FROM runoff_ballot WHERE runoff_id = ? AND voter_key = ?')
+		.get(runoffId, voterKey) as { film_id: number; ranking: string | null } | undefined;
+	return ballot ? (ballot.ranking ? JSON.parse(ballot.ranking) : [ballot.film_id]) : [];
 }
 
 /**
- * §7.2. One row per (runoff_id, voter_key), and voting again moves it: the room
- * argues until the host closes it, and a vote you cannot move is an argument you
- * cannot lose. Written to runoff_ballot and never to ballot: being in the room
- * breaks a tie, it does not buy influence.
+ * §7.2: replace a complete private ranking atomically. Room ballots never touch
+ * weekly points, banks or attrition. film_id retains the first choice for history.
  */
 export function flashVote(
 	db: DB,
 	runoffId: number,
 	voterKey: string,
 	personId: string | null,
-	filmId: number,
+	ranking: number[],
 	now: Date = new Date()
 ): void {
 	immediate(db, () => {
@@ -74,29 +131,21 @@ export function flashVote(
 		if (runoff.closed_at) throw new RuleError('runoff_decided', 'this runoff is already decided');
 		if (isExpired(runoff, now)) throw new RuleError('runoff_expired', 'this runoff has expired');
 
-		const inRunoff = db
-			.prepare('SELECT 1 FROM runoff_film WHERE runoff_id = ? AND film_id = ?')
-			.get(runoffId, filmId);
-		if (!inRunoff) throw new RuleError('film_not_in_runoff', 'that film is not in this runoff');
-
-		const existing = db
-			.prepare('SELECT film_id FROM runoff_ballot WHERE runoff_id = ? AND voter_key = ?')
-			.get(runoffId, voterKey) as { film_id: number } | undefined;
-		if (existing?.film_id === filmId) return;
-
-		if (existing) {
-			// created_at moves with the choice, so the row says when this vote was
-			// actually made rather than when its owner first walked in
-			db.prepare(
-				`UPDATE runoff_ballot SET film_id = ?, person_id = ?, created_at = ?
-				 WHERE runoff_id = ? AND voter_key = ?`
-			).run(filmId, personId, iso(now), runoffId, voterKey);
-		} else {
-			db.prepare(
-				`INSERT INTO runoff_ballot (runoff_id, voter_key, person_id, film_id, created_at)
-				 VALUES (?, ?, ?, ?, ?)`
-			).run(runoffId, voterKey, personId, filmId, iso(now));
+		const candidates = runoffFilms(db, runoffId);
+		if (!Array.isArray(ranking) || ranking.length !== candidates.length ||
+			new Set(ranking).size !== candidates.length ||
+			!ranking.every((id) => Number.isInteger(id) && candidates.some((f) => f.id === id))) {
+			throw new RuleError('invalid_ranking', 'rank every shortlisted film exactly once');
 		}
+		const encoded = JSON.stringify(ranking);
+		db.prepare(
+			`INSERT INTO runoff_ballot (runoff_id, voter_key, person_id, film_id, ranking, created_at)
+			 VALUES (?, ?, ?, ?, ?, ?)
+			 ON CONFLICT (runoff_id, voter_key) DO UPDATE SET
+			 film_id = excluded.film_id, ranking = excluded.ranking,
+			 person_id = excluded.person_id, created_at = excluded.created_at
+			 WHERE runoff_ballot.ranking IS NOT excluded.ranking`
+		).run(runoffId, voterKey, personId, ranking[0], encoded, iso(now));
 
 		// §7.4: an identified flash vote implies being in the room
 		if (personId) checkIn(db, runoff.week_number, personId, now);
@@ -104,6 +153,21 @@ export function flashVote(
 }
 
 /** the most recently decided runoff, for the host's winner screen */
+/** §7.2: the host starts the count once. Pressing again replays it on the
+ * screen without moving the clock the phones are waiting on. */
+export function startReveal(db: DB, runoffId: number, now: Date = new Date()): void {
+	immediate(db, () => {
+		db.prepare('UPDATE runoff SET revealed_at = ? WHERE id = ? AND closed_at IS NOT NULL AND revealed_at IS NULL')
+			.run(iso(now), runoffId);
+	});
+}
+
+/** whether the recorded winner had to be settled on ranked points */
+export function decidedOnPoints(db: DB, runoff: Runoff): boolean {
+	const won = tally(db, runoff.id).find((row) => row.film.id === runoff.winner_film_id);
+	return turnout(db, runoff.id) > 0 && !won?.beatsAll;
+}
+
 export function latestDecidedRunoff(db: DB): Runoff | undefined {
 	return db
 		.prepare(
@@ -116,8 +180,8 @@ export function latestDecidedRunoff(db: DB): Runoff | undefined {
 export type RunoffResult = { kind: 'noop' } | { kind: 'winner'; film: Film };
 
 /**
- * §7.3. Zero turnout and a tied flash vote both fall back to the §3.2 ordering,
- * which means the film that has been waiting longest wins. Idempotent.
+ * §7.3. A pairwise winner beats ranked points; unresolved ties and zero turnout
+ * fall back to weekly score, then age and id (§3.2). Idempotent.
  */
 export function closeRunoff(
 	db: DB,

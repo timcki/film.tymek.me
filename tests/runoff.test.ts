@@ -3,16 +3,29 @@ import { closeWeek, weekByNumber } from '../src/lib/server/weeks.js';
 import { setPoints } from '../src/lib/server/films.js';
 import {
 	closeRunoff,
-	flashVote,
+	flashVote as rankVote,
 	isExpired,
 	latestDecidedRunoff,
 	openRunoff,
 	runoffByCode,
+	runoffFilms,
+	publicTally,
+	revealedRankings,
+	myRanking,
+	turnout,
 	tally
 } from '../src/lib/server/runoffs.js';
+import { applySchema, type DB } from '../src/lib/server/db.js';
 import { RuleError } from '../src/lib/server/types.js';
 import { newCode } from '../src/lib/server/tokens.js';
-import { addFilm, freshDb } from './helpers.js';
+import { addFilm, freshDb, rankedRoom } from './helpers.js';
+
+/** the original two-film scenarios have only one possible backup preference. */
+function flashVote(db: DB, id: number, key: string, person: string | null, first: number, now?: Date) {
+	const films = runoffFilms(db, id);
+	expect(films).toHaveLength(2);
+	rankVote(db, id, key, person, [first, ...films.filter((f) => f.id !== first).map((f) => f.id)], now);
+}
 
 /** two films tied at the top; the older one is `first` */
 function tiedWeek() {
@@ -212,5 +225,148 @@ describe('runoff', () => {
 		for (let i = 0; i < 200; i++) {
 			expect(newCode()).toMatch(/^[ACDEFGHJKLMNPQRTUVWXY3479]{6}$/);
 		}
+	});
+});
+
+
+describe('private rankings', () => {
+	it('reveals final named rankings only after close, without device keys or invented legacy preferences', () => {
+		const { db, rules, runoff, films: [a, b, c] } = rankedRoom();
+		db.prepare("UPDATE person SET avatar_updated_at = '2026-08-03T10:00:00Z' WHERE id = 'ala'").run();
+		rankVote(db, runoff.id, 'ala', 'ala', [a, b, c]);
+		rankVote(db, runoff.id, 'ala', 'ala', [c, a, b]);
+		rankVote(db, runoff.id, 'private-device-key', null, [b, c, a]);
+		db.prepare('INSERT INTO runoff_ballot (runoff_id, voter_key, person_id, film_id, created_at) VALUES (?, ?, ?, ?, ?)')
+			.run(runoff.id, 'bartek', 'bartek', a, runoff.created_at);
+		expect(revealedRankings(db, runoff.id)).toEqual([]);
+		// expiry alone does not publish ballots; closing the room does
+		db.prepare('UPDATE runoff SET expires_at = ? WHERE id = ?').run(runoff.created_at, runoff.id);
+		expect(revealedRankings(db, runoff.id)).toEqual([]);
+		closeRunoff(db, rules, runoff.id);
+		db.prepare("UPDATE person SET xp = CASE id WHEN 'ala' THEN 123 ELSE 0 END").run();
+		expect(revealedRankings(db, runoff.id)).toEqual([
+			{ name: 'ala', colour: '#fff', xp: 123, avatar: '/avatar/ala?v=1785751200000', ranking: [c, a, b], legacy: false },
+			{ name: 'bartek', colour: '#fff', xp: 0, avatar: null, ranking: [a], legacy: true },
+			{ name: null, colour: null, xp: null, avatar: null, ranking: [b, c, a], legacy: false }
+		]);
+		expect(revealedRankings(db, runoff.id + 1)).toEqual([]);
+	});
+
+	it('selects the compromise over the plurality leader', () => {
+		const { db, rules, runoff, films: [a, b, c], cast } = rankedRoom();
+		cast([a, b, c], 4);
+		cast([c, b, a], 3);
+		cast([b, c, a], 3);
+		const rows = tally(db, runoff.id);
+		expect(rows.map((r) => [r.film.id, r.votes, r.points])).toEqual([[b, 3, 13], [c, 3, 9], [a, 4, 8]]);
+		expect(rows[0].comparisons).toEqual([
+			{ filmId: a, preferred: 6, opposed: 4 },
+			{ filmId: c, preferred: 7, opposed: 3 }
+		]);
+		expect(closeRunoff(db, rules, runoff.id)).toMatchObject({ kind: 'winner', film: { id: b } });
+	});
+
+	it('gives a pairwise winner priority even when another film has more ranked points', () => {
+		const { db, runoff, films: [a, b, c], cast } = rankedRoom();
+		cast([a, b, c], 3);
+		cast([b, c, a], 2);
+		const rows = tally(db, runoff.id);
+		expect(rows.map((r) => [r.film.id, r.points, r.beatsAll])).toEqual([
+			[a, 6, true], [b, 7, false], [c, 2, false]
+		]);
+	});
+
+	it('resolves a strict majority cycle with ranked points', () => {
+		const { db, runoff, films: [a, b, c], cast } = rankedRoom();
+		cast([a, b, c], 3);
+		cast([b, c, a], 4);
+		cast([c, a, b], 2);
+		const rows = tally(db, runoff.id);
+		expect(rows.every((r) => !r.beatsAll)).toBe(true);
+		expect(rows.map((r) => [r.film.id, r.points])).toEqual([[b, 11], [a, 8], [c, 8]]);
+	});
+
+	it('does not treat a tied comparison as a pairwise win', () => {
+		const { db, runoff, films: [a, b, c], cast } = rankedRoom();
+		cast([a, b, c]);
+		cast([b, c, a]);
+		const rows = tally(db, runoff.id);
+		expect(rows.some((r) => r.beatsAll)).toBe(false);
+		expect(rows.map((r) => [r.film.id, r.points])).toEqual([[b, 3], [a, 2], [c, 1]]);
+	});
+
+	it('uses weekly score before age when a cycle also ties on ranked points', () => {
+		const { db, rules, runoff, films: [a, b, c], cast } = rankedRoom();
+		db.prepare('UPDATE film SET score = 5 WHERE id = ?').run(c);
+		cast([a, b, c]);
+		cast([b, c, a]);
+		cast([c, a, b]);
+		expect(tally(db, runoff.id).map((r) => r.points)).toEqual([3, 3, 3]);
+		expect(closeRunoff(db, rules, runoff.id)).toMatchObject({ film: { id: c } });
+		// finish recomputes weekly scores, but must not change the published winner
+		expect(publicTally(db, runoffByCode(db, runoff.code)!)[0].film.id).toBe(c);
+	});
+
+	it('keeps totals, comparisons and result order private until close', () => {
+		const { db, rules, runoff, films: [a, b, c], cast } = rankedRoom();
+		const before = publicTally(db, runoff);
+		cast([c, b, a], 2);
+		expect(publicTally(db, runoff)).toEqual(before);
+		expect(before.map((r) => [r.film.id, r.votes, r.points, r.beatsAll, r.comparisons])).toEqual([
+			[a, null, null, null, null], [b, null, null, null, null], [c, null, null, null, null]
+		]);
+		expect(turnout(db, runoff.id)).toBe(2);
+		expect(myRanking(db, runoff.id, 'guest-0')).toEqual([c, b, a]);
+		expect(myRanking(db, runoff.id, 'another-device')).toEqual([]);
+		closeRunoff(db, rules, runoff.id);
+		expect(publicTally(db, runoffByCode(db, runoff.code)!)[0]).toMatchObject({
+			film: { id: c }, points: 4, votes: 2, beatsAll: true
+		});
+	});
+
+	it('replaces lower preferences even when the first choice is unchanged', () => {
+		const { db, runoff, films: [a, b, c] } = rankedRoom();
+		rankVote(db, runoff.id, 'ala', 'ala', [a, b, c]);
+		rankVote(db, runoff.id, 'ala', 'ala', [a, c, b]);
+		expect(myRanking(db, runoff.id, 'ala')).toEqual([a, c, b]);
+		expect(turnout(db, runoff.id)).toBe(1);
+		expect(tally(db, runoff.id).map((r) => [r.film.id, r.points])).toEqual([[a, 2], [c, 1], [b, 0]]);
+	});
+
+	it('rejects missing, duplicated, foreign and noninteger films without replacing a saved ballot', () => {
+		const { db, runoff, films: [a, b, c] } = rankedRoom();
+		rankVote(db, runoff.id, 'ala', 'ala', [c, b, a]);
+		for (const ranking of [[], [a], [a, b], [a, a, c], [a, b, 9999], [a, b, NaN], [a, b, c + 0.5], [a, b, c, c]]) {
+			expect(() => rankVote(db, runoff.id, 'ala', 'ala', ranking)).toThrow('rank every shortlisted film exactly once');
+			expect(myRanking(db, runoff.id, 'ala')).toEqual([c, b, a]);
+		}
+	});
+
+	it('preserves old first-choice ballots through an idempotent column migration', () => {
+		const { db, runoff, films: [a, b, c], cast } = rankedRoom();
+		db.exec('ALTER TABLE runoff_ballot DROP COLUMN ranking');
+		db.prepare('INSERT INTO runoff_ballot (runoff_id, voter_key, film_id, created_at) VALUES (?, ?, ?, ?)')
+			.run(runoff.id, 'legacy', c, runoff.created_at);
+		applySchema(db);
+		applySchema(db);
+		expect(myRanking(db, runoff.id, 'legacy')).toEqual([c]);
+		expect(tally(db, runoff.id).map((r) => [r.film.id, r.votes, r.points])).toEqual([[c, 1, 2], [a, 0, 0], [b, 0, 0]]);
+		cast([b, a, c]);
+		expect(tally(db, runoff.id).find((r) => r.film.id === b)!.comparisons)
+			.toContainEqual({ filmId: a, preferred: 1, opposed: 0 });
+		rankVote(db, runoff.id, 'legacy', null, [c, a, b]);
+		expect(turnout(db, runoff.id)).toBe(2);
+		expect(myRanking(db, runoff.id, 'legacy')).toEqual([c, a, b]);
+	});
+
+	it('accepts a lone candidate and rejects a ranking exactly at expiry', () => {
+		const { db, rules } = freshDb();
+		const a = addFilm(db, 'Only', 'ala', 1);
+		setPoints(db, rules, 'ala', a, 1);
+		closeWeek(db, rules);
+		const runoff = openRunoff(db)!;
+		rankVote(db, runoff.id, 'ala', 'ala', [a]);
+		expect(tally(db, runoff.id)[0]).toMatchObject({ film: { id: a }, votes: 1, points: 0 });
+		expect(() => rankVote(db, runoff.id, 'guest', null, [a], new Date(runoff.expires_at))).toThrow('expired');
 	});
 });

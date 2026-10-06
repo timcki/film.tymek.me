@@ -26,7 +26,7 @@ describe('deriving XP', () => {
 
 		closeWeek(db, rules);
 		const runoff = openRunoff(db)!;
-		flashVote(db, runoff.id, 'ala', 'ala', mine);
+		flashVote(db, runoff.id, 'ala', 'ala', [mine]);
 		closeRunoff(db, rules, runoff.id);
 
 		// nominated (1), voted one week (2), attended via flash vote (10),
@@ -61,7 +61,7 @@ describe('deriving XP', () => {
 		castBallot(db, 1, 'bartek', loser, 1);
 
 		closeWeek(db, rules);
-		flashVote(db, openRunoff(db)!.id, 'someone', null, winner);
+		flashVote(db, openRunoff(db)!.id, 'someone', null, [winner, loser]);
 		closeRunoff(db, rules, openRunoff(db)!.id);
 
 		expect(xpBreakdown(db, 'ala').winnersBacked).toBe(1);
@@ -92,7 +92,7 @@ describe('the person.xp cache', () => {
 		const film = addFilm(db, 'A', 'ala', 1);
 		castBallot(db, 1, 'ala', film, 2);
 		closeWeek(db, rules);
-		flashVote(db, openRunoff(db)!.id, 'darek', 'darek', film);
+		flashVote(db, openRunoff(db)!.id, 'darek', 'darek', [film]);
 		closeRunoff(db, rules, openRunoff(db)!.id);
 
 		// the pre-attendance world: table dropped, then a deploy boots on old data

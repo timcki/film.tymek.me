@@ -494,14 +494,34 @@ point is that being in the room is the credential.
 - If for some reason no name is picked (a seventh person, a guest), `voter_key` is the
   `fn_device` uuid and `person_id` is null.
 
-One row per `(runoff_id, voter_key)`; voting again **replaces** your choice until the
-runoff closes. ~~**Revised, August 2026.** the first vote is **final**; the card arms on
-the first tap and commits on the second, and a different film is rejected
-(`vote_locked`).~~ **Reverted, August 2026**, and the arming ceremony with it: finality
-moved the argument to after the tap, which is the one place it cannot change anything. A
-repeat tap on the same film is an idempotent no-op; a different film moves the row,
-`created_at` and all, so it records when the choice was made rather than when its owner
-walked in. Show a live tally to everyone on the page.
+One row per `(runoff_id, voter_key)`. Each voter ranks every shortlisted film exactly
+once, favourite first, then explicitly saves. Saving again **replaces** the entire ranking
+until the runoff closes, including changes to lower preferences. A repeated identical
+submission is an idempotent no-op. Incomplete or duplicate rankings are rejected without
+changing an existing ballot.
+
+Only the submitted ballot count is live. Neither voters nor the host receive first-choice
+counts, ranked points, pairwise comparisons or result-dependent film ordering before
+close. A voter can read their own saved ranking through their personal or guest-device
+cookie; picking somebody's name or casting on their behalf does not expose their ballot.
+After close, the host's results disclosure shows aggregate results and each person's
+final submitted ranking by name. Guest ballots use numbered guest labels, never device
+identifiers. Legacy ballots show only their recorded first choice.
+
+Closing the room does not announce the result. The host screen holds it behind a
+**count**: the host presses one button, `runoff.revealed_at` is stamped once, and the
+screen lands the ballots one at a time with the films standing in an unranked triangle,
+says the ranked points aloud when the night was a cycle, and only then lifts the winner
+to the top. Phones in the room show *look at the screen* until the count has had time to
+run (`src/lib/reveal.ts` holds the timings both sides share), so the room learns the
+winner from the projector rather than from the phone in its hand. A room nobody counts,
+because it closed on its own clock, tells its phones ten minutes after closing.
+Replaying the count on the screen does not move the phones' clock.
+
+`runoff_ballot.ranking` stores the ordered film ids as JSON; `film_id` retains the first
+choice. A NULL ranking is a legacy ballot: that film is preferred to all others, with no
+preference between the remaining films. It earns the top rank's points and gives the
+others zero. A new submission replaces it with a complete ranking.
 
 Flash votes are written to `runoff_ballot` and **never** to `ballot`. They do not touch
 scores, banks, or attrition. This is the single most important invariant in the runoff:
@@ -512,11 +532,17 @@ being in the room breaks a tie, it does not buy influence.
 `POST /host/close-runoff`, or automatically at `expires_at`.
 
 ```
-winner = runoff films ordered by (flash votes desc, then §3.2 ordering)
+if a film strictly beats every other film in head-to-head comparisons:
+    winner = that film
+else:
+    winner = films ordered by (ranked points desc, then §3.2 ordering)
 ```
 
-So zero turnout falls back cleanly to the oldest film, and a tied flash vote does too. Then
-run `finish(week, winner)` from §6.1.
+For N candidates, each ranking awards N-1 points to first place, N-2 to second, down to
+zero for last. A tied pairwise comparison is not a win. Cycles and tied comparisons use
+the points fallback across all candidates. Remaining ties and zero turnout use §3.2:
+weekly score descending, then nomination week, timestamp and id ascending. With one
+candidate, the room simply confirms it. Then run `finish(week, winner)` from §6.1.
 
 ### 7.4 Attendance
 
@@ -537,9 +563,12 @@ else; never scores, budgets, or attrition.
 
 ### 7.5 The host view
 
-`/host` is a projector-friendly page: big room QR, the code in large monospace, the tied
-films, the live tally, a **Close** button, and a row of the six names so the host can cast
-on behalf of someone whose phone is dead.
+`/host` is a projector-friendly page: big room QR, the code in large monospace, the
+shortlist, the submitted ballot count and a **Close** button. The collapsed proxy-voting
+form accepts a complete ranking for someone whose phone is dead. Use it on an
+unprojected screen to keep that ranking private. Closing reveals the winner with an
+explanation, its head-to-head comparisons, and every film's first-choice count and
+ranked points directly on the host screen.
 
 ---
 

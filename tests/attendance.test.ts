@@ -42,8 +42,8 @@ describe('checking in', () => {
 
 		closeWeek(db, rules);
 		const runoff = openRunoff(db)!;
-		flashVote(db, runoff.id, 'celina', 'celina', a);
-		flashVote(db, runoff.id, 'guest-device', null, b);
+		flashVote(db, runoff.id, 'celina', 'celina', [a, b]);
+		flashVote(db, runoff.id, 'guest-device', null, [b, a]);
 		closeRunoff(db, rules, runoff.id);
 
 		// the idempotent seed in applySchema turns historical flash votes into
@@ -61,7 +61,7 @@ describe('checking in', () => {
 		castBallot(db, 1, 'ala', a, 2);
 		castBallot(db, 1, 'bartek', b, 2);
 		closeWeek(db, rules);
-		flashVote(db, openRunoff(db)!.id, 'darek', 'darek', a);
+		flashVote(db, openRunoff(db)!.id, 'darek', 'darek', [a, b]);
 		closeRunoff(db, rules, openRunoff(db)!.id);
 
 		// simulate the pre-attendance world: the table vanishes, then a deploy

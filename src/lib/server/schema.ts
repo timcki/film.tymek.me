@@ -106,6 +106,8 @@ CREATE TABLE IF NOT EXISTS runoff_ballot (
   voter_key  TEXT    NOT NULL,
   person_id  TEXT    REFERENCES person(id),
   film_id    INTEGER NOT NULL REFERENCES film(id),
+  -- §7.2: ordered film ids; NULL preserves a legacy first-choice-only ballot
+  ranking    TEXT,
   created_at TEXT    NOT NULL,
   PRIMARY KEY (runoff_id, voter_key)
 );
@@ -223,7 +225,11 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	['film', 'archival', 'INTEGER NOT NULL DEFAULT 0'],
 	['ballot', 'prev_points', 'INTEGER NOT NULL DEFAULT 0'],
 	['person', 'xp', 'INTEGER NOT NULL DEFAULT 0'],
-	['person', 'changelog_seen', 'INTEGER NOT NULL DEFAULT 0']
+	['person', 'changelog_seen', 'INTEGER NOT NULL DEFAULT 0'],
+	['runoff_ballot', 'ranking', 'TEXT'],
+	// §7.2: when the host started the count on the projector; phones keep the
+	// result to themselves until it has run
+	['runoff', 'revealed_at', 'TEXT']
 ];
 
 /**

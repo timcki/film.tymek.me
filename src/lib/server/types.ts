@@ -91,6 +91,8 @@ export type Runoff = {
 	expires_at: string;
 	closed_at: string | null;
 	winner_film_id: number | null;
+	/** §7.2: when the host started the count; null until then */
+	revealed_at: string | null;
 };
 
 export type Backer = {

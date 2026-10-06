@@ -3,14 +3,15 @@ import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import { attended, checkIn } from '$lib/server/attendance';
 import { allPeople, faceOf } from '$lib/server/people';
-import { flashVote, isExpired, runoffByCode, tally } from '$lib/server/runoffs';
+import { decidedOnPoints, flashVote, isExpired, myRanking, publicTally, runoffByCode, runoffFilms, turnout } from '$lib/server/runoffs';
+import { resultPublic } from '$lib/reveal';
 import { seenCounts } from '$lib/server/seen';
 import { ruleFail } from '$lib/server/respond';
 import { newDeviceId } from '$lib/server/tokens';
 import { DEVICE_COOKIE } from '../../../hooks.server';
 
 /** §7.2: reachable without a personal link. Being in the room is the credential. */
-export const load: PageServerLoad = async ({ params, locals, cookies, depends }) => {
+export const load: PageServerLoad = async ({ params, locals, cookies, depends, url }) => {
 	depends('app:room');
 	const db = getDb();
 	const runoff = runoffByCode(db, params.code);
@@ -23,15 +24,25 @@ export const load: PageServerLoad = async ({ params, locals, cookies, depends })
 	}
 
 	if (runoff.closed_at) {
-		const rows = tally(db, runoff.id);
+		const n = turnout(db, runoff.id);
+		// §7.2: the room learns the winner from the screen. Until the host's count
+		// has run, a phone knows the vote is over and nothing else
+		const pending = !resultPublic(runoff, n, decidedOnPoints(db, runoff), new Date());
+		const rows = pending
+			? runoffFilms(db, runoff.id).sort((a, b) => a.id - b.id).map((film) => ({
+				film, votes: null, points: null, beatsAll: null, comparisons: null
+			}))
+			: publicTally(db, runoff);
 		return {
 			decided: true,
+			pending,
 			code: runoff.code,
 			tally: rows,
 			seen: seenCounts(db, rows.map((row) => row.film.id)),
-			winnerFilmId: runoff.winner_film_id,
+			winnerFilmId: pending ? null : runoff.winner_film_id,
 			people: [],
-			myVote: null,
+			myRanking: [],
+			turnout: n,
 			// the face for the bar, when the phone that scanned belongs to somebody
 			me: locals.person ? { ...faceOf(locals.person), xp: locals.person.xp } : null,
 			identified: locals.person ? locals.person.name : null,
@@ -46,6 +57,7 @@ export const load: PageServerLoad = async ({ params, locals, cookies, depends })
 		deviceId = newDeviceId();
 		cookies.set(DEVICE_COOKIE, deviceId, {
 			httpOnly: true,
+			secure: url.protocol === 'https:',
 			sameSite: 'lax',
 			path: '/',
 			maxAge: 60 * 60 * 24
@@ -53,19 +65,17 @@ export const load: PageServerLoad = async ({ params, locals, cookies, depends })
 	}
 
 	const voterKey = locals.person?.id ?? deviceId;
-	const myVote = db
-		.prepare('SELECT film_id FROM runoff_ballot WHERE runoff_id = ? AND voter_key = ?')
-		.get(runoff.id, voterKey) as { film_id: number } | undefined;
-
-	const rows = tally(db, runoff.id);
+	const rows = publicTally(db, runoff);
 	return {
 		decided: false,
+		pending: false,
 		code: runoff.code,
 		tally: rows,
 		seen: seenCounts(db, rows.map((row) => row.film.id)),
 		winnerFilmId: null,
 		people: locals.person ? [] : allPeople(db).map((p) => ({ id: p.id, name: p.name })),
-		myVote: myVote?.film_id ?? null,
+		myRanking: myRanking(db, runoff.id, voterKey),
+		turnout: turnout(db, runoff.id),
 		// the face for the bar, when the phone that scanned belongs to somebody
 		me: locals.person ? { ...faceOf(locals.person), xp: locals.person.xp } : null,
 		identified: locals.person ? locals.person.name : null,
@@ -74,23 +84,26 @@ export const load: PageServerLoad = async ({ params, locals, cookies, depends })
 };
 
 export const actions: Actions = {
-	flashVote: async ({ params, request, locals, cookies }) => {
+	flashVote: async ({ params, request, locals, cookies, url }) => {
 		const db = getDb();
 		const runoff = runoffByCode(db, params.code);
 		if (!runoff) return fail(404, { message: 'no runoff with that code' });
 
 		const form = await request.formData();
-		const filmId = Number(form.get('filmId'));
+		const ranking = form.getAll('filmId').map(Number);
 		const claimed = String(form.get('personId') ?? '');
 
 		// a person picked from the list identifies the vote; otherwise it is a device vote
 		const personId = locals.person?.id ?? (claimed || null);
 		const deviceId = cookies.get(DEVICE_COOKIE) ?? newDeviceId();
 		const voterKey = personId ?? deviceId;
+		cookies.set(DEVICE_COOKIE, deviceId, {
+			httpOnly: true, secure: url.protocol === 'https:', sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24
+		});
 
 		try {
-			flashVote(db, runoff.id, voterKey, personId, filmId);
-			return { ok: true, filmId };
+			flashVote(db, runoff.id, voterKey, personId, ranking);
+			return { ok: true };
 		} catch (err) {
 			return ruleFail(err);
 		}
