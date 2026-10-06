@@ -7,8 +7,8 @@ import { openRunoff } from '$lib/server/runoffs';
 import { avatarUrl, bankBalance, spentInWeek } from '$lib/server/people';
 import { langOf } from '$lib/i18n';
 import { unseenChangelog } from '$lib/changelog';
-import { themeOf } from '$lib/themes';
-import { LANG_COOKIE, THEME_COOKIE } from '../hooks.server';
+import { bananaOf, themeOf } from '$lib/themes';
+import { BANANA_COOKIE, LANG_COOKIE, THEME_COOKIE } from '../hooks.server';
 
 export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	const db = getDb();
@@ -43,6 +43,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 		// the palette is already on <html>; the layout only needs it to know
 		// which half of the switch is lit
 		theme: themeOf(cookies.get(THEME_COOKIE)),
+		banana: bananaOf(cookies.get(BANANA_COOKIE)),
 		// news this person has not dismissed yet, already said in their language
 		changelog: person
 			? unseenChangelog(person.changelog_seen).map((entry) => ({

@@ -6,6 +6,7 @@
 	import { formatNight, formatNightDay } from '$lib/datetime';
 	import { dictFor, isVotes, LANGS } from '$lib/i18n';
 	import { THEMES } from '$lib/themes';
+	import Banana from '$lib/components/Banana.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import type { LayoutServerData } from './$types';
 
@@ -310,6 +311,18 @@
 			</form>
 		{/each}
 	</div>
+	<!-- bananas lie over whichever palette is showing, so they are a toggle of
+	     their own rather than a fourth way to be lit -->
+	<form method="POST" action="/theme?/banana" class="lang themes nana">
+		<input type="hidden" name="banana" value={data.banana ? '0' : '1'} />
+		<input type="hidden" name="to" value={path} />
+		<button
+			class:on={data.banana}
+			title={T.themeBanana}
+			aria-label={T.themeBanana}
+			aria-pressed={data.banana}><Banana /></button
+		>
+	</form>
 {/snippet}
 
 {#snippet budget()}
@@ -325,7 +338,7 @@
 				onblur={() => (tipOpen = false)}
 			>
 				{#each Array(Math.max(0, data.person.spent)) as _, i (i)}
-					<span class="hpip spent">✓</span>
+					<span class="hpip spent">{#if data.banana}<Banana />{:else}✓{/if}</span>
 				{/each}
 				{#each Array(Math.max(0, data.person.left)) as _, i (i)}
 					<!-- the ring is drawn rather than bordered, exactly as the cards

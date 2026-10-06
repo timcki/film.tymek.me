@@ -78,3 +78,95 @@
 :root[data-theme='light'] .lrow .lname[class*='lv'] {
 	text-shadow: none;
 }
+
+/* --------------------------------------------------------------- banana -----
+   Not a palette but a flavour over either one, switched by data-banana on its
+   own cookie, so "auto" still follows the phone. The accent ripens to banana and
+   --warn reddens to coral, the overripe end of the same fruit: the old amber sat
+   a step from banana yellow, and "leading" and "about to drop" would read alike. */
+/* the dark greys lean blue, which turns banana cold; under bananas they warm to
+   a stem's brown-black, every neutral shifted to the same hue so the steps
+   between them stay where app.css put them */
+:root[data-banana] {
+	--bg: #12100c;
+	--wash: radial-gradient(1000px 480px at 50% -14%, rgba(244, 220, 138, 0.07), transparent 70%);
+	--card: #1a1712;
+	--card2: #201c16;
+	/* lifted well clear of the card: the wells on /host and /stats are this at
+	   70% over a card, and four steps apart they vanish on a projector */
+	--sunk: #2e2820;
+	--raise: #242019;
+	--line: #2a251d;
+	--line2: #342e25;
+	--line3: #4a4235;
+	--edge: #5a5141;
+	--ink: #f3f0e8;
+	--ink2: #d2ccbf;
+	--dim: #9a9385;
+	--dimmer: #736c60;
+	--accent: #f4dc8a;
+	--accent-ink: #3a2c00;
+	--warn: #f0946a;
+}
+
+/* on paper, yellow on cream is a banana nobody can see, so the light side goes
+   to the leaf instead: sage paper, a leaf-green accent, and the fruit and the
+   coral are the only warm things on the page, which is what makes them carry */
+:root[data-theme='light'][data-banana] {
+	--bg: #eef1e6;
+	--wash: radial-gradient(1000px 480px at 50% -14%, rgba(240, 215, 110, 0.22), transparent 70%);
+	--card: #fbfcf7;
+	--card2: #f0f3e8;
+	--sunk: #e3e8d8;
+	--raise: #e1e7d4;
+	--line: #e2e7d6;
+	--line2: #ccd6bb;
+	--line3: #aebd96;
+	--edge: #8f9e78;
+	--ink: #2c3324;
+	--ink2: #4d5644;
+	--dim: #6c7562;
+	--dimmer: #8d957f;
+	--chip: #fdfefb;
+	--accent: #5f7a1c;
+	--accent-ink: #fbfcf7;
+	--warn: #b5532b;
+	--shadow: rgba(50, 70, 30, 0.16);
+	--shadow-soft: rgba(50, 70, 30, 0.1);
+	--lead-glow: rgba(120, 150, 60, 0.2);
+	--lead-ring: rgba(120, 150, 60, 0.14);
+	--lead-edge: rgba(70, 95, 40, 0.45);
+	--scrim: rgba(40, 55, 30, 0.4);
+	--toast-bg: #2c3324;
+	--toast-ink: #eef1e6;
+}
+
+/* the one place a flavour may touch more than colour: a spent point is a banana
+   rather than a check on a disc, and a banana on a yellow disc is invisible, so
+   the disc goes and the fruit is drawn a little larger than it */
+:root[data-banana] .pip.set i {
+	background: none;
+	font-size: 18px;
+	width: auto;
+	height: auto;
+}
+:root[data-banana] .tdot.set {
+	background: none;
+}
+:root[data-banana] .tdot.set i {
+	font-size: 13px;
+}
+:root[data-banana] .hpip.spent {
+	background: none;
+	font-size: 14px;
+}
+/* the switch shows what it would turn on: a grey banana until it is lit */
+.menu .lang.nana button {
+	font-size: 15px;
+	filter: grayscale(1);
+	opacity: 0.55;
+}
+.menu .lang.nana button.on {
+	filter: none;
+	opacity: 1;
+}

@@ -5,12 +5,13 @@ import { isDemo } from '$lib/server/config';
 import { personByToken } from '$lib/server/people';
 import { limiter } from '$lib/server/ratelimit';
 import { startScheduler } from '$lib/server/scheduler';
-import { THEME_BG, themeOf } from '$lib/themes';
+import { BANANA_BG, THEME_BG, bananaOf, themeOf } from '$lib/themes';
 
 export const PERSON_COOKIE = 'fn_person';
 export const DEVICE_COOKIE = 'fn_device';
 export const LANG_COOKIE = 'fn_lang';
 export const THEME_COOKIE = 'fn_theme';
+export const BANANA_COOKIE = 'fn_banana';
 /** the browser cap; re-set on every request so regular visitors never expire */
 export const COOKIE_MAX_AGE = 400 * 24 * 60 * 60;
 
@@ -129,17 +130,20 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// status bar tint iOS reads off the meta tag. On auto the tint is left to
 	// the phone, which is what the media-scoped pair is for
 	const theme = themeOf(event.cookies.get(THEME_COOKIE));
+	const banana = bananaOf(event.cookies.get(BANANA_COOKIE));
+	const bg = banana ? BANANA_BG : THEME_BG;
 	const tint =
 		theme === 'auto'
-			? `<meta name="theme-color" content="${THEME_BG.dark}" media="(prefers-color-scheme: dark)" />
-		<meta name="theme-color" content="${THEME_BG.light}" media="(prefers-color-scheme: light)" />`
-			: `<meta name="theme-color" content="${THEME_BG[theme]}" />`;
+			? `<meta name="theme-color" content="${bg.dark}" media="(prefers-color-scheme: dark)" />
+		<meta name="theme-color" content="${bg.light}" media="(prefers-color-scheme: light)" />`
+			: `<meta name="theme-color" content="${bg[theme]}" />`;
 
 	return unindexed(
 		await resolve(event, {
 			transformPageChunk: ({ html }) =>
 				html
 					.replaceAll('%fn.theme%', theme)
+					.replace('%fn.banana%', banana ? ' data-banana' : '')
 					.replace('%fn.scheme%', theme === 'auto' ? 'light dark' : theme)
 					.replace('%fn.tint%', tint)
 		})

@@ -27,3 +27,19 @@ export const THEME_BG: Record<'dark' | 'light', string> = {
 	dark: '#0f1012',
 	light: '#f3e2d4'
 };
+
+/**
+ * Bananas: not a third palette but a flavour laid over whichever of the two is
+ * showing, so "auto" keeps following the phone. Its own cookie, '1' or nothing,
+ * set on <html> as data-banana; the yellow lives in themes.css and the bananas
+ * themselves in the few places a check or a burst used to be.
+ */
+export function bananaOf(value: string | undefined | null): boolean {
+	return value === '1';
+}
+
+/** THEME_BG under the banana wash, sampled the same way */
+export const BANANA_BG: Record<'dark' | 'light', string> = {
+	dark: '#1a1710',
+	light: '#f0f0dc'
+};

@@ -105,6 +105,7 @@ export type Dict = {
 	themeAuto: string;
 	themeDark: string;
 	themeLight: string;
+	themeBanana: string;
 
 	week: (n: number) => string;
 	/** the whole phrase, verb included, because the bar has no room for a sentence around it */
@@ -505,6 +506,7 @@ const pl: Dict = {
 	themeAuto: 'Jak w telefonie',
 	themeDark: 'Ciemny',
 	themeLight: 'Jasny',
+	themeBanana: 'Bananowo',
 
 	week: (n) => `Tydzień ${n}`,
 	// tiered: only the unit that matters now, down to seconds in the last minute
@@ -1003,6 +1005,7 @@ const en: Dict = {
 	themeAuto: 'Match the phone',
 	themeDark: 'Dark',
 	themeLight: 'Light',
+	themeBanana: 'Bananas',
 
 	week: (n) => `Week ${n}`,
 	// tiered: only the unit that matters now, down to seconds in the last minute
