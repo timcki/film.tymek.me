@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import { flip } from 'svelte/animate';
 	import { scale } from 'svelte/transition';
 	import { backOut } from 'svelte/easing';
@@ -17,6 +18,8 @@
 	import { levelOf } from '$lib/levels';
 	import Banana from '$lib/components/Banana.svelte';
 	import { say } from '$lib/toast.svelte';
+	import { watchLive } from '$lib/live-poll';
+	import { votePulse } from '$lib/vote-pulse';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -397,9 +400,14 @@
 
 	/* -------------------------------------------------------------- forms -- */
 
+	// the viewer's own writes in flight; the live poll waits for them to land
+	let sending = $state(0);
+
 	function submit(onOk?: () => void): SubmitFunction {
-		return () =>
-			async ({ result, update }) => {
+		return () => {
+			sending += 1;
+			return async ({ result, update }) => {
+				sending -= 1;
 				if (result.type === 'failure') {
 					const body = result.data as
 						| { code?: string; params?: Record<string, string | number>; message?: string }
@@ -409,7 +417,32 @@
 				if (result.type === 'success') onOk?.();
 				await update({ reset: false });
 			};
+		};
 	}
+
+	// other people's votes, as they land: a short poll, and a reload only when
+	// the server has moved past what is on screen. The cards glide to their new
+	// seats on the same flip a vote of your own uses, the coin pulses, and new
+	// faces pop in. Anything open or half-done holds it back until it is not
+	$effect(() =>
+		watchLive({
+			read: async () => (await (await fetch('/api/live', { cache: 'no-store' })).json()).gen,
+			current: () => data.live,
+			refresh: () => invalidateAll(),
+			busy: () =>
+				sending > 0 ||
+				armed !== null ||
+				detailId !== null ||
+				searchOpen ||
+				backersOpenId !== null ||
+				commentsOpenId !== null ||
+				peek !== null ||
+				notePop !== null ||
+				scorePop !== null ||
+				cmtPop !== null ||
+				seenPop !== null
+		})
+	);
 
 	$effect(() => {
 		if (!form) return;
@@ -438,6 +471,7 @@
 	<button
 		class="bk"
 		type="button"
+		in:scale={{ duration: 260, start: 0.3, easing: backOut }}
 		style="--bkring:var(--tier{levelOf(backer.xp)})"
 		aria-label={backer.name}
 		onpointerenter={(event) => {
@@ -927,7 +961,7 @@
 					onclick={(event) => !mousing && scoreAt(event.currentTarget, film, true)}
 					onblur={unpeek}
 				>
-					<b>{fmtScore(film.score)}</b><i>{T.unit(film.score, votes)}</i>
+					<b use:votePulse={film.score}>{fmtScore(film.score)}</b><i>{T.unit(film.score, votes)}</i>
 				</button>
 			</div>
 			<div class="ft">

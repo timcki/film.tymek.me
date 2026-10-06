@@ -19,14 +19,19 @@ import { addComment, commentsOf, reactComment } from '$lib/server/comments';
 import { seenOf, toggleSeen } from '$lib/server/seen';
 import { ruleFail } from '$lib/server/respond';
 import { detailsOf } from '$lib/server/tmdb';
+import { generation } from '$lib/server/live';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const db = getDb();
 	const rules = activeRules();
 	const week = currentWeek(db);
 	const person = locals.person!;
+	// read before anything else the page shows, so a write landing mid-load
+	// leaves this behind the data and the next poll reloads, never the reverse
+	const live = generation();
 	if (!week) {
 		return {
+			live,
 			films: [],
 			archived: [],
 			dropped: [],
@@ -70,6 +75,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	};
 
 	return {
+		live,
 		films: withComments(films),
 		archived: withComments(standings(db, rules, week.number, person.id, 'archived')),
 		dropped: filmsByStatus(db, 'dropped'),

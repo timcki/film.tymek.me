@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import { ADDED_COLUMNS, LATE_INDEXES, SCHEMA } from './schema.js';
+import { bumpGeneration } from './live.js';
 
 export type DB = Database.Database;
 
@@ -49,8 +50,15 @@ export function getDb(): DB {
 /**
  * BEGIN IMMEDIATE takes the write lock up front, so two concurrent mutations
  * serialise instead of one failing at COMMIT with SQLITE_BUSY_SNAPSHOT.
+ *
+ * Every mutation passing through here is also what makes it the place to tell
+ * the open lists that something changed (live.ts). Only once the outermost
+ * transaction has committed: a nested call is a savepoint, and a phone that
+ * reloaded on it would read the state from before the commit it was told about.
  */
 export function immediate<T>(db: DB, fn: () => T): T {
 	const tx = db.transaction(fn);
-	return tx.immediate();
+	const result = tx.immediate();
+	if (!db.inTransaction) bumpGeneration();
+	return result;
 }
