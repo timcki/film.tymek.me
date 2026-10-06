@@ -45,6 +45,15 @@
 			: data.films
 	);
 	const restStart = $derived(shortlist.size ? shortlist.size : -1);
+	// the reszta divider rides in the same keyed list as the cards, as an item of
+	// its own: on a desktop it has to span the whole row of the grid, which it
+	// cannot do from inside a card's wrapper, and as a sibling it glides with them
+	const board = $derived(
+		ordered.flatMap((film, i): { key: number | string; film: Film | null }[] => [
+			...(i === restStart ? [{ key: 'rest', film: null }] : []),
+			{ key: film.id, film }
+		])
+	);
 	// the film already spending the viewer's one hold, for the sheet's refusal
 	const heldTitle = $derived(data.films.find((film) => film.id === data.myHold)?.title ?? '');
 
@@ -802,7 +811,8 @@
 		class:shelf
 		class:held={Boolean(film.held)}
 	>
-		<div class="pw">
+		<!-- a podium card on a desktop stands its poster on a blurred copy of itself -->
+		<div class="pw" style:--art={lead && film.poster_url ? `url("${encodeURI(film.poster_url)}")` : null}>
 			<button
 				class="p"
 				onclick={() => {
@@ -1047,12 +1057,18 @@
 	<!-- no banner over the trójka: the lead glow and the reszta divider say it.
 	     The wrapper exists for the flip: confirmed votes glide cards to their
 	     new seats instead of teleporting them -->
-	{#each ordered as film, i (film.id)}
-		<div class="fwrap" animate:flip={{ duration: flipMs }}>
-			{#if restStart > 0 && i === restStart}
+	{#each board as { key, film } (key)}
+		<div
+			class="fwrap"
+			class:podium={film !== null && shortlist.has(film.id)}
+			class:headrow={film === null}
+			animate:flip={{ duration: flipMs }}
+		>
+			{#if film}
+				{@render row(film, shortlist.has(film.id), false)}
+			{:else}
 				<div class="rest-head">{T.restHead}</div>
 			{/if}
-			{@render row(film, shortlist.has(film.id), false)}
 		</div>
 	{:else}
 		<div class="empty">{T.listEmpty}</div>

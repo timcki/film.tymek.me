@@ -45,6 +45,9 @@
 	--sheen: rgba(255, 255, 255, 0.9);
 	--onart: rgba(50, 36, 28, 0.4);
 	--scrim: rgba(58, 40, 30, 0.4);
+	/* on paper the blur turns pastel by itself */
+	--stage: var(--sunk);
+	--stage-glow: 0.55;
 	/* dark toasts, so a message still arrives as an interruption */
 	--toast-bg: #33292a;
 	--toast-ink: #f7f0e7;
@@ -88,14 +91,16 @@
    a stem's brown-black, every neutral shifted to the same hue so the steps
    between them stay where app.css put them */
 :root[data-banana] {
-	--bg: #12100c;
+	--bg: #0e0c09;
 	--wash: radial-gradient(1000px 480px at 50% -14%, rgba(244, 220, 138, 0.07), transparent 70%);
-	--card: #1a1712;
-	--card2: #201c16;
+	/* a card has to stand clear of the page on its own: on near-black a drop
+	   shadow is nothing, so the step up is in the surface and the lit edge */
+	--card: #201c16;
+	--card2: #26211a;
 	/* lifted well clear of the card: the wells on /host and /stats are this at
 	   70% over a card, and four steps apart they vanish on a projector */
-	--sunk: #2e2820;
-	--raise: #242019;
+	--sunk: #332c23;
+	--raise: #2b261e;
 	--line: #2a251d;
 	--line2: #342e25;
 	--line3: #4a4235;
@@ -104,6 +109,15 @@
 	--ink2: #d2ccbf;
 	--dim: #9a9385;
 	--dimmer: #736c60;
+	--sheen: rgba(255, 240, 200, 0.07);
+	/* the podium flat rather than lit from above: white light on a brown card
+	   is a grey haze, so the rim and the halo are the fruit's colour instead */
+	/* the card's own colour, not transparent: the tint is the top of a
+	   gradient into --card, and see-through would fade the page in from above */
+	--lead-tint: var(--card);
+	--lead-glow: rgba(244, 220, 138, 0.07);
+	--lead-ring: rgba(244, 220, 138, 0.12);
+	--lead-edge: rgba(244, 220, 138, 0.4);
 	--accent: #f4dc8a;
 	--accent-ink: #3a2c00;
 	--warn: #f0946a;

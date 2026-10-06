@@ -51,6 +51,11 @@
 	/* the fade a caption sits in at the foot of a poster. Artwork is dark under
 	   every palette, so this one stays dark even when the page is not */
 	--art-scrim: rgba(8, 9, 11, 0.92);
+	/* the podium's poster stage on a desktop: the ground under the blurred art,
+	   and how strongly the art shows through. Below the page the art goes murky,
+	   so on dark the ground is near-black and the art is let through brighter */
+	--stage: color-mix(in srgb, var(--bg) 55%, black);
+	--stage-glow: 0.8;
 	--toast-bg: #f0f2f6;
 	--toast-ink: #14151a;
 	--toast-bad-bg: #f6dedb;
@@ -1599,6 +1604,118 @@ button.holdchip:hover {
 	font-size: 12px;
 	color: var(--dim);
 	margin: 5px 2px 0;
+}
+
+/* ---------- the board: the list on a desktop ----------
+   The one width breakpoint in this file, and it has to be one: a podium card is
+   as wide on a phone as a third of a desktop, so nothing narrower than the page
+   can tell the two apart. Below it the list is the column it always was. Above
+   it the room's choices stand side by side as tall cards and the rest pairs up
+   underneath, still read in ranking order, left to right and down. Six tracks,
+   so the podium takes two apiece and the rest three, from one grid, which is
+   what lets a card that wins its way up glide into the podium rather than
+   vanish from one list and appear in another */
+@media (min-width: 960px) {
+	.wrap.home {
+		max-width: 1180px;
+		padding: 0 24px;
+	}
+	.wrap.home header.lean {
+		margin: 0 -24px;
+		padding: 13px 24px;
+	}
+	.wrap.home .list {
+		display: grid;
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+		gap: 16px;
+		align-items: stretch;
+	}
+	.wrap.home .fwrap,
+	.wrap.home .list > .film {
+		grid-column: span 3;
+	}
+	.wrap.home .fwrap.podium {
+		grid-column: span 2;
+	}
+	.wrap.home .fwrap.headrow,
+	.wrap.home .list > .empty {
+		grid-column: 1 / -1;
+	}
+	/* a row of cards is one height, whatever each one has to say */
+	.wrap.home .fwrap > .film {
+		flex: 1;
+	}
+	.wrap.home .headrow .rest-head {
+		margin: 18px 2px 0;
+	}
+
+	/* the podium card stands up: the poster on a stage of its own blurred art,
+	   then the title, two lines of pitch, and the dock */
+	.wrap.home .film.lead {
+		flex-direction: column;
+		flex-wrap: nowrap;
+		padding: 14px;
+		gap: 14px;
+	}
+	.wrap.home .film.lead .pw {
+		flex: none;
+		align-self: stretch;
+		height: 236px;
+		border-radius: 12px;
+		overflow: hidden;
+		background: var(--stage);
+		display: grid;
+		place-items: center;
+		/* the blur is painted larger than its box and clipped, so its soft edge
+		   never shows as a lighter rim around the stage */
+		isolation: isolate;
+	}
+	.wrap.home .film.lead .pw::before {
+		content: '';
+		position: absolute;
+		inset: -24px;
+		z-index: -1;
+		background: var(--art, none) center / cover no-repeat;
+		filter: blur(22px) saturate(1.5);
+		opacity: var(--stage-glow);
+	}
+	.wrap.home .film.lead .p {
+		width: 136px;
+		flex: none;
+		align-self: center;
+		box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.6);
+	}
+	.wrap.home .film.lead .nomface {
+		top: 10px;
+		left: 10px;
+	}
+	.wrap.home .film.lead .ttl {
+		font-size: 16.5px;
+	}
+	/* there is room for the pitch to say more than its first few words */
+	.wrap.home .film.lead .note {
+		white-space: normal;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		margin-top: 6px;
+	}
+	.wrap.home .film.lead .cardfoot {
+		margin-top: -6px;
+		padding-top: 0;
+	}
+}
+/* and where a third of the page is as wide as a phone, the rest go three
+   across as well, each card the size it was drawn at */
+@media (min-width: 1280px) {
+	.wrap.home {
+		max-width: 1320px;
+	}
+	.wrap.home .fwrap,
+	.wrap.home .list > .film {
+		grid-column: span 2;
+	}
 }
 
 /* ---------- top-right identity menu ---------- */

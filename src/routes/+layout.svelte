@@ -362,7 +362,7 @@
 	<div class="wrap">{@render children()}</div>
 {:else}
 	<!-- the host view is a projector or a laptop, never a phone; let it breathe -->
-	<div class="wrap" class:wide={path.startsWith('/host')}>
+	<div class="wrap" class:wide={path.startsWith('/host')} class:home={path === '/'}>
 		{#if lean && data.week}
 			<!-- the list wears its state, not its name: a face, the night, and how
 			     long there is left to vote in, warming as that runs out. It follows

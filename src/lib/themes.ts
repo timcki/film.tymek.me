@@ -40,6 +40,6 @@ export function bananaOf(value: string | undefined | null): boolean {
 
 /** THEME_BG under the banana wash, sampled the same way */
 export const BANANA_BG: Record<'dark' | 'light', string> = {
-	dark: '#1a1710',
+	dark: '#16130e',
 	light: '#f0f0dc'
 };
