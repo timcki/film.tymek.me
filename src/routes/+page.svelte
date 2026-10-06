@@ -33,13 +33,23 @@
 
 	/* ----------------------------------------------------------- shortlist -- */
 
-	const shortlist = $derived(new Set(data.shortlistIds));
+	// a run of votes holds the list still: every tap moves scores, and a card
+	// that slid away between the first point and the second had to be hunted
+	// for. The order and the band are kept as they were when the run began;
+	// numbers, dots and faces still change in place, and once the viewer has
+	// been quiet for SETTLE_MS everything glides to where it now belongs
+	const SETTLE_MS = 2500;
+	let still = $state<{ order: number[]; shortlist: number[] } | null>(null);
+	let settleTimer: ReturnType<typeof setTimeout> | undefined;
+	$effect(() => () => clearTimeout(settleTimer));
+
+	const shortlist = $derived(new Set(still ? still.shortlist : data.shortlistIds));
 	// §3.5: a sleeper is no candidate, so it does not sit in the candidates' half
 	// of the list. Pulling the shortlist to the front makes the band a prefix
 	// again, and the cards at the top of the screen the ones that actually go to
 	// the room. Both halves keep the §3.2 ordering, so the rest is still headed
 	// by whatever scored highest among them, sleeper or not
-	const ordered = $derived(
+	const ranked = $derived(
 		shortlist.size
 			? [
 					...data.films.filter((film) => shortlist.has(film.id)),
@@ -47,6 +57,14 @@
 				]
 			: data.films
 	);
+	// held still, a film keeps its seat; one that was not there yet goes last
+	const ordered = $derived.by(() => {
+		if (!still) return ranked;
+		const seat = new Map(still.order.map((id, i) => [id, i]));
+		return [...ranked].sort(
+			(a, b) => (seat.get(a.id) ?? Infinity) - (seat.get(b.id) ?? Infinity)
+		);
+	});
 	const restStart = $derived(shortlist.size ? shortlist.size : -1);
 	// the reszta divider rides in the same keyed list as the cards, as an item of
 	// its own: on a desktop it has to span the whole row of the grid, which it
@@ -404,10 +422,20 @@
 	let sending = $state(0);
 
 	function submit(onOk?: () => void): SubmitFunction {
-		return () => {
+		return ({ action }) => {
 			sending += 1;
+			const vote = action.search.includes('setPoints');
+			if (vote) {
+				clearTimeout(settleTimer);
+				still ??= { order: ordered.map((film) => film.id), shortlist: [...shortlist] };
+			}
 			return async ({ result, update }) => {
 				sending -= 1;
+				if (vote) {
+					// restarted by every landing, so the quiet is measured from the last one
+					clearTimeout(settleTimer);
+					settleTimer = setTimeout(() => (still = null), SETTLE_MS);
+				}
 				if (result.type === 'failure') {
 					const body = result.data as
 						| { code?: string; params?: Record<string, string | number>; message?: string }
