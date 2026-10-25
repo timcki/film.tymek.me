@@ -3,12 +3,14 @@
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import { daysUntil, formatNight, toLocalInput } from '$lib/datetime';
 	import { adminDict } from '$lib/i18n.admin';
+	import { dictFor } from '$lib/i18n';
 	import { say } from '$lib/toast.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const A = $derived(adminDict(data.lang));
+	const T = $derived(dictFor(data.lang));
 	const when = (at: string) => formatNight(at, data.lang);
 
 	type Night = PageData['nights'][number];
@@ -57,6 +59,29 @@
 	</div>
 	{#if data.drivingId === null && data.fallback}
 		<p class="ahint">{A.calDefaultNote(when(data.fallback))}</p>
+	{/if}
+
+	<!-- §3.6: the round, not a date, is what goes special; the date is the row below -->
+	<div class="sec">{A.spcH}</div>
+	<p class="ahint">{A.spcIntro}</p>
+	{#if data.week.special}
+		<div class="nextcard">
+			<b>{A.spcOn(T.spName(data.week.special))}</b>
+			{#if data.specialPicks === 0}
+				<form method="POST" action="?/unspecial" use:enhance={submit()}>
+					<button class="tap">{A.spcStop}</button>
+				</form>
+			{:else}
+				<span class="tag soft">{A.spcLocked}</span>
+			{/if}
+		</div>
+	{:else if data.week.status === 'open'}
+		{#each data.specials as id (id)}
+			<form method="POST" action="?/special" use:enhance={submit()}>
+				<input type="hidden" name="special" value={id} />
+				<button class="tap go">{A.spcStart(T.spName(id))}</button>
+			</form>
+		{/each}
 	{/if}
 {/if}
 

@@ -79,7 +79,9 @@ describe('opening a database that predates the archive work', () => {
 		const db = legacyDb();
 		applySchema(db);
 
-		expect(indexNames(db)).toContain('film_one_per_person_per_round');
+		expect(indexNames(db)).toContain('film_one_nomination_per_round');
+		// §3.6: the round-scoped index it replaced in turn, once special picks existed
+		expect(indexNames(db)).not.toContain('film_one_per_person_per_round');
 		expect(indexNames(db)).not.toContain('film_one_per_person_per_week');
 	});
 

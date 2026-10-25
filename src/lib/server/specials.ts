@@ -1,0 +1,226 @@
+import type { DB } from './db.js';
+import { immediate } from './db.js';
+import type { Face, Film, Week } from './types.js';
+import { RuleError } from './types.js';
+import type { RuleSet } from './rules.js';
+import { iso, localParts } from './time.js';
+import { avatarUrl } from './people.js';
+import { rescoreAll } from './scoring.js';
+import { rexpAll } from './xp.js';
+import { assertNotDuplicate, filmById, insertFilm, type NominationInput } from './films.js';
+import { currentWeek, requireOpenWeek, requireSpecialWeek } from './weeks.js';
+import { SPECIALS, specialOf, type Special, type SpecialId } from '../specials.js';
+
+/**
+ * §3.6. An admin gives the open round over to a special night. The list goes to
+ * sleep on the spot: points already spent this round stand, nothing more can be
+ * spent or nominated, and the round will not age anything on it.
+ */
+export function startSpecial(db: DB, rules: RuleSet, id: SpecialId, now: Date = new Date()): Week {
+	return immediate(db, () => {
+		const week = requireOpenWeek(db, now);
+		if (week.special) throw new RuleError('special_on', 'this round is already a special one');
+		db.prepare('UPDATE week SET special = ? WHERE number = ?').run(SPECIALS[id].id, week.number);
+		rescoreAll(db, rules, week.number);
+		return currentWeek(db) as Week;
+	});
+}
+
+/**
+ * §3.6: changing your mind, while nothing rides on it. Once a pick is up there is
+ * somebody's choice to undo, and nothing is ever deleted (§1.5), so by then the
+ * round runs its course.
+ */
+export function stopSpecial(db: DB, rules: RuleSet, now: Date = new Date()): void {
+	immediate(db, () => {
+		const week = requireSpecialWeek(db, now);
+		const { n } = db
+			.prepare('SELECT COUNT(*) AS n FROM film WHERE special = ? AND added_week = ?')
+			.get(week.special, week.number) as { n: number };
+		if (n > 0) throw new RuleError('special_has_picks', 'somebody has already put a pick up');
+		db.prepare('UPDATE week SET special = NULL WHERE number = ?').run(week.number);
+		rescoreAll(db, rules, week.number);
+	});
+}
+
+function picksOf(db: DB, week: Week, personId: string): number {
+	return (
+		db
+			.prepare(
+				'SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND added_week = ? AND special = ?'
+			)
+			.get(personId, week.number, week.special) as { n: number }
+	).n;
+}
+
+/**
+ * §3.6: a pick for the night. A few each rather than one, and the usual
+ * duplicate rules (§4.1) against everything, the list included: a film already
+ * waiting on the list is one the list will get to.
+ */
+export function nominateSpecial(
+	db: DB,
+	rules: RuleSet,
+	personId: string,
+	input: NominationInput,
+	now: Date = new Date()
+): number {
+	return immediate(db, () => {
+		const week = requireSpecialWeek(db, now);
+		const special = specialOf(week.special) as Special;
+		if (picksOf(db, week, personId) >= special.picksPerPerson) {
+			throw new RuleError('picks_spent', `you have put up all ${special.picksPerPerson} of yours`, {
+				max: special.picksPerPerson
+			});
+		}
+		assertNotDuplicate(db, input);
+		const id = insertFilm(db, input, personId, week.number, week.special);
+		rescoreAll(db, rules, week.number);
+		rexpAll(db);
+		return id;
+	});
+}
+
+/**
+ * §3.6: approval voting. A tick on a pick says "I would happily watch this",
+ * as many ticks as you like, your own picks included, and taken back freely until
+ * the round closes: nobody can see the counts, so there is nothing to react to.
+ * Returns whether the viewer approves of the pick afterwards.
+ */
+export function setApproval(
+	db: DB,
+	rules: RuleSet,
+	personId: string,
+	filmId: number,
+	on: boolean,
+	now: Date = new Date()
+): boolean {
+	return immediate(db, () => {
+		const week = requireSpecialWeek(db, now);
+		const film = filmById(db, filmId);
+		if (
+			!film ||
+			film.special !== week.special ||
+			film.added_week !== week.number ||
+			film.status !== 'active'
+		) {
+			throw new RuleError('not_a_pick', 'that is not one of this round’s picks');
+		}
+		if (on) {
+			db.prepare(
+				'INSERT OR IGNORE INTO approval (film_id, person_id, created_at) VALUES (?, ?, ?)'
+			).run(filmId, personId, iso(now));
+		} else {
+			db.prepare('DELETE FROM approval WHERE film_id = ? AND person_id = ?').run(filmId, personId);
+		}
+		rescoreAll(db, rules, week.number);
+		rexpAll(db);
+		return on;
+	});
+}
+
+export type SpecialPick = Film & {
+	nominator: Face & { xp: number };
+	/** whether the viewer has ticked it; nobody else's ticks leave the server */
+	approved: boolean;
+};
+
+/**
+ * The round's picks as the page may show them while it is open: in the order
+ * they were put up, so the order says nothing about the counts, with score taken
+ * off for the same reason.
+ */
+export function specialPicks(db: DB, week: Week, viewerId: string | null): SpecialPick[] {
+	const films = db
+		.prepare(
+			`SELECT f.*, p.name AS nom_name, p.colour AS nom_colour, p.xp AS nom_xp,
+			        p.avatar_updated_at AS nom_avatar,
+			        EXISTS (SELECT 1 FROM approval a WHERE a.film_id = f.id AND a.person_id = ?) AS approved
+			 FROM film f JOIN person p ON p.id = f.added_by
+			 WHERE f.special = ? AND f.added_week = ? AND f.status = 'active'
+			 ORDER BY f.created_at, f.id`
+		)
+		.all(viewerId, week.special, week.number) as (Film & {
+		nom_name: string;
+		nom_colour: string;
+		nom_xp: number;
+		nom_avatar: string | null;
+		approved: number;
+	})[];
+	return films.map(({ nom_name, nom_colour, nom_xp, nom_avatar, approved, ...film }) => ({
+		...film,
+		score: 0,
+		nominator: {
+			id: film.added_by,
+			name: nom_name,
+			colour: nom_colour,
+			xp: nom_xp,
+			avatar: avatarUrl(film.added_by, nom_avatar)
+		},
+		approved: Boolean(approved)
+	}));
+}
+
+export type SpecialTurnout = {
+	/** who has ticked anything, most recent first; never what they ticked */
+	voters: (Face & { xp: number })[];
+	roster: number;
+};
+
+export function specialTurnout(db: DB, week: Week): SpecialTurnout {
+	const rows = db
+		.prepare(
+			`SELECT p.id, p.name, p.colour, p.avatar_updated_at, p.xp, MAX(a.created_at) AS last
+			 FROM approval a
+			 JOIN film f ON f.id = a.film_id
+			 JOIN person p ON p.id = a.person_id
+			 WHERE f.special = ? AND f.added_week = ?
+			 GROUP BY p.id
+			 ORDER BY last DESC, p.name COLLATE NOCASE`
+		)
+		.all(week.special, week.number) as {
+		id: string;
+		name: string;
+		colour: string;
+		avatar_updated_at: string | null;
+		xp: number;
+	}[];
+	const { roster } = db.prepare('SELECT COUNT(*) AS roster FROM person WHERE active = 1').get() as {
+		roster: number;
+	};
+	return {
+		voters: rows.map((row) => ({
+			id: row.id,
+			name: row.name,
+			colour: row.colour,
+			avatar: avatarUrl(row.id, row.avatar_updated_at),
+			xp: row.xp
+		})),
+		roster
+	};
+}
+
+/** how many of their picks this person has put up this round */
+export function picksUsed(db: DB, week: Week, personId: string): number {
+	return week.special ? picksOf(db, week, personId) : 0;
+}
+
+/**
+ * Which special look the site wears right now, if any. On while the round is in
+ * play; once it is over, for the rest of the month it belongs to, because the
+ * night can come a few days before the date it is for.
+ */
+export function lookAt(db: DB, now: Date = new Date()): Special | null {
+	const week = currentWeek(db);
+	if (!week) return null;
+	const live = specialOf(week.special);
+	if (live) return live;
+	const last = db
+		.prepare('SELECT special, closes_at FROM week WHERE special IS NOT NULL ORDER BY number DESC LIMIT 1')
+		.get() as { special: string; closes_at: string } | undefined;
+	const special = specialOf(last?.special);
+	if (!special || !last) return null;
+	const held = localParts(new Date(last.closes_at));
+	const today = localParts(now);
+	return held.year === today.year && today.month === special.themeMonth ? special : null;
+}

@@ -7,7 +7,8 @@ import { accrue, orderFilms } from './rules.js';
 import { iso } from './time.js';
 import { heldIn, ignoreHolds } from './holds.js';
 import { markNightUsed, nextNight } from './schedule.js';
-import { pointsInWindow, rescoreAll, totalPoints } from './scoring.js';
+import { listClock, pointsInWindow, rescoreAll, totalPoints } from './scoring.js';
+import { specialOf } from '../specials.js';
 import { rexpAll } from './xp.js';
 import { newCode } from './tokens.js';
 
@@ -32,6 +33,27 @@ export function requireOpenWeek(db: DB, now: Date = new Date()): Week {
 		throw new RuleError('deadline_passed', 'voting closed at 20:00, the film is starting');
 	}
 	return week;
+}
+
+/**
+ * §3.6: the list's own mutations, which a special round puts to sleep. Checked
+ * after requireOpenWeek's own refusals, so a closed round still says it is closed.
+ */
+export function requireListWeek(db: DB, now: Date = new Date()): Week {
+	const week = requireOpenWeek(db, now);
+	if (week.special) {
+		throw new RuleError('list_asleep', 'the list is asleep for the special round', {
+			special: week.special
+		});
+	}
+	return week;
+}
+
+/** §3.6: the special round's own mutations, which only make sense inside one */
+export function requireSpecialWeek(db: DB, now: Date = new Date()): Week & { special: string } {
+	const week = requireOpenWeek(db, now);
+	if (!week.special) throw new RuleError('no_special', 'this round is not a special one');
+	return week as Week & { special: string };
 }
 
 export function openWeek(db: DB, number: number, now: Date = new Date()): Week {
@@ -60,9 +82,21 @@ export function syncOpenWeek(db: DB): Week | undefined {
 /** ordered active films, per §3.2, with their scores as of `week` */
 export function standingsFor(db: DB, rules: RuleSet, week: number): (Film & { score: number })[] {
 	rescoreAll(db, rules, week);
-	const films = db.prepare(`SELECT * FROM film WHERE status = 'active' AND archival = 0`).all() as (Film & {
-		score: number;
-	})[];
+	const films = db
+		.prepare(`SELECT * FROM film WHERE status = 'active' AND archival = 0 AND special IS NULL`)
+		.all() as (Film & { score: number })[];
+	return orderFilms(films);
+}
+
+/**
+ * §3.6: a special round's picks, most approved first. The rest of the order is
+ * §3.2's, so a tie goes to the pick that was put up first, and never to a coin.
+ */
+export function specialStandings(db: DB, rules: RuleSet, week: Week): (Film & { score: number })[] {
+	rescoreAll(db, rules, week.number);
+	const films = db
+		.prepare(`SELECT * FROM film WHERE status = 'active' AND special = ? AND added_week = ?`)
+		.all(week.special, week.number) as (Film & { score: number })[];
 	return orderFilms(films);
 }
 
@@ -81,10 +115,14 @@ export function shortlistOf(db: DB, week: number): Film[] {
 
 /** §3.4, evaluated once during week close, after the winner has been removed */
 export function applyAttrition(db: DB, rules: RuleSet, week: number): void {
-	const films = db.prepare(`SELECT * FROM film WHERE status = 'active' AND archival = 0`).all() as Film[];
+	const films = db
+		.prepare(`SELECT * FROM film WHERE status = 'active' AND archival = 0 AND special IS NULL`)
+		.all() as Film[];
+	// §3.6: age on the list's clock, which a special round does not move
+	const clock = listClock(db);
 	for (const film of films) {
 		if (rules.attrition.kind === 'archive') {
-			const age = week - film.added_week;
+			const age = clock(week) - clock(film.added_week);
 			if (totalPoints(db, film.id) === 0 && age >= rules.attrition.afterWeeksAtZero) {
 				db.prepare(`UPDATE film SET status = 'archived' WHERE id = ?`).run(film.id);
 			}
@@ -118,6 +156,23 @@ export function accrueBanks(db: DB, rules: RuleSet, week: number): void {
 	}
 }
 
+/**
+ * What a round leaves behind once it is decided. A list round runs attrition and
+ * banks; a special one (§3.6) touches neither, because the list slept through
+ * it, and its picks that did not get watched go with it: they were put up for
+ * that night, not for the list.
+ */
+function settle(db: DB, rules: RuleSet, week: Week): void {
+	if (week.special) {
+		db.prepare(
+			`UPDATE film SET status = 'dropped' WHERE status = 'active' AND special = ? AND added_week = ?`
+		).run(week.special, week.number);
+		return;
+	}
+	applyAttrition(db, rules, week.number);
+	accrueBanks(db, rules, week.number);
+}
+
 /** the winner is watched, the week resolves, attrition and banks run, the next week opens */
 export function finish(
 	db: DB,
@@ -134,8 +189,7 @@ export function finish(
 		iso(now),
 		week.number
 	);
-	applyAttrition(db, rules, week.number);
-	accrueBanks(db, rules, week.number);
+	settle(db, rules, week);
 	markNightUsed(db, week.number, week.closes_at);
 	const next = openWeek(db, week.number + 1, now);
 	rescoreAll(db, rules, next.number);
@@ -147,8 +201,7 @@ function closeWithoutWinner(db: DB, rules: RuleSet, week: Week, now: Date): void
 		iso(now),
 		week.number
 	);
-	applyAttrition(db, rules, week.number);
-	accrueBanks(db, rules, week.number);
+	settle(db, rules, week);
 	markNightUsed(db, week.number, week.closes_at);
 	const next = openWeek(db, week.number + 1, now);
 	rescoreAll(db, rules, next.number);
@@ -168,7 +221,9 @@ export function closeWeek(db: DB, rules: RuleSet, now: Date = new Date()): Close
 		const week = currentWeek(db);
 		if (!week || week.status !== 'open') return { kind: 'noop' } as CloseResult;
 
-		const ranked = standingsFor(db, rules, week.number);
+		// §3.6: a special round's candidates are its own picks, by approvals
+		const special = specialOf(week.special);
+		const ranked = special ? specialStandings(db, rules, week) : standingsFor(db, rules, week.number);
 		if (ranked.length === 0 || ranked[0].score <= 0) {
 			closeWithoutWinner(db, rules, week, now);
 			return { kind: 'no-winner' } as CloseResult;
@@ -180,11 +235,15 @@ export function closeWeek(db: DB, rules: RuleSet, now: Date = new Date()): Close
 		const candidates = ranked.filter((f) => f.score > 0);
 		// §3.5: a film whose nominator asked it to wait is not a candidate tonight,
 		// and the film under it moves up. Where every candidate stepped aside none
-		// of them does: the room still gets a night and no hold is spent on it
+		// of them does: the room still gets a night and no hold is spent on it.
+		// A special round has no holds to honour; its picks cannot be held
 		const held = heldIn(db, week.number);
 		const awake = candidates.filter((f) => !held.has(f.id));
 		if (!awake.length) ignoreHolds(db, week.number);
-		const shortlist = (awake.length ? awake : candidates).slice(0, rules.shortlistSize);
+		const shortlist = (awake.length ? awake : candidates).slice(
+			0,
+			special ? special.shortlistSize : rules.shortlistSize
+		);
 		const code = uniqueCode(db);
 		const result = db
 			.prepare(

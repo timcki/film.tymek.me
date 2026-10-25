@@ -19,17 +19,63 @@ export function pointsByFilm(db: DB): Map<number, Map<number, number>> {
 }
 
 /**
+ * §3.6: the list's own clock, as a round number to the rounds the list was awake
+ * for. A special round is one the list slept through, so it ages nothing: the
+ * round after it shares its place on this clock, and points cast in a special
+ * round's week before it began are still this round's points once the list
+ * wakes. With no special rounds on record it is the identity.
+ */
+export type ListClock = (week: number) => number;
+
+export function listClock(db: DB): ListClock {
+	const specials = (
+		db.prepare('SELECT number FROM week WHERE special IS NOT NULL ORDER BY number').all() as {
+			number: number;
+		}[]
+	).map((row) => row.number);
+	if (!specials.length) return (week) => week;
+	return (week) => week - specials.filter((number) => number < week).length;
+}
+
+/** a film's points re-keyed from round numbers to the list's clock */
+function onClock(clock: ListClock, points: Map<number, number>): Map<number, number> {
+	const out = new Map<number, number>();
+	for (const [week, p] of points) {
+		const at = clock(week);
+		out.set(at, (out.get(at) ?? 0) + p);
+	}
+	return out;
+}
+
+/** §3.6: how many people would happily watch each special pick, which is its whole score */
+function approvalsByFilm(db: DB): Map<number, number> {
+	const rows = db
+		.prepare('SELECT film_id, COUNT(*) AS n FROM approval GROUP BY film_id')
+		.all() as { film_id: number; n: number }[];
+	return new Map(rows.map((row) => [row.film_id, row.n]));
+}
+
+/**
  * Recomputes every film's score from the ballot table and writes the cache.
  * The only writer of film.score, always run inside the mutating transaction, so
  * the cache is rebuilt wholesale and can never partially drift.
  */
 export function rescoreAll(db: DB, rules: RuleSet, currentWeek: number): Map<number, number> {
 	const points = pointsByFilm(db);
-	const films = db.prepare('SELECT id FROM film').all() as { id: number }[];
+	const approvals = approvalsByFilm(db);
+	const clock = listClock(db);
+	const now = clock(currentWeek);
+	const films = db.prepare('SELECT id, special FROM film').all() as {
+		id: number;
+		special: string | null;
+	}[];
 	const update = db.prepare('UPDATE film SET score = ? WHERE id = ?');
 	const scores = new Map<number, number>();
 	for (const film of films) {
-		const value = scoreOf(rules, points.get(film.id) ?? new Map(), currentWeek);
+		// §3.6: a special pick never takes points; its score is its approvals
+		const value = film.special
+			? (approvals.get(film.id) ?? 0)
+			: scoreOf(rules, onClock(clock, points.get(film.id) ?? new Map()), now);
 		scores.set(film.id, value);
 		update.run(value, film.id);
 	}
@@ -37,17 +83,37 @@ export function rescoreAll(db: DB, rules: RuleSet, currentWeek: number): Map<num
 }
 
 export function scoreFor(db: DB, rules: RuleSet, filmId: number, currentWeek: number): number {
-	return scoreOf(rules, pointsByFilm(db).get(filmId) ?? new Map(), currentWeek);
+	const clock = listClock(db);
+	return scoreOf(rules, onClock(clock, pointsByFilm(db).get(filmId) ?? new Map()), clock(currentWeek));
+}
+
+/**
+ * The rounds a window of `weeks` rounds ending at `week` covers, inclusive, on
+ * the list's clock (§3.6): a special round inside it widens it by one, because
+ * the list was asleep for that one.
+ */
+export function windowWeeks(db: DB, week: number, weeks: number): number[] {
+	const clock = listClock(db);
+	const end = clock(week);
+	return (
+		db.prepare('SELECT number FROM week WHERE number <= ? ORDER BY number').all(week) as {
+			number: number;
+		}[]
+	)
+		.map((row) => row.number)
+		.filter((number) => clock(number) > end - weeks);
 }
 
 /** points a film received across a window of `weeks` weeks ending at `week`, inclusive */
 export function pointsInWindow(db: DB, filmId: number, week: number, weeks: number): number {
+	const span = windowWeeks(db, week, weeks);
+	if (!span.length) return 0;
 	const row = db
 		.prepare(
 			`SELECT COALESCE(SUM(points), 0) AS total FROM ballot
-			 WHERE film_id = ? AND week_number <= ? AND week_number > ?`
+			 WHERE film_id = ? AND week_number IN (${span.map(() => '?').join(',')})`
 		)
-		.get(filmId, week, week - weeks) as { total: number };
+		.get(filmId, ...span) as { total: number };
 	return row.total;
 }
 
@@ -66,16 +132,19 @@ export function campaignWeeks(db: DB, filmId: number, week: number): number {
 	const rows = db
 		.prepare('SELECT person_id, week_number FROM ballot WHERE film_id = ?')
 		.all(filmId) as { person_id: string; week_number: number }[];
+	// counted on the list's clock, so sleeping through a special round is no break
+	const clock = listClock(db);
+	const end = clock(week);
 	const byPerson = new Map<string, Set<number>>();
 	for (const row of rows) {
 		let weeks = byPerson.get(row.person_id);
 		if (!weeks) byPerson.set(row.person_id, (weeks = new Set()));
-		weeks.add(row.week_number);
+		weeks.add(clock(row.week_number));
 	}
 	let best = 0;
 	for (const weeks of byPerson.values()) {
 		let run = 0;
-		while (weeks.has(week - run)) run++;
+		while (weeks.has(end - run)) run++;
 		if (run > best) best = run;
 	}
 	return best;

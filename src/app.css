@@ -416,9 +416,190 @@ header .sub b {
 	white-space: normal;
 }
 @media (hover: hover) {
-	.budget:hover .tip {
+	/* the special round's rules open on a click alone, like a menu: a pointer
+	   crossing the bar should not drop a panel over the picks */
+	.budget:hover .tip:not(.sptip) {
 		display: block !important;
 	}
+}
+/* §3.6: a special round's name in the points pill's place, its rules in the tip */
+.pill.spchip {
+	position: relative;
+	gap: 7px;
+	padding: 6px 12px 6px 10px;
+	color: var(--ink);
+	font-weight: 650;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+.pill.spchip:hover {
+	background: color-mix(in srgb, var(--raise) 82%, var(--ink));
+}
+/* it opens: a chevron that turns over while it is open */
+.spchev {
+	fill: none;
+	stroke: var(--dim);
+	stroke-width: 1.5;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	transition: transform 0.2s ease;
+}
+.spchev.up {
+	transform: rotate(180deg);
+}
+/* nobody has read the rules on this phone yet: a dot on the chip and a ring
+   breathing out of it, slow enough to notice and not so busy as to nag */
+.pill.spchip.fresh::after {
+	content: '';
+	position: absolute;
+	top: 1px;
+	right: 1px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--accent);
+	box-shadow: 0 0 0 2px var(--bg);
+}
+.pill.spchip.fresh {
+	animation: rulesbeckon 2.4s ease-out infinite;
+}
+@keyframes rulesbeckon {
+	0% {
+		box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+	}
+	70%,
+	100% {
+		box-shadow: 0 0 0 9px color-mix(in srgb, var(--accent) 0%, transparent);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.pill.spchip.fresh {
+		animation: none;
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+	}
+}
+/* the rules hang from the bar's right edge rather than from the chip, which the
+   + now keeps off that edge: anchored to the chip, a phone-wide tip ran off the
+   left of the screen */
+.hrow:has(.spchip) {
+	position: relative;
+}
+.hrow .budget:has(.spchip) {
+	position: static;
+}
+.budget .tip.sptip {
+	right: 0;
+	max-width: min(360px, calc(100vw - 28px));
+	padding: 12px 14px 4px;
+	font-size: 12.5px;
+}
+.sptip ol {
+	margin: 0;
+	padding-left: 18px;
+}
+.sptip li {
+	margin-bottom: 8px;
+}
+.sptip li b {
+	color: var(--ink);
+	font-variant-numeric: normal;
+}
+/* the + that opens the special round's nomination sheet: the accent's own
+   fill, the one call to action in the bar */
+.pill.spadd {
+	padding: 0;
+	width: 34px;
+	height: 34px;
+	justify-content: center;
+	background: var(--accent);
+	color: var(--accent-ink);
+	cursor: pointer;
+	margin-left: 6px;
+	flex: none;
+}
+.pill.spadd svg {
+	stroke: currentColor;
+	stroke-width: 1.8;
+	stroke-linecap: round;
+	transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+/* a quarter and a half round, landing on the × with a small overshoot */
+.pill.spadd.on svg {
+	transform: rotate(135deg);
+}
+.pill.spadd {
+	transition:
+		transform 0.18s ease,
+		box-shadow 0.25s ease;
+}
+.pill.spadd:active {
+	transform: scale(0.9);
+}
+.pill.spadd.on {
+	box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+/* every pick put up: still there, but spent */
+.pill.spadd:disabled {
+	background: var(--raise);
+	color: var(--dim);
+	cursor: default;
+	transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+	.pill.spadd,
+	.pill.spadd svg {
+		transition: none;
+	}
+}
+.wshort {
+	display: none;
+}
+/* a phone's bar holds the special round's two chips by dropping words: the
+   pumpkin alone stands for the round, and the countdown loses its verb */
+@media (max-width: 560px) {
+	.hrow:has(.spchip) .wlong {
+		display: none;
+	}
+	.hrow:has(.spchip) .wshort {
+		display: inline;
+	}
+	.pill.spchip {
+		padding: 6px 8px 6px 7px;
+		gap: 4px;
+	}
+	.pill.spadd {
+		width: 32px;
+		height: 32px;
+		margin-left: 3px;
+	}
+	.hrow:has(.spchip) .wk .wkbtn {
+		gap: 6px;
+	}
+}
+/* the narrowest phones (an SE, a mini) are a dozen pixels short of the date,
+   and the two chips give them back */
+@media (max-width: 380px) {
+	.pill.spchip {
+		padding: 5px 6px 5px 5px;
+		gap: 3px;
+		font-size: 11.5px;
+	}
+	.pill.spadd {
+		width: 30px;
+		height: 30px;
+		margin-left: 2px;
+	}
+	.hrow:has(.spchip) .wk .wkbtn {
+		gap: 3px;
+	}
+}
+/* the patch the rules end on: a skull and a lantern, out of the text's way */
+.sptip .spfoot {
+	display: flex;
+	justify-content: flex-end;
+	align-items: flex-end;
+	gap: 5px;
+	margin: -2px -2px 8px;
 }
 
 /* ---------- film rows ---------- */

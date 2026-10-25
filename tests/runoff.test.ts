@@ -13,7 +13,8 @@ import {
 	revealedRankings,
 	myRanking,
 	turnout,
-	tally
+	tally,
+	withdrawFlashVote
 } from '../src/lib/server/runoffs.js';
 import { applySchema, type DB } from '../src/lib/server/db.js';
 import { RuleError } from '../src/lib/server/types.js';
@@ -101,6 +102,24 @@ describe('runoff', () => {
 		} catch (error) {
 			expect((error as RuleError).code).toBe('runoff_decided');
 		}
+	});
+
+	it('a saved ranking can be taken back while the room is open, and only then', () => {
+		const { db, rules, first, second } = tiedWeek();
+		const runoff = openRunoff(db)!;
+		flashVote(db, runoff.id, 'celina', 'celina', first);
+		flashVote(db, runoff.id, 'device-abc', null, second);
+		withdrawFlashVote(db, runoff.id, 'celina');
+		expect(turnout(db, runoff.id)).toBe(1);
+		expect(myRanking(db, runoff.id, 'celina')).toEqual([]);
+		// being in the room is not taken back with it
+		expect(db.prepare('SELECT COUNT(*) AS n FROM attendance WHERE person_id = ?').get('celina')).toEqual({ n: 1 });
+
+		flashVote(db, runoff.id, 'celina', 'celina', first);
+		closeRunoff(db, rules, runoff.id);
+		expect(() => withdrawFlashVote(db, runoff.id, 'celina')).toThrow(
+			expect.objectContaining({ code: 'runoff_decided' })
+		);
 	});
 
 	it('a guest with no person_id can still vote on their own device key', () => {
@@ -252,50 +271,33 @@ describe('private rankings', () => {
 		expect(revealedRankings(db, runoff.id + 1)).toEqual([]);
 	});
 
-	it('selects the compromise over the plurality leader', () => {
+	it('lets ranked points carry the compromise past the plurality leader', () => {
 		const { db, rules, runoff, films: [a, b, c], cast } = rankedRoom();
 		cast([a, b, c], 4);
 		cast([c, b, a], 3);
 		cast([b, c, a], 3);
 		const rows = tally(db, runoff.id);
 		expect(rows.map((r) => [r.film.id, r.votes, r.points])).toEqual([[b, 3, 13], [c, 3, 9], [a, 4, 8]]);
-		expect(rows[0].comparisons).toEqual([
-			{ filmId: a, preferred: 6, opposed: 4 },
-			{ filmId: c, preferred: 7, opposed: 3 }
-		]);
 		expect(closeRunoff(db, rules, runoff.id)).toMatchObject({ kind: 'winner', film: { id: b } });
 	});
 
-	it('gives a pairwise winner priority even when another film has more ranked points', () => {
-		const { db, runoff, films: [a, b, c], cast } = rankedRoom();
+	it('goes by points even against the film a majority puts first', () => {
+		const { db, rules, runoff, films: [a, b, c], cast } = rankedRoom();
 		cast([a, b, c], 3);
 		cast([b, c, a], 2);
-		const rows = tally(db, runoff.id);
-		expect(rows.map((r) => [r.film.id, r.points, r.beatsAll])).toEqual([
-			[a, 6, true], [b, 7, false], [c, 2, false]
-		]);
+		expect(tally(db, runoff.id).map((r) => [r.film.id, r.points])).toEqual([[b, 7], [a, 6], [c, 2]]);
+		expect(closeRunoff(db, rules, runoff.id)).toMatchObject({ kind: 'winner', film: { id: b } });
 	});
 
-	it('resolves a strict majority cycle with ranked points', () => {
+	it('settles a three-way split on points, with no special case for it', () => {
 		const { db, runoff, films: [a, b, c], cast } = rankedRoom();
 		cast([a, b, c], 3);
 		cast([b, c, a], 4);
 		cast([c, a, b], 2);
-		const rows = tally(db, runoff.id);
-		expect(rows.every((r) => !r.beatsAll)).toBe(true);
-		expect(rows.map((r) => [r.film.id, r.points])).toEqual([[b, 11], [a, 8], [c, 8]]);
+		expect(tally(db, runoff.id).map((r) => [r.film.id, r.points])).toEqual([[b, 11], [a, 8], [c, 8]]);
 	});
 
-	it('does not treat a tied comparison as a pairwise win', () => {
-		const { db, runoff, films: [a, b, c], cast } = rankedRoom();
-		cast([a, b, c]);
-		cast([b, c, a]);
-		const rows = tally(db, runoff.id);
-		expect(rows.some((r) => r.beatsAll)).toBe(false);
-		expect(rows.map((r) => [r.film.id, r.points])).toEqual([[b, 3], [a, 2], [c, 1]]);
-	});
-
-	it('uses weekly score before age when a cycle also ties on ranked points', () => {
+	it('breaks a tie on points by weekly score before age', () => {
 		const { db, rules, runoff, films: [a, b, c], cast } = rankedRoom();
 		db.prepare('UPDATE film SET score = 5 WHERE id = ?').run(c);
 		cast([a, b, c]);
@@ -307,20 +309,20 @@ describe('private rankings', () => {
 		expect(publicTally(db, runoffByCode(db, runoff.code)!)[0].film.id).toBe(c);
 	});
 
-	it('keeps totals, comparisons and result order private until close', () => {
+	it('keeps totals and result order private until close', () => {
 		const { db, rules, runoff, films: [a, b, c], cast } = rankedRoom();
 		const before = publicTally(db, runoff);
 		cast([c, b, a], 2);
 		expect(publicTally(db, runoff)).toEqual(before);
-		expect(before.map((r) => [r.film.id, r.votes, r.points, r.beatsAll, r.comparisons])).toEqual([
-			[a, null, null, null, null], [b, null, null, null, null], [c, null, null, null, null]
+		expect(before.map((r) => [r.film.id, r.votes, r.points])).toEqual([
+			[a, null, null], [b, null, null], [c, null, null]
 		]);
 		expect(turnout(db, runoff.id)).toBe(2);
 		expect(myRanking(db, runoff.id, 'guest-0')).toEqual([c, b, a]);
 		expect(myRanking(db, runoff.id, 'another-device')).toEqual([]);
 		closeRunoff(db, rules, runoff.id);
 		expect(publicTally(db, runoffByCode(db, runoff.code)!)[0]).toMatchObject({
-			film: { id: c }, points: 4, votes: 2, beatsAll: true
+			film: { id: c }, points: 4, votes: 2
 		});
 	});
 
@@ -352,8 +354,7 @@ describe('private rankings', () => {
 		expect(myRanking(db, runoff.id, 'legacy')).toEqual([c]);
 		expect(tally(db, runoff.id).map((r) => [r.film.id, r.votes, r.points])).toEqual([[c, 1, 2], [a, 0, 0], [b, 0, 0]]);
 		cast([b, a, c]);
-		expect(tally(db, runoff.id).find((r) => r.film.id === b)!.comparisons)
-			.toContainEqual({ filmId: a, preferred: 1, opposed: 0 });
+		expect(tally(db, runoff.id).map((r) => [r.film.id, r.points])).toEqual([[b, 2], [c, 2], [a, 1]]);
 		rankVote(db, runoff.id, 'legacy', null, [c, a, b]);
 		expect(turnout(db, runoff.id)).toBe(2);
 		expect(myRanking(db, runoff.id, 'legacy')).toEqual([c, a, b]);

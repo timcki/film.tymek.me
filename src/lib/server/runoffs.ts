@@ -13,8 +13,6 @@ export type Tally = {
 	film: Film;
 	votes: number;
 	points: number;
-	beatsAll: boolean;
-	comparisons: { filmId: number; preferred: number; opposed: number }[];
 };
 
 export function runoffByCode(db: DB, code: string): Runoff | undefined {
@@ -41,7 +39,7 @@ export function isExpired(runoff: Runoff, now: Date = new Date()): boolean {
 	return now.getTime() >= new Date(runoff.expires_at).getTime();
 }
 
-/** §7.3: a strict pairwise winner, otherwise ranked points, then §3.2 ordering. */
+/** §7.3: ranked points, then §3.2 ordering. */
 export function tally(db: DB, runoffId: number): Tally[] {
 	const films = orderFilms(runoffFilms(db, runoffId));
 	const ballots = db.prepare('SELECT film_id, ranking FROM runoff_ballot WHERE runoff_id = ?')
@@ -52,20 +50,12 @@ export function tally(db: DB, runoffId: number): Tally[] {
 		const index = ranking.indexOf(id);
 		return index < 0 ? films.length - 1 : index;
 	};
-	return films.map((film) => {
-		const comparisons = films.filter((other) => other.id !== film.id).map((other) => ({
-			filmId: other.id,
-			preferred: rankings.filter((r) => rank(r, film.id) < rank(r, other.id)).length,
-			opposed: rankings.filter((r) => rank(r, film.id) > rank(r, other.id)).length
-		}));
-		return {
-			film,
-			votes: rankings.filter((r) => r[0] === film.id).length,
-			points: rankings.reduce((sum, r) => sum + films.length - 1 - rank(r, film.id), 0),
-			beatsAll: comparisons.every((c) => c.preferred > c.opposed),
-			comparisons
-		};
-	}).sort((a, b) => Number(b.beatsAll) - Number(a.beatsAll) || b.points - a.points);
+	// the sort is stable, so films level on points keep the §3.2 order they came in
+	return films.map((film) => ({
+		film,
+		votes: rankings.filter((r) => r[0] === film.id).length,
+		points: rankings.reduce((sum, r) => sum + films.length - 1 - rank(r, film.id), 0)
+	})).sort((a, b) => b.points - a.points);
 }
 
 /** §7.2: no totals or result-dependent ordering leave the server before close. */
@@ -76,7 +66,7 @@ export function publicTally(db: DB, runoff: Runoff) {
 			Number(b.film.id === runoff.winner_film_id) - Number(a.film.id === runoff.winner_film_id));
 	}
 	return runoffFilms(db, runoff.id).sort((a, b) => a.id - b.id).map((film) => ({
-		film, votes: null, points: null, beatsAll: null, comparisons: null
+		film, votes: null, points: null
 	}));
 }
 
@@ -152,6 +142,23 @@ export function flashVote(
 	});
 }
 
+/**
+ * §7.2: a saved ranking taken back while the room is still open, so the
+ * phone's save works both ways. Only the ballot goes: being in the room was
+ * recorded when it was cast and stays recorded.
+ */
+export function withdrawFlashVote(db: DB, runoffId: number, voterKey: string, now: Date = new Date()): void {
+	immediate(db, () => {
+		const runoff = db.prepare('SELECT * FROM runoff WHERE id = ?').get(runoffId) as
+			| Runoff
+			| undefined;
+		if (!runoff) throw new RuleError('no_runoff', 'no such runoff');
+		if (runoff.closed_at) throw new RuleError('runoff_decided', 'this runoff is already decided');
+		if (isExpired(runoff, now)) throw new RuleError('runoff_expired', 'this runoff has expired');
+		db.prepare('DELETE FROM runoff_ballot WHERE runoff_id = ? AND voter_key = ?').run(runoffId, voterKey);
+	});
+}
+
 /** the most recently decided runoff, for the host's winner screen */
 /** §7.2: the host starts the count once. Pressing again replays it on the
  * screen without moving the clock the phones are waiting on. */
@@ -160,12 +167,6 @@ export function startReveal(db: DB, runoffId: number, now: Date = new Date()): v
 		db.prepare('UPDATE runoff SET revealed_at = ? WHERE id = ? AND closed_at IS NOT NULL AND revealed_at IS NULL')
 			.run(iso(now), runoffId);
 	});
-}
-
-/** whether the recorded winner had to be settled on ranked points */
-export function decidedOnPoints(db: DB, runoff: Runoff): boolean {
-	const won = tally(db, runoff.id).find((row) => row.film.id === runoff.winner_film_id);
-	return turnout(db, runoff.id) > 0 && !won?.beatsAll;
 }
 
 export function latestDecidedRunoff(db: DB): Runoff | undefined {
@@ -180,8 +181,8 @@ export function latestDecidedRunoff(db: DB): Runoff | undefined {
 export type RunoffResult = { kind: 'noop' } | { kind: 'winner'; film: Film };
 
 /**
- * §7.3. A pairwise winner beats ranked points; unresolved ties and zero turnout
- * fall back to weekly score, then age and id (§3.2). Idempotent.
+ * §7.3. The most ranked points wins; ties and zero turnout fall back to weekly
+ * score, then age and id (§3.2). Idempotent.
  */
 export function closeRunoff(
 	db: DB,

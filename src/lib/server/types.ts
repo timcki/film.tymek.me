@@ -40,6 +40,8 @@ export type Week = {
 	status: WeekStatus;
 	winner_film_id: number | null;
 	resolved_at: string | null;
+	/** §3.6: the special night this round is given over to, or null for a list round */
+	special: string | null;
 };
 
 export type FilmStatus = 'active' | 'archived' | 'dropped' | 'watched';
@@ -70,6 +72,8 @@ export type Film = {
 	 * the list, untouched by attrition, unvotable, and outside the one-per-round index
 	 */
 	archival: number;
+	/** §3.6: the special round this film is a pick for; null for the list's own films */
+	special: string | null;
 };
 
 export type Ballot = {
@@ -119,7 +123,7 @@ export type Standing = Film & {
 	/** the nominator as a face, for the pill in the card's title line */
 	nominator: Omit<Backer, 'points' | 'weekly'>;
 	/** per-week point totals, oldest last, for the score-breakdown popup */
-	weeklyPoints: { week: number; points: number }[];
+	weeklyPoints: { week: number; points: number; age: number }[];
 	/** consecutive weeks a single person has backed this film, §9 badge */
 	campaignWeeks: number;
 	/** true when this film is one pointless week away from attrition */

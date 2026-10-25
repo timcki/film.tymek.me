@@ -63,7 +63,8 @@ const KNOWN_TABLES: Record<string, string> = {
 	film_comment: 'person_id remapped, body replaced',
 	film_seen: 'kept, with person_id remapped',
 	film_hold: 'person_id remapped, reason replaced',
-	comment_react: 'kept, with person_id remapped'
+	comment_react: 'kept, with person_id remapped',
+	approval: 'kept, with person_id remapped'
 };
 
 /** every column holding a person id, so the new ids reach all of them */
@@ -82,7 +83,9 @@ const PERSON_REFS: [table: string, column: string][] = [
 	['film_comment', 'person_id'],
 	['film_seen', 'person_id'],
 	['film_hold', 'person_id'],
-	['comment_react', 'person_id']
+	['comment_react', 'person_id'],
+	// §3.6: a tick on a special round's pick
+	['approval', 'person_id']
 ];
 
 /** free text, with the table's rowid as the handle and the column to rewrite */

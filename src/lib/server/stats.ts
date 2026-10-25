@@ -520,7 +520,9 @@ export type ScreenStats = {
 	 * Nights the app itself resolved, which is the only honest basis for any of
 	 * this. A backfilled record was written down as nominated and watched in the
 	 * same week and carries no score, so counting those would put the typical
-	 * wait at nothing and the typical winner at no points at all.
+	 * wait at nothing and the typical winner at no points at all. A special
+	 * round's night (§3.6) is out for the same reason: its film was put up that
+	 * week and won on ticks, not points.
 	 */
 	nights: number;
 	/** rounds each of them spent on the list before reaching the screen */
@@ -577,7 +579,8 @@ export function screenStats(db: DB): ScreenStats | null {
 	const won = db
 		.prepare(
 			`SELECT id, title, poster_url, added_week, watched_week, final_score FROM film
-			 WHERE status = 'watched' AND final_score IS NOT NULL AND watched_week IS NOT NULL`
+			 WHERE status = 'watched' AND final_score IS NOT NULL AND watched_week IS NOT NULL
+			   AND special IS NULL`
 		)
 		.all() as {
 		id: number;
@@ -615,7 +618,7 @@ export function screenStats(db: DB): ScreenStats | null {
 		db
 			.prepare(
 				`SELECT id, title, poster_url, added_week FROM film
-				 WHERE status = 'active' AND archival = 0`
+				 WHERE status = 'active' AND archival = 0 AND special IS NULL`
 			)
 			.all() as { id: number; title: string; poster_url: string | null; added_week: number }[]
 	)

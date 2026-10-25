@@ -6,30 +6,38 @@ import type { RuleSet } from './rules.js';
 import { orderFilms, titleKey } from './rules.js';
 import { iso } from './time.js';
 import { avatarUrl, bankBalance, spentInWeek } from './people.js';
-import { campaignWeeks, pointsInWindow, rescoreAll, totalPoints } from './scoring.js';
+import {
+	campaignWeeks,
+	listClock,
+	pointsInWindow,
+	rescoreAll,
+	totalPoints,
+	windowWeeks
+} from './scoring.js';
 import { heldIn, holdOf, liftHold, placeHold } from './holds.js';
 import { rexpAll } from './xp.js';
-import { requireOpenWeek } from './weeks.js';
+import { requireListWeek } from './weeks.js';
 
 export function filmById(db: DB, id: number): Film | undefined {
 	return db.prepare('SELECT * FROM film WHERE id = ?').get(id) as Film | undefined;
 }
 
+/** the list's films in one state; a special round's picks (§3.6) are never on the list */
 export function filmsByStatus(db: DB, status: Film['status']): Film[] {
 	return db
-		.prepare('SELECT * FROM film WHERE status = ? AND archival = 0')
+		.prepare('SELECT * FROM film WHERE status = ? AND archival = 0 AND special IS NULL')
 		.all(status) as Film[];
 }
 
 /** the weeks whose ballots contribute to the current score under these rules */
-function scoringWeeks(rules: RuleSet, currentWeek: number): number[] | null {
+function scoringWeeks(db: DB, rules: RuleSet, currentWeek: number): number[] | null {
 	// under 'total' and 'fade' every week counts (fade just discounts them);
-	// only 'decay' has a hard two-week window
-	return rules.scoring === 'decay' ? [currentWeek, currentWeek - 1] : null;
+	// only 'decay' has a hard two-week window, on the list's clock (§3.6)
+	return rules.scoring === 'decay' ? windowWeeks(db, currentWeek, 2) : null;
 }
 
 function backersOf(db: DB, rules: RuleSet, filmId: number, currentWeek: number): Backer[] {
-	const weeks = scoringWeeks(rules, currentWeek);
+	const weeks = scoringWeeks(db, rules, currentWeek);
 	const clause = weeks ? `AND b.week_number IN (${weeks.map(() => '?').join(',')})` : '';
 	const params: (number | string)[] = weeks ? [filmId, ...weeks] : [filmId];
 	const rows = db
@@ -74,7 +82,8 @@ function isAtRisk(db: DB, rules: RuleSet, film: Film, currentWeek: number): bool
 	if (rules.attrition.kind === 'drop') {
 		return pointsInWindow(db, film.id, currentWeek, rules.attrition.afterWeeksWithoutPoints) === 0;
 	}
-	const age = currentWeek - film.added_week;
+	const clock = listClock(db);
+	const age = clock(currentWeek) - clock(film.added_week);
 	return totalPoints(db, film.id) === 0 && age >= rules.attrition.afterWeeksAtZero - 1;
 }
 
@@ -86,11 +95,14 @@ export function standings(
 	status: Film['status'] = 'active'
 ): Standing[] {
 	const films = db
-		.prepare('SELECT * FROM film WHERE status = ? AND archival = 0')
+		.prepare('SELECT * FROM film WHERE status = ? AND archival = 0 AND special IS NULL')
 		.all(status) as (Film & {
 		score: number;
 	})[];
 	const now = new Date();
+	// §3.6: how many of the list's rounds old each week's points are, which is
+	// what the fade is taken to the power of and not always the gap in numbers
+	const clock = listClock(db);
 	const mine = new Map<
 		number,
 		{ points: number; floor: number; graceUntil: string | null }
@@ -140,7 +152,9 @@ export function standings(
 			myFloor: mine.get(film.id)?.floor ?? 0,
 			myGraceUntil: mine.get(film.id)?.graceUntil ?? null,
 			addedByName: nom?.name ?? film.added_by,
-			weeklyPoints: byWeek.all(film.id, currentWeek) as { week: number; points: number }[],
+			weeklyPoints: (byWeek.all(film.id, currentWeek) as { week: number; points: number }[]).map(
+				(row) => ({ ...row, age: clock(currentWeek) - clock(row.week) })
+			),
 			nominator: {
 				person_id: film.added_by,
 				name: nom?.name ?? film.added_by,
@@ -273,7 +287,7 @@ function duplicate(clash: Film): RuleError {
  * and the room never watching it is no reason it cannot go up now. An archival
  * film we did watch still blocks, which is the whole point of writing it down.
  */
-function assertNotDuplicate(db: DB, input: NominationInput): void {
+export function assertNotDuplicate(db: DB, input: NominationInput): void {
 	const key = titleKey(input.title);
 	if (!key) throw new RuleError('no_title', 'give the film a title');
 
@@ -302,7 +316,7 @@ function assertNominationSlot(db: DB, rules: RuleSet, personId: string, week: nu
 	// film marked watched mid-round should not hand its nominator a second turn
 	const row = db
 		.prepare(
-			'SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND added_week = ? AND archival = 0'
+			'SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND added_week = ? AND archival = 0 AND special IS NULL'
 		)
 		.get(personId, week) as { n: number };
 	if (row.n >= rules.nominationsPerWeek) {
@@ -310,13 +324,19 @@ function assertNominationSlot(db: DB, rules: RuleSet, personId: string, week: nu
 	}
 }
 
-function insertFilm(db: DB, input: NominationInput, personId: string, week: number): number {
+export function insertFilm(
+	db: DB,
+	input: NominationInput,
+	personId: string,
+	week: number,
+	special: string | null = null
+): number {
 	const title = cleanTitle(input.title);
 	const result = db
 		.prepare(
 			`INSERT INTO film (title, title_key, year, director, genre, runtime, tmdb_id, poster_url,
-			                   overview, note, added_by, added_week, status, score, created_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0, ?)`
+			                   overview, note, added_by, added_week, status, score, created_at, special)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0, ?, ?)`
 		)
 		.run(
 			title,
@@ -331,7 +351,8 @@ function insertFilm(db: DB, input: NominationInput, personId: string, week: numb
 			cleanNote(input.note),
 			personId,
 			week,
-			iso()
+			iso(),
+			special
 		);
 	return Number(result.lastInsertRowid);
 }
@@ -350,7 +371,7 @@ export function setNote(db: DB, personId: string, filmId: number, note: string):
 
 export function nominate(db: DB, rules: RuleSet, personId: string, input: NominationInput): number {
 	return immediate(db, () => {
-		const week = requireOpenWeek(db);
+		const week = requireListWeek(db);
 		assertNominationSlot(db, rules, personId, week.number);
 		assertNotDuplicate(db, input);
 		const id = insertFilm(db, input, personId, week.number);
@@ -363,7 +384,7 @@ export function nominate(db: DB, rules: RuleSet, personId: string, input: Nomina
 /** a dropped film comes back as a new row starting from zero, and costs a nomination slot */
 export function renominate(db: DB, rules: RuleSet, personId: string, filmId: number): number {
 	return immediate(db, () => {
-		const week = requireOpenWeek(db);
+		const week = requireListWeek(db);
 		const old = filmById(db, filmId);
 		if (!old) throw new RuleError('no_film', 'no such film');
 		if (old.status !== 'dropped') throw new RuleError('not_dropped', 'that film has not been dropped');
@@ -398,7 +419,7 @@ function assertHoldable(db: DB, personId: string, filmId: number): Film {
 	if (film.added_by !== personId) {
 		throw new RuleError('not_your_film', 'only the person who nominated it can hold it back');
 	}
-	if (film.archival || film.status !== 'active') {
+	if (film.archival || film.special || film.status !== 'active') {
 		throw new RuleError('hold_not_active', `${film.title} is not on the list`, { title: film.title });
 	}
 	return film;
@@ -418,7 +439,7 @@ export function holdFilm(
 	now: Date = new Date()
 ): void {
 	immediate(db, () => {
-		const week = requireOpenWeek(db, now);
+		const week = requireListWeek(db, now);
 		assertHoldable(db, personId, filmId);
 		const spent = holdOf(db, week.number, personId);
 		if (spent && spent.film_id !== filmId) {
@@ -434,7 +455,7 @@ export function holdFilm(
 /** back into play; free while the round is open, because it only ever adds a candidate */
 export function releaseFilm(db: DB, personId: string, filmId: number, now: Date = new Date()): void {
 	immediate(db, () => {
-		const week = requireOpenWeek(db, now);
+		const week = requireListWeek(db, now);
 		assertHoldable(db, personId, filmId);
 		liftHold(db, week.number, filmId);
 	});
@@ -476,7 +497,7 @@ export function setPoints(
 	now: Date = new Date()
 ): void {
 	immediate(db, () => {
-		const week = requireOpenWeek(db, now);
+		const week = requireListWeek(db, now);
 		if (!Number.isInteger(points) || points < 0) {
 			throw new RuleError('bad_points', 'points must be a whole number');
 		}
@@ -485,6 +506,12 @@ export function setPoints(
 		if (!film) throw new RuleError('no_film', 'no such film');
 		if (film.archival) {
 			throw new RuleError('film_archival', `${film.title} is a record of a past night`, {
+				title: film.title
+			});
+		}
+		// §3.6: a special pick is approved, never pointed
+		if (film.special) {
+			throw new RuleError('special_pick', `${film.title} is a pick for a special round`, {
 				title: film.title
 			});
 		}

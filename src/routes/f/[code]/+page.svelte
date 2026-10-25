@@ -2,10 +2,13 @@
 	import { enhance } from '$app/forms';
 	import { invalidate, invalidateAll } from '$app/navigation';
 	import { pollRoom } from '$lib/room-poll';
+	import { fly, scale } from 'svelte/transition';
+	import { backOut } from 'svelte/easing';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import RankingBallot from '$lib/components/RankingBallot.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Confetti from '$lib/components/Confetti.svelte';
+	import BatBurst from '$lib/components/BatBurst.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import SeenCount from '$lib/components/SeenCount.svelte';
 	import { dictFor } from '$lib/i18n';
@@ -15,6 +18,8 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const T = $derived(dictFor(data.lang));
+	const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const ms = (n: number) => (still ? 0 : n);
 
 	// pick a name once, then keep the draft local while turnout updates
 	let who = $state('');
@@ -49,13 +54,6 @@
 			}
 			await update({ reset: false });
 		};
-
-	// the count sits in its own coin at the end of the row, so it stays out here
-	function meta(row: (typeof data.tally)[number]): string {
-		return [row.film.year, row.film.runtime ? T.minutes(row.film.runtime) : null]
-			.filter(Boolean)
-			.join(' · ');
-	}
 
 	// only turnout is live; results arrive after close, and after the count on
 	// the projector has run
@@ -101,7 +99,27 @@
 	<!-- §7.2: the vote is over and the screen has the result; the phone says so
 	     and nothing more until the count there has run -->
 	<div class="lookup" aria-live="polite">
-		<div class="eyes" aria-hidden="true">👀</div>
+		{#if data.look === 'halloween'}
+			<!-- §3.6: a ghost keeping watch with the room, its eyes on the screen -->
+			<div class="spook" aria-hidden="true">
+				<svg viewBox="0 0 30 36" width="58" height="70">
+					<path
+						class="spook-sheet"
+						d="M15 1C7.3 1 3 6.8 3 14v18.5c1.6 1.8 3.4 1.8 5 0 1.6 1.8 3.4 1.8 5 0 1.4 1.8 2.6 1.8 4 0 1.6 1.8 3.4 1.8 5 0 1.6 1.8 3.4 1.8 5 0V14C27 6.8 22.7 1 15 1z"
+					/>
+					<g class="spook-look">
+						<ellipse class="spook-hole" cx="10.6" cy="13.6" rx="2.1" ry="3" />
+						<ellipse class="spook-hole" cx="19.4" cy="13.6" rx="2.1" ry="3" />
+						<ellipse class="spook-glint" cx="11.2" cy="12.6" rx="0.6" ry="0.8" />
+						<ellipse class="spook-glint" cx="20" cy="12.6" rx="0.6" ry="0.8" />
+					</g>
+					<ellipse class="spook-hole" cx="15" cy="21.8" rx="1.8" ry="2.4" />
+				</svg>
+				<span class="spook-shade"></span>
+			</div>
+		{:else}
+			<div class="eyes" aria-hidden="true">👀</div>
+		{/if}
 		<b>{T.roomLookUp}</b>
 		<p>{T.roomLookUpSub}</p>
 		<div class="lookfilms">
@@ -111,41 +129,26 @@
 		</div>
 	</div>
 {:else if data.decided}
-	<p class="banner accent">{T.roomDecided}</p>
-	<div class="roomvote">
-		{#each data.tally as row (row.film.id)}
-			<div class="pickbtn" class:on={row.film.id === data.winnerFilmId}>
-				<div class="th"><Poster title={row.film.title} url={row.film.poster_url} /></div>
-				<div class="rbody">
-					<b>{row.film.title}</b>
-					<span>{meta(row)} · <SeenCount n={data.seen[row.film.id] ?? 0} size={11} /></span>
-					{#if row.film.id === data.winnerFilmId}
-						<span class="winchip">{T.roomWinner}</span>
-					{/if}
-				</div>
+	{@const won = data.tally.find((row) => row.film.id === data.winnerFilmId)}
+	{#if won}
+		<!-- §7.3: the night, decided: only the film it is, said big, arriving the
+		     way it does on the projector, the poster first and its words after -->
+		<section class="tonight">
+			<div class="tsec" in:fly|global={{ y: 8, duration: ms(360) }}>{T.hostWinnerH}</div>
+			<div class="tposter" in:scale|global={{ start: 0.86, delay: ms(120), duration: ms(560), easing: backOut }}>
+				<Poster title={won.film.title} url={won.film.poster_url} />
 			</div>
-		{/each}
-	</div>
-	<details class="castbox">
-		<summary>{T.roomResults}</summary>
-		<p class="hintline">{T.roomRankRules(data.tally.length)}</p>
-		{#each data.tally as row (row.film.id)}
-			<div class="resultrow" class:won={row.film.id === data.winnerFilmId}>
-				<div class="resulthead">
-					<b>{row.film.title}</b>
-					<span class="rstat">{T.roomFirstChoices(row.votes ?? 0)}</span>
-					<span class="rstat">{T.roomRankPoints(row.points ?? 0)}</span>
-				</div>
-				<div class="pairs">
-					{#each row.comparisons ?? [] as comparison (comparison.filmId)}
-						<span class="pair" class:beat={comparison.preferred > comparison.opposed}>
-							{T.roomPair(data.tally.find((r) => r.film.id === comparison.filmId)!.film.title, comparison.preferred, comparison.opposed)}
-						</span>
-					{/each}
-				</div>
+			<h1 in:fly|global={{ y: 12, delay: ms(340), duration: ms(420) }}>{won.film.title}</h1>
+			<div class="tmeta" in:fly|global={{ y: 10, delay: ms(420), duration: ms(380) }}>
+				{#if won.film.year}<span>{won.film.year}</span>{/if}
+				{#if won.film.runtime}<span>{T.minutes(won.film.runtime)}</span>{/if}
+				<span><SeenCount n={data.seen[won.film.id] ?? 0} size={12} /></span>
 			</div>
-		{/each}
-	</details>
+			{#if won.film.overview}
+				<p class="tover" in:fly|global={{ y: 10, delay: ms(500), duration: ms(400) }}>{won.film.overview}</p>
+			{/if}
+		</section>
+	{/if}
 {:else if needsName}
 	<div class="sec">{T.roomWho}</div>
 	<input class="sinput" placeholder={T.roomFilter} bind:value={filter} autocomplete="off" />
@@ -170,30 +173,64 @@
 	<div class="roomstate">
 		<span class="turnchip"><b>{data.turnout}</b> {T.turnoutWord(data.turnout)}</span>
 	</div>
-	<!-- §7.2: said before anyone ranks anything, quietly: it is a promise, not a step -->
-	<p class="privacy">
-		<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="2" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></svg>
-		<span>{T.roomOpen}</span>
+	<!-- §7.3: how the room counts, said before anyone ranks anything -->
+	<p class="pointsnote">
+		<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 14h13M2.5 14V9.5H6V14M6 14V5h4v9M10 14V8h3.5v6" /></svg>
+		<span>{T.roomPoints(data.tally.length)}</span>
 	</p>
 	{#key `${data.code}:${data.me?.id ?? who}`}
 		<RankingBallot films={data.tally.map((r) => r.film)} seen={data.seen} lang={data.lang}
 			savedRanking={data.identified || who === 'guest' ? data.myRanking : undefined}
-			personId={who === 'guest' ? '' : who} />
+			personId={who === 'guest' ? '' : who} withdraw="?/withdraw" spooky={data.look === 'halloween'} />
 	{/key}
-	<details class="castbox">
-		<summary>{T.roomResults}</summary>
-		<p class="hintline">{T.roomRankRules(data.tally.length)}</p>
-	</details>
 {/if}
 
 {#if burst}
-	<Confetti onDone={() => (burst = false)} />
+	{#if data.look === 'halloween'}
+		<BatBurst onDone={() => (burst = false)} />
+	{:else}
+		<Confetti onDone={() => (burst = false)} />
+	{/if}
 {/if}
 
 <style>
 	.hrow { flex-wrap: wrap; }
 	.wk { min-width: max-content; }
-	.roomvote .pickbtn .winchip { width: fit-content; color: var(--accent); }
+	.tonight {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		margin-top: 18px;
+		padding: 24px 22px 26px;
+		border-radius: var(--r);
+		background: var(--card);
+		box-shadow: var(--lift);
+	}
+	.tsec { color: var(--accent); font-size: 14px; font-weight: 700; letter-spacing: 0.02em; }
+	.tposter {
+		width: min(62vw, 240px);
+		aspect-ratio: 2/3;
+		margin-top: 16px;
+		border-radius: 14px;
+		overflow: hidden;
+		background: var(--raise);
+		box-shadow: 0 0 0 3px var(--accent), 0 0 48px -8px var(--accent), 0 26px 50px -20px var(--shadow);
+	}
+	.tposter :global(img) { display: block; width: 100%; height: 100%; object-fit: cover; }
+	.tonight h1 { margin: 22px 0 0; font-size: 30px; line-height: 1.1; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+	.tmeta { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px; }
+	.tmeta span {
+		display: inline-flex;
+		align-items: center;
+		padding: 4px 10px;
+		border-radius: 99px;
+		background: var(--raise);
+		color: var(--ink2);
+		font-size: 12.5px;
+		font-variant-numeric: tabular-nums;
+	}
+	.tover { margin: 16px 0 0; color: var(--ink2); font-size: 14.5px; line-height: 1.6; text-align: left; }
 	.lookup {
 		margin-top: 18px;
 		padding: 34px 20px 26px;
@@ -209,7 +246,41 @@
 	.lookfilms .th { width: 58px; aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; background: var(--raise); }
 	.lookfilms .th :global(img) { display: block; width: 100%; height: 100%; object-fit: cover; }
 	@keyframes glance { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-6px); } 60% { transform: translateX(6px); } }
-	@media (prefers-reduced-motion: reduce) { .eyes { animation: none; } }
+	/* the ghost floats over its own faint shadow, and keeps glancing up at the
+	   screen and round the room, the way the eyes do on any other night */
+	.spook { display: flex; flex-direction: column; align-items: center; }
+	.spook svg { display: block; overflow: visible; animation: hover 3.4s ease-in-out infinite; }
+	.spook .spook-sheet { fill: rgba(246, 241, 252, 0.88); filter: drop-shadow(0 0 8px rgba(230, 220, 255, 0.5)); }
+	:global(:root[data-theme='light']) .spook .spook-sheet {
+		fill: #fff;
+		filter: drop-shadow(0 3px 7px rgba(90, 50, 80, 0.22));
+	}
+	.spook .spook-hole { fill: #160e1c; }
+	.spook .spook-glint { fill: rgba(255, 255, 255, 0.75); }
+	.spook .spook-look { animation: lookabout 4.8s ease-in-out infinite; }
+	.spook .spook-shade {
+		width: 40px;
+		height: 7px;
+		margin-top: 6px;
+		border-radius: 50%;
+		background: radial-gradient(closest-side, color-mix(in srgb, var(--ink) 22%, transparent), transparent);
+		animation: shade 3.4s ease-in-out infinite;
+	}
+	@keyframes hover {
+		0%, 100% { transform: translateY(0) rotate(-3deg); }
+		50% { transform: translateY(-8px) rotate(3deg); }
+	}
+	@keyframes shade {
+		0%, 100% { transform: scale(1); opacity: 1; }
+		50% { transform: scale(0.8); opacity: 0.6; }
+	}
+	@keyframes lookabout {
+		0%, 14%, 100% { transform: translate(0, -1.6px); }
+		24%, 40% { transform: translate(-2px, -1.2px); }
+		50%, 64% { transform: translate(2px, -1.2px); }
+		74%, 88% { transform: translate(0, -2.2px); }
+	}
+	@media (prefers-reduced-motion: reduce) { .eyes, .spook svg, .spook .spook-look, .spook .spook-shade { animation: none; } }
 	.roomstate { display: flex; justify-content: center; margin-top: 6px; }
 	.turnchip {
 		padding: 6px 14px;
@@ -220,7 +291,7 @@
 		font-weight: 650;
 	}
 	.turnchip b { font-weight: 800; font-variant-numeric: tabular-nums; }
-	.privacy {
+	.pointsnote {
 		display: flex;
 		gap: 10px;
 		align-items: flex-start;
@@ -232,7 +303,7 @@
 		font-size: 12.5px;
 		line-height: 1.5;
 	}
-	.privacy svg {
+	.pointsnote svg {
 		flex: none;
 		width: 16px;
 		height: 16px;
@@ -242,13 +313,4 @@
 		stroke-width: 1.5;
 		stroke-linecap: round;
 	}
-	.resultrow { padding: 12px 0; border-bottom: 1px solid var(--line); }
-	.resultrow:last-child { border-bottom: 0; padding-bottom: 2px; }
-	.resulthead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
-	.resulthead b { flex: 1 1 100%; font-size: 15px; }
-	.won .resulthead b { color: var(--accent); }
-	.rstat { font-size: 12px; color: var(--dim); }
-	.pairs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-	.pair { padding: 4px 10px; border-radius: 99px; background: var(--raise); color: var(--dim); font-size: 11.5px; }
-	.pair.beat { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
 </style>

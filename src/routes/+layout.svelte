@@ -8,6 +8,11 @@
 	import { THEMES } from '$lib/themes';
 	import Banana from '$lib/components/Banana.svelte';
 	import Check from '$lib/components/Check.svelte';
+	import Halloween from '$lib/components/Halloween.svelte';
+	import Pumpkin from '$lib/components/Pumpkin.svelte';
+	import Skull from '$lib/components/Skull.svelte';
+	import { specialOf } from '$lib/specials';
+	import { nomSheet } from '$lib/special-sheet.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import type { LayoutServerData } from './$types';
 
@@ -36,6 +41,18 @@
 			Math.floor(left / 1000) % 60
 		);
 	});
+	// §3.6: a phone's bar with the special round's chips in it has no room for the verb
+	const countdownShort = $derived.by(() => {
+		if (!data.week) return '';
+		const left = new Date(data.week.closesAt).getTime() - now;
+		if (left <= 0) return null;
+		return T.timeLeftShort(
+			Math.floor(left / 86400000),
+			Math.floor(left / 3600000) % 24,
+			Math.floor(left / 60000) % 60,
+			Math.floor(left / 1000) % 60
+		);
+	});
 
 	const title = $derived.by(() => {
 		if (path.startsWith('/history')) return T.watchedH;
@@ -46,6 +63,39 @@
 	});
 
 	const showPill = $derived(Boolean(data.person) && (path === '/' || path.startsWith('/me')));
+	// §3.6: the special round's page stands where the list does while the list sleeps
+	const listPath = $derived(data.week?.special ? '/special' : '/');
+	const home = $derived(path === '/' || path === '/special');
+	// §3.6: the special round's name and rules ride in the bar, where the points
+	// pill would be: a special round spends no points, so the slot is free
+	const special = $derived(path === '/special' ? specialOf(data.week?.special) : null);
+	let rulesOpen = $state(false);
+	// until somebody has read the rules once, the chip says it can be opened:
+	// a dot and a slow ring, put away for good the first time it is tapped
+	const RULES_SEEN = 'fn_rules_seen';
+	let rulesSeen = $state(true);
+	$effect(() => {
+		if (!special) return;
+		try {
+			rulesSeen = localStorage.getItem(`${RULES_SEEN}_${special.id}`) === '1';
+		} catch {
+			rulesSeen = true;
+		}
+	});
+	function openRules() {
+		rulesOpen = !rulesOpen;
+		if (rulesSeen || !special) return;
+		rulesSeen = true;
+		try {
+			localStorage.setItem(`${RULES_SEEN}_${special.id}`, '1');
+		} catch {
+			// private mode: it nags again next visit, which is the lesser harm
+		}
+	}
+	// picks the viewer still has, read off the round's own page data
+	const picksLeft = $derived(
+		special ? Math.max(0, special.picksPerPerson - Number(page.data.used ?? 0)) : 0
+	);
 
 	// every page gets the compact bar, so the app has one header rather than two.
 	// The list has no name worth printing, so the night takes that slot, because
@@ -53,7 +103,7 @@
 	// round's number is nobody's reason for opening this, so it waits in the tip
 	const lean = $derived(!bare && Boolean(data.week));
 	const leanLabel = $derived(
-		path === '/' && data.week ? formatNightDay(data.week.closesAt, data.lang) : title
+		home && data.week ? formatNightDay(data.week.closesAt, data.lang) : title
 	);
 
 	// how much of the round is spent
@@ -94,6 +144,17 @@
 	$effect(() => {
 		path;
 		menuOpen = false;
+	});
+
+	// §3.6: the special look is put on <html> by the server, which only a full
+	// load goes through. A round that starts or ends while a page is open (an
+	// admin switching it on and walking over to the list, say) arrives as page
+	// data instead, so the attribute follows the data here, or the bats and the
+	// lights would turn up without the palette they are drawn for
+	$effect(() => {
+		const root = document.documentElement;
+		if (data.look) root.dataset.special = data.look;
+		else delete root.dataset.special;
 	});
 
 	// on auto the phone can change its mind while the page is open, and the
@@ -173,7 +234,7 @@
 					/>
 					<b>{data.person.name}</b>
 				</div>
-				<a href="/" class:on={path === '/'}>
+				<a href={listPath} class:on={home}>
 					<span class="ic">
 						<svg
 							width="17"
@@ -359,12 +420,64 @@
 	{/if}
 {/snippet}
 
+{#snippet specialChip()}
+	{#if special && data.week}
+		<div class="budget">
+			<button
+				class="pill spchip"
+				class:fresh={!rulesSeen}
+				aria-expanded={rulesOpen}
+				aria-label="{T.spName(special.id)}: {T.youRules}"
+				onclick={openRules}
+				onblur={() => (rulesOpen = false)}
+			>
+				<Pumpkin size={17} />
+				<span class="splabel">{T.spName(special.id)}</span>
+				<svg class="spchev" class:up={rulesOpen} viewBox="0 0 10 10" width="9" height="9" aria-hidden="true"
+					><path d="M2 3.6 5 6.6 8 3.6" /></svg
+				>
+			</button>
+			<div class="tip sptip" style:display={rulesOpen ? 'block' : 'none'}>
+				<ol>
+					{#each T.spRules(special, data.week.closesAt) as rule (rule.head)}
+						<li><b>{rule.head}</b> {rule.body}</li>
+					{/each}
+				</ol>
+				<div class="spfoot" aria-hidden="true"><Skull size={15} /><Pumpkin size={24} /></div>
+			</div>
+		</div>
+		{#if data.week.status === 'open'}
+			<!-- open, the + turns into the modal's close: it stays above the dimmed
+			     page, and the modal grows out of it and shrinks back into it. With
+			     every pick put up it stays where it was, greyed, so the bar does
+			     not jump about and its absence does not read as a fault -->
+			<button
+				class="pill spadd"
+				class:on={nomSheet.open}
+				disabled={picksLeft === 0 && !nomSheet.open}
+				aria-label={nomSheet.open ? T.close : picksLeft ? T.spAddAria(picksLeft) : T.spAddDone}
+				aria-expanded={nomSheet.open}
+				title={nomSheet.open ? T.close : picksLeft ? T.spAddAria(picksLeft) : T.spAddDone}
+				onclick={(event) => {
+					const rect = event.currentTarget.getBoundingClientRect();
+					nomSheet.from = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+					nomSheet.open = !nomSheet.open;
+				}}
+			>
+				<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"
+					><path d="M6 1.5v9M1.5 6h9" /></svg
+				>
+			</button>
+		{/if}
+	{/if}
+{/snippet}
+
 {#if bare}
 	<div class="wrap">{@render children()}</div>
 {:else}
 	<!-- the host view is a projector or a laptop, never a phone; let it breathe -->
-	<div class="wrap" class:wide={path.startsWith('/host')} class:home={path === '/'}
-		class:roomy={path === '/' || ['/stats', '/history', '/me'].some((p) => path.startsWith(p))}
+	<div class="wrap" class:wide={path.startsWith('/host')} class:home
+		class:roomy={home || ['/stats', '/history', '/me'].some((p) => path.startsWith(p))}
 	>
 		{#if lean && data.week}
 			<!-- the list wears its state, not its name: a face, the night, and how
@@ -394,7 +507,11 @@
 								<!-- the words are the countdown already, down to the second, so
 								     colour is all that is left to say: how much of the round has
 								     gone. A bar said it worse and got read as a rank -->
-								<span class="wchip" class:urgent>{countdown}</span>
+								<span class="wchip" class:urgent
+									><span class="wlong">{countdown}</span><span class="wshort"
+										>{countdownShort}</span
+									></span
+								>
 							{:else if data.week.status === 'runoff'}
 								<b>{T.roomPicking(data.runoffCode ?? '')}</b>
 							{:else}
@@ -410,6 +527,7 @@
 					</div>
 
 					{@render budget()}
+					{@render specialChip()}
 				</div>
 			</header>
 		{:else}
@@ -453,8 +571,19 @@
 		{/if}
 
 		{@render children()}
-	</div>
 
+		{#if data.look === 'halloween'}
+			<Halloween part="ground" />
+		{/if}
+	</div>
+	{#if data.look === 'halloween'}
+		<Halloween part="land" />
+	{/if}
+
+{/if}
+
+{#if data.look === 'halloween'}
+	<Halloween part="sky" />
 {/if}
 
 {#if !bare && data.changelog.length}

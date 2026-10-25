@@ -184,3 +184,221 @@
 	filter: none;
 	opacity: 1;
 }
+
+/* ------------------------------------------------------------ halloween -----
+   §3.6. Not a palette anybody picks but a special round's look, put on <html>
+   as data-special by the server and taken off when the round is over. Declared
+   after bananas so it wins over them, the same specificity either way. Dark is
+   a night sky gone violet with a pumpkin for the accent; --warn turns slime
+   green, which keeps "about to drop" as far from the accent as amber was. */
+:root[data-special='halloween'] {
+	--bg: #120c16;
+	/* lit from the ground, where the pumpkins are, rather than from the sky: the
+	   top of the page has to be exactly --bg, or it parts from the status bar
+	   that iOS paints in SPECIAL_BG. Not a --wash but --glow, which the root
+	   paints itself (below), so it reaches under Safari's bar */
+	--wash: none;
+	--glow: radial-gradient(
+		80% calc(66px + env(safe-area-inset-bottom, 0px))
+			at 50% calc(100% - 74px - env(safe-area-inset-bottom, 0px)),
+		rgba(255, 128, 32, 0.2),
+		transparent
+	);
+	--card: #1c1521;
+	--card2: #231a29;
+	--sunk: #2b2032;
+	--raise: #2a1f30;
+	--line: #2a2131;
+	--line2: #352a3d;
+	--line3: #4d3f57;
+	--edge: #5e4f69;
+	--ink: #f4eee8;
+	--ink2: #d8cdd9;
+	--dim: #9d90a4;
+	--dimmer: #75697c;
+	--sheen: rgba(255, 220, 200, 0.05);
+	--lead-tint: var(--card);
+	--lead-glow: rgba(255, 140, 40, 0.09);
+	--lead-ring: rgba(255, 140, 40, 0.15);
+	--lead-edge: rgba(255, 154, 60, 0.45);
+	--accent: #ff9a3c;
+	--accent-ink: #2a1200;
+	--warn: #a6e36c;
+}
+
+/* room under the string of lights, which stays strung across the top of the
+   screen: the page starts below its band, and the header sticks below it too */
+:root[data-special='halloween'] body {
+	padding-top: 18px;
+}
+:root[data-special='halloween'] header.lean {
+	top: 18px;
+}
+/* the ground glow. On an iPhone the page ends above Safari's floating bar and
+   Safari fills what is under the bar with the root's plain background-color,
+   never with an image or a gradient; at the top of the page it uses the same
+   colour for the status area. So the root colour stays --bg, and the glow is a
+   pool of light round the pumpkins that has faded back to --bg before the
+   page's last pixel, which is what lets the page run on under the bar without
+   a seam. The root is at least a screen tall, and the pumpkins sit on the
+   bottom of the page, so a short page still glows where they are */
+:root[data-special='halloween'] {
+	min-height: 100%;
+	background: var(--glow) no-repeat, var(--bg);
+}
+:root[data-special='halloween'] body {
+	background: transparent;
+	/* what the full-width scenery at the foot of the page is laid out against */
+	position: relative;
+}
+:root[data-special='halloween'] .wrap {
+	min-height: calc(100vh - 50px - env(safe-area-inset-bottom, 0px));
+	min-height: calc(100svh - 50px - env(safe-area-inset-bottom, 0px));
+	padding-bottom: 112px;
+}
+
+/* on paper it is an old parchment, ink gone to aubergine, the pumpkin burnt */
+:root[data-theme='light'][data-special='halloween'] {
+	--bg: #f3e4cf;
+	--glow: radial-gradient(
+		80% calc(66px + env(safe-area-inset-bottom, 0px))
+			at 50% calc(100% - 74px - env(safe-area-inset-bottom, 0px)),
+		rgba(222, 120, 40, 0.26),
+		transparent
+	);
+	--card: #fffaf1;
+	--card2: #f6ead9;
+	--sunk: #eadbc5;
+	--raise: #efdfc8;
+	--line: #e5d3ba;
+	--line2: #d6bf9f;
+	--line3: #bba07c;
+	--edge: #a2865f;
+	--ink: #2b1d2e;
+	--ink2: #54405a;
+	--dim: #7e6a7f;
+	--dimmer: #a08ea0;
+	--chip: #fffcf6;
+	--sheen: rgba(255, 255, 255, 0.9);
+	--lead-tint: rgba(255, 255, 255, 0.8);
+	--lead-glow: rgba(200, 90, 12, 0.16);
+	--lead-ring: rgba(200, 90, 12, 0.14);
+	--lead-edge: rgba(130, 60, 20, 0.45);
+	--accent: #c45a0e;
+	--accent-ink: #fffaf1;
+	--warn: #5d8a1c;
+	--shadow: rgba(70, 40, 50, 0.18);
+	--shadow-soft: rgba(70, 40, 50, 0.11);
+	--scrim: rgba(43, 29, 46, 0.4);
+	--toast-bg: #2b1d2e;
+	--toast-ink: #f3e4cf;
+}
+
+/* cobwebs in the corners of things, and one resident. Drawn as data URIs per
+   palette, because a background image cannot read --ink. Each web is clipped to
+   the corner it hangs in, rounding and all, and none of it takes a pointer */
+:root[data-special='halloween'] {
+	--web: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cpath d=%22M64 0L64.0 62.0M64 0L50.0 56.3M64 0L31.6 54.0M64 0L23.0 38.2M64 0L10.1 28.6M64 0L8.7 13.8M64 0L2.0 0.0M64.0 10.6Q62.9 9.2 61.3 10.7Q60.3 8.9 58.1 9.8Q58.0 7.4 56.3 7.2Q56.5 5.4 54.3 5.2Q55.0 3.5 52.9 2.8Q54.6 1.2 53.4 0.0M64.0 20.2Q61.8 17.6 58.9 20.4Q57.0 17.0 52.8 18.7Q52.6 14.0 49.3 13.7Q49.6 10.3 45.5 9.9Q46.8 6.6 42.8 5.3Q46.1 2.2 43.8 0.0M64.0 30.7Q60.7 26.8 56.3 31.0Q53.3 25.9 46.9 28.5Q46.7 21.4 41.5 21.0Q42.0 15.7 35.7 15.0Q37.8 10.1 31.7 8.1Q36.7 3.4 33.3 0.0M64.0 42.2Q59.5 36.8 53.4 42.7Q49.2 35.7 40.4 39.2Q40.2 29.4 33.1 28.8Q33.8 21.5 25.2 20.7Q28.0 13.8 19.6 11.1Q26.4 4.6 21.8 0.0M64.0 52.8Q58.4 46.0 50.7 53.4Q45.5 44.6 34.5 49.0Q34.2 36.8 25.4 36.0Q26.3 26.9 15.4 25.8Q19.0 17.3 8.5 13.8Q17.1 5.8 11.2 0.0%22 fill=%22none%22 stroke=%22rgba%28232,222,240,0.26%29%22 stroke-width=%22.7%22 stroke-linecap=%22round%22/%3E%3C/svg%3E");
+	--web-left: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cg transform=%22matrix%28-1 0 0 1 64 0%29%22%3E%3Cpath d=%22M64 0L64.0 62.0M64 0L50.0 56.3M64 0L31.6 54.0M64 0L23.0 38.2M64 0L10.1 28.6M64 0L8.7 13.8M64 0L2.0 0.0M64.0 10.6Q62.9 9.2 61.3 10.7Q60.3 8.9 58.1 9.8Q58.0 7.4 56.3 7.2Q56.5 5.4 54.3 5.2Q55.0 3.5 52.9 2.8Q54.6 1.2 53.4 0.0M64.0 20.2Q61.8 17.6 58.9 20.4Q57.0 17.0 52.8 18.7Q52.6 14.0 49.3 13.7Q49.6 10.3 45.5 9.9Q46.8 6.6 42.8 5.3Q46.1 2.2 43.8 0.0M64.0 30.7Q60.7 26.8 56.3 31.0Q53.3 25.9 46.9 28.5Q46.7 21.4 41.5 21.0Q42.0 15.7 35.7 15.0Q37.8 10.1 31.7 8.1Q36.7 3.4 33.3 0.0M64.0 42.2Q59.5 36.8 53.4 42.7Q49.2 35.7 40.4 39.2Q40.2 29.4 33.1 28.8Q33.8 21.5 25.2 20.7Q28.0 13.8 19.6 11.1Q26.4 4.6 21.8 0.0M64.0 52.8Q58.4 46.0 50.7 53.4Q45.5 44.6 34.5 49.0Q34.2 36.8 25.4 36.0Q26.3 26.9 15.4 25.8Q19.0 17.3 8.5 13.8Q17.1 5.8 11.2 0.0%22 fill=%22none%22 stroke=%22rgba%28232,222,240,0.26%29%22 stroke-width=%22.7%22 stroke-linecap=%22round%22/%3E%3C/g%3E%3C/svg%3E");
+	--spider: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 18%22%3E%3Cstyle%3Epath%7Bfill:none%3Bstroke:%232e221b%3Bstroke-width:.9%3Bstroke-linecap:round%3Bstroke-linejoin:round%3Btransform-box:fill-box%7D.l0%7Btransform-origin:100%25 0%3Banimation:t 1.7s ease-in-out infinite alternate%7D.l1%7Btransform-origin:100%25 0%3Banimation:t 1.7s ease-in-out infinite alternate-reverse%7D%40keyframes t%7Bto%7Btransform:rotate%289deg%29%7D%7D%40media %28prefers-reduced-motion:reduce%29%7Bpath%7Banimation:none%7D%7D%3C/style%3E%3Cdefs%3E%3Cfilter id=%22r%22 x=%22-30%25%22 y=%22-30%25%22 width=%22160%25%22 height=%22160%25%22%3E%3CfeDropShadow dx=%220%22 dy=%220%22 stdDeviation=%22.45%22 flood-color=%22rgba%28255,214,170,0.7%29%22/%3E%3C/filter%3E%3C/defs%3E%3Cg filter=%22url%28%23r%29%22%3E%3Cg%3E%3Cpath class=%22l0%22 d=%22M5.6 8.6 2.2 5.4 1.2 1.8%22/%3E%3Cpath class=%22l1%22 d=%22M5.4 9.6 1.6 8.4 .2 6%22/%3E%3Cpath class=%22l0%22 d=%22M5.4 10.6 1.4 11.2 .2 13.6%22/%3E%3Cpath class=%22l1%22 d=%22M5.6 11.6 2.6 14 1.6 16%22/%3E%3C/g%3E%3Cg transform=%22matrix%28-1 0 0 1 16 0%29%22%3E%3Cpath class=%22l0%22 d=%22M5.6 8.6 2.2 5.4 1.2 1.8%22/%3E%3Cpath class=%22l1%22 d=%22M5.4 9.6 1.6 8.4 .2 6%22/%3E%3Cpath class=%22l0%22 d=%22M5.4 10.6 1.4 11.2 .2 13.6%22/%3E%3Cpath class=%22l1%22 d=%22M5.6 11.6 2.6 14 1.6 16%22/%3E%3C/g%3E%3Cg fill=%22%231f1612%22%3E%3Cellipse cx=%228%22 cy=%2212.4%22 rx=%222.9%22 ry=%223.5%22/%3E%3Ccircle cx=%228%22 cy=%228%22 r=%221.9%22/%3E%3C/g%3E%3Cellipse cx=%227.1%22 cy=%2211.3%22 rx=%22.9%22 ry=%221.4%22 fill=%22rgba%28255,225,190,0.22%29%22/%3E%3C/g%3E%3C/svg%3E");
+	/* real colours for real animals: near-black browns, with a hairline of warm
+	   light so they still read against a dark page */
+	--spider-body: #1f1612;
+	--spider-leg: #2e221b;
+	--spider-rim: drop-shadow(0 0 0.35px rgba(255, 214, 170, 0.6));
+	--bat-body: #1a1214;
+	--bat-wing: #2c1d20;
+	--bat-rim: drop-shadow(0 0 1px rgba(255, 150, 70, 0.45));
+	/* the far-off horizon, a shade off the night, and the mist on the ground */
+	--horizon: #1e1626;
+	--fog: rgba(220, 208, 236, 0.13);
+	--cat: #0b080a;
+	--thread: rgba(232, 222, 240, 0.35);
+}
+:root[data-theme='light'][data-special='halloween'] {
+	--web: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cpath d=%22M64 0L64.0 62.0M64 0L50.0 56.3M64 0L31.6 54.0M64 0L23.0 38.2M64 0L10.1 28.6M64 0L8.7 13.8M64 0L2.0 0.0M64.0 10.6Q62.9 9.2 61.3 10.7Q60.3 8.9 58.1 9.8Q58.0 7.4 56.3 7.2Q56.5 5.4 54.3 5.2Q55.0 3.5 52.9 2.8Q54.6 1.2 53.4 0.0M64.0 20.2Q61.8 17.6 58.9 20.4Q57.0 17.0 52.8 18.7Q52.6 14.0 49.3 13.7Q49.6 10.3 45.5 9.9Q46.8 6.6 42.8 5.3Q46.1 2.2 43.8 0.0M64.0 30.7Q60.7 26.8 56.3 31.0Q53.3 25.9 46.9 28.5Q46.7 21.4 41.5 21.0Q42.0 15.7 35.7 15.0Q37.8 10.1 31.7 8.1Q36.7 3.4 33.3 0.0M64.0 42.2Q59.5 36.8 53.4 42.7Q49.2 35.7 40.4 39.2Q40.2 29.4 33.1 28.8Q33.8 21.5 25.2 20.7Q28.0 13.8 19.6 11.1Q26.4 4.6 21.8 0.0M64.0 52.8Q58.4 46.0 50.7 53.4Q45.5 44.6 34.5 49.0Q34.2 36.8 25.4 36.0Q26.3 26.9 15.4 25.8Q19.0 17.3 8.5 13.8Q17.1 5.8 11.2 0.0%22 fill=%22none%22 stroke=%22rgba%2860,40,62,0.28%29%22 stroke-width=%22.7%22 stroke-linecap=%22round%22/%3E%3C/svg%3E");
+	--web-left: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cg transform=%22matrix%28-1 0 0 1 64 0%29%22%3E%3Cpath d=%22M64 0L64.0 62.0M64 0L50.0 56.3M64 0L31.6 54.0M64 0L23.0 38.2M64 0L10.1 28.6M64 0L8.7 13.8M64 0L2.0 0.0M64.0 10.6Q62.9 9.2 61.3 10.7Q60.3 8.9 58.1 9.8Q58.0 7.4 56.3 7.2Q56.5 5.4 54.3 5.2Q55.0 3.5 52.9 2.8Q54.6 1.2 53.4 0.0M64.0 20.2Q61.8 17.6 58.9 20.4Q57.0 17.0 52.8 18.7Q52.6 14.0 49.3 13.7Q49.6 10.3 45.5 9.9Q46.8 6.6 42.8 5.3Q46.1 2.2 43.8 0.0M64.0 30.7Q60.7 26.8 56.3 31.0Q53.3 25.9 46.9 28.5Q46.7 21.4 41.5 21.0Q42.0 15.7 35.7 15.0Q37.8 10.1 31.7 8.1Q36.7 3.4 33.3 0.0M64.0 42.2Q59.5 36.8 53.4 42.7Q49.2 35.7 40.4 39.2Q40.2 29.4 33.1 28.8Q33.8 21.5 25.2 20.7Q28.0 13.8 19.6 11.1Q26.4 4.6 21.8 0.0M64.0 52.8Q58.4 46.0 50.7 53.4Q45.5 44.6 34.5 49.0Q34.2 36.8 25.4 36.0Q26.3 26.9 15.4 25.8Q19.0 17.3 8.5 13.8Q17.1 5.8 11.2 0.0%22 fill=%22none%22 stroke=%22rgba%2860,40,62,0.28%29%22 stroke-width=%22.7%22 stroke-linecap=%22round%22/%3E%3C/g%3E%3C/svg%3E");
+	--spider: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 18%22%3E%3Cstyle%3Epath%7Bfill:none%3Bstroke:%232e221b%3Bstroke-width:.9%3Bstroke-linecap:round%3Bstroke-linejoin:round%3Btransform-box:fill-box%7D.l0%7Btransform-origin:100%25 0%3Banimation:t 1.7s ease-in-out infinite alternate%7D.l1%7Btransform-origin:100%25 0%3Banimation:t 1.7s ease-in-out infinite alternate-reverse%7D%40keyframes t%7Bto%7Btransform:rotate%289deg%29%7D%7D%40media %28prefers-reduced-motion:reduce%29%7Bpath%7Banimation:none%7D%7D%3C/style%3E%3Cg%3E%3Cg%3E%3Cpath class=%22l0%22 d=%22M5.6 8.6 2.2 5.4 1.2 1.8%22/%3E%3Cpath class=%22l1%22 d=%22M5.4 9.6 1.6 8.4 .2 6%22/%3E%3Cpath class=%22l0%22 d=%22M5.4 10.6 1.4 11.2 .2 13.6%22/%3E%3Cpath class=%22l1%22 d=%22M5.6 11.6 2.6 14 1.6 16%22/%3E%3C/g%3E%3Cg transform=%22matrix%28-1 0 0 1 16 0%29%22%3E%3Cpath class=%22l0%22 d=%22M5.6 8.6 2.2 5.4 1.2 1.8%22/%3E%3Cpath class=%22l1%22 d=%22M5.4 9.6 1.6 8.4 .2 6%22/%3E%3Cpath class=%22l0%22 d=%22M5.4 10.6 1.4 11.2 .2 13.6%22/%3E%3Cpath class=%22l1%22 d=%22M5.6 11.6 2.6 14 1.6 16%22/%3E%3C/g%3E%3Cg fill=%22%231f1612%22%3E%3Cellipse cx=%228%22 cy=%2212.4%22 rx=%222.9%22 ry=%223.5%22/%3E%3Ccircle cx=%228%22 cy=%228%22 r=%221.9%22/%3E%3C/g%3E%3Cellipse cx=%227.1%22 cy=%2211.3%22 rx=%22.9%22 ry=%221.4%22 fill=%22rgba%28255,225,190,0.22%29%22/%3E%3C/g%3E%3C/svg%3E");
+	--spider-body: #1f1612;
+	--spider-leg: #2e221b;
+	--spider-rim: none;
+	--bat-body: #231819;
+	--bat-wing: #3a2a2c;
+	--bat-rim: none;
+	--horizon: #e3cfb4;
+	--fog: rgba(255, 252, 245, 0.55);
+	--cat: #1d1418;
+	--thread: rgba(60, 40, 62, 0.4);
+}
+:root[data-special='halloween'] .sppick {
+	position: relative;
+}
+/* a web is part of the surface it hangs on, a background layer under the
+   card's own colour, so the card's rounding clips it and the poster, the faces
+   and the words always sit on top. On the left the poster covers its middle,
+   and what is left reads as a web spun from the card's corner to the poster's;
+   on the right a wash of the card's colour thins it out where a title can run
+   long, so a word never lands on a knot of threads. Corners alternate, and
+   every third pick goes without */
+:root[data-special='halloween'] .sppick:nth-child(3n + 1) {
+	background:
+		radial-gradient(circle at 100% 0, transparent 22px, var(--card) 58px) no-repeat right top / 56px 56px,
+		var(--web) no-repeat right top / 56px 56px,
+		var(--card);
+}
+:root[data-special='halloween'] .sppick:nth-child(3n + 2) {
+	background:
+		var(--web-left) no-repeat left top / 64px 64px,
+		var(--card);
+}
+@keyframes dangle {
+	from {
+		height: 26px;
+	}
+	to {
+		height: 52px;
+	}
+}
+
+/* the rules tip under the Halloween chip, dressed like the cards: lit faintly
+   from below in pumpkin, a web in its lower corner and the spider on the
+   right, with room kept beside the text so neither ever sits on a word */
+:root[data-special='halloween'] .budget .tip.sptip {
+	padding-right: 38px;
+	box-shadow:
+		0 12px 30px var(--shadow),
+		inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+		inset 0 -46px 50px -40px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+:root[data-special='halloween'] .sptip::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	width: 52px;
+	height: 52px;
+	background: var(--web) no-repeat right top / 52px 52px;
+	/* the web is drawn for a top-right corner; turned over, it fits the lower left */
+	transform: rotate(180deg);
+	border-top-right-radius: 12px;
+	pointer-events: none;
+}
+:root[data-special='halloween'] .sptip::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	right: 12px;
+	width: 16px;
+	height: 30px;
+	background:
+		var(--spider) no-repeat center bottom / 14px 16px,
+		linear-gradient(var(--thread), var(--thread)) no-repeat center top / 1px calc(100% - 10px);
+	animation: dangle 4.5s ease-in-out infinite alternate;
+	pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+	:root[data-special='halloween'] .sptip::before {
+		animation: none;
+		height: 40px;
+	}
+}

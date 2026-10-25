@@ -14,6 +14,9 @@ import { ruleFail } from '$lib/server/respond';
 import { RuleError } from '$lib/server/types';
 import { fromLocalInput, iso, nextDeadline } from '$lib/server/time';
 import { toLocalInput } from '$lib/datetime';
+import { activeRules } from '$lib/server/config';
+import { startSpecial, stopSpecial } from '$lib/server/specials';
+import { isSpecialId, SPECIALS } from '$lib/specials';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	requireAdmin(locals.person);
@@ -26,7 +29,18 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const drivingId = nights.find((n) => n.at === closesAt && n.status === 'planned')?.id ?? null;
 
 	return {
-		week: week ? { number: week.number, status: week.status, closesAt: week.closes_at } : null,
+		week: week
+			? { number: week.number, status: week.status, closesAt: week.closes_at, special: week.special }
+			: null,
+		// §3.6: what an open round could be given over to, and whether it still can be taken back
+		specials: Object.keys(SPECIALS),
+		specialPicks: week?.special
+			? (
+					db
+						.prepare('SELECT COUNT(*) AS n FROM film WHERE special = ? AND added_week = ?')
+						.get(week.special, week.number) as { n: number }
+				).n
+			: 0,
 		drivingId,
 		nights,
 		// what the round would fall back to with nothing planned
@@ -91,6 +105,32 @@ export const actions: Actions = {
 			logAdmin(getDb(), person.id, restore ? 'night.restore' : 'night.skip', String(id));
 			afterEdit();
 			return { skipped: !restore };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	special: async ({ request, locals }) => {
+		const person = requireAdmin(locals.person);
+		const form = await request.formData();
+		const id = String(form.get('special') ?? '');
+		try {
+			if (!isSpecialId(id)) throw new RuleError('no_special', 'no such special round');
+			const week = startSpecial(getDb(), activeRules(), id);
+			logAdmin(getDb(), person.id, 'round.special', String(week.number), id);
+			return { special: id };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	unspecial: async ({ locals }) => {
+		const person = requireAdmin(locals.person);
+		try {
+			const week = currentWeek(getDb());
+			stopSpecial(getDb(), activeRules());
+			logAdmin(getDb(), person.id, 'round.unspecial', String(week?.number ?? ''));
+			return { unspecial: true };
 		} catch (error) {
 			return ruleFail(error);
 		}

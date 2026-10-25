@@ -5,7 +5,8 @@ import { isDemo } from '$lib/server/config';
 import { personByToken } from '$lib/server/people';
 import { limiter } from '$lib/server/ratelimit';
 import { startScheduler } from '$lib/server/scheduler';
-import { BANANA_BG, THEME_BG, bananaOf, themeOf } from '$lib/themes';
+import { BANANA_BG, SPECIAL_BG, THEME_BG, bananaOf, themeOf } from '$lib/themes';
+import { lookAt } from '$lib/server/specials';
 
 export const PERSON_COOKIE = 'fn_person';
 export const DEVICE_COOKIE = 'fn_device';
@@ -131,7 +132,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// the phone, which is what the media-scoped pair is for
 	const theme = themeOf(event.cookies.get(THEME_COOKIE));
 	const banana = bananaOf(event.cookies.get(BANANA_COOKIE));
-	const bg = banana ? BANANA_BG : THEME_BG;
+	// §3.6: a special round dresses everybody, over bananas too, for as long as it lasts
+	const look = lookAt(db);
+	const bg = look ? SPECIAL_BG[look.id] : banana ? BANANA_BG : THEME_BG;
 	const tint =
 		theme === 'auto'
 			? `<meta name="theme-color" content="${bg.dark}" media="(prefers-color-scheme: dark)" />
@@ -144,6 +147,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 				html
 					.replaceAll('%fn.theme%', theme)
 					.replace('%fn.banana%', banana ? ' data-banana' : '')
+					.replace('%fn.special%', look ? ` data-special="${look.id}"` : '')
 					.replace('%fn.scheme%', theme === 'auto' ? 'light dark' : theme)
 					.replace('%fn.tint%', tint)
 		})

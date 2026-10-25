@@ -206,6 +206,17 @@ CREATE TABLE IF NOT EXISTS comment_react (
   created_at TEXT    NOT NULL,
   PRIMARY KEY (comment_id, person_id, emoji)
 );
+
+-- §3.6: a special round's ballot. Not points: a tick on every pick you would
+-- happily sit through, as many as you like, freely taken back until the round
+-- closes. Kept apart from ballot so a special round can never touch the list's
+-- scores, budgets or attrition
+CREATE TABLE IF NOT EXISTS approval (
+  film_id    INTEGER NOT NULL REFERENCES film(id),
+  person_id  TEXT    NOT NULL REFERENCES person(id),
+  created_at TEXT    NOT NULL,
+  PRIMARY KEY (film_id, person_id)
+);
 `;
 
 /**
@@ -229,7 +240,15 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	['runoff_ballot', 'ranking', 'TEXT'],
 	// §7.2: when the host started the count on the projector; phones keep the
 	// result to themselves until it has run
-	['runoff', 'revealed_at', 'TEXT']
+	['runoff', 'revealed_at', 'TEXT'],
+	// §3.6: a round given over to a special night. The list sleeps through it:
+	// no points, no nominations, and the round does not count towards fade or
+	// attrition, so the list wakes up exactly where it was left
+	['week', 'special', 'TEXT'],
+	// §3.6: a pick for a special round rather than a nomination to the list. It
+	// never appears on the list, never takes points, and once its round is over
+	// it is either the night's film or dropped with the rest
+	['film', 'special', 'TEXT']
 ];
 
 /**
@@ -245,7 +264,11 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
  */
 export const LATE_INDEXES: string[] = [
 	'DROP INDEX IF EXISTS film_one_per_person_per_week',
-	`CREATE UNIQUE INDEX IF NOT EXISTS film_one_per_person_per_round
+	// §3.6: a special round's picks are not nominations, and a person has more
+	// than one of them, so the one-per-round rule is scoped to the list's films
+	'DROP INDEX IF EXISTS film_one_per_person_per_round',
+	`CREATE UNIQUE INDEX IF NOT EXISTS film_one_nomination_per_round
 	   ON film(added_by, added_week)
-	   WHERE archival = 0 AND status != 'watched'`
+	   WHERE archival = 0 AND status != 'watched' AND special IS NULL`,
+	'CREATE INDEX IF NOT EXISTS approval_person ON approval(person_id)'
 ];

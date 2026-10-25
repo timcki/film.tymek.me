@@ -3,6 +3,7 @@ import { getDb } from '$lib/server/db';
 import { activeRules, isDemo, origin } from '$lib/server/config';
 import { bankBalance, clearAvatar, rotateToken, setAvatar } from '$lib/server/people';
 import { currentWeek } from '$lib/server/weeks';
+import { listClock } from '$lib/server/scoring';
 import { XP, xpBreakdown } from '$lib/server/xp';
 import { qrSvg } from '$lib/server/qr';
 import { ruleFail } from '$lib/server/respond';
@@ -34,19 +35,21 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const nominatedThisWeek = week
 		? Boolean(
 				db
-					.prepare('SELECT 1 FROM film WHERE added_by = ? AND added_week = ?')
+					.prepare('SELECT 1 FROM film WHERE added_by = ? AND added_week = ? AND special IS NULL')
 					.get(person.id, week.number)
 			)
 		: false;
 
-	// the longest run of consecutive weeks this person kept points on one film
+	// the longest run of consecutive weeks this person kept points on one film,
+	// on the list's clock, so sleeping through a special round (§3.6) is no break
+	const clock = listClock(db);
 	const rows = db
 		.prepare('SELECT film_id, week_number FROM ballot WHERE person_id = ?')
 		.all(person.id) as { film_id: number; week_number: number }[];
 	const byFilm = new Map<number, Set<number>>();
 	for (const row of rows) {
 		const weeks = byFilm.get(row.film_id) ?? new Set<number>();
-		weeks.add(row.week_number);
+		weeks.add(clock(row.week_number));
 		byFilm.set(row.film_id, weeks);
 	}
 	let longestCampaign = 0;

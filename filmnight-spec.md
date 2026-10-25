@@ -227,6 +227,34 @@ on.
 An optional reason of up to 160 characters rides along and is shown to everyone. It is the
 group-chat message; without somewhere to put it, people would still write it there.
 
+### 3.6 Special rounds
+
+**Added October 2026, for Halloween.** An admin can give the open round over to one night
+with its own picks, its own way of voting and its own look (`/admin/calendar`). The
+round's numbers live in `src/lib/specials.ts`, so the page says what the round is from
+the same values the engine enforces, the way the rules screen reads the `RuleSet`.
+
+- **Its own picks.** Each person puts up `picksPerPerson` films (one for Halloween),
+  marked `film.special`, outside the list's one-nomination-a-round slot. The usual
+  duplicate rules (§4.1) apply against everything, the list included.
+- **Hidden approval voting.** Each pick can be ticked ("I want to see it") by anyone, as
+  many as they like, their own included, and unticked until the round closes. Ticks live
+  in `approval`, never in `ballot`. Nobody sees the counts, only who has voted, so there is
+  nothing to react to. A special film's `score` is its approval count, rebuilt by
+  `rescoreAll()` like any other score.
+- **The room, as usual.** At close the `shortlistSize` most approved picks go to the room
+  (§7) and the night is decided there. Ties fall back to §3.2.
+- **The list sleeps.** While the round is on, nobody spends points or nominates, and the
+  round neither fades nor ages anything. The list keeps its own clock: a special round's
+  week shares its ordinal with the week after it (`listClock`), so fade, attrition and the
+  archive's ages all read as though the night had not happened. Picks nobody watched are
+  dropped afterwards rather than joining the list.
+- **The look.** While the round is in play, and for the rest of its month (`themeMonth`,
+  Europe/Warsaw) once it has been held, every page wears the round's theme. It is
+  decoration only, and asks for less motion are honoured throughout.
+
+An admin can call a special round off only while nobody has put a pick up.
+
 ---
 
 ## 4. Data model
@@ -501,8 +529,7 @@ submission is an idempotent no-op. Incomplete or duplicate rankings are rejected
 changing an existing ballot.
 
 Only the submitted ballot count is live. Neither voters nor the host receive first-choice
-counts, ranked points, pairwise comparisons or result-dependent film ordering before
-close. A voter can read their own saved ranking through their personal or guest-device
+counts, ranked points or result-dependent film ordering before close. A voter can read their own saved ranking through their personal or guest-device
 cookie; picking somebody's name or casting on their behalf does not expose their ballot.
 After close, the host's results disclosure shows aggregate results and each person's
 final submitted ranking by name. Guest ballots use numbered guest labels, never device
@@ -510,9 +537,9 @@ identifiers. Legacy ballots show only their recorded first choice.
 
 Closing the room does not announce the result. The host screen holds it behind a
 **count**: the host presses one button, `runoff.revealed_at` is stamped once, and the
-screen lands the ballots one at a time with the films standing in an unranked triangle,
-says the ranked points aloud when the night was a cycle, and only then lifts the winner
-to the top. Phones in the room show *look at the screen* until the count has had time to
+screen lands the ballots one at a time, each handing out its points, while the films'
+totals race in a fixed order that gives nothing away, and only then reorders them by
+points with the winner on top. Phones in the room show *look at the screen* until the count has had time to
 run (`src/lib/reveal.ts` holds the timings both sides share), so the room learns the
 winner from the projector rather than from the phone in its hand. A room nobody counts,
 because it closed on its own clock, tells its phones ten minutes after closing.
@@ -532,16 +559,15 @@ being in the room breaks a tie, it does not buy influence.
 `POST /host/close-runoff`, or automatically at `expires_at`.
 
 ```
-if a film strictly beats every other film in head-to-head comparisons:
-    winner = that film
-else:
-    winner = films ordered by (ranked points desc, then §3.2 ordering)
+winner = films ordered by (ranked points desc, then §3.2 ordering)
 ```
 
 For N candidates, each ranking awards N-1 points to first place, N-2 to second, down to
-zero for last. A tied pairwise comparison is not a win. Cycles and tied comparisons use
-the points fallback across all candidates. Remaining ties and zero turnout use §3.2:
-weekly score descending, then nomination week, timestamp and id ascending. With one
+zero for last: with three films, 2, 1 and 0. The most points wins. This used to crown a
+film that beat every other head to head before looking at points; it was hard to explain
+to a room and almost never disagreed with the points, so the points are now the whole
+rule. Ties and zero turnout use §3.2: weekly score descending, then nomination week,
+timestamp and id ascending. With one
 candidate, the room simply confirms it. Then run `finish(week, winner)` from §6.1.
 
 ### 7.4 Attendance
@@ -566,9 +592,9 @@ else; never scores, budgets, or attrition.
 `/host` is a projector-friendly page: big room QR, the code in large monospace, the
 shortlist, the submitted ballot count and a **Close** button. The collapsed proxy-voting
 form accepts a complete ranking for someone whose phone is dead. Use it on an
-unprojected screen to keep that ranking private. Closing reveals the winner with an
-explanation, its head-to-head comparisons, and every film's first-choice count and
-ranked points directly on the host screen.
+unprojected screen to keep that ranking private. Closing reveals the winner through the
+count: one bar of points per film, filling as the ballots land, with each person's full
+ranking folded away under the result for anyone who wants it.
 
 ---
 

@@ -3,7 +3,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import { attended, checkIn } from '$lib/server/attendance';
 import { allPeople, faceOf } from '$lib/server/people';
-import { decidedOnPoints, flashVote, isExpired, myRanking, publicTally, runoffByCode, runoffFilms, turnout } from '$lib/server/runoffs';
+import { flashVote, isExpired, myRanking, publicTally, runoffByCode, runoffFilms, turnout, withdrawFlashVote } from '$lib/server/runoffs';
 import { resultPublic } from '$lib/reveal';
 import { seenCounts } from '$lib/server/seen';
 import { ruleFail } from '$lib/server/respond';
@@ -27,10 +27,10 @@ export const load: PageServerLoad = async ({ params, locals, cookies, depends, u
 		const n = turnout(db, runoff.id);
 		// §7.2: the room learns the winner from the screen. Until the host's count
 		// has run, a phone knows the vote is over and nothing else
-		const pending = !resultPublic(runoff, n, decidedOnPoints(db, runoff), new Date());
+		const pending = !resultPublic(runoff, n, new Date());
 		const rows = pending
 			? runoffFilms(db, runoff.id).sort((a, b) => a.id - b.id).map((film) => ({
-				film, votes: null, points: null, beatsAll: null, comparisons: null
+				film, votes: null, points: null
 			}))
 			: publicTally(db, runoff);
 		return {
@@ -103,6 +103,26 @@ export const actions: Actions = {
 
 		try {
 			flashVote(db, runoff.id, voterKey, personId, ranking);
+			return { ok: true };
+		} catch (err) {
+			return ruleFail(err);
+		}
+	},
+
+	// the save works both ways: pressed again, the ranking is taken back out of
+	// the room, found by the same key it was cast under
+	withdraw: async ({ params, request, locals, cookies }) => {
+		const db = getDb();
+		const runoff = runoffByCode(db, params.code);
+		if (!runoff) return fail(404, { message: 'no runoff with that code' });
+
+		const form = await request.formData();
+		const claimed = String(form.get('personId') ?? '');
+		const voterKey = locals.person?.id ?? (claimed || cookies.get(DEVICE_COOKIE));
+		if (!voterKey) return { ok: true };
+
+		try {
+			withdrawFlashVote(db, runoff.id, voterKey);
 			return { ok: true };
 		} catch (err) {
 			return ruleFail(err);

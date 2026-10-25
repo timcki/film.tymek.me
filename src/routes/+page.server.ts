@@ -1,4 +1,4 @@
-import { fail } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import { activeRules } from '$lib/server/config';
@@ -29,6 +29,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 	// read before anything else the page shows, so a write landing mid-load
 	// leaves this behind the data and the next poll reloads, never the reverse
 	const live = generation();
+	// §3.6: the list is asleep for a special round, which has a page of its own
+	if (week?.special) redirect(303, '/special');
 	if (!week) {
 		return {
 			live,
@@ -43,7 +45,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	}
 
 	const nominatedThisWeek = db
-		.prepare('SELECT id, title FROM film WHERE added_by = ? AND added_week = ?')
+		.prepare('SELECT id, title FROM film WHERE added_by = ? AND added_week = ? AND special IS NULL')
 		.get(person.id, week.number) as { id: number; title: string } | undefined;
 
 	const films = standings(db, rules, week.number, person.id);

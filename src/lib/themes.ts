@@ -43,3 +43,16 @@ export const BANANA_BG: Record<'dark' | 'light', string> = {
 	dark: '#16130e',
 	light: '#f0f0dc'
 };
+
+/**
+ * §3.6: a special round's look. Not chosen by anybody: the server puts it on
+ * <html> as data-special while the round lasts, over whichever palette is
+ * showing and over bananas too, and takes it off again when it is over.
+ */
+export const SPECIAL_BG: Record<string, Record<'dark' | 'light', string>> = {
+	// --bg itself: the Halloween wash glows from the bottom, so the top is unwashed
+	halloween: {
+		dark: '#120c16',
+		light: '#f3e4cf'
+	}
+};

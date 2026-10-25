@@ -41,6 +41,13 @@ export type AdminDict = {
 	calEdit: string;
 	calSave: string;
 	calCancel: string;
+	/** §3.6: giving the open round over to a special night */
+	spcH: string;
+	spcIntro: string;
+	spcStart: (name: string) => string;
+	spcOn: (name: string) => string;
+	spcStop: string;
+	spcLocked: string;
 
 	/* people */
 	peoH: string;
@@ -178,6 +185,15 @@ const pl: AdminDict = {
 	calEdit: 'Zmień',
 	calSave: 'Zapisz',
 	calCancel: 'Anuluj',
+	spcH: 'Wieczór specjalny',
+	spcIntro:
+		'Oddaje bieżącą rundę jednemu wieczorowi z własnymi propozycjami i własnym głosowaniem. ' +
+		'Lista śpi do jego końca: nikt nie wydaje punktów, nic nie traci na wartości i nic nie wypada. ' +
+		'Punkty wydane w tej rundzie wcześniej zostają.',
+	spcStart: (name) => `Zrób z tej rundy ${name}`,
+	spcOn: (name) => `Ta runda to ${name}.`,
+	spcStop: 'Odwołaj',
+	spcLocked: 'Ktoś już zgłosił propozycję, więc runda dobiegnie końca.',
 
 	peoH: 'Ludzie',
 	peoAddH: 'Dodaj osobę',
@@ -312,6 +328,18 @@ const pl: AdminDict = {
 				return `${p.title} jest już zapisany (tydzień ${p.week}).`;
 			case 'film_archival':
 				return `${p.title} to zapis dawnego wieczoru, nie można na niego głosować.`;
+			case 'special_on':
+				return 'Ta runda już jest specjalna.';
+			case 'special_has_picks':
+				return 'Ktoś już zgłosił propozycję, więc runda dobiegnie końca.';
+			case 'no_special':
+				return 'Ta runda nie jest specjalna.';
+			case 'room_picking':
+				return 'Sala właśnie wybiera film.';
+			case 'week_closed':
+				return 'Ta runda jest zamknięta.';
+			case 'deadline_passed':
+				return 'Termin tej rundy już minął.';
 			default:
 				return fallback;
 		}
@@ -362,6 +390,15 @@ const en: AdminDict = {
 	calEdit: 'Change',
 	calSave: 'Save',
 	calCancel: 'Cancel',
+	spcH: 'Special night',
+	spcIntro:
+		'Gives the current round over to one night with its own picks and its own vote. ' +
+		'The list sleeps until it is over: nobody spends points, nothing fades and nothing drops. ' +
+		'Points already spent this round stay where they are.',
+	spcStart: (name) => `Make this round ${name}`,
+	spcOn: (name) => `This round is ${name}.`,
+	spcStop: 'Call it off',
+	spcLocked: 'Somebody has already put a pick up, so the round runs its course.',
 
 	peoH: 'People',
 	peoAddH: 'Add someone',

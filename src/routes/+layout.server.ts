@@ -4,6 +4,7 @@ import { activeRules, demoHome, isDemo } from '$lib/server/config';
 import { PERSONAS, personas, type PersonaKind } from '$lib/server/demo';
 import { currentWeek } from '$lib/server/weeks';
 import { openRunoff } from '$lib/server/runoffs';
+import { lookAt } from '$lib/server/specials';
 import { avatarUrl, bankBalance, spentInWeek } from '$lib/server/people';
 import { langOf } from '$lib/i18n';
 import { unseenChangelog } from '$lib/changelog';
@@ -44,6 +45,8 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 		// which half of the switch is lit
 		theme: themeOf(cookies.get(THEME_COOKIE)),
 		banana: bananaOf(cookies.get(BANANA_COOKIE)),
+		// §3.6: the special look already on <html>, for the few things drawn rather than coloured
+		look: lookAt(db)?.id ?? null,
 		// news this person has not dismissed yet, already said in their language
 		changelog: person
 			? unseenChangelog(person.changelog_seen).map((entry) => ({
@@ -83,6 +86,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 			? {
 					number: week.number,
 					status: week.status,
+					special: week.special,
 					// both ends, so the header can draw how much of the round is gone
 					opensAt: week.opens_at,
 					closesAt: week.closes_at

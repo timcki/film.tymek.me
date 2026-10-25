@@ -9,7 +9,7 @@ import type { DB } from './db.js';
 export const XP = {
 	/** you were in the room */
 	attend: 10,
-	/** you spent at least one point that week */
+	/** you spent at least one point that week, or ticked a pick in a special round */
 	vote: 2,
 	/** you nominated a film */
 	nominate: 1,
@@ -18,6 +18,17 @@ export const XP = {
 	/** you had points on the winner in its winning week */
 	backedWinner: 3
 } as const;
+
+/**
+ * (person, round) for every round somebody voted in. A special round's ticks
+ * (§3.6) are its votes, so turning up to one is no worse for your XP than a
+ * round of points; a round with both still counts once.
+ */
+const ROUNDS_VOTED = `
+	SELECT person_id, week_number FROM ballot
+	UNION
+	SELECT a.person_id, f.added_week AS week_number
+	FROM approval a JOIN film f ON f.id = a.film_id`;
 
 export type XpBreakdown = {
 	nightsAttended: number;
@@ -43,7 +54,7 @@ export function xpBreakdown(db: DB, personId: string): XpBreakdown {
 	const one = (sql: string) => (db.prepare(sql).get(personId) as { n: number }).n;
 	const counts = {
 		nightsAttended: one('SELECT COUNT(*) AS n FROM attendance WHERE person_id = ?'),
-		weeksVoted: one('SELECT COUNT(DISTINCT week_number) AS n FROM ballot WHERE person_id = ?'),
+		weeksVoted: one(`SELECT COUNT(*) AS n FROM (${ROUNDS_VOTED}) WHERE person_id = ?`),
 		nominations: one('SELECT COUNT(*) AS n FROM film WHERE added_by = ?'),
 		nominationsWatched: one(
 			`SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND status = 'watched'`
@@ -79,7 +90,7 @@ export function rexpAll(db: DB): void {
 	);
 	add(
 		db
-			.prepare('SELECT person_id, COUNT(DISTINCT week_number) AS n FROM ballot GROUP BY person_id')
+			.prepare(`SELECT person_id, COUNT(*) AS n FROM (${ROUNDS_VOTED}) GROUP BY person_id`)
 			.all() as { person_id: string; n: number }[],
 		XP.vote
 	);
