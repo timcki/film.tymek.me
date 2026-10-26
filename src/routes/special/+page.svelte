@@ -17,6 +17,7 @@
 	import { watchLive } from '$lib/live-poll';
 	import { nomSheet } from '$lib/special-sheet.svelte';
 	import { portal } from '$lib/portal';
+	import { fitViewport } from '$lib/fit-viewport';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -131,6 +132,13 @@
 		detailId = null;
 		noteEdit = false;
 	};
+	// opened from the comment pill: the modal comes up with its thread in view
+	let toComments = $state(false);
+	$effect(() => {
+		if (!detail || !toComments) return;
+		toComments = false;
+		setTimeout(() => document.querySelector('.spdetail .cmts')?.scrollIntoView({ block: 'start', behavior: ms(1) ? 'smooth' : 'auto' }), ms(260));
+	});
 
 	/* --------------------------------------------------------------- lamps -- */
 
@@ -366,6 +374,30 @@
 					</div>
 				</div>
 				<div class="ft">
+					<!-- the thread's pill: opens the film with its comments in view -->
+					<button
+						class="eyebtn cmtbtn"
+						type="button"
+						aria-label={pick.comments.length ? T.commentsH(pick.comments.length) : T.commentNone}
+						onclick={() => {
+							toComments = true;
+							detailId = pick.id;
+						}}
+					>
+						<svg
+							viewBox="0 0 24 24"
+							width="13"
+							height="13"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
+							<path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+						</svg>
+						<b>{pick.comments.length}</b>
+					</button>
 					<form method="POST" action="?/seen" use:enhance={submit()}>
 						<input type="hidden" name="filmId" value={pick.id} />
 						<button
@@ -448,6 +480,7 @@
 		role="dialog"
 		aria-modal="true"
 		use:portal
+		use:fitViewport
 		aria-label={T.spNomH(name)}
 		in:grow
 		out:grow={{ out: true }}
@@ -547,6 +580,7 @@
 		role="dialog"
 		aria-modal="true"
 		use:portal
+		use:fitViewport
 		aria-label={detail.title}
 		in:grow
 		out:grow={{ out: true }}

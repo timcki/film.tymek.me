@@ -4,6 +4,7 @@
 	import { flip } from 'svelte/animate';
 	import { fade, scale } from 'svelte/transition';
 	import { portal } from '$lib/portal';
+	import { fitViewport } from '$lib/fit-viewport';
 	import { backOut, cubicIn, cubicOut } from 'svelte/easing';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from '$lib/components/Avatar.svelte';
@@ -1122,6 +1123,7 @@
 	aria-modal="true"
 	aria-label={detail.title}
 	use:portal
+	use:fitViewport
 	in:grow
 	out:grow={{ out: true }}
 >

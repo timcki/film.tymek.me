@@ -2557,6 +2557,10 @@ details[open] > .iconbtn {
 	stroke-width: 1.8;
 	stroke-linecap: round;
 }
+/* 16px, or iPhone Safari zooms the page in when the comment box is tapped */
+.dmodal .nin {
+	font-size: 16px;
+}
 .dmodal .spendbar {
 	padding-bottom: 14px;
 }
