@@ -9,7 +9,6 @@
 set -euo pipefail
 
 HOST=${HOST:-bigchungus}
-REMOTE_DB=${REMOTE_DB:-/var/lib/filmnight/filmnight.db}
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 LOCAL_DB=${LOCAL_DB:-$HERE/data/prod-copy.db}
 SNAPSHOT=${SNAPSHOT:-1}
@@ -40,20 +39,29 @@ if [[ -z "${LOCAL_ORIGIN:-}" ]]; then
 	fi
 fi
 
+# Streams a fresh .backup of production to stdout. On the box itself (the amp
+# runner) there is no ssh hop, and on either side the only privilege it needs is
+# the sudo rule for filmnight-snapshot, so the account need not be in wheel.
+snapshot() {
+	if [[ "${HOSTNAME%%.*}" == "$HOST" ]]; then
+		sudo -n filmnight-snapshot
+	else
+		ssh -C "$HOST" sudo -n filmnight-snapshot
+	fi
+}
+
 if [[ "$SNAPSHOT" == 1 ]]; then
-	echo "==> snapshotting $HOST:$REMOTE_DB"
-	# .backup is safe against a live WAL writer; the copy in /tmp is world-readable
-	# for a moment so the ssh user can pull it, then removed
-	ssh "$HOST" "sudo sqlite3 $REMOTE_DB \".backup '/tmp/filmnight-test.db'\" && sudo chmod 644 /tmp/filmnight-test.db"
+	echo "==> snapshotting production on $HOST"
 	mkdir -p "$HERE/data"
+	# fetched beside the old copy first, so a failed pull leaves the last good one
+	snapshot >"$LOCAL_DB.part"
 	# the -wal and -shm of the previous snapshot belong to a database that is about
 	# to be replaced. Left in place, SQLite treats them as this file's journal and
 	# replays a stranger's pages over the fresh copy: the table says 'watched' while
 	# the index on it still says 'active', the list shows films that are gone, and
 	# voting on one is refused by a server reading the row the list never saw
 	rm -f "$LOCAL_DB" "$LOCAL_DB-wal" "$LOCAL_DB-shm"
-	rsync -z "$HOST:/tmp/filmnight-test.db" "$LOCAL_DB"
-	ssh "$HOST" "sudo rm -f /tmp/filmnight-test.db"
+	mv "$LOCAL_DB.part" "$LOCAL_DB"
 	echo "==> snapshot at $LOCAL_DB"
 	sqlite3 "$LOCAL_DB" 'PRAGMA integrity_check;' | head -5
 elif [[ ! -f "$LOCAL_DB" ]]; then

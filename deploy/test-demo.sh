@@ -10,7 +10,6 @@
 set -euo pipefail
 
 HOST=${HOST:-bigchungus}
-REMOTE_DB=${REMOTE_DB:-/var/lib/filmnight/filmnight.db}
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 # the snapshot and the demo built from it are two files on purpose: the snapshot
 # is the real thing and never gets served, the demo is what the browser sees
@@ -40,17 +39,27 @@ if [[ -z "${LOCAL_ORIGIN:-}" ]]; then
 	fi
 fi
 
+# Streams a fresh .backup of production to stdout. On the box itself (the amp
+# runner) there is no ssh hop, and on either side the only privilege it needs is
+# the sudo rule for filmnight-snapshot, so the account need not be in wheel.
+snapshot() {
+	if [[ "${HOSTNAME%%.*}" == "$HOST" ]]; then
+		sudo -n filmnight-snapshot
+	else
+		ssh -C "$HOST" sudo -n filmnight-snapshot
+	fi
+}
+
 if [[ "$SNAPSHOT" == 1 ]]; then
-	echo "==> snapshotting $HOST:$REMOTE_DB"
-	# .backup is safe against a live WAL writer, and it is what the hourly refresh
-	# on the box does too; the anonymiser refuses a source with a -wal beside it
-	ssh "$HOST" "sudo sqlite3 $REMOTE_DB \".backup '/tmp/filmnight-demo.db'\" && sudo chmod 644 /tmp/filmnight-demo.db"
+	echo "==> snapshotting production on $HOST"
+	# the anonymiser refuses a source with a -wal beside it
 	mkdir -p "$HERE/data"
+	# fetched beside the old copy first, so a failed pull leaves the last good one
+	snapshot >"$SNAP_DB.part"
 	# the -wal and -shm of the previous snapshot belong to a database that is about
 	# to be replaced, and SQLite would replay a stranger's pages over the fresh copy
 	rm -f "$SNAP_DB" "$SNAP_DB-wal" "$SNAP_DB-shm"
-	rsync -z "$HOST:/tmp/filmnight-demo.db" "$SNAP_DB"
-	ssh "$HOST" "sudo rm -f /tmp/filmnight-demo.db"
+	mv "$SNAP_DB.part" "$SNAP_DB"
 	echo "==> snapshot at $SNAP_DB"
 elif [[ ! -f "$SNAP_DB" ]]; then
 	echo "no snapshot at $SNAP_DB; run once without SNAPSHOT=0 first" >&2

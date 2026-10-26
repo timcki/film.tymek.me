@@ -72,6 +72,7 @@ database; see **The demo**.
 | environment | `/etc/filmnight.env` (0640 root:filmnight): `ORIGIN`, `RULES`, `TZ`, TMDB token |
 | revision | `FILMNIGHT_REV` in the unit, from the flake input; read back at `/healthz` |
 | backups | `filmnight-backup.timer`, nightly 04:17, 30 days in `/var/backups/filmnight` |
+| snapshots | `sudo filmnight-snapshot`, a `.backup` streamed to stdout; wheel, plus `snapshotUsers` (`amp`) |
 | proxy | chungus-1 `/etc/caddy/Caddyfile`, `film.tymek.me` to `bigchungus:3010` |
 | firewall | 3010 is open on `tailscale0` only, so only chungus-1 can reach it |
 

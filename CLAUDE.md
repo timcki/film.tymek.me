@@ -36,8 +36,9 @@ First-time local setup needs `cp .env.example .env` with a TMDB v4 read token, a
 ### Testing against real data
 
 `./deploy/test-local.sh` is how a change gets poked at before it ships. It takes a
-`sqlite3 .backup` of the production database over ssh to `bigchungus` (safe against the
-live WAL writer, and it never writes to production), drops the copy at
+`sqlite3 .backup` of the production database through `sudo filmnight-snapshot` on
+`bigchungus` (safe against the live WAL writer, and it never writes to production), over
+ssh from elsewhere or directly when already on the box as `amp`, drops the copy at
 `data/prod-copy.db`, prints every personal link on that copy, and runs `vite dev --host`
 against it. `SNAPSHOT=0` reuses the last copy instead of pulling a fresh one.
 
