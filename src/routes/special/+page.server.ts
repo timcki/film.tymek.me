@@ -11,6 +11,7 @@ import {
 	specialTurnout
 } from '$lib/server/specials';
 import { seenOf, toggleSeen } from '$lib/server/seen';
+import { setNote } from '$lib/server/films';
 import { addComment, commentsOf, reactComment } from '$lib/server/comments';
 import { ruleFail } from '$lib/server/respond';
 import { detailsOf } from '$lib/server/tmdb';
@@ -101,6 +102,17 @@ export const actions: Actions = {
 		try {
 			setApproval(getDb(), activeRules(), locals.person!.id, Number(form.get('filmId')), on);
 			return on ? { approved: title } : { unapproved: title };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	// the pitch under a pick, written or rewritten by whoever put it up
+	setNote: async ({ request, locals }) => {
+		const form = await request.formData();
+		try {
+			setNote(getDb(), locals.person!.id, Number(form.get('filmId')), String(form.get('note') ?? ''));
+			return { noteSaved: true };
 		} catch (error) {
 			return ruleFail(error);
 		}

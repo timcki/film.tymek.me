@@ -124,7 +124,13 @@
 	// the poster opens the film, in a modal like the one picks are put up in
 	let detailId = $state<number | null>(null);
 	const detail = $derived(detailId === null ? null : (data.picks.find((pick) => pick.id === detailId) ?? null));
-	const closeDetail = () => (detailId = null);
+	// the pitch is the nominator's to write, from their own pick's modal
+	let noteEdit = $state(false);
+	const mine = $derived(Boolean(detail && data.person && detail.added_by === data.person.id));
+	const closeDetail = () => {
+		detailId = null;
+		noteEdit = false;
+	};
 
 	/* --------------------------------------------------------------- lamps -- */
 
@@ -575,9 +581,23 @@
 				</span>
 			</div>
 		</div>
-		{#if detail.note}
+		{#if noteEdit && mine}
+			<form class="dblock" method="POST" action="?/setNote" use:enhance={submit(() => (noteEdit = false))}>
+				<input type="hidden" name="filmId" value={detail.id} />
+				<textarea class="nin" name="note" rows="3" maxlength="160" placeholder={T.notePh} value={detail.note ?? ''}></textarea>
+				<div class="cbtns">
+					<button type="button" onclick={() => (noteEdit = false)}>{T.noteCancel}</button>
+					<button class="go">{T.noteSave}</button>
+				</div>
+			</form>
+		{:else if detail.note || mine}
 			<div class="dblock pitch" in:rise={1}>
-				<div class="dnote">“{detail.note}”<span class="sig">{T.noteSig(detail.nominator.name)}</span></div>
+				{#if detail.note}
+					<div class="dnote">“{detail.note}”<span class="sig">{T.noteSig(detail.nominator.name)}</span></div>
+				{/if}
+				{#if mine}
+					<button class="nedit" onclick={() => (noteEdit = true)}>{detail.note ? T.noteEdit : T.noteAdd}</button>
+				{/if}
 			</div>
 		{/if}
 		{#if detail.overview}
@@ -756,6 +776,7 @@
 	.sppick .pw .p { border: 0; padding: 0; cursor: pointer; }
 	/* 16px is the size below which iPhone Safari zooms the page in on focus,
 	   which threw the whole modal off the screen mid-search */
+	.spdetail .nin { width: 100%; }
 	.spmodal :global(.sinput),
 	.spmodal :global(.nin) {
 		font-size: 16px;
