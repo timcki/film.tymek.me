@@ -565,6 +565,13 @@
 			</header>
 		{/if}
 
+		{#if menuOpen}
+			<!-- a tap anywhere else dismisses the menu. It lives in the page's column,
+			     under the bar and its menu: §3.6's look lifts the column into a layer
+			     of its own, and a backdrop outside it would cover the menu too -->
+			<button class="menu-backdrop" aria-label={T.close} onclick={() => (menuOpen = false)}></button>
+		{/if}
+
 		{#if data.week?.status === 'runoff' && data.runoffCode && !path.startsWith('/host')}
 			<p class="banner accent">
 				<a href="/f/{data.runoffCode}">{T.openRoom}</a>
@@ -605,11 +612,6 @@
 			<button class="tap go">{T.chlogOk}</button>
 		</form>
 	</div>
-{/if}
-
-{#if menuOpen}
-	<!-- a tap anywhere else dismisses the menu -->
-	<button class="menu-backdrop" aria-label={T.close} onclick={() => (menuOpen = false)}></button>
 {/if}
 
 <svelte:window onkeydown={(event) => event.key === 'Escape' && (menuOpen = false)} />
