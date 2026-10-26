@@ -318,7 +318,8 @@
 				<!-- the settings nobody touches twice a year, kept out of the bar -->
 				<div class="menufoot">
 					{@render langswitch()}
-					{@render themeswitch()}
+					<!-- §3.6: a special look is dark only, so there is nothing to switch -->
+					{#if !data.look}{@render themeswitch()}{/if}
 				</div>
 			</div>
 		</details>

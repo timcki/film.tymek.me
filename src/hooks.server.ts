@@ -130,10 +130,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// client, so the first paint is already the right colour, and so is the
 	// status bar tint iOS reads off the meta tag. On auto the tint is left to
 	// the phone, which is what the media-scoped pair is for
-	const theme = themeOf(event.cookies.get(THEME_COOKIE));
 	const banana = bananaOf(event.cookies.get(BANANA_COOKIE));
-	// §3.6: a special round dresses everybody, over bananas too, for as long as it lasts
+	// §3.6: a special round dresses everybody, over bananas too, for as long as it lasts.
+	// Its look is drawn for the dark only, so it is dark for everybody too; the
+	// cookie is left alone and the chosen palette comes back when the look ends
 	const look = lookAt(db);
+	const theme = look ? 'dark' : themeOf(event.cookies.get(THEME_COOKIE));
 	const bg = look ? SPECIAL_BG[look.id] : banana ? BANANA_BG : THEME_BG;
 	const tint =
 		theme === 'auto'

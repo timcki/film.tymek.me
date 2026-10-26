@@ -38,15 +38,17 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 			}
 		: null;
 
+	// §3.6: the special look already on <html>, for the few things drawn rather than coloured
+	const look = lookAt(db)?.id ?? null;
 	return {
 		lang,
 		demo,
 		// the palette is already on <html>; the layout only needs it to know
-		// which half of the switch is lit
-		theme: themeOf(cookies.get(THEME_COOKIE)),
+		// which half of the switch is lit. A special look is dark only, as in
+		// hooks.server.ts
+		theme: look ? ('dark' as const) : themeOf(cookies.get(THEME_COOKIE)),
 		banana: bananaOf(cookies.get(BANANA_COOKIE)),
-		// §3.6: the special look already on <html>, for the few things drawn rather than coloured
-		look: lookAt(db)?.id ?? null,
+		look,
 		// news this person has not dismissed yet, already said in their language
 		changelog: person
 			? unseenChangelog(person.changelog_seen).map((entry) => ({
