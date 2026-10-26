@@ -254,7 +254,7 @@
 </script>
 
 <!-- who is in on it, never what they ticked -->
-<div class="spturn" aria-label="{voted} {T.spVotedOf(data.turnout.roster)}">
+<div class="spturn" aria-label="{voted} {T.turnoutWord(voted)}">
 	<span class="tchip">
 		{#if voted}
 			<span class="tfaces">
@@ -277,7 +277,7 @@
 			>{#key voted}<b class="tcount" in:scale={{ start: 0.5, duration: ms(320), easing: backOut }}
 					>{voted}</b
 				>{/key}
-			{T.spVotedOf(data.turnout.roster)}</span
+			{T.turnoutWord(voted)}</span
 		>
 	</span>
 	<!-- with one pick each, the greyed + in the bar already says it is spent -->

@@ -387,8 +387,6 @@ export type Dict = {
 	spName: (id: string) => string;
 	spRules: (s: SpecialView, closesAt?: string | null) => Rule[];
 	spMine: (used: number, max: number) => string;
-	/** follows the bold count of people who have ticked anything */
-	spVotedOf: (roster: number) => string;
 	/** the bar's + chip, said out loud */
 	spAddAria: (left: number) => string;
 	/** the same +, greyed once every pick is in */
@@ -851,7 +849,6 @@ const pl: Dict = {
 		}
 	],
 	spMine: (used, max) => `Twoje propozycje: ${used} z ${max}`,
-	spVotedOf: (roster) => `z ${roster} już zagłosowało`,
 	spAddAria: (left) => `Zgłoś straszny film, ${plLeft(left, 'propozycja', 'propozycje', 'propozycji', true)}`,
 	spAddDone: 'Twoja propozycja już jest na liście',
 	spNomPop: (name) => `Propozycja na ${name}`,
@@ -1387,7 +1384,6 @@ const en: Dict = {
 		}
 	],
 	spMine: (used, max) => `Your picks: ${used} of ${max}`,
-	spVotedOf: (roster) => `of ${roster} have voted`,
 	spAddAria: (left) => `Propose a spooky film, ${left} ${en2(left, 'pick', 'picks')} left`,
 	spAddDone: 'Your pick is already in',
 	spNomPop: (name) => `Picked for ${name}`,
