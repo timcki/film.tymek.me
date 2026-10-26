@@ -2,8 +2,9 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { flip } from 'svelte/animate';
-	import { scale } from 'svelte/transition';
-	import { backOut } from 'svelte/easing';
+	import { fade, scale } from 'svelte/transition';
+	import { portal } from '$lib/portal';
+	import { backOut, cubicIn, cubicOut } from 'svelte/easing';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import FacePeek, {
@@ -135,6 +136,15 @@
 		typeof matchMedia === 'undefined' || matchMedia('(prefers-reduced-motion: reduce)').matches
 			? 0
 			: 450;
+
+	/** the film's modal appears where it stands: a short rise, a touch of scale, a fade */
+	function grow(node: HTMLElement, { out = false }: { out?: boolean } = {}) {
+		return {
+			duration: flipMs ? (out ? 140 : 200) : 0,
+			easing: out ? cubicIn : cubicOut,
+			css: (t: number, u: number) => `transform: translateY(${u * 10}px) scale(${0.97 + 0.03 * t}); opacity: ${t};`
+		};
+	}
 
 	/**
 	 * Starts the drain ring exactly once per mount. An action rather than a style
@@ -1193,14 +1203,37 @@
 
 <button
 	class="scrim"
-	class:on={anySheet}
+	class:on={searchOpen}
 	aria-label="close"
-	tabindex={anySheet ? 0 : -1}
+	tabindex={searchOpen ? 0 : -1}
 	onclick={closeSheets}
 ></button>
 
-<div class="sheet dsheet" class:on={detail !== null}>
-	<button class="handle" aria-label="close" onclick={closeSheets}></button>
+<!-- the film's own page, in a modal in the middle of the screen like the one
+     films are put up in: a bottom sheet slid up from under the screen was the
+     one thing here iOS would not reliably let anybody tap -->
+{#if detail}
+<button
+	class="dveil"
+	aria-label={T.close}
+	onclick={closeSheets}
+	in:fade={{ duration: flipMs ? 180 : 0 }}
+	out:fade={{ duration: flipMs ? 140 : 0 }}
+></button>
+<!-- stays where Svelte expects it, while the modal moves above the look -->
+<div class="phost">
+<div
+	class="dsheet dmodal"
+	role="dialog"
+	aria-modal="true"
+	aria-label={detail.title}
+	use:portal
+	in:grow
+	out:grow={{ out: true }}
+>
+	<button class="dx" type="button" aria-label={T.close} onclick={closeSheets}>
+		<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" /></svg>
+	</button>
 	<div class="inner">
 		{#if detail}
 			<!-- the top of the sheet is a card like everything under it, which is
@@ -1409,6 +1442,8 @@
 		</div>
 	{/if}
 </div>
+</div>
+{/if}
 
 <div class="sheet" class:on={searchOpen}>
 	<button class="handle" aria-label="close" onclick={closeSheets}></button>
@@ -1637,9 +1672,12 @@
 	onresize={unpeek}
 	onkeydown={(event) => {
 		if (event.key !== 'Escape') return;
+		// one press closes one thing: whatever is on top first, the film's modal last
+		if (backersOpenId !== null || commentsOpenId !== null) {
+			backersOpenId = null;
+			commentsOpenId = null;
+		} else if (detailId !== null || searchOpen) closeSheets();
 		unpeek();
-		backersOpenId = null;
-		commentsOpenId = null;
 	}}
 	onpointerdown={disarmElsewhere}
 />

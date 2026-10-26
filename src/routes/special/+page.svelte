@@ -15,6 +15,7 @@
 	import { say } from '$lib/toast.svelte';
 	import { watchLive } from '$lib/live-poll';
 	import { nomSheet } from '$lib/special-sheet.svelte';
+	import { portal } from '$lib/portal';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -116,6 +117,13 @@
 		poster: null,
 		overview: ''
 	});
+
+	/* -------------------------------------------------------------- detail -- */
+
+	// the poster opens the film, in a modal like the one picks are put up in
+	let detailId = $state<number | null>(null);
+	const detail = $derived(detailId === null ? null : (data.picks.find((pick) => pick.id === detailId) ?? null));
+	const closeDetail = () => (detailId = null);
 
 	/* --------------------------------------------------------------- lamps -- */
 
@@ -298,7 +306,9 @@
 				<Spider zone="ledge" />
 			{/if}
 			<div class="pw">
-				<div class="p"><Poster title={pick.title} url={pick.poster_url} /></div>
+				<button class="p" type="button" aria-label={pick.title} onclick={() => (detailId = pick.id)}>
+					<Poster title={pick.title} url={pick.poster_url} />
+				</button>
 				<button
 					class="nomface"
 					type="button"
@@ -424,10 +434,13 @@
 		out:fade={{ duration: ms(140) }}
 	></button>
 
+	<!-- stays where Svelte expects it, while the modal moves above the look -->
+	<div class="phost">
 	<div
 		class="spmodal"
 		role="dialog"
 		aria-modal="true"
+		use:portal
 		aria-label={T.spNomH(name)}
 		in:grow
 		out:grow={{ out: true }}
@@ -507,9 +520,100 @@
 			</div>
 		{/if}
 	</div>
+	</div>
 {/if}
 
-<svelte:window onkeydown={(event) => event.key === 'Escape' && closeSheet()} />
+{#if detail}
+	<!-- one film, opened from its poster: what it is, who put it up and why, and
+	     who has seen it. Nothing about how many want it: that stays hidden here -->
+	<button
+		class="spveil"
+		aria-label={T.close}
+		onclick={closeDetail}
+		in:fade={{ duration: ms(180) }}
+		out:fade={{ duration: ms(140) }}
+	></button>
+	<!-- stays where Svelte expects it, while the modal moves above the look -->
+	<div class="phost">
+	<div
+		class="spmodal spdetail"
+		role="dialog"
+		aria-modal="true"
+		use:portal
+		aria-label={detail.title}
+		in:grow
+		out:grow={{ out: true }}
+	>
+		<button class="spx" type="button" aria-label={T.close} onclick={closeDetail}>
+			<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" /></svg>
+		</button>
+		<div class="dblock dtop" in:rise={0}>
+			<div class="dhero">
+				<div class="p"><Poster title={detail.title} url={detail.poster_url} /></div>
+				<div class="dh">
+					<h2>{detail.title}</h2>
+					<div class="yr">{[detail.year, detail.director].filter(Boolean).join(' · ')}</div>
+				</div>
+			</div>
+			<div class="dmeta">
+				{#if detail.genre}<span class="mchip">{detail.genre}</span>{/if}
+				{#if detail.runtime}<span class="mchip">{T.minutes(detail.runtime)}</span>{/if}
+				<span class="bk face">
+					<Avatar
+						name={detail.nominator.name}
+						colour={detail.nominator.colour}
+						avatar={detail.nominator.avatar}
+						size={16}
+						font={8}
+						titled={false}
+					/>
+					<b>{detail.nominator.name}</b>
+				</span>
+			</div>
+		</div>
+		{#if detail.note}
+			<div class="dblock pitch" in:rise={1}>
+				<div class="dnote">“{detail.note}”<span class="sig">{T.noteSig(detail.nominator.name)}</span></div>
+			</div>
+		{/if}
+		{#if detail.overview}
+			<div class="dblock" in:rise={2}><p class="over">{detail.overview}</p></div>
+		{/if}
+		<div class="dblock" in:rise={3}>
+			<div class="dsec">
+				<div class="drow">
+					<span class="dlab">{T.dSeen}</span>
+					{#if !detail.seen.length}<span class="dnone">{T.dNobody}</span>{/if}
+					<form method="POST" action="?/seen" use:enhance={submit()}>
+						<input type="hidden" name="filmId" value={detail.id} />
+						<button class="tap" class:on={detail.seenMine}>
+							{detail.seenMine ? `✓ ${T.seenBtn}` : T.seenBtn}
+						</button>
+					</form>
+				</div>
+				{#if detail.seen.length}
+					<div class="dpeople">
+						{#each detail.seen as face (face.id)}
+							<span class="bk face">
+								<Avatar name={face.name} colour={face.colour} avatar={face.avatar} size={16} font={8} titled={false} />
+								<b>{face.name}</b>
+							</span>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		</div>
+	</div>
+	</div>
+{/if}
+
+<svelte:window
+	onkeydown={(event) => {
+		if (event.key !== 'Escape') return;
+		closeSheet();
+		closeDetail();
+	}}
+/>
 
 <style>
 	/* who is in on it: faces overlapping in a chip, the count, and your picks */
@@ -627,6 +731,26 @@
 			0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
 		transform-origin: 50% 50%;
 	}
+	/* the film's own modal: the list's detail blocks, stacked, with a way out */
+	.spdetail { display: grid; gap: 10px; padding-top: 16px; }
+	.spdetail .dtop { padding-right: 40px; }
+	.spx {
+		position: absolute;
+		top: 12px;
+		right: 12px;
+		z-index: 1;
+		display: grid;
+		place-items: center;
+		width: 34px;
+		height: 34px;
+		border: 0;
+		border-radius: 50%;
+		background: var(--raise);
+		color: var(--ink2);
+		cursor: pointer;
+	}
+	.spx svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+	.sppick .pw .p { border: 0; padding: 0; cursor: pointer; }
 	/* 16px is the size below which iPhone Safari zooms the page in on focus,
 	   which threw the whole modal off the screen mid-search */
 	.spmodal :global(.sinput),
