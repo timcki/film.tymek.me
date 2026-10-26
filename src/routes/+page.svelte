@@ -242,7 +242,8 @@
 		shutPops();
 		notePop = {
 			text: film.note,
-			sig: T.noteSig(film.addedByName),
+			// the nominator's face is already on the card the note was opened from
+			sig: '',
 			quoted: true,
 			tap,
 			...anchorAt(el, NPOP_W, NPOP_H)
@@ -1210,7 +1211,7 @@
 						<div class="dblock pitch">
 							{#if detail.note}
 								<div class="dnote">
-									“{detail.note}”<span class="sig">{T.noteSig(detail.addedByName)}</span>
+									“{detail.note}”
 								</div>
 							{/if}
 							{#if detail.added_by === data.person?.id}

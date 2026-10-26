@@ -365,7 +365,7 @@
 							{/if}
 						</div>
 						{#if pick.note}
-							<p class="spnote">“{pick.note}” <span class="sig">{T.noteSig(pick.nominator.name)}</span></p>
+							<p class="spnote">“{pick.note}”</p>
 						{:else if pick.overview}
 							<p class="spnote blurb">{pick.overview}</p>
 						{:else if pick.director || pick.genre}
@@ -627,7 +627,7 @@
 		{:else if detail.note || mine}
 			<div class="dblock pitch" in:rise={1}>
 				{#if detail.note}
-					<div class="dnote">“{detail.note}”<span class="sig">{T.noteSig(detail.nominator.name)}</span></div>
+					<div class="dnote">“{detail.note}”</div>
 				{/if}
 				{#if mine}
 					<button class="nedit" onclick={() => (noteEdit = true)}>{detail.note ? T.noteEdit : T.noteAdd}</button>
@@ -736,10 +736,6 @@
 	}
 	.spnote.blurb {
 		color: var(--dim);
-	}
-	.spnote .sig {
-		color: var(--dim);
-		font-size: 11.5px;
 	}
 	.ft form:last-child {
 		margin-left: auto;
