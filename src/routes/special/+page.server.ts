@@ -11,6 +11,7 @@ import {
 	specialTurnout
 } from '$lib/server/specials';
 import { seenOf, toggleSeen } from '$lib/server/seen';
+import { addComment, commentsOf, reactComment } from '$lib/server/comments';
 import { ruleFail } from '$lib/server/respond';
 import { detailsOf } from '$lib/server/tmdb';
 import { generation } from '$lib/server/live';
@@ -34,6 +35,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 		db,
 		picks.map((pick) => pick.id)
 	);
+	const comments = commentsOf(
+		db,
+		picks.map((pick) => pick.id),
+		person.id
+	);
 	return {
 		live,
 		special: {
@@ -43,7 +49,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 		},
 		picks: picks.map((pick) => {
 			const faces = seen.get(pick.id) ?? [];
-			return { ...pick, seen: faces, seenMine: faces.some((face) => face.id === person.id) };
+			return {
+				...pick,
+				seen: faces,
+				seenMine: faces.some((face) => face.id === person.id),
+				comments: comments.get(pick.id) ?? []
+			};
 		}),
 		used: picksUsed(db, week, person.id),
 		turnout: specialTurnout(db, week)
@@ -90,6 +101,27 @@ export const actions: Actions = {
 		try {
 			setApproval(getDb(), activeRules(), locals.person!.id, Number(form.get('filmId')), on);
 			return on ? { approved: title } : { unapproved: title };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	// the same thread the list's films have, said about a pick
+	comment: async ({ request, locals }) => {
+		const form = await request.formData();
+		try {
+			addComment(getDb(), locals.person!.id, Number(form.get('filmId')), String(form.get('body') ?? ''));
+			return { commented: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	react: async ({ request, locals }) => {
+		const form = await request.formData();
+		try {
+			reactComment(getDb(), locals.person!.id, Number(form.get('commentId')), String(form.get('emoji') ?? ''));
+			return { reacted: true };
 		} catch (error) {
 			return ruleFail(error);
 		}

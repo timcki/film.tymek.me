@@ -7,6 +7,7 @@
 	import { backOut, cubicIn, cubicOut } from 'svelte/easing';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import CommentThread from '$lib/components/CommentThread.svelte';
 	import FacePeek, {
 		anchorAt,
 		peekFor,
@@ -15,7 +16,6 @@
 	} from '$lib/components/FacePeek.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import { dictFor, fmtScore, isVotes } from '$lib/i18n';
-	import { REACTIONS } from '$lib/reactions';
 	import { levelOf } from '$lib/levels';
 	import Banana from '$lib/components/Banana.svelte';
 	import Check from '$lib/components/Check.svelte';
@@ -493,9 +493,6 @@
 		if ('released' in form && form.released) say(T.tReleased(form.released));
 	});
 
-	let commentDraft = $state('');
-	// which comment's emoji picker is unfolded; one at a time is plenty
-	let pickerFor = $state<number | null>(null);
 
 	function commentDay(at: string): string {
 		return new Date(at).toLocaleDateString(data.lang === 'pl' ? 'pl-PL' : 'en-GB', {
@@ -577,110 +574,7 @@
 
 <!-- one thread, two homes: the detail sheet and the badge's modal -->
 {#snippet commentThread(film: { id: number; comments: Film['comments'] })}
-	<div class="cmts">
-		<div class="sec">{film.comments.length ? T.commentsH(film.comments.length) : T.commentNone}</div>
-		{#each film.comments as comment (comment.id)}
-			<div class="cmt">
-				<Avatar
-					name={comment.name}
-					colour={comment.colour}
-					avatar={comment.avatar}
-					size={22}
-					font={9}
-					titled={false}
-					xp={comment.xp}
-					slim
-				/>
-				<div class="cbody">
-					<div class="who">
-						<b>{comment.name}</b>
-						<time>{commentDay(comment.created_at)}</time>
-					</div>
-					<p>{comment.body}</p>
-					<div class="rrow">
-						{#each comment.reacts as react (react.emoji)}
-							<form method="POST" action="?/react" use:enhance={submit()}>
-								<input type="hidden" name="commentId" value={comment.id} />
-								<button
-									class="rchip"
-									class:mine={react.mine}
-									name="emoji"
-									value={react.emoji}
-									title={react.people.map((p) => p.name).join(', ')}
-								>
-									<span class="remoji">{react.emoji}</span>
-									<span class="rfaces">
-										{#each react.people.slice(0, 3) as person (person.id)}
-											<Avatar
-												name={person.name}
-												colour={person.colour}
-												avatar={person.avatar}
-												size={14}
-												font={7}
-												titled={false}
-											/>
-										{/each}
-									</span>
-									{#if react.people.length > 3}<b>+{react.people.length - 3}</b>{/if}
-								</button>
-							</form>
-						{/each}
-						<button
-							class="rchip radd"
-							type="button"
-							aria-label={T.reactAdd}
-							onclick={() => (pickerFor = pickerFor === comment.id ? null : comment.id)}
-						>
-							🍿<span class="plus">+</span>
-						</button>
-					</div>
-					{#if pickerFor === comment.id}
-						<form
-							class="rpick"
-							method="POST"
-							action="?/react"
-							use:enhance={submit(() => (pickerFor = null))}
-						>
-							<input type="hidden" name="commentId" value={comment.id} />
-							{#each REACTIONS as emoji (emoji)}
-								<button name="emoji" value={emoji}>{emoji}</button>
-							{/each}
-						</form>
-					{/if}
-				</div>
-			</div>
-		{/each}
-		<form
-			class="cwrite"
-			method="POST"
-			action="?/comment"
-			use:enhance={submit(() => (commentDraft = ''))}
-		>
-			<input type="hidden" name="filmId" value={film.id} />
-			<textarea
-				class="nin"
-				name="body"
-				rows="2"
-				maxlength="280"
-				placeholder={T.commentPh}
-				bind:value={commentDraft}
-			></textarea>
-			<button class="csend" aria-label={T.commentSend} disabled={!commentDraft.trim()}>
-				<svg
-					viewBox="0 0 24 24"
-					width="14"
-					height="14"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2.5"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				>
-					<path d="M12 19V5M5 12l7-7 7 7" />
-				</svg>
-			</button>
-		</form>
-	</div>
+	<CommentThread {film} lang={data.lang} {submit} />
 {/snippet}
 
 <!-- §3.5, said on the title line rather than in the fine print: a sleeper's row
@@ -1231,9 +1125,12 @@
 	in:grow
 	out:grow={{ out: true }}
 >
-	<button class="dx" type="button" aria-label={T.close} onclick={closeSheets}>
-		<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" /></svg>
-	</button>
+	<!-- the way out has a row of its own, so it never sits on a panel -->
+	<div class="dxrow">
+		<button class="dx" type="button" aria-label={T.close} onclick={closeSheets}>
+			<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" /></svg>
+		</button>
+	</div>
 	<div class="inner">
 		{#if detail}
 			<!-- the top of the sheet is a card like everything under it, which is

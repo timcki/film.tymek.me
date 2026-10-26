@@ -6,6 +6,7 @@
 	import { flip } from 'svelte/animate';
 	import { backOut, cubicIn, cubicInOut, cubicOut } from 'svelte/easing';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import CommentThread from '$lib/components/CommentThread.svelte';
 	import FacePeek, { peekFor, type Peek, type PeekFace } from '$lib/components/FacePeek.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import Pumpkin from '$lib/components/Pumpkin.svelte';
@@ -544,9 +545,12 @@
 		in:grow
 		out:grow={{ out: true }}
 	>
-		<button class="spx" type="button" aria-label={T.close} onclick={closeDetail}>
-			<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" /></svg>
-		</button>
+		<!-- the way out has a row of its own, so it never sits on a panel -->
+		<div class="spxrow">
+			<button class="spx" type="button" aria-label={T.close} onclick={closeDetail}>
+				<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" /></svg>
+			</button>
+		</div>
 		<div class="dblock dtop" in:rise={0}>
 			<div class="dhero">
 				<div class="p"><Poster title={detail.title} url={detail.poster_url} /></div>
@@ -602,6 +606,9 @@
 					</div>
 				{/if}
 			</div>
+		</div>
+		<div class="dblock" in:rise={4}>
+			<CommentThread film={detail} lang={data.lang} {submit} />
 		</div>
 	</div>
 	</div>
@@ -732,13 +739,9 @@
 		transform-origin: 50% 50%;
 	}
 	/* the film's own modal: the list's detail blocks, stacked, with a way out */
-	.spdetail { display: grid; gap: 10px; padding-top: 16px; }
-	.spdetail .dtop { padding-right: 40px; }
+	.spdetail { display: grid; gap: 10px; padding-top: 12px; }
+	.spxrow { display: flex; justify-content: flex-end; margin-bottom: -2px; }
 	.spx {
-		position: absolute;
-		top: 12px;
-		right: 12px;
-		z-index: 1;
 		display: grid;
 		place-items: center;
 		width: 34px;
