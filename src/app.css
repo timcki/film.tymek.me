@@ -2221,52 +2221,6 @@ details[open] > .iconbtn {
 }
 
 /* ---------- sheets ---------- */
-.scrim {
-	position: fixed;
-	inset: 0;
-	background: var(--scrim);
-	backdrop-filter: blur(3px);
-	/* under the bar (47), as a special round's veil is: the + that opened the
-	   sheet stays lit above it, turned into the sheet's close */
-	z-index: 46;
-	opacity: 0;
-	pointer-events: none;
-	transition: opacity 0.2s;
-	border: 0;
-	padding: 0;
-}
-.scrim.on {
-	opacity: 1;
-	pointer-events: auto;
-}
-.sheet {
-	position: fixed;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	z-index: 70;
-	background: var(--card);
-	border-top: 0;
-	border-radius: 24px 24px 0 0;
-	max-height: 92vh;
-	overflow-y: auto;
-	transform: translateY(102%);
-	transition: transform 0.26s cubic-bezier(0.22, 0.9, 0.3, 1);
-	padding-bottom: calc(20px + env(safe-area-inset-bottom));
-}
-/* the shadow belongs to the open sheet alone. A closed one is parked just below
-   the fold, but a transform does not stop it painting: two sheets sit there at
-   all times, and on a phone their shadows rose into the page as a dark haze
-   along the bottom edge, clipped hard where the fixed layer ends */
-.sheet.on {
-	transform: translateY(0);
-	box-shadow: 0 -12px 40px var(--shadow);
-}
-.sheet .inner {
-	max-width: 620px;
-	margin: 0 auto;
-	padding: 0 16px;
-}
 /* a film has enough to say to fill a panel; the list stays one column because a
    ranking is a column, but this is not a ranking */
 .dsheet .inner {
@@ -2349,21 +2303,6 @@ details[open] > .iconbtn {
 .drow form {
 	margin-left: auto;
 }
-.handle {
-	display: block;
-	width: 44px;
-	height: 5px;
-	border-radius: 99px;
-	background: var(--line3);
-	margin: 11px auto 4px;
-	border: 0;
-	padding: 0;
-	cursor: pointer;
-}
-.handle:hover {
-	background: var(--edge);
-}
-
 /* the hero and the chips under it are one card, so the coin sits against an
    edge of its own instead of the far side of the window */
 .dtop {
@@ -2520,6 +2459,52 @@ details[open] > .iconbtn {
 /* the film's modal: in the middle of the screen over a softly blurred page,
    scrolling in itself, with the dock pinned to its foot */
 /* the place a portalled modal is rendered from: no box of its own */
+/* the modal films are put up in (NominateModal.svelte), and a special round's
+   film modal, which is dressed the same */
+/* the dimmed page under the modal, softly out of focus */
+.spveil {
+	position: fixed;
+	inset: 0;
+	z-index: 46;
+	border: 0;
+	padding: 0;
+	background: color-mix(in srgb, var(--bg) 62%, transparent);
+	-webkit-backdrop-filter: blur(4px);
+	backdrop-filter: blur(4px);
+	cursor: default;
+}
+/* a panel in the middle of the screen, high enough that a phone's keyboard
+   leaves the search box and the first results in view */
+.spmodal {
+	position: fixed;
+	z-index: 70;
+	left: 0;
+	right: 0;
+	top: max(11vh, 84px);
+	margin: 0 auto;
+	width: min(560px, calc(100vw - 24px));
+	max-height: min(78vh, 680px);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 18px 18px 14px;
+	background: var(--card);
+	border-radius: 22px;
+	box-shadow:
+		0 30px 80px -20px var(--shadow),
+		0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
+	transform-origin: 50% 50%;
+}
+/* 16px is the size below which iPhone Safari zooms the page in on focus,
+   which threw the whole modal off the screen mid-search */
+.spmodal .sinput,
+.spmodal .nin {
+	font-size: 16px;
+}
+.spmodal h2 {
+	margin: 0 0 2px;
+	font-size: 19px;
+	letter-spacing: -0.02em;
+}
 .phost {
 	display: contents;
 }
@@ -2915,9 +2900,9 @@ details[open] > .iconbtn {
 	border-radius: 12px;
 	cursor: pointer;
 	background: none;
-	border-left: 0;
-	border-right: 0;
-	border-top: 0;
+	/* all four: left with its bottom edge, a button keeps the browser's own
+	   bevel there, a bright lip under every row */
+	border: 0;
 	width: 100%;
 	text-align: left;
 	color: inherit;

@@ -16,6 +16,7 @@
 		type PeekFace
 	} from '$lib/components/FacePeek.svelte';
 	import Poster from '$lib/components/Poster.svelte';
+	import NominateModal from '$lib/components/NominateModal.svelte';
 	import { dictFor, fmtScore, isVotes } from '$lib/i18n';
 	import { levelOf } from '$lib/levels';
 	import Banana from '$lib/components/Banana.svelte';
@@ -157,15 +158,6 @@
 		const leftMs = Math.max(0, new Date(opts.until).getTime() - Date.now());
 		node.style.animation = `ringdrain ${opts.total}s linear -${opts.total - leftMs / 1000}s forwards`;
 	}
-
-	type Result = {
-		tmdbId: number | null;
-		title: string;
-		year: number | null;
-		thumb: string | null;
-		poster: string | null;
-		overview: string;
-	};
 
 	type Film = PageData['films'][number];
 
@@ -351,17 +343,10 @@
 
 	let detailId = $state<number | null>(null);
 	let noteEdit = $state(false);
-	// the sheet films are put up in opens from the + in the bar, which the
-	// layout draws, so whether it is open lives with the bar's
+	// the modal films are put up in opens from the + in the bar, which the
+	// layout draws, so whether it is open lives with the bar's. Leaving the list
+	// shuts it, so it is not found open on the way back
 	const searchOpen = $derived(nomSheet.open);
-	// every opening starts from an empty box, and leaving the list shuts it, so
-	// it is not found open on the way back
-	$effect(() => {
-		if (!nomSheet.open) return;
-		query = '';
-		results = [];
-		picked = null;
-	});
 	$effect(() => () => (nomSheet.open = false));
 	// the +N fold opens every backer pill in a small modal; face popups stack on top
 	let backersOpenId = $state<number | null>(null);
@@ -390,56 +375,14 @@
 		detailId = null;
 		noteEdit = false;
 		nomSheet.open = false;
-		picked = null;
 	}
 
 	/* ------------------------------------------------------------- search -- */
 
-	let query = $state('');
-	let results = $state<Result[]>([]);
-	let degraded = $state(false);
-	let searching = $state(false);
-	let picked = $state<Result | null>(null);
-	let timer: ReturnType<typeof setTimeout>;
-
-	function onQuery() {
-		clearTimeout(timer);
-		const q = query.trim();
-		if (q.length < 2) {
-			results = [];
-			searching = false;
-			return;
-		}
-		searching = true;
-		timer = setTimeout(async () => {
-			try {
-				const response = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-				const body = await response.json();
-				results = body.results ?? [];
-				degraded = Boolean(body.degraded);
-			} catch {
-				degraded = true;
-				results = [];
-			} finally {
-				searching = false;
-			}
-		}, 250);
-	}
-
+	// the modal itself is NominateModal; the list knows what is already up
 	const known = $derived(
 		new Set([...data.films, ...data.archived].map((f) => f.title.toLowerCase()))
 	);
-
-	function byHand(): Result {
-		return {
-			tmdbId: null,
-			title: query.trim(),
-			year: null,
-			thumb: null,
-			poster: null,
-			overview: ''
-		};
-	}
 
 	/* -------------------------------------------------------------- forms -- */
 
@@ -1099,14 +1042,6 @@
 
 <!-- ------------------------------------------------------------ sheets -- -->
 
-<button
-	class="scrim"
-	class:on={searchOpen}
-	aria-label="close"
-	tabindex={searchOpen ? 0 : -1}
-	onclick={closeSheets}
-></button>
-
 <!-- the film's own page, in a modal in the middle of the screen like the one
      films are put up in: a bottom sheet slid up from under the screen was the
      one thing here iOS would not reliably let anybody tap -->
@@ -1347,74 +1282,7 @@
 </div>
 {/if}
 
-<div class="sheet" class:on={searchOpen}>
-	<button class="handle" aria-label="close" onclick={closeSheets}></button>
-	<div class="inner">
-		<h2 style="margin:8px 0 2px;font-size:19px;letter-spacing:-.02em">{T.nomH}</h2>
-
-		{#if picked}
-			<form
-				method="POST"
-				action="?/nominate"
-				use:enhance={submit(() => closeSheets())}
-				style="padding-bottom:8px"
-			>
-				<input type="hidden" name="title" value={picked.title} />
-				<input type="hidden" name="tmdbId" value={picked.tmdbId ?? ''} />
-				<input type="hidden" name="year" value={picked.year ?? ''} />
-				<input type="hidden" name="poster" value={picked.poster ?? ''} />
-				<input type="hidden" name="overview" value={picked.overview} />
-				<div class="crow">
-					<div class="th"><Poster title={picked.title} url={picked.thumb} /></div>
-					<div>
-						<b>{picked.title}</b>
-						<span>{picked.year ?? T.dEmpty}</span>
-					</div>
-				</div>
-				<div class="nlabel">{T.noteQ}</div>
-				<textarea class="nin" name="note" rows="3" maxlength="160" placeholder={T.notePh}></textarea>
-				<div class="cbtns">
-					<button type="button" onclick={() => (picked = null)}>{T.noteBack}</button>
-					<button class="go">{T.noteConfirm}</button>
-				</div>
-			</form>
-		{:else}
-			<div class="hintline">{degraded ? T.nomOffline : T.nomHint}</div>
-			<input
-				class="sinput"
-				bind:value={query}
-				oninput={onQuery}
-				placeholder={T.nomPh}
-				autocomplete="off"
-				spellcheck="false"
-			/>
-			<div class="sres">
-				{#if searching}
-					<div class="hintline">{T.nomSearching}</div>
-				{:else}
-					{#each results as result (result.tmdbId)}
-						{@const dup = known.has(result.title.toLowerCase())}
-						<button class="r" disabled={dup} onclick={() => (picked = result)}>
-							<div class="th"><Poster title={result.title} url={result.thumb} /></div>
-							<div class="m">
-								<b>{result.title}</b>
-								<span>{result.year ?? T.dEmpty}{dup ? ` · ${T.nomDup}` : ''}</span>
-							</div>
-						</button>
-					{/each}
-					{#if query.trim().length >= 2 && !results.length}
-						<div class="hintline">{T.nomNone(query.trim())}</div>
-					{/if}
-					{#if query.trim().length >= 2}
-						<button class="ghostbtn" onclick={() => (picked = byHand())}>
-							{T.nomByHand(query.trim())}
-						</button>
-					{/if}
-				{/if}
-			</div>
-		{/if}
-	</div>
-</div>
+<NominateModal lang={data.lang} heading={T.nomH} hint={T.nomHint} {known} {submit} />
 
 <!-- ----------------------------------------------------------- backers -- -->
 
