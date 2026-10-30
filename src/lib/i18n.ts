@@ -116,7 +116,7 @@ export type Dict = {
 	votingClosed: string;
 	roomPicking: (code: string) => string;
 	openRoom: string;
-	/** the bar's way into the room while it picks, where the + was */
+	/** the bar's way into the room's vote while it picks, where the + was */
 	roomGo: string;
 	budgetPill: (left: number, budget: number, votes: boolean) => string;
 	budgetHelp: (rules: RulesView) => string;
@@ -525,7 +525,7 @@ const pl: Dict = {
 	votingClosed: 'głosowanie zamknięte',
 	roomPicking: (code) => `sala wybiera, kod ${code}`,
 	openRoom: 'Wybierz film na dziś',
-	roomGo: 'Do sali',
+	roomGo: 'Głosuj',
 	budgetPill: (left, budget, votes) =>
 		votes ? `${left}/${budget} ${plVotes(budget)}` : `${left}/${budget} pkt`,
 	budgetHelp: (r) => {
@@ -1059,7 +1059,7 @@ const en: Dict = {
 	votingClosed: 'voting is closed',
 	roomPicking: (code) => `the room is picking, code ${code}`,
 	openRoom: "Pick tonight's film",
-	roomGo: 'To the room',
+	roomGo: 'Vote',
 	budgetPill: (left, budget, votes) =>
 		votes ? `${left}/${budget} ${en2(budget, 'vote', 'votes')}` : `${left}/${budget} pts`,
 	budgetHelp: (r) => {
