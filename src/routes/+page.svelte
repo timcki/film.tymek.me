@@ -108,6 +108,32 @@
 
 	const undoSeconds = (film: Graceful) => Math.ceil(graceLeftMs(film) / 1000);
 
+	/* ------------------------------------------------------ the strip -- */
+
+	const canCast = (film: Film) => open && left > 0 && Boolean(data.person);
+
+	// a film's points as one gradient across the whole strip: everyone's own
+	// colour, centred on their share and blending into the next, so a film with
+	// a wide audience reads as a spectrum. Yours comes first with hard edges in
+	// the accent, lit brightest for what you have given it this week
+	function stripOf(film: Film, backers: Film['backers'], sum: number): string {
+		const stops: string[] = [];
+		let at = 0;
+		for (const backer of backers) {
+			const width = (backer.points / sum) * 100;
+			const end = at + width;
+			if (backer.person_id === data.person?.id) {
+				stops.push(`var(--accent) ${at}%`, `var(--accent) ${end}%`);
+			} else {
+				const colour = `color-mix(in srgb, ${backer.colour} 80%, var(--card2))`;
+				const blend = Math.min(width * 0.35, 7);
+				stops.push(`${colour} ${at + blend}%`, `${colour} ${end - blend}%`);
+			}
+			at = end;
+		}
+		return `linear-gradient(90deg, ${stops.join(', ')})`;
+	}
+
 	/* ------------------------------------------------- feeling a vote -- */
 
 	// a point is the one thing everybody spends here every week, so spending one
@@ -118,7 +144,7 @@
 		fly(barPip('free'), button).then(() => {
 			// the card may have redrawn its button, or moved, while the point flew
 			const target =
-				(filmId !== undefined && document.querySelector(`.vb[data-film="${filmId}"]`)) || button;
+				(filmId !== undefined && document.querySelector(`[data-vote="${filmId}"]`)) || button;
 			burst(target);
 			thump(target);
 			haptic('knock');
@@ -652,60 +678,121 @@
 	{/key}
 {/snippet}
 
-{#snippet voteBtn(film: Film)}
-	<!-- the card's vote, about this film alone: what you have given it, and a +
-	     to give it one more. One tap casts. For the grace window the count wears
-	     a draining ring and a way back, then cures into a check; what you have
-	     left to spend is the bar's to say -->
-	<div class="vb" class:has={film.myPoints > 0} data-film={film.id}>
-		{#if film.myPoints > 0}
-			{#if canUndo(film)}
-				<form method="POST" action="?/setPoints" use:enhance={submit()}>
-					<input type="hidden" name="filmId" value={film.id} />
-					<button
-						class="vbn live"
-						class:urgent={graceLeftMs(film) < 6000}
-						name="points"
-						value={film.myPoints - 1}
-						aria-label={T.btnUndo(undoSeconds(film))}
-						title={T.btnUndo(undoSeconds(film))}
-						onclick={(event) => undoFx(event.currentTarget)}
-					>
-						<span class="vbring">
-							{@render graceRing(film)}
-							<svg class="vbback" viewBox="0 0 12 12" aria-hidden="true"
-								><path d="M4.2 3.2 2 5.4l2.2 2.2M2.3 5.4h5a2.7 2.7 0 0 1 0 5.4H6" /></svg
+{#snippet strip(film: Film)}
+	<!-- the card's vote and its backers as one object: the film's points as a
+	     strip, each backer's share of it exactly in proportion and yours first,
+	     ending in the score and the + that raises it. On a film you have backed
+	     this week the strip wears a ring and the + your count -->
+	{@const sum = film.backers.reduce((total, b) => total + b.points, 0)}
+	{@const backers = [...film.backers].sort(
+		(x, y) => Number(y.person_id === data.person?.id) - Number(x.person_id === data.person?.id)
+	)}
+	<div class="pbar" class:voted={film.myPoints > 0}>
+		<div
+			class="pbtrack"
+			role="button"
+			tabindex="0"
+			aria-label={film.backers.map((b) => `${b.name} ${b.points}`).join(', ') || T.noBackers}
+			onclick={() => {
+				unpeek();
+				backersOpenId = film.id;
+			}}
+			onkeydown={(event) => {
+				if (event.key !== 'Enter' && event.key !== ' ') return;
+				event.preventDefault();
+				backersOpenId = film.id;
+			}}
+		>
+			{#if sum > 0}
+				<div
+					class="pbfill"
+					style="--strip:{stripOf(film, backers, sum)};--crowd:{Math.min(0.75, backers.length * 0.11)}"
+				>
+					{#each backers as backer (backer.person_id)}
+						{@const mine = backer.person_id === data.person?.id}
+						{#if mine && canUndo(film)}
+							<form
+								class="pbseg me"
+								style="flex-basis:{(backer.points / sum) * 100}%"
+								method="POST"
+								action="?/setPoints"
+								use:enhance={submit()}
 							>
-						</span>
-						{#key film.myPoints}<b class="vbcount">{film.myPoints}</b>{/key}
-					</button>
-				</form>
+								<input type="hidden" name="filmId" value={film.id} />
+								<button
+									class="pbundo"
+									name="points"
+									value={film.myPoints - 1}
+									aria-label={T.btnUndo(undoSeconds(film))}
+									title={T.btnUndo(undoSeconds(film))}
+									onclick={(event) => {
+										event.stopPropagation();
+										undoFx(event.currentTarget);
+									}}
+								>
+									<svg viewBox="0 0 12 12" aria-hidden="true"
+										><path d="M4.2 3.2 2 5.4l2.2 2.2M2.3 5.4h5a2.7 2.7 0 0 1 0 5.4H6" /></svg
+									>
+								</button>
+							</form>
+						{:else}
+							<span
+								class="pbseg"
+								class:me={mine}
+								style="flex-basis:{(backer.points / sum) * 100}%;--seg:{backer.colour}"
+							>
+								<!-- a face only where the segment has room for one; a sliver
+								     stays a sliver, and the list behind a tap names it -->
+								{#if backer.points / sum >= 0.1}
+									<Avatar
+										name={backer.name}
+										colour={backer.colour}
+										avatar={backer.avatar}
+										size={18}
+										font={8}
+										titled={false}
+									/>
+								{/if}
+							</span>
+						{/if}
+					{/each}
+				</div>
 			{:else}
-				<span class="vbn" aria-label={T.dYours(film.myPoints, votes)}>
-					<i class="vbmark">{#if data.banana}<Banana />{:else}<Check />{/if}</i>
-					<b class="vbcount">{film.myPoints}</b>
-				</span>
+				<span class="pbempty">{T.noBackers}</span>
 			{/if}
-		{/if}
-		{#if film.myPoints === 0 || left > 0}
+		</div>
+		<div class="pcap" data-vote={film.id}>
+			<!-- the score, which a tap or a hover explains as the coin did -->
+			<button
+				class="pcnum"
+				type="button"
+				onpointerenter={(event) => {
+					mousing = event.pointerType === 'mouse';
+					if (mousing) scoreAt(event.currentTarget, film, false);
+				}}
+				onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+				onclick={(event) => !mousing && scoreAt(event.currentTarget, film, true)}
+				onblur={unpeek}
+				><b use:votePulse={film.score}>{fmtScore(film.score)}</b><i>{T.unit(film.score, votes)}</i
+				></button
+			>
 			<form method="POST" action="?/setPoints" use:enhance={submit()}>
 				<input type="hidden" name="filmId" value={film.id} />
 				<button
-					class="vbadd"
+					class="pcplus"
 					name="points"
 					value={film.myPoints + 1}
-					disabled={!open || left < 1}
+					disabled={!canCast(film)}
 					aria-label={T.btnAddPoint}
 					onclick={(event) => castFx(event.currentTarget, film.id)}
 				>
+					<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2v8M2 6h8" /></svg>
 					{#if film.myPoints > 0}
-						<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2v8M2 6h8" /></svg>
-					{:else}
-						{T.btnAddPoint}
+						{#key film.myPoints}<span class="bpcount">{film.myPoints}</span>{/key}
 					{/if}
 				</button>
 			</form>
-		{/if}
+		</div>
 	</div>
 {/snippet}
 
@@ -821,6 +908,9 @@
 						</div>
 					{/if}
 				</div>
+				{#if data.person && !votes && !shelf}
+					<!-- the score lives at the end of the strip instead -->
+				{:else}
 				<!-- tapping the coin explains the fade arithmetic behind the number -->
 				<button
 					class="coin"
@@ -835,9 +925,14 @@
 				>
 					<b use:votePulse={film.score}>{fmtScore(film.score)}</b><i>{T.unit(film.score, votes)}</i>
 				</button>
+				{/if}
 			</div>
 			<div class="ft">
-				{@render backerRow(film)}
+				{#if votes || !data.person || shelf}
+					{@render backerRow(film)}
+				{:else}
+					{@render strip(film)}
+				{/if}
 				{#if votes}
 					<form method="POST" action="?/setPoints" use:enhance={submit()}>
 						<input type="hidden" name="filmId" value={film.id} />
@@ -855,8 +950,6 @@
 							{film.myPoints > 0 ? T.btnVoted : T.btnVote}
 						</button>
 					</form>
-				{:else if data.person}
-					{@render voteBtn(film)}
 				{/if}
 			</div>
 		</div>

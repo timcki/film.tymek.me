@@ -164,9 +164,6 @@
 	width: auto;
 	height: auto;
 }
-:root[data-banana] .vbmark {
-	font-size: 14px;
-}
 :root[data-banana] .hpip.spent {
 	background: none;
 	font-size: 14px;
