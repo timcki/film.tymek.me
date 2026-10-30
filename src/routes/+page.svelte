@@ -681,117 +681,120 @@
 {#snippet strip(film: Film)}
 	<!-- the card's vote and its backers as one object: the film's points as a
 	     strip, each backer's share of it exactly in proportion and yours first,
-	     ending in the score and the + that raises it. On a film you have backed
-	     this week the strip wears a ring and the + your count -->
+	     led by the score and ending in the + that raises it. On a film you have
+	     backed this week the strip wears a ring and the + your count -->
 	{@const sum = film.backers.reduce((total, b) => total + b.points, 0)}
 	{@const backers = [...film.backers].sort(
 		(x, y) => Number(y.person_id === data.person?.id) - Number(x.person_id === data.person?.id)
 	)}
-	<div class="pbar" class:voted={film.myPoints > 0}>
-		<div
-			class="pbtrack"
-			role="button"
-			tabindex="0"
-			aria-label={film.backers.map((b) => `${b.name} ${b.points}`).join(', ') || T.noBackers}
-			onclick={() => {
-				unpeek();
-				backersOpenId = film.id;
+	<div class="pbar">
+		<!-- the score leads the row, so down the list the numbers stand in one
+		     column and the order reads at a glance; a tap or a hover explains it -->
+		<button
+			class="pcnum"
+			type="button"
+			onpointerenter={(event) => {
+				mousing = event.pointerType === 'mouse';
+				if (mousing) scoreAt(event.currentTarget, film, false);
 			}}
-			onkeydown={(event) => {
-				if (event.key !== 'Enter' && event.key !== ' ') return;
-				event.preventDefault();
-				backersOpenId = film.id;
-			}}
+			onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+			onclick={(event) => !mousing && scoreAt(event.currentTarget, film, true)}
+			onblur={unpeek}
+			><b use:votePulse={film.score}>{fmtScore(film.score)}</b><i>{T.unit(film.score, votes)}</i
+			></button
 		>
-			{#if sum > 0}
-				<div
-					class="pbfill"
-					style="--strip:{stripOf(film, backers, sum)};--crowd:{Math.min(0.75, backers.length * 0.11)}"
-				>
-					{#each backers as backer (backer.person_id)}
-						{@const mine = backer.person_id === data.person?.id}
-						{#if mine && canUndo(film)}
-							<form
-								class="pbseg me"
-								style="flex-basis:{(backer.points / sum) * 100}%"
-								method="POST"
-								action="?/setPoints"
-								use:enhance={submit()}
-							>
-								<input type="hidden" name="filmId" value={film.id} />
-								<button
-									class="pbundo"
-									name="points"
-									value={film.myPoints - 1}
-									aria-label={T.btnUndo(undoSeconds(film))}
-									title={T.btnUndo(undoSeconds(film))}
-									onclick={(event) => {
-										event.stopPropagation();
-										undoFx(event.currentTarget);
-									}}
-								>
-									<svg viewBox="0 0 12 12" aria-hidden="true"
-										><path d="M4.2 3.2 2 5.4l2.2 2.2M2.3 5.4h5a2.7 2.7 0 0 1 0 5.4H6" /></svg
-									>
-								</button>
-							</form>
-						{:else}
-							<span
-								class="pbseg"
-								class:me={mine}
-								style="flex-basis:{(backer.points / sum) * 100}%;--seg:{backer.colour}"
-							>
-								<!-- a face only where the segment has room for one; a sliver
-								     stays a sliver, and the list behind a tap names it -->
-								{#if backer.points / sum >= 0.1}
-									<Avatar
-										name={backer.name}
-										colour={backer.colour}
-										avatar={backer.avatar}
-										size={18}
-										font={8}
-										titled={false}
-									/>
-								{/if}
-							</span>
-						{/if}
-					{/each}
-				</div>
-			{:else}
-				<span class="pbempty">{T.noBackers}</span>
-			{/if}
-		</div>
-		<div class="pcap" data-vote={film.id}>
-			<!-- the score, which a tap or a hover explains as the coin did -->
-			<button
-				class="pcnum"
-				type="button"
-				onpointerenter={(event) => {
-					mousing = event.pointerType === 'mouse';
-					if (mousing) scoreAt(event.currentTarget, film, false);
+		<div class="pbpill" class:voted={film.myPoints > 0}>
+			<div
+				class="pbtrack"
+				role="button"
+				tabindex="0"
+				aria-label={film.backers.map((b) => `${b.name} ${b.points}`).join(', ') || T.noBackers}
+				onclick={() => {
+					unpeek();
+					backersOpenId = film.id;
 				}}
-				onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
-				onclick={(event) => !mousing && scoreAt(event.currentTarget, film, true)}
-				onblur={unpeek}
-				><b use:votePulse={film.score}>{fmtScore(film.score)}</b><i>{T.unit(film.score, votes)}</i
-				></button
+				onkeydown={(event) => {
+					if (event.key !== 'Enter' && event.key !== ' ') return;
+					event.preventDefault();
+					backersOpenId = film.id;
+				}}
 			>
-			<form method="POST" action="?/setPoints" use:enhance={submit()}>
-				<input type="hidden" name="filmId" value={film.id} />
-				<button
-					class="pcplus"
-					name="points"
-					value={film.myPoints + 1}
-					disabled={!canCast(film)}
-					aria-label={T.btnAddPoint}
-					onclick={(event) => castFx(event.currentTarget, film.id)}
-				>
-					<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2v8M2 6h8" /></svg>
-					{#if film.myPoints > 0}
-						{#key film.myPoints}<span class="bpcount">{film.myPoints}</span>{/key}
-					{/if}
-				</button>
-			</form>
+				{#if sum > 0}
+					<div
+						class="pbfill"
+						style="--strip:{stripOf(film, backers, sum)};--crowd:{Math.min(0.75, backers.length * 0.11)}"
+					>
+						{#each backers as backer (backer.person_id)}
+							{@const mine = backer.person_id === data.person?.id}
+							{#if mine && canUndo(film)}
+								<form
+									class="pbseg me"
+									style="flex-basis:{(backer.points / sum) * 100}%"
+									method="POST"
+									action="?/setPoints"
+									use:enhance={submit()}
+								>
+									<input type="hidden" name="filmId" value={film.id} />
+									<button
+										class="pbundo"
+										name="points"
+										value={film.myPoints - 1}
+										aria-label={T.btnUndo(undoSeconds(film))}
+										title={T.btnUndo(undoSeconds(film))}
+										onclick={(event) => {
+											event.stopPropagation();
+											undoFx(event.currentTarget);
+										}}
+									>
+										<svg viewBox="0 0 12 12" aria-hidden="true"
+											><path d="M4.2 3.2 2 5.4l2.2 2.2M2.3 5.4h5a2.7 2.7 0 0 1 0 5.4H6" /></svg
+										>
+									</button>
+								</form>
+							{:else}
+								<span
+									class="pbseg"
+									class:me={mine}
+									style="flex-basis:{(backer.points / sum) * 100}%;--seg:{backer.colour}"
+								>
+									<!-- a face only where the segment has room for one; a sliver
+									     stays a sliver, and the list behind a tap names it -->
+									{#if backer.points / sum >= 0.1}
+										<Avatar
+											name={backer.name}
+											colour={backer.colour}
+											avatar={backer.avatar}
+											size={18}
+											font={8}
+											titled={false}
+										/>
+									{/if}
+								</span>
+							{/if}
+						{/each}
+					</div>
+				{:else}
+					<span class="pbempty">{T.noBackers}</span>
+				{/if}
+			</div>
+			<div class="pcap" data-vote={film.id}>
+				<form method="POST" action="?/setPoints" use:enhance={submit()}>
+					<input type="hidden" name="filmId" value={film.id} />
+					<button
+						class="pcplus"
+						name="points"
+						value={film.myPoints + 1}
+						disabled={!canCast(film)}
+						aria-label={T.btnAddPoint}
+						onclick={(event) => castFx(event.currentTarget, film.id)}
+					>
+						<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2v8M2 6h8" /></svg>
+						{#if film.myPoints > 0}
+							{#key film.myPoints}<span class="bpcount">{film.myPoints}</span>{/key}
+						{/if}
+					</button>
+				</form>
+			</div>
 		</div>
 	</div>
 {/snippet}

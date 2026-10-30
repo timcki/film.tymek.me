@@ -4329,7 +4329,15 @@ details[open] > .iconbtn {
    The card's vote and its backers as one object: the film's points as one
    gradient across the strip, a share a backer, ending in the score and the +.
    pbfill's ::before glows under it, brighter the wider the audience */
+/* the row: the score, then the pill holding the strip and the + */
 .pbar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex: 1;
+	min-width: 0;
+}
+.pbpill {
 	display: flex;
 	align-items: stretch;
 	flex: 1;
@@ -4375,8 +4383,8 @@ details[open] > .iconbtn {
 .pbtrack {
 	isolation: isolate;
 }
-/* voted on this week: the bar wears a ring in the accent */
-.pbar.voted {
+/* voted on this week: the pill wears a ring in the accent */
+.pbpill.voted {
 	box-shadow:
 		inset 0 0 0 1.5px var(--accent),
 		0 0 18px -6px color-mix(in srgb, var(--accent) 70%, transparent);
@@ -4442,29 +4450,33 @@ form.pbseg {
 	flex: none;
 	display: flex;
 	align-items: center;
-	gap: 7px;
-	padding-left: 9px;
+	padding-left: 6px;
 }
+/* the score, the same width on every card so the numbers line up in a column
+   down the list and the order can be read without reading the bars */
 .pcnum {
+	flex: none;
+	width: 40px;
 	display: grid;
-	justify-items: center;
+	justify-items: start;
 	line-height: 1;
-	min-width: 26px;
 	padding: 0;
 	border: 0;
 	background: none;
-	color: inherit;
+	color: var(--ink);
 	font: inherit;
+	text-align: left;
 	cursor: help;
 }
 .pcnum b {
-	font-size: 13.5px;
+	font-size: 19px;
+	letter-spacing: -0.02em;
 	font-weight: 800;
 	font-variant-numeric: tabular-nums;
 }
 .pcnum i {
 	font-style: normal;
-	font-size: 8px;
+	font-size: 9.5px;
 	font-weight: 600;
 	color: var(--dim);
 	margin-top: 2px;
