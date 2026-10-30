@@ -164,11 +164,8 @@
 	width: auto;
 	height: auto;
 }
-:root[data-banana] .tdot.set {
-	background: none;
-}
-:root[data-banana] .tdot.set i {
-	font-size: 13px;
+:root[data-banana] .vbmark {
+	font-size: 14px;
 }
 :root[data-banana] .hpip.spent {
 	background: none;

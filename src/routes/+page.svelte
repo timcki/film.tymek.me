@@ -25,6 +25,8 @@
 	import { watchLive } from '$lib/live-poll';
 	import { nomSheet } from '$lib/special-sheet.svelte';
 	import { votePulse } from '$lib/vote-pulse';
+	import { haptic } from '$lib/haptics';
+	import { barPip, burst, fly, thump } from '$lib/vote-fx';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -106,32 +108,26 @@
 
 	const undoSeconds = (film: Graceful) => Math.ceil(graceLeftMs(film) / 1000);
 
-	/* ---------------------------------------------------- arming a vote -- */
+	/* ------------------------------------------------- feeling a vote -- */
 
-	// the card votes in two taps: the first arms a dot, the second casts for
-	// real. An armed dot not confirmed in time relaxes and earns the hint
-	let armed = $state<{ filmId: number } | null>(null);
-	let armTimer: ReturnType<typeof setTimeout>;
-
-	function arm(filmId: number) {
-		clearTimeout(armTimer);
-		armed = { filmId };
-		armTimer = setTimeout(() => {
-			armed = null;
-			say(T.armHint);
-		}, 4000);
+	// a point is the one thing everybody spends here every week, so spending one
+	// should feel like something: a tick under the thumb, the point flying out of
+	// the bar into the film, and a knock as it lands. Taking it back flies it home
+	function castFx(button: Element, filmId?: number) {
+		haptic();
+		fly(barPip('free'), button).then(() => {
+			// the card may have redrawn its button, or moved, while the point flew
+			const target =
+				(filmId !== undefined && document.querySelector(`.vb[data-film="${filmId}"]`)) || button;
+			burst(target);
+			thump(target);
+			haptic('knock');
+		});
 	}
 
-	function disarm() {
-		clearTimeout(armTimer);
-		armed = null;
-	}
-
-	// a tap anywhere that is not the armed pill quietly relaxes the bowstring
-	function disarmElsewhere(event: PointerEvent) {
-		if (!armed) return;
-		const pill = event.target instanceof Element ? event.target.closest('.tri') : null;
-		if (!(pill instanceof HTMLElement) || pill.dataset.film !== String(armed.filmId)) disarm();
+	function undoFx(button: Element) {
+		haptic();
+		fly(button, barPip('spent'));
 	}
 
 	// the reorder glide after a confirmed vote; instant for reduced motion
@@ -427,7 +423,6 @@
 			refresh: () => invalidateAll(),
 			busy: () =>
 				sending > 0 ||
-				armed !== null ||
 				detailId !== null ||
 				searchOpen ||
 				backersOpenId !== null ||
@@ -609,6 +604,7 @@
 						name="points"
 						value={film.myPoints - 1}
 						aria-label={T.btnUndo(undoSeconds(film))}
+						onclick={(event) => undoFx(event.currentTarget)}
 						in:scale={{ duration: 260, start: 0.3, easing: backOut }}
 					>
 						{@render graceRing(film)}
@@ -628,6 +624,7 @@
 					value={film.myPoints + 1}
 					disabled={!open}
 					aria-label={T.btnAddPoint}
+					onclick={(event) => castFx(event.currentTarget)}
 				>
 					<!-- drawn, not bordered: the same even ring the small docks use -->
 					<svg viewBox="0 0 36 36" aria-hidden="true"
@@ -655,74 +652,59 @@
 	{/key}
 {/snippet}
 
-{#snippet triDots(film: Film)}
-	<!-- the spent slots in the order the week's points were cast, so every
-	     card tells the same story: a check where a point landed here, a busy
-	     dot where it went to another film, free slots at the end. The first
-	     free dot wears the plus that says tap me; armed, it trades the plus
-	     for the bowstring drawn: one more tap makes it count -->
-	{#each data.myCastOrder as entry (entry.filmId)}
-		{#each Array(entry.points) as _, i (i)}
-			{#if entry.filmId === film.id}
-				<span class="tdot set" in:scale={{ duration: 260, start: 0.3, easing: backOut }}
-					><i>{#if data.banana}<Banana />{:else}<Check />{/if}</i></span
-				>
+{#snippet voteBtn(film: Film)}
+	<!-- the card's vote, about this film alone: what you have given it, and a +
+	     to give it one more. One tap casts. For the grace window the count wears
+	     a draining ring and a way back, then cures into a check; what you have
+	     left to spend is the bar's to say -->
+	<div class="vb" class:has={film.myPoints > 0} data-film={film.id}>
+		{#if film.myPoints > 0}
+			{#if canUndo(film)}
+				<form method="POST" action="?/setPoints" use:enhance={submit()}>
+					<input type="hidden" name="filmId" value={film.id} />
+					<button
+						class="vbn live"
+						class:urgent={graceLeftMs(film) < 6000}
+						name="points"
+						value={film.myPoints - 1}
+						aria-label={T.btnUndo(undoSeconds(film))}
+						title={T.btnUndo(undoSeconds(film))}
+						onclick={(event) => undoFx(event.currentTarget)}
+					>
+						<span class="vbring">
+							{@render graceRing(film)}
+							<svg class="vbback" viewBox="0 0 12 12" aria-hidden="true"
+								><path d="M4.2 3.2 2 5.4l2.2 2.2M2.3 5.4h5a2.7 2.7 0 0 1 0 5.4H6" /></svg
+							>
+						</span>
+						{#key film.myPoints}<b class="vbcount">{film.myPoints}</b>{/key}
+					</button>
+				</form>
 			{:else}
-				<span class="tdot busy"></span>
+				<span class="vbn" aria-label={T.dYours(film.myPoints, votes)}>
+					<i class="vbmark">{#if data.banana}<Banana />{:else}<Check />{/if}</i>
+					<b class="vbcount">{film.myPoints}</b>
+				</span>
 			{/if}
-		{/each}
-	{/each}
-	{#each Array(Math.max(0, left)) as _, i (i)}
-		<span class="tdot free" class:armed={i === 0 && armed?.filmId === film.id}>
-			<!-- ring and plus are drawn, not borrowed from a border or a font:
-			     even dashes, a dead-centre cross -->
-			<svg viewBox="0 0 12 12" aria-hidden="true">
-				<circle cx="6" cy="6" r="5.25" pathLength="12" />
-				{#if i === 0 && open}<path d="M6 3.9v4.2M3.9 6h4.2" />{/if}
-			</svg>
-		</span>
-	{/each}
-{/snippet}
-
-{#snippet voteTri(film: Film)}
-	<!-- the card's vote control: one pill, the whole weekly budget as three
-	     dots, and a two-tap cast: the first tap arms, the second is the vote,
-	     final on the spot. Spent out, the pill opens the sheet. -->
-	<div class="vd">
-		{#if left > 0}
-			<form method="POST" action="?/setPoints" use:enhance={submit(disarm)}>
+		{/if}
+		{#if film.myPoints === 0 || left > 0}
+			<form method="POST" action="?/setPoints" use:enhance={submit()}>
 				<input type="hidden" name="filmId" value={film.id} />
 				<button
-					class="tri"
-					class:armed={armed?.filmId === film.id}
-					data-film={film.id}
-					type={armed?.filmId === film.id ? 'submit' : 'button'}
+					class="vbadd"
 					name="points"
 					value={film.myPoints + 1}
-					disabled={!open}
+					disabled={!open || left < 1}
 					aria-label={T.btnAddPoint}
-					onclick={(event) => {
-						if (armed?.filmId !== film.id) {
-							event.preventDefault();
-							arm(film.id);
-						}
-					}}
+					onclick={(event) => castFx(event.currentTarget, film.id)}
 				>
-					{@render triDots(film)}
+					{#if film.myPoints > 0}
+						<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2v8M2 6h8" /></svg>
+					{:else}
+						{T.btnAddPoint}
+					{/if}
 				</button>
 			</form>
-		{:else}
-			<button
-				class="tri"
-				type="button"
-				aria-label={T.dYours(film.myPoints, votes)}
-				onclick={() => {
-					unpeek();
-					detailId = film.id;
-				}}
-			>
-				{@render triDots(film)}
-			</button>
 		{/if}
 	</div>
 {/snippet}
@@ -864,6 +846,8 @@
 							class:on={film.myPoints > 0}
 							name="points"
 							value={film.myPoints > 0 ? 0 : 1}
+							onclick={(event) =>
+								film.myPoints > 0 ? undoFx(event.currentTarget) : castFx(event.currentTarget)}
 							disabled={!open ||
 								(film.myPoints === 0 && left < 1) ||
 								(film.myPoints > 0 && !canUndo(film))}
@@ -872,8 +856,7 @@
 						</button>
 					</form>
 				{:else if data.person}
-					<!-- always present: even spent-out it shows where the week went -->
-					{@render voteTri(film)}
+					{@render voteBtn(film)}
 				{/if}
 			</div>
 		</div>
@@ -1449,5 +1432,4 @@
 		} else if (detailId !== null || searchOpen) closeSheets();
 		unpeek();
 	}}
-	onpointerdown={disarmElsewhere}
 />

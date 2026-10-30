@@ -2,6 +2,8 @@
 	import '../app.css';
 	import '../themes.css';
 	import { page } from '$app/state';
+	import { scale } from 'svelte/transition';
+	import { backOut } from 'svelte/easing';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import { formatNight } from '$lib/datetime';
 	import { dictFor, isVotes, LANGS } from '$lib/i18n';
@@ -133,6 +135,15 @@
 		kind === 'admin' ? T.demoAdmin : kind === 'fresh' ? T.demoFresh : T.demoMember;
 
 	let tipOpen = $state(false);
+	// a point spent on a card leaves the bar with a pop, and comes back with one
+	const pipPop = {
+		duration:
+			typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
+				? 0
+				: 340,
+		start: 0.2,
+		easing: backOut
+	};
 	let weekTip = $state(false);
 	let menuOpen = $state(false);
 
@@ -397,12 +408,14 @@
 				onblur={() => (tipOpen = false)}
 			>
 				{#each Array(Math.max(0, data.person.spent)) as _, i (i)}
-					<span class="hpip spent">{#if data.banana}<Banana />{:else}<Check />{/if}</span>
+					<span class="hpip spent" in:scale={pipPop}
+						>{#if data.banana}<Banana />{:else}<Check />{/if}</span
+					>
 				{/each}
 				{#each Array(Math.max(0, data.person.left)) as _, i (i)}
 					<!-- the ring is drawn rather than bordered, exactly as the cards
 					     draw theirs: even dashes at this size -->
-					<span class="hpip free">
+					<span class="hpip free" in:scale={pipPop}>
 						<svg viewBox="0 0 12 12" aria-hidden="true"
 							><circle cx="6" cy="6" r="5.25" pathLength="12" /></svg
 						>
