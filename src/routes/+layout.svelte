@@ -16,6 +16,7 @@
 	import Skull from '$lib/components/Skull.svelte';
 	import { specialOf } from '$lib/specials';
 	import { nomSheet } from '$lib/special-sheet.svelte';
+	import { inFlight } from '$lib/points-in-flight.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import type { LayoutServerData } from './$types';
 
@@ -135,6 +136,21 @@
 		kind === 'admin' ? T.demoAdmin : kind === 'fresh' ? T.demoFresh : T.demoMember;
 
 	let tipOpen = $state(false);
+	// the bar answers a tap on a card's + at once, before the server does
+	const spentNow = $derived(
+		Math.min(
+			(data.person?.spent ?? 0) + (data.person?.left ?? 0),
+			inFlight.spent ?? data.person?.spent ?? 0
+		)
+	);
+	const leftNow = $derived(
+		Math.max(0, (data.person?.spent ?? 0) + (data.person?.left ?? 0) - spentNow)
+	);
+	// once the page says what the bar was already showing, the guess has done
+	// its job and goes, without the bar moving
+	$effect(() => {
+		if (inFlight.spent !== null && data.person?.spent === inFlight.spent) inFlight.spent = null;
+	});
 	// a point spent on a card leaves the bar with a pop, and comes back with one
 	const pipPop = {
 		duration:
@@ -407,12 +423,21 @@
 				onclick={() => (tipOpen = !tipOpen)}
 				onblur={() => (tipOpen = false)}
 			>
-				{#each Array(Math.max(0, data.person.spent)) as _, i (i)}
-					<span class="hpip spent" in:scale={pipPop}
-						>{#if data.banana}<Banana />{:else}<Check />{/if}</span
-					>
+				{#if data.banana}
+					<!-- with bananas the points are the fruit: a banana for every point
+					     still yours, and a faint one where a point has been spent, so
+					     the week starts full and ends on three ghosts -->
+					{#each Array(Math.max(0, spentNow)) as _, i (i)}
+						<span class="hpip spent ghost" in:scale={pipPop}><Banana /></span>
+					{/each}
+					{#each Array(Math.max(0, leftNow)) as _, i (i)}
+						<span class="hpip free nana" in:scale={pipPop}><Banana /></span>
+					{/each}
+				{:else}
+				{#each Array(Math.max(0, spentNow)) as _, i (i)}
+					<span class="hpip spent" in:scale={pipPop}><Check /></span>
 				{/each}
-				{#each Array(Math.max(0, data.person.left)) as _, i (i)}
+				{#each Array(Math.max(0, leftNow)) as _, i (i)}
 					<!-- the ring is drawn rather than bordered, exactly as the cards
 					     draw theirs: even dashes at this size -->
 					<span class="hpip free" in:scale={pipPop}>
@@ -421,12 +446,27 @@
 						>
 					</span>
 				{/each}
+				{/if}
 			</button>
 			<div class="tip" style:display={tipOpen ? 'block' : 'none'}>
 				<b>{T.budgetPill(data.person.left, data.person.budget, isVotes(data.rules))}</b>
 				· {T.budgetHelp(data.rules)}
 			</div>
 		</div>
+	{/if}
+{/snippet}
+
+{#snippet addGlyph()}
+	<!-- said in a word, "+ Film", so it is never taken for the cards' round +,
+	     which gives a point. Open, it is the modal's × -->
+	{#if nomSheet.open}
+		<svg class="addx" viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"
+			><path d="M2.8 2.8l6.4 6.4M9.2 2.8l-6.4 6.4" /></svg
+		>
+	{:else}
+		<svg class="addplus" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"
+			><path d="M6 1.8v8.4M1.8 6h8.4" /></svg
+		><span class="addword">{special ? '' : T.btnAddFilm}</span>
 	{/if}
 {/snippet}
 
@@ -448,9 +488,7 @@
 				nomSheet.open = !nomSheet.open;
 			}}
 		>
-			<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"
-				><path d="M6 1.5v9M1.5 6h9" /></svg
-			>
+			{@render addGlyph()}
 		</button>
 	{/if}
 {/snippet}
@@ -499,9 +537,7 @@
 					nomSheet.open = !nomSheet.open;
 				}}
 			>
-				<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"
-					><path d="M6 1.5v9M1.5 6h9" /></svg
-				>
+				{@render addGlyph()}
 			</button>
 		{/if}
 	{/if}
@@ -632,15 +668,13 @@
 	{#if data.look === 'halloween'}
 		<Halloween part="land" />
 	{:else if !data.look}
-		<Cinema part="seats" />
+		<Cinema />
 	{/if}
 
 {/if}
 
 {#if data.look === 'halloween'}
 	<Halloween part="sky" />
-{:else if !data.look}
-	<Cinema part="sky" />
 {/if}
 
 {#if !bare && data.changelog.length}

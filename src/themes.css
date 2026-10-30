@@ -164,9 +164,15 @@
 	width: auto;
 	height: auto;
 }
-:root[data-banana] .hpip.spent {
+/* with bananas the points left are the fruit, and a spent one a ghost of it */
+:root[data-banana] .hpip.nana,
+:root[data-banana] .hpip.ghost {
 	background: none;
-	font-size: 14px;
+	font-size: 15px;
+}
+:root[data-banana] .hpip.ghost {
+	filter: grayscale(1);
+	opacity: 0.28;
 }
 /* the switch shows what it would turn on: a grey banana until it is lit */
 .menu .lang.nana button {
@@ -179,46 +185,60 @@
 	opacity: 1;
 }
 
-/* --------------------------------------------------------------- cinema -----
+/* --------------------------------------------------------------- living -----
    The everyday look's scenery (Cinema.svelte), worn whenever no special round
-   has put on its own: a marquee's bulbs along the top, and the back row of the
-   house at the foot of the page with the screen's light coming over it. Under
-   either palette, under bananas too; the seats are velvet in both. */
+   has put on its own: a living room at the foot of the page, a blue sofa and a
+   red beanbag among plants, lamplit at night and sunlit on paper. Under either
+   palette, under bananas too */
 :root:not([data-special]) {
-	--bulb: #ffd98e;
-	--socket: color-mix(in srgb, var(--ink) 12%, var(--bg));
-	--marquee-edge: color-mix(in srgb, var(--ink) 7%, transparent);
-	--seat: #2c1619;
-	--seat-rim: color-mix(in srgb, var(--accent) 50%, transparent);
-	--head: #08090a;
-	--screenlight: color-mix(in srgb, var(--accent) 18%, transparent);
-	--popcorn: #f3e3b8;
-	--popcorn-tub: #b8323a;
+	--sofa: #2f5683;
+	--sofa-lit: #3a679b;
+	--beanbag: #b13a2e;
+	--beanbag-fold: #8a2a21;
+	--blanket: #9c2a2a;
+	--blanket-fold: #741d1d;
+	--figure: #241e1a;
+	--leaf1: #3f7a48;
+	--leaf2: #53935a;
+	--leaf3: #2c5c38;
+	--leafline: rgba(10, 20, 10, 0.35);
+	--pot: #a85a38;
+	--wood: #5a4030;
+	--shade: #e8b468;
+	--rug: rgba(150, 110, 70, 0.25);
+	--lamplight: rgba(255, 176, 90, 0.26);
+	--sunlight: transparent;
+	--zzz: rgba(240, 225, 200, 0.75);
 }
-/* on paper a lit bulb is a darker amber, and the house is in daylight: the
-   velvet faded, the heads a soft ink rather than black */
+/* on paper it is daytime: the lamp is off, the sun slants in, the greens are
+   brighter and the people a soft ink rather than black */
 :root[data-theme='light']:not([data-special]) {
-	--bulb: #e09a2c;
-	--seat: #c48f86;
-	--seat-rim: rgba(255, 255, 255, 0.7);
-	--head: #6b5752;
-	--screenlight: color-mix(in srgb, var(--accent) 16%, transparent);
-	--popcorn: #fff6dc;
-	--popcorn-tub: #c2414a;
+	--sofa: #4f7fb4;
+	--sofa-lit: #6592c4;
+	--beanbag: #c94a3c;
+	--beanbag-fold: #a63a2e;
+	--blanket: #b8383a;
+	--blanket-fold: #8f2a2c;
+	--figure: #6b5a52;
+	--leaf1: #4f8f52;
+	--leaf2: #6aab62;
+	--leaf3: #3d7244;
+	--pot: #c06a44;
+	--wood: #7a5a42;
+	--shade: #d9b98c;
+	--rug: rgba(170, 120, 80, 0.22);
+	--sunlight: rgba(255, 214, 140, 0.22);
+	--zzz: rgba(90, 70, 60, 0.7);
 }
-/* room under the marquee, the way Halloween keeps it under its lights */
+/* the back row is laid out against the body */
 :root:not([data-special]) body {
-	padding-top: 16px;
 	position: relative;
-}
-:root:not([data-special]) header.lean {
-	top: 16px;
 }
 /* the back row stands at the foot of the window on a short page */
 :root:not([data-special]) .wrap:not(.bare) {
-	min-height: calc(100vh - 48px - env(safe-area-inset-bottom, 0px));
-	min-height: calc(100svh - 48px - env(safe-area-inset-bottom, 0px));
-	padding-bottom: 76px;
+	min-height: calc(100vh - 32px - env(safe-area-inset-bottom, 0px));
+	min-height: calc(100svh - 32px - env(safe-area-inset-bottom, 0px));
+	padding-bottom: 128px;
 }
 
 /* ------------------------------------------------------------ halloween -----

@@ -75,8 +75,7 @@
 
 	// §3.6: a Halloween night dresses the room: a web and a spider on the way
 	// in, a pumpkin lit for every ballot, fog at the posters' feet, and the
-	// lights along the top shivering each time somebody's ranking lands (on an
-	// ordinary night the marquee's bulbs race instead)
+	// lights along the top shivering each time somebody's ranking lands
 	const spooky = $derived(data.look === 'halloween');
 	const turnout = $derived(data.runoff?.turnout ?? 0);
 	// one lit for every ballot in, and a single dark one waiting for the next

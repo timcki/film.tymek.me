@@ -20,12 +20,15 @@
 	import { dictFor, fmtScore, isVotes } from '$lib/i18n';
 	import { levelOf } from '$lib/levels';
 	import Banana from '$lib/components/Banana.svelte';
+	import BananaBunch from '$lib/components/BananaBunch.svelte';
+	import DieFive from '$lib/components/DieFive.svelte';
 	import Check from '$lib/components/Check.svelte';
 	import { say } from '$lib/toast.svelte';
 	import { watchLive } from '$lib/live-poll';
 	import { nomSheet } from '$lib/special-sheet.svelte';
 	import { votePulse } from '$lib/vote-pulse';
 	import { haptic } from '$lib/haptics';
+	import { inFlight } from '$lib/points-in-flight.svelte';
 	import { barPip, burst, fly, thump } from '$lib/vote-fx';
 	import type { ActionData, PageData } from './$types';
 
@@ -108,30 +111,72 @@
 
 	const undoSeconds = (film: Graceful) => Math.ceil(graceLeftMs(film) / 1000);
 
-	/* ------------------------------------------------------ the strip -- */
+	/* ------------------------------------------------------- the base -- */
 
 	const canCast = (film: Film) => open && left > 0 && Boolean(data.person);
-
-	// a film's points as one gradient across the whole strip: everyone's own
-	// colour, centred on their share and blending into the next, so a film with
-	// a wide audience reads as a spectrum. Yours comes first with hard edges in
-	// the accent, lit brightest for what you have given it this week
-	function stripOf(film: Film, backers: Film['backers'], sum: number): string {
-		const stops: string[] = [];
-		let at = 0;
-		for (const backer of backers) {
-			const width = (backer.points / sum) * 100;
-			const end = at + width;
-			if (backer.person_id === data.person?.id) {
-				stops.push(`var(--accent) ${at}%`, `var(--accent) ${end}%`);
-			} else {
-				const colour = `color-mix(in srgb, ${backer.colour} 80%, var(--card2))`;
-				const blend = Math.min(width * 0.35, 7);
-				stops.push(`${colour} ${at + blend}%`, `${colour} ${end - blend}%`);
-			}
-			at = end;
+	// which cards wear the faces and the + as their base: a member's, on the
+	// live list, under points
+	const based = (film: Film, shelf: boolean) => Boolean(data.person) && !votes && !shelf;
+	// faces shown before the rest fold into a count
+	// faces in the stack until the row's width is spent; a fold of one is
+	// never worth its "+1", so the last face shows instead
+	const FACE_ROOM = 210;
+	function stackFit(points: number[]): number {
+		let width = 0;
+		let fit = 0;
+		for (const p of points) {
+			const next = width + faceSize(p) - (fit ? 8 : 0);
+			if (next > FACE_ROOM - (fit < points.length - 1 ? 30 : 0)) break;
+			width = next;
+			fit++;
 		}
-		return `linear-gradient(90deg, ${stops.join(', ')})`;
+		return fit >= points.length - 1 ? points.length : Math.max(1, fit);
+	}
+	// a face in the stack grows with what its owner gave the film: its area in
+	// proportion to the points, so eleven against two looks it, and five
+	// against three looks close. Capped, so one big giver cannot crowd the row
+	const faceSize = (points: number) => Math.round(Math.min(44, 16 * Math.sqrt(Math.max(1, points))));
+
+	// who gave what: a tap on the stack opens the card itself downwards into a
+	// list, right there under the poster, and a second tap folds it again. No
+	// sheet, no backdrop, nothing to learn
+	let crowdOpen = $state<number | null>(null);
+	function toggleCrowd(filmId: number) {
+		unpeek();
+		crowdOpen = crowdOpen === filmId ? null : filmId;
+	}
+
+	/** a number that runs to its new value rather than jumping there */
+	function tween(node: HTMLElement, value: number) {
+		let shown = value;
+		let frame = 0;
+		const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+		const paint = (n: number) => (node.textContent = fmtScore(Math.round(n * 10) / 10));
+		return {
+			update(next: number) {
+				cancelAnimationFrame(frame);
+				if (reduced.matches || next === shown) {
+					shown = next;
+					paint(next);
+					return;
+				}
+				const from = shown;
+				let start = -1;
+				const step = (now: number) => {
+					// timed from the first frame it paints, and held inside 0..1: a
+					// frame's stamp can come before the call that asked for it
+					if (start < 0) start = now;
+					const t = Math.min(1, Math.max(0, (now - start) / 520));
+					const eased = 1 - (1 - t) ** 3;
+					shown = from + (next - from) * eased;
+					paint(shown);
+					if (t < 1) frame = requestAnimationFrame(step);
+					else shown = next;
+				};
+				frame = requestAnimationFrame(step);
+			},
+			destroy: () => cancelAnimationFrame(frame)
+		};
 	}
 
 	/* ------------------------------------------------- feeling a vote -- */
@@ -141,7 +186,10 @@
 	// the bar into the film, and a knock as it lands. Taking it back flies it home
 	function castFx(button: Element, filmId?: number) {
 		haptic();
-		fly(barPip('free'), button).then(() => {
+		// measured before the bar redraws, so the point leaves from where it was
+		const flight = fly(barPip('free'), button);
+		inFlight.spent = (inFlight.spent ?? data.person?.spent ?? 0) + 1;
+		flight.then(() => {
 			// the card may have redrawn its button, or moved, while the point flew
 			const target =
 				(filmId !== undefined && document.querySelector(`[data-vote="${filmId}"]`)) || button;
@@ -153,7 +201,9 @@
 
 	function undoFx(button: Element) {
 		haptic();
-		fly(button, barPip('spent'));
+		const home = barPip('spent');
+		inFlight.spent = Math.max(0, (inFlight.spent ?? data.person?.spent ?? 0) - 1);
+		fly(button, home);
 	}
 
 	// the reorder glide after a confirmed vote; instant for reduced motion
@@ -371,7 +421,6 @@
 	const searchOpen = $derived(nomSheet.open);
 	$effect(() => () => (nomSheet.open = false));
 	// the +N fold opens every backer pill in a small modal; face popups stack on top
-	let backersOpenId = $state<number | null>(null);
 	// the badge on the poster opens the thread in a modal, for reading and writing
 	let commentsOpenId = $state<number | null>(null);
 
@@ -379,11 +428,6 @@
 		detailId === null
 			? null
 			: ([...data.films, ...data.archived].find((f) => f.id === detailId) ?? null)
-	);
-	const backersFilm = $derived(
-		backersOpenId === null
-			? null
-			: ([...data.films, ...data.archived].find((f) => f.id === backersOpenId) ?? null)
 	);
 	const commentsFilm = $derived(
 		commentsOpenId === null
@@ -434,6 +478,8 @@
 				}
 				if (result.type === 'success') onOk?.();
 				await update({ reset: false });
+				// a vote refused leaves the bar to say what the server says
+				if (vote && result.type !== 'success') inFlight.spent = null;
 			};
 		};
 	}
@@ -451,7 +497,7 @@
 				sending > 0 ||
 				detailId !== null ||
 				searchOpen ||
-				backersOpenId !== null ||
+				crowdOpen !== null ||
 				commentsOpenId !== null ||
 				peek !== null ||
 				notePop !== null ||
@@ -599,10 +645,7 @@
 						.slice(7)
 						.map((b) => b.name)
 						.join(', ')}
-					onclick={() => {
-						unpeek();
-						backersOpenId = film.id;
-					}}
+					onclick={() => toggleCrowd(film.id)}
 				>
 					+{film.backers.length - 7}
 				</button>
@@ -678,110 +721,118 @@
 	{/key}
 {/snippet}
 
-{#snippet strip(film: Film)}
-	<!-- the card's vote and its backers as one object: the film's points as a
-	     strip, each backer's share of it exactly in proportion and yours first,
-	     led by the score and ending in the + that raises it. On a film you have
-	     backed this week the strip wears a ring and the + your count -->
-	{@const sum = film.backers.reduce((total, b) => total + b.points, 0)}
-	{@const backers = [...film.backers].sort(
-		(x, y) => Number(y.person_id === data.person?.id) - Number(x.person_id === data.person?.id)
-	)}
-	<div class="pbar">
-		<!-- the score leads the row, so down the list the numbers stand in one
-		     column and the order reads at a glance; a tap or a hover explains it -->
+{#snippet scoreNum(film: Film)}
+	<!-- the score, at one width wherever it stands, so down the list the numbers
+	     line up and the order reads at a glance; a tap or a hover explains it -->
+	<button
+		class="pcnum"
+		type="button"
+		onpointerenter={(event) => {
+			mousing = event.pointerType === 'mouse';
+			if (mousing) scoreAt(event.currentTarget, film, false);
+		}}
+		onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+		onclick={(event) => !mousing && scoreAt(event.currentTarget, film, true)}
+		onblur={unpeek}
+		><b use:votePulse={film.score} use:tween={film.score}>{fmtScore(film.score)}</b><i
+			>{T.unit(film.score, votes)}</i
+		></button
+	>
+{/snippet}
+
+{#snippet base(film: Film)}
+	<!-- the card's base: who is behind the film, as faces big enough to know,
+	     and the + that adds you. More people is a longer row, which is the
+	     sign of a film the group wants rather than one somebody does. Whoever
+	     put points in this week is lit; the rest rest quietened. Yours, given a
+	     point this week, wears an accent ring -->
+	{@const fresh = (b: Film['backers'][number]) => b.weekly.some((w) => w.week === data.week?.number)}
+	<!-- the stack is in order of what each gave, and each face is sized by it,
+	     so the row reads at a glance as one person carrying a film or many
+	     chipping in; the fan gives the exact count -->
+	{@const mineFirst = [...film.backers].sort((x, y) => y.points - x.points)}
+	{@const fit = stackFit(mineFirst.map((b) => b.points))}
+	<div class="fbase">
+		{#if !film.held}
 		<button
-			class="pcnum"
+			class="bfaces"
+			class:open={crowdOpen === film.id}
 			type="button"
-			onpointerenter={(event) => {
-				mousing = event.pointerType === 'mouse';
-				if (mousing) scoreAt(event.currentTarget, film, false);
-			}}
-			onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
-			onclick={(event) => !mousing && scoreAt(event.currentTarget, film, true)}
-			onblur={unpeek}
-			><b use:votePulse={film.score}>{fmtScore(film.score)}</b><i>{T.unit(film.score, votes)}</i
-			></button
+			aria-expanded={crowdOpen === film.id}
+			aria-label={film.backers.map((b) => `${b.name} ${b.points}`).join(', ') || T.noBackers}
+			onclick={() => film.backers.length && toggleCrowd(film.id)}
 		>
-		<div class="pbpill" class:voted={film.myPoints > 0}>
-			<div
-				class="pbtrack"
-				role="button"
-				tabindex="0"
-				aria-label={film.backers.map((b) => `${b.name} ${b.points}`).join(', ') || T.noBackers}
-				onclick={() => {
-					unpeek();
-					backersOpenId = film.id;
-				}}
-				onkeydown={(event) => {
-					if (event.key !== 'Enter' && event.key !== ' ') return;
-					event.preventDefault();
-					backersOpenId = film.id;
-				}}
-			>
-				{#if sum > 0}
-					<div
-						class="pbfill"
-						style="--strip:{stripOf(film, backers, sum)};--crowd:{Math.min(0.75, backers.length * 0.11)}"
+			{#each mineFirst.slice(0, fit) as backer, i (backer.person_id)}
+				<!-- the row leads with whoever matters most here, so each face lies
+				     over the one after it, never under -->
+				<span
+					class="fface"
+					style:z-index={film.backers.length - i}
+					class:lit={fresh(backer)}
+					class:me={backer.person_id === data.person?.id && film.myPoints > 0}
+					animate:flip={{ duration: flipMs ? 380 : 0, easing: cubicOut }}
+					in:scale={{ duration: flipMs ? 360 : 0, start: 0.5, easing: cubicOut }}
+				>
+					<Avatar
+						name={backer.name}
+						colour={backer.colour}
+						avatar={backer.avatar}
+						size={faceSize(backer.points)}
+						font={Math.round(faceSize(backer.points) * 0.4)}
+						titled={false}
+					/>
+					{#if i === 0 && backer.points > 1}
+						<!-- the biggest giver's count, the one number worth a glance -->
+						<b class="ftop">{backer.points}</b>
+					{/if}
+				</span>
+			{:else}
+				<span class="nobk">{T.noBackers}</span>
+			{/each}
+			{#if film.backers.length > fit}
+				<span class="fmore">+{film.backers.length - fit}</span>
+			{/if}
+		</button>
+		{/if}
+		<div class="fvote" data-vote={film.id}>
+			{#if canUndo(film)}
+				<!-- for the grace window the + is the way back: ↶ in a draining ring -->
+				<form method="POST" action="?/setPoints" use:enhance={submit()}>
+					<input type="hidden" name="filmId" value={film.id} />
+					<button
+						class="fundo"
+						class:urgent={graceLeftMs(film) < 6000}
+						name="points"
+						value={film.myPoints - 1}
+						aria-label={T.btnUndo(undoSeconds(film))}
+						title={T.btnUndo(undoSeconds(film))}
+						onclick={(event) => undoFx(event.currentTarget)}
 					>
-						{#each backers as backer (backer.person_id)}
-							{@const mine = backer.person_id === data.person?.id}
-							{#if mine && canUndo(film)}
-								<form
-									class="pbseg me"
-									style="flex-basis:{(backer.points / sum) * 100}%"
-									method="POST"
-									action="?/setPoints"
-									use:enhance={submit()}
-								>
-									<input type="hidden" name="filmId" value={film.id} />
-									<button
-										class="pbundo"
-										name="points"
-										value={film.myPoints - 1}
-										aria-label={T.btnUndo(undoSeconds(film))}
-										title={T.btnUndo(undoSeconds(film))}
-										onclick={(event) => {
-											event.stopPropagation();
-											undoFx(event.currentTarget);
-										}}
-									>
-										<svg viewBox="0 0 12 12" aria-hidden="true"
-											><path d="M4.2 3.2 2 5.4l2.2 2.2M2.3 5.4h5a2.7 2.7 0 0 1 0 5.4H6" /></svg
-										>
-									</button>
-								</form>
-							{:else}
-								<span
-									class="pbseg"
-									class:me={mine}
-									style="flex-basis:{(backer.points / sum) * 100}%;--seg:{backer.colour}"
-								>
-									<!-- a face only where the segment has room for one; a sliver
-									     stays a sliver, and the list behind a tap names it -->
-									{#if backer.points / sum >= 0.1}
-										<Avatar
-											name={backer.name}
-											colour={backer.colour}
-											avatar={backer.avatar}
-											size={18}
-											font={8}
-											titled={false}
-										/>
-									{/if}
-								</span>
-							{/if}
-						{/each}
-					</div>
-				{:else}
-					<span class="pbempty">{T.noBackers}</span>
-				{/if}
-			</div>
-			<div class="pcap" data-vote={film.id}>
+						{@render graceRing(film)}
+						<svg class="fback" viewBox="0 0 12 12" aria-hidden="true"
+							><path d="M4.2 3.2 2 5.4l2.2 2.2M2.3 5.4h5a2.7 2.7 0 0 1 0 5.4H6" /></svg
+						>
+					</button>
+				</form>
+			{/if}
+			{#if !canCast(film) && film.myPoints > 0 && !canUndo(film)}
+				<!-- nothing left to give, some of it went here, and the way back has
+				     closed: only then does the + settle into what you gave, still lit,
+				     so the card reads as yours. Until then it stays the + it was -->
+				<span
+					class="pcdone"
+					aria-label={T.dYours(film.myPoints, votes)}
+					in:scale={{ duration: 380, start: 0.5, easing: backOut }}
+				>
+					<i>{#if data.banana}<Banana />{:else}<Check />{/if}</i>
+					{#key film.myPoints}<b>{film.myPoints}</b>{/key}
+				</span>
+			{:else}
 				<form method="POST" action="?/setPoints" use:enhance={submit()}>
 					<input type="hidden" name="filmId" value={film.id} />
 					<button
 						class="pcplus"
+						class:mine={film.myPoints > 0}
 						name="points"
 						value={film.myPoints + 1}
 						disabled={!canCast(film)}
@@ -794,9 +845,118 @@
 						{/if}
 					</button>
 				</form>
-			</div>
+			{/if}
 		</div>
 	</div>
+{/snippet}
+
+<!-- the card's fine print: the attrition warning on the left, and on the right
+     edge the thread's pill and an eye that both counts who has seen the film
+     and toggles the viewer's own mark. Where the faces and the + are the card's
+     base it sits in the text column; on the rest, along the base -->
+{#snippet fineprint(film: Film, lead: boolean)}
+	{@render status(film, lead)}
+	{@render chips(film)}
+{/snippet}
+
+<!-- what is happening to the film: about to drop, or the nominator's chance to
+     let it sleep a round -->
+{#snippet status(film: Film, lead: boolean)}
+	{#if film.atRisk && data.week}
+		<span class="warnchip">
+			{rules.attrition.kind === 'archive'
+				? T.warnFades(
+						Math.max(
+							1,
+							rules.attrition.afterWeeksAtZero - (data.week.number - film.added_week)
+						)
+					)
+				: T.warnDrops}
+		</span>
+	{/if}
+	<!-- §3.5. A film stepping aside is public the instant it happens, which
+	     is half the point: there is still time to put votes elsewhere. On
+	     your own candidate the chip is the one tap that does it; the reason
+	     goes on afterwards, in the sheet -->
+	{#if lead && canHold(film)}
+		<form method="POST" action="?/hold" use:enhance={submit()}>
+			<input type="hidden" name="filmId" value={film.id} />
+			<input type="hidden" name="title" value={film.title} />
+			<button class="holdchip act">💤 {T.holdCta}</button>
+		</form>
+	{/if}
+{/snippet}
+
+<!-- the thread and the eye, the card's two small counts -->
+{#snippet chips(film: Film)}
+	<!-- the thread's pill: a hover peeks at it, a click or tap opens the
+	     modal where it can be read and joined -->
+	<button
+		class="eyebtn cmtbtn"
+		type="button"
+		aria-label={film.comments.length ? T.commentsH(film.comments.length) : T.commentNone}
+		onpointerenter={(event) => {
+			mousing = event.pointerType === 'mouse';
+			if (mousing) cmtsAt(event.currentTarget, film);
+		}}
+		onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+		onclick={() => {
+			unpeek();
+			commentsOpenId = film.id;
+		}}
+	>
+		<svg
+			viewBox="0 0 24 24"
+			width="13"
+			height="13"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+		>
+			<path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+		</svg>
+		<b>{film.comments.length}</b>
+	</button>
+	<!-- the popup holds the faces it opened with, so the toggle shuts it
+	     rather than leaving a list one name out of date under the cursor -->
+	<form class="eyeform" method="POST" action="?/seen" use:enhance={submit(unpeek)}>
+		<input type="hidden" name="filmId" value={film.id} />
+		<button
+			class="eyebtn"
+			class:on={film.seenMine}
+			title={T.seenBtn}
+			aria-label={T.seenBtn}
+			onpointerenter={(event) => {
+				mousing = event.pointerType === 'mouse';
+				if (mousing) seenAt(event.currentTarget, film, false);
+			}}
+			onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+			onclick={(event) => {
+				// a finger opens the list instead of submitting; the mark is a
+				// button inside it. A mouse keeps the click it always had
+				if (mousing) return;
+				event.preventDefault();
+				seenAt(event.currentTarget, film, true);
+			}}
+		>
+			<svg
+				viewBox="0 0 24 24"
+				width="14"
+				height="14"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+				<circle cx="12" cy="12" r="3" />
+			</svg>
+			<b>{film.seen.length}</b>
+		</button>
+	</form>
 {/snippet}
 
 {#snippet row(film: Film, lead: boolean, shelf: boolean)}
@@ -910,9 +1070,14 @@
 							{[film.director, film.genre].filter(Boolean).join(' · ')}
 						</div>
 					{/if}
+					{#if based(film, shelf) && !film.held}
+						<!-- the two small counts, in the room under the pitch, so the
+						     row below has the width for the faces -->
+						<div class="fchips">{@render chips(film)}</div>
+					{/if}
 				</div>
 				{#if data.person && !votes && !shelf}
-					<!-- the score lives at the end of the strip instead -->
+					{@render scoreNum(film)}
 				{:else}
 				<!-- tapping the coin explains the fade arithmetic behind the number -->
 				<button
@@ -931,10 +1096,13 @@
 				{/if}
 			</div>
 			<div class="ft">
-				{#if votes || !data.person || shelf}
-					{@render backerRow(film)}
+				{#if based(film, shelf)}
+					<!-- the faces, the counts and the + sit at the foot of the text
+					     column, level with the foot of the poster, so the card is
+					     the poster's height and no taller -->
+					{@render base(film)}
 				{:else}
-					{@render strip(film)}
+					{@render backerRow(film)}
 				{/if}
 				{#if votes}
 					<form method="POST" action="?/setPoints" use:enhance={submit()}>
@@ -956,103 +1124,50 @@
 				{/if}
 			</div>
 		</div>
-		<!-- the card's fine print, always present and spanning the full card:
-		     the attrition warning on the left, and on the right edge an eye
-		     that both counts who has seen the film and toggles the viewer's
-		     own mark. Indented to the text column on desktop, flush on phones -->
-		<div class="cardfoot">
-			{#if film.atRisk && data.week}
-				<span class="warnchip">
-					{rules.attrition.kind === 'archive'
-						? T.warnFades(
-								Math.max(
-									1,
-									rules.attrition.afterWeeksAtZero - (data.week.number - film.added_week)
-								)
-							)
-						: T.warnDrops}
-				</span>
-			{/if}
-			<!-- §3.5. A film stepping aside is public the instant it happens, which
-			     is half the point: there is still time to put votes elsewhere. On
-			     your own candidate the chip is the one tap that does it; the reason
-			     goes on afterwards, in the sheet -->
-			{#if lead && canHold(film)}
-				<form method="POST" action="?/hold" use:enhance={submit()}>
-					<input type="hidden" name="filmId" value={film.id} />
-					<input type="hidden" name="title" value={film.title} />
-					<button class="holdchip act">💤 {T.holdCta}</button>
-				</form>
-			{/if}
-			<!-- the thread's pill: a hover peeks at it, a click or tap opens the
-			     modal where it can be read and joined -->
-			<button
-				class="eyebtn cmtbtn"
-				type="button"
-				aria-label={film.comments.length ? T.commentsH(film.comments.length) : T.commentNone}
-				onpointerenter={(event) => {
-					mousing = event.pointerType === 'mouse';
-					if (mousing) cmtsAt(event.currentTarget, film);
-				}}
-				onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
-				onclick={() => {
-					unpeek();
-					commentsOpenId = film.id;
-				}}
-			>
-				<svg
-					viewBox="0 0 24 24"
-					width="13"
-					height="13"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				>
-					<path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-				</svg>
-				<b>{film.comments.length}</b>
-			</button>
-			<!-- the popup holds the faces it opened with, so the toggle shuts it
-			     rather than leaving a list one name out of date under the cursor -->
-			<form class="eyeform" method="POST" action="?/seen" use:enhance={submit(unpeek)}>
-				<input type="hidden" name="filmId" value={film.id} />
-				<button
-					class="eyebtn"
-					class:on={film.seenMine}
-					title={T.seenBtn}
-					aria-label={T.seenBtn}
-					onpointerenter={(event) => {
-						mousing = event.pointerType === 'mouse';
-						if (mousing) seenAt(event.currentTarget, film, false);
-					}}
-					onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
-					onclick={(event) => {
-						// a finger opens the list instead of submitting; the mark is a
-						// button inside it. A mouse keeps the click it always had
-						if (mousing) return;
-						event.preventDefault();
-						seenAt(event.currentTarget, film, true);
-					}}
-				>
-					<svg
-						viewBox="0 0 24 24"
-						width="14"
-						height="14"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-						<circle cx="12" cy="12" r="3" />
-					</svg>
-					<b>{film.seen.length}</b>
-				</button>
-			</form>
-		</div>
+		<!-- the card's fine print along its base: all of it on a card without
+		     the faces and the +, and on one with them only what is happening to
+		     the film, when anything is -->
+		{#if !based(film, shelf)}
+			<div class="cardfoot">{@render fineprint(film, lead)}</div>
+		{:else if (film.atRisk && data.week) || (lead && canHold(film))}
+			<div class="cardfoot">{@render status(film, lead)}</div>
+		{/if}
+		{#if (based(film, shelf) && !film.held) || film.backers.length > 7}
+			<!-- who gave what, opened in the card itself: biggest first, a face,
+			     a name, and the points drawn as points. Always in the card and
+			     folded to nothing, so opening it is one smooth unfold -->
+			<div class="crowdfold" class:open={crowdOpen === film.id} inert={crowdOpen !== film.id}>
+			<div class="crowdclip">
+			<div class="crowd">
+				{#each [...film.backers].sort((x, y) => y.points - x.points) as backer, r (backer.person_id)}
+					<div class="crowdrow" class:me={backer.person_id === data.person?.id} style:--r={r}>
+						<Avatar
+							name={backer.name}
+							colour={backer.colour}
+							avatar={backer.avatar}
+							size={24}
+							font={10}
+							titled={false}
+							xp={backer.xp}
+							slim
+						/>
+						<span class="crowdname">{backer.name}</span>
+						<!-- the points drawn as points, every five gathered into one mark:
+						     a bunch of bananas, or a die showing five -->
+						<span class="crowdpts" aria-label={T.unit(backer.points, votes)}>
+							{#each Array(Math.floor(backer.points / 5)) as _, k (k)}
+								<i class="five">{#if data.banana}<BananaBunch />{:else}<DieFive />{/if}</i>
+							{/each}
+							{#each Array(backer.points % 5) as _, k (k)}
+								<i>{#if data.banana}<Banana />{:else}<Check />{/if}</i>
+							{/each}
+						</span>
+					</div>
+				{/each}
+			</div>
+			</div>
+			</div>
+		{/if}
 	</div>
 {/snippet}
 
@@ -1471,20 +1586,6 @@
 	</div>
 {/if}
 
-{#if backersFilm}
-	<!-- everyone with points on the film; each pill opens the usual face popup
-	     above this modal (the popup layers sit higher on purpose) -->
-	<button class="bkm-backdrop" aria-label={T.close} onclick={() => (backersOpenId = null)}
-	></button>
-	<div class="bkmodal" role="dialog" aria-label={T.dBacked}>
-		<h3>{backersFilm.title}</h3>
-		<div class="bkmgrid">
-			{#each backersFilm.backers as backer (backer.person_id)}
-				{@render bkPill(backer)}
-			{/each}
-		</div>
-	</div>
-{/if}
 
 {#if scorePop}
 	{#if scorePop.tap}
@@ -1522,8 +1623,8 @@
 	onkeydown={(event) => {
 		if (event.key !== 'Escape') return;
 		// one press closes one thing: whatever is on top first, the film's modal last
-		if (backersOpenId !== null || commentsOpenId !== null) {
-			backersOpenId = null;
+		if (crowdOpen !== null || commentsOpenId !== null) {
+			crowdOpen = null;
 			commentsOpenId = null;
 		} else if (detailId !== null || searchOpen) closeSheets();
 		unpeek();

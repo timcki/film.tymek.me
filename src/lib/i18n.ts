@@ -181,6 +181,8 @@ export type Dict = {
 	noteSig: (name: string) => string;
 
 	nomH: string;
+	/** the bar's way to the nomination modal: a word, so it is never taken for the cards' + */
+	btnAddFilm: string;
 	nomHint: string;
 	nomPh: string;
 	nomSearching: string;
@@ -605,6 +607,7 @@ const pl: Dict = {
 	noteSig: (name) => name,
 
 	nomH: 'Zgłoś film',
+	btnAddFilm: 'Film',
 	nomHint: 'Jedno zgłoszenie na osobę w tygodniu.',
 	nomPh: 'Szukaj po tytule…',
 	nomSearching: 'szukam…',
@@ -1135,6 +1138,7 @@ const en: Dict = {
 	noteSig: (name) => name,
 
 	nomH: 'Nominate a film',
+	btnAddFilm: 'Film',
 	nomHint: 'One nomination per person per week.',
 	nomPh: 'Search by title…',
 	nomSearching: 'searching…',
