@@ -249,9 +249,9 @@ the same values the engine enforces, the way the rules screen reads the `RuleSet
   week shares its ordinal with the week after it (`listClock`), so fade, attrition and the
   archive's ages all read as though the night had not happened. Picks nobody watched are
   dropped afterwards rather than joining the list.
-- **The look.** While the round is in play, and for the rest of its month (`themeMonth`,
-  Europe/Warsaw) once it has been held, every page wears the round's theme. It is
-  decoration only, and asks for less motion are honoured throughout.
+- **The look.** While the round is in play, up to and including the room's vote, every
+  page wears the round's theme. When the night resolves and the next week opens, it
+  comes off. It is decoration only, and asks for less motion are honoured throughout.
 
 An admin can call a special round off only while nobody has put a pick up.
 

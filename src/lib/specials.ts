@@ -12,19 +12,13 @@ export type Special = {
 	picksPerPerson: number;
 	/** how many of the most approved picks go to the room */
 	shortlistSize: number;
-	/**
-	 * The month (1 to 12, Europe/Warsaw) the look stays on through, once the round
-	 * has been held: the night itself may come before the date it celebrates.
-	 */
-	themeMonth: number;
 };
 
 export const SPECIALS: Record<SpecialId, Special> = {
 	halloween: {
 		id: 'halloween',
 		picksPerPerson: 1,
-		shortlistSize: 3,
-		themeMonth: 10
+		shortlistSize: 3
 	}
 };
 

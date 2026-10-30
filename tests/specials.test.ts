@@ -202,21 +202,20 @@ describe('a special round', () => {
 		);
 	});
 
-	it('wears its look while in play and for the rest of its month', () => {
-		const { db, rules } = freshDb('weekly', new Date('2026-08-03T10:00:00Z'));
+	it('wears its look while in play and takes it off once the night is over', () => {
+		const { db, rules } = freshDb('weekly');
 		expect(lookAt(db)).toBeNull();
 		startSpecial(db, rules, 'halloween');
 		expect(lookAt(db)?.id).toBe('halloween');
+		const pick = nominateSpecial(db, rules, 'ala', { title: 'A' });
+		setApproval(db, rules, 'ala', pick, true);
 		closeWeek(db, rules);
-		// the round closed without a night; the look follows the month, which is
-		// October for Halloween, so a round held in August has none to keep
+		// the room is still picking: still the round's night
+		expect(currentWeek(db)!.status).toBe('runoff');
+		expect(lookAt(db)?.id).toBe('halloween');
+		closeRunoff(db, rules, openRunoff(db)!.id);
+		// the night resolved and an ordinary week opened, so the look comes off
+		expect(currentWeek(db)!.special).toBeNull();
 		expect(lookAt(db)).toBeNull();
-
-		const october = freshDb('weekly', new Date('2026-10-25T10:00:00Z'));
-		october.db.prepare('UPDATE week SET closes_at = ?').run('2026-10-29T19:00:00.000Z');
-		startSpecial(october.db, october.rules, 'halloween', new Date('2026-10-25T10:00:00Z'));
-		closeWeek(october.db, october.rules, new Date('2026-10-29T19:00:00Z'));
-		expect(lookAt(october.db, new Date('2026-10-31T21:00:00Z'))?.id).toBe('halloween');
-		expect(lookAt(october.db, new Date('2026-10-31T23:30:00Z'))).toBeNull();
 	});
 });

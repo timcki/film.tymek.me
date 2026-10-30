@@ -3,7 +3,7 @@ import { immediate } from './db.js';
 import type { Face, Film, Week } from './types.js';
 import { RuleError } from './types.js';
 import type { RuleSet } from './rules.js';
-import { iso, localParts } from './time.js';
+import { iso } from './time.js';
 import { avatarUrl } from './people.js';
 import { rescoreAll } from './scoring.js';
 import { rexpAll } from './xp.js';
@@ -207,20 +207,10 @@ export function picksUsed(db: DB, week: Week, personId: string): number {
 
 /**
  * Which special look the site wears right now, if any. On while the round is in
- * play; once it is over, for the rest of the month it belongs to, because the
- * night can come a few days before the date it is for.
+ * play, room vote included; once the night resolves the next week opens as an
+ * ordinary one and the look goes with it, whatever the calendar says.
  */
-export function lookAt(db: DB, now: Date = new Date()): Special | null {
+export function lookAt(db: DB): Special | null {
 	const week = currentWeek(db);
-	if (!week) return null;
-	const live = specialOf(week.special);
-	if (live) return live;
-	const last = db
-		.prepare('SELECT special, closes_at FROM week WHERE special IS NOT NULL ORDER BY number DESC LIMIT 1')
-		.get() as { special: string; closes_at: string } | undefined;
-	const special = specialOf(last?.special);
-	if (!special || !last) return null;
-	const held = localParts(new Date(last.closes_at));
-	const today = localParts(now);
-	return held.year === today.year && today.month === special.themeMonth ? special : null;
+	return week ? specialOf(week.special) : null;
 }
