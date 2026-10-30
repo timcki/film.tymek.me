@@ -9,6 +9,7 @@
 	import Banana from '$lib/components/Banana.svelte';
 	import Check from '$lib/components/Check.svelte';
 	import Halloween from '$lib/components/Halloween.svelte';
+	import Cinema from '$lib/components/Cinema.svelte';
 	import Pumpkin from '$lib/components/Pumpkin.svelte';
 	import Skull from '$lib/components/Skull.svelte';
 	import { specialOf } from '$lib/specials';
@@ -474,7 +475,8 @@
 {/snippet}
 
 {#if bare}
-	<div class="wrap">{@render children()}</div>
+	<!-- bare: no back row for the room's phones and the admin's tables -->
+	<div class="wrap bare">{@render children()}</div>
 {:else}
 	<!-- the host view is a projector or a laptop, never a phone; let it breathe -->
 	<div class="wrap" class:wide={path.startsWith('/host')} class:home
@@ -586,12 +588,16 @@
 	</div>
 	{#if data.look === 'halloween'}
 		<Halloween part="land" />
+	{:else if !data.look}
+		<Cinema part="seats" />
 	{/if}
 
 {/if}
 
 {#if data.look === 'halloween'}
 	<Halloween part="sky" />
+{:else if !data.look}
+	<Cinema part="sky" />
 {/if}
 
 {#if !bare && data.changelog.length}

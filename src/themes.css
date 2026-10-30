@@ -185,6 +185,48 @@
 	opacity: 1;
 }
 
+/* --------------------------------------------------------------- cinema -----
+   The everyday look's scenery (Cinema.svelte), worn whenever no special round
+   has put on its own: a marquee's bulbs along the top, and the back row of the
+   house at the foot of the page with the screen's light coming over it. Under
+   either palette, under bananas too; the seats are velvet in both. */
+:root:not([data-special]) {
+	--bulb: #ffd98e;
+	--socket: color-mix(in srgb, var(--ink) 12%, var(--bg));
+	--marquee-edge: color-mix(in srgb, var(--ink) 7%, transparent);
+	--seat: #2c1619;
+	--seat-rim: color-mix(in srgb, var(--accent) 50%, transparent);
+	--head: #08090a;
+	--screenlight: color-mix(in srgb, var(--accent) 18%, transparent);
+	--popcorn: #f3e3b8;
+	--popcorn-tub: #b8323a;
+}
+/* on paper a lit bulb is a darker amber, and the house is in daylight: the
+   velvet faded, the heads a soft ink rather than black */
+:root[data-theme='light']:not([data-special]) {
+	--bulb: #e09a2c;
+	--seat: #c48f86;
+	--seat-rim: rgba(255, 255, 255, 0.7);
+	--head: #6b5752;
+	--screenlight: color-mix(in srgb, var(--accent) 16%, transparent);
+	--popcorn: #fff6dc;
+	--popcorn-tub: #c2414a;
+}
+/* room under the marquee, the way Halloween keeps it under its lights */
+:root:not([data-special]) body {
+	padding-top: 16px;
+	position: relative;
+}
+:root:not([data-special]) header.lean {
+	top: 16px;
+}
+/* the back row stands at the foot of the window on a short page */
+:root:not([data-special]) .wrap:not(.bare) {
+	min-height: calc(100vh - 48px - env(safe-area-inset-bottom, 0px));
+	min-height: calc(100svh - 48px - env(safe-area-inset-bottom, 0px));
+	padding-bottom: 76px;
+}
+
 /* ------------------------------------------------------------ halloween -----
    §3.6. Not a palette anybody picks but a special round's look, put on <html>
    as data-special by the server and taken off when the round is over. Declared

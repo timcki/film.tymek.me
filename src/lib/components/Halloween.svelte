@@ -63,7 +63,7 @@
 	onMount(() => {
 		if (part !== 'sky') return;
 		let timer: ReturnType<typeof setTimeout>;
-		lights.flicker = () => {
+		const shiver = () => {
 			clearTimeout(timer);
 			shivering = false;
 			requestAnimationFrame(() => {
@@ -71,9 +71,11 @@
 				timer = setTimeout(() => (shivering = false), 1600);
 			});
 		};
+		lights.flicker = shiver;
 		return () => {
 			clearTimeout(timer);
-			lights.flicker = () => {};
+			// the marquee may have strung its own bulbs by now
+			if (lights.flicker === shiver) lights.flicker = () => {};
 		};
 	});
 </script>
