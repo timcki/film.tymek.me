@@ -150,8 +150,6 @@ export type Dict = {
 
 	addedBy: (name: string, week: number) => string;
 	nomPop: (week: number) => string;
-	nomCta: string;
-	nomCtaSub: string;
 	nomDone: (title: string) => string;
 	listEmpty: string;
 	shelfArchive: (n: number) => string;
@@ -577,8 +575,6 @@ const pl: Dict = {
 
 	addedBy: (name, week) => `${name}, tydzień ${week}`,
 	nomPop: (week) => `Zgłoszenie z tygodnia ${week}`,
-	nomCta: '+ Zgłoś film',
-	nomCtaSub: 'jedno zgłoszenie na osobę w tygodniu',
 	nomDone: (title) => `Twoje zgłoszenie w tym tygodniu: ${title}`,
 	listEmpty: 'Lista jest pusta. Zgłoś coś.',
 	shelfArchive: (n) => `Archiwum · ${n} ${plFilms(n)} bez głosów`,
@@ -1113,8 +1109,6 @@ const en: Dict = {
 
 	addedBy: (name, week) => `${name}, week ${week}`,
 	nomPop: (week) => `Nominated in week ${week}`,
-	nomCta: '+ Nominate a film',
-	nomCtaSub: 'one nomination per person per week',
 	nomDone: (title) => `You nominated ${title} this week`,
 	listEmpty: 'Nothing on the list. Nominate something.',
 	shelfArchive: (n) => `Archive · ${n} ${en2(n, 'film', 'films')} nobody has voted for`,

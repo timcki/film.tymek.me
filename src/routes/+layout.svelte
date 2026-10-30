@@ -97,6 +97,14 @@
 	const picksLeft = $derived(
 		special ? Math.max(0, special.picksPerPerson - Number(page.data.used ?? 0)) : 0
 	);
+	// the list's +: on the list itself, while the week is open to nominations
+	const addable = $derived(
+		path === '/' && Boolean(data.person) && data.week?.status === 'open' && !data.week.special
+	);
+	// this week's own film, read off the list's page data
+	const nominatedTitle = $derived(
+		(page.data.nominatedThisWeek as { title: string } | null | undefined)?.title ?? null
+	);
 
 	// every page gets the compact bar, so the app has one header rather than two.
 	// The list has no name worth printing, so the night takes that slot, because
@@ -422,6 +430,31 @@
 	{/if}
 {/snippet}
 
+{#snippet addFilm()}
+	{#if addable}
+		<!-- the list's own +, the one call to action in the bar, the way a special
+		     round's is: it opens the sheet films are put up in, and turns into its
+		     close while that is open. Once this week's film is in it stays, greyed,
+		     with the film's name in its title, so the bar does not jump about -->
+		<button
+			class="pill spadd"
+			class:on={nomSheet.open}
+			disabled={Boolean(nominatedTitle) && !nomSheet.open}
+			aria-label={nomSheet.open ? T.close : nominatedTitle ? T.nomDone(nominatedTitle) : T.nomH}
+			aria-expanded={nomSheet.open}
+			title={nomSheet.open ? T.close : nominatedTitle ? T.nomDone(nominatedTitle) : T.nomH}
+			onclick={() => {
+				nomSheet.from = null;
+				nomSheet.open = !nomSheet.open;
+			}}
+		>
+			<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"
+				><path d="M6 1.5v9M1.5 6h9" /></svg
+			>
+		</button>
+	{/if}
+{/snippet}
+
 {#snippet specialChip()}
 	{#if special && data.week}
 		<div class="budget">
@@ -530,6 +563,7 @@
 					</div>
 
 					{@render budget()}
+					{@render addFilm()}
 					{@render specialChip()}
 				</div>
 			</header>

@@ -22,6 +22,7 @@
 	import Check from '$lib/components/Check.svelte';
 	import { say } from '$lib/toast.svelte';
 	import { watchLive } from '$lib/live-poll';
+	import { nomSheet } from '$lib/special-sheet.svelte';
 	import { votePulse } from '$lib/vote-pulse';
 	import type { ActionData, PageData } from './$types';
 
@@ -350,7 +351,18 @@
 
 	let detailId = $state<number | null>(null);
 	let noteEdit = $state(false);
-	let searchOpen = $state(false);
+	// the sheet films are put up in opens from the + in the bar, which the
+	// layout draws, so whether it is open lives with the bar's
+	const searchOpen = $derived(nomSheet.open);
+	// every opening starts from an empty box, and leaving the list shuts it, so
+	// it is not found open on the way back
+	$effect(() => {
+		if (!nomSheet.open) return;
+		query = '';
+		results = [];
+		picked = null;
+	});
+	$effect(() => () => (nomSheet.open = false));
 	// the +N fold opens every backer pill in a small modal; face popups stack on top
 	let backersOpenId = $state<number | null>(null);
 	// the badge on the poster opens the thread in a modal, for reading and writing
@@ -377,7 +389,7 @@
 		unpeek();
 		detailId = null;
 		noteEdit = false;
-		searchOpen = false;
+		nomSheet.open = false;
 		picked = null;
 	}
 
@@ -1044,55 +1056,45 @@
 	{/each}
 </div>
 
-<button
-	class="addcard"
-	disabled={Boolean(nominated) || !open}
-	onclick={() => {
-		searchOpen = true;
-		query = '';
-		results = [];
-		picked = null;
-	}}
->
-	{#if nominated}
-		{T.nomDone(nominated.title)}
-	{:else}
-		<b>{T.nomCta}</b><br /><span style="font-size:11.5px">{T.nomCtaSub}</span>
-	{/if}
-</button>
-
 {#if data.archived.length || data.dropped.length}
-	<div class="sec">
-		{rules.attrition.kind === 'archive'
-			? T.shelfArchive(data.archived.length)
-			: T.shelfDropped(data.dropped.length)}
-	</div>
-	<div class="list">
-		{#each data.archived as film (film.id)}
-			{@render row(film, false, true)}
-		{/each}
-		{#each data.dropped as film (film.id)}
-			<div class="film shelf">
-				<div class="p"><Poster title={film.title} url={film.poster_url} /></div>
-				<div class="b">
-					<div class="hd">
-						<div class="ttl">
-							<span class="tname">{film.title}</span>
-							{#if film.year}<span class="mm">{film.year}</span>{/if}
+	<!-- what fell off the list is history, not the vote: folded away until asked
+	     for, the count on the fold saying how much is in there -->
+	<details class="shelfbox">
+		<summary class="sec">
+			{rules.attrition.kind === 'archive'
+				? T.shelfArchive(data.archived.length)
+				: T.shelfDropped(data.dropped.length)}
+			<svg class="shelfchev" viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"
+				><path d="M2 3.6 5 6.6 8 3.6" /></svg
+			>
+		</summary>
+		<div class="list">
+			{#each data.archived as film (film.id)}
+				{@render row(film, false, true)}
+			{/each}
+			{#each data.dropped as film (film.id)}
+				<div class="film shelf">
+					<div class="p"><Poster title={film.title} url={film.poster_url} /></div>
+					<div class="b">
+						<div class="hd">
+							<div class="ttl">
+								<span class="tname">{film.title}</span>
+								{#if film.year}<span class="mm">{film.year}</span>{/if}
+							</div>
+						</div>
+						<div class="ft">
+							<span class="backers"></span>
+							<form method="POST" action="?/renominate" use:enhance={submit()}>
+								<input type="hidden" name="filmId" value={film.id} />
+								<input type="hidden" name="title" value={film.title} />
+								<button class="tap" disabled={Boolean(nominated) || !open}>{T.btnRenominate}</button>
+							</form>
 						</div>
 					</div>
-					<div class="ft">
-						<span class="backers"></span>
-						<form method="POST" action="?/renominate" use:enhance={submit()}>
-							<input type="hidden" name="filmId" value={film.id} />
-							<input type="hidden" name="title" value={film.title} />
-							<button class="tap" disabled={Boolean(nominated) || !open}>{T.btnRenominate}</button>
-						</form>
-					</div>
 				</div>
-			</div>
-		{/each}
-	</div>
+			{/each}
+		</div>
+	</details>
 {/if}
 
 <!-- ------------------------------------------------------------ sheets -- -->

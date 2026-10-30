@@ -481,7 +481,7 @@ header .sub b {
 /* the rules hang from the bar's right edge rather than from the chip, which the
    + now keeps off that edge: anchored to the chip, a phone-wide tip ran off the
    left of the screen */
-.hrow:has(.spchip) {
+.hrow:has(.spchip, .spadd) {
 	position: relative;
 }
 .hrow .budget:has(.spchip) {
@@ -504,8 +504,8 @@ header .sub b {
 	color: var(--ink);
 	font-variant-numeric: normal;
 }
-/* the + that opens the special round's nomination sheet: the accent's own
-   fill, the one call to action in the bar */
+/* the + that opens the nomination sheet, the list's or a special round's: the
+   accent's own fill, the one call to action in the bar */
 .pill.spadd {
 	padding: 0;
 	width: 34px;
@@ -538,7 +538,7 @@ header .sub b {
 .pill.spadd.on {
 	box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
 }
-/* every pick put up: still there, but spent */
+/* every pick put up, or this week's film nominated: still there, but spent */
 .pill.spadd:disabled {
 	background: var(--raise);
 	color: var(--dim);
@@ -554,13 +554,14 @@ header .sub b {
 .wshort {
 	display: none;
 }
-/* a phone's bar holds the special round's two chips by dropping words: the
-   pumpkin alone stands for the round, and the countdown loses its verb */
+/* a phone's bar holds the special round's two chips, or the list's points and
+   its +, by dropping words: the pumpkin alone stands for the round, and the
+   countdown loses its verb */
 @media (max-width: 560px) {
-	.hrow:has(.spchip) .wlong {
+	.hrow:has(.spchip, .spadd) .wlong {
 		display: none;
 	}
-	.hrow:has(.spchip) .wshort {
+	.hrow:has(.spchip, .spadd) .wshort {
 		display: inline;
 	}
 	.pill.spchip {
@@ -572,7 +573,7 @@ header .sub b {
 		height: 32px;
 		margin-left: 3px;
 	}
-	.hrow:has(.spchip) .wk .wkbtn {
+	.hrow:has(.spchip, .spadd) .wk .wkbtn {
 		gap: 6px;
 	}
 }
@@ -589,7 +590,7 @@ header .sub b {
 		height: 30px;
 		margin-left: 2px;
 	}
-	.hrow:has(.spchip) .wk .wkbtn {
+	.hrow:has(.spchip, .spadd) .wk .wkbtn {
 		gap: 3px;
 	}
 }
@@ -1726,24 +1727,35 @@ button.holdchip:hover {
 	opacity: 0.4;
 	cursor: not-allowed;
 }
-.addcard {
-	border: 1px dashed color-mix(in srgb, var(--dim) 38%, transparent);
-	border-radius: var(--r);
-	color: var(--dim);
-	font-size: 13.5px;
-	text-align: center;
-	padding: 18px;
-	background: none;
-	width: 100%;
+/* the shelf of films that fell off the list, folded by default: its heading is
+   the fold, with a chevron that turns when it is open */
+.shelfbox > summary {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	width: fit-content;
+	list-style: none;
 	cursor: pointer;
-	margin-top: 10px;
+	user-select: none;
 }
-.addcard b {
-	color: var(--dim);
-	font-weight: 650;
+.shelfbox > summary::-webkit-details-marker {
+	display: none;
 }
-.addcard:disabled {
-	cursor: default;
+.shelfchev {
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.5;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	transition: transform 0.2s ease;
+}
+.shelfbox[open] .shelfchev {
+	transform: rotate(180deg);
+}
+@media (prefers-reduced-motion: reduce) {
+	.shelfchev {
+		transition: none;
+	}
 }
 .empty {
 	color: var(--dim);
@@ -2208,7 +2220,9 @@ details[open] > .iconbtn {
 	inset: 0;
 	background: var(--scrim);
 	backdrop-filter: blur(3px);
-	z-index: 60;
+	/* under the bar (47), as a special round's veil is: the + that opened the
+	   sheet stays lit above it, turned into the sheet's close */
+	z-index: 46;
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity 0.2s;
