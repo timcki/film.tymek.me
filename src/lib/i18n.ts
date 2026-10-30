@@ -113,11 +113,11 @@ export type Dict = {
 	week: (n: number) => string;
 	/** the whole phrase, verb included, because the bar has no room for a sentence around it */
 	timeLeft: (d: number, h: number, m: number, s: number) => string;
-	/** the same, for a bar with no room for the verb */
-	timeLeftShort: (d: number, h: number, m: number, s: number) => string;
 	votingClosed: string;
 	roomPicking: (code: string) => string;
 	openRoom: string;
+	/** the bar's way into the room while it picks, where the + was */
+	roomGo: string;
 	budgetPill: (left: number, budget: number, votes: boolean) => string;
 	budgetHelp: (rules: RulesView) => string;
 
@@ -522,17 +522,10 @@ const pl: Dict = {
 		if (m) return plLeft(m, 'minuta', 'minuty', 'minut', true);
 		return plLeft(s, 'sekunda', 'sekundy', 'sekund', true);
 	},
-	timeLeftShort: (d, h, m, s) =>
-		d
-			? `${d} ${pl3(d, 'dzień', 'dni', 'dni')}`
-			: h
-				? `${h} godz.`
-				: m
-					? `${m} min`
-					: `${s} s`,
 	votingClosed: 'głosowanie zamknięte',
 	roomPicking: (code) => `sala wybiera, kod ${code}`,
 	openRoom: 'Wybierz film na dziś',
+	roomGo: 'Do sali',
 	budgetPill: (left, budget, votes) =>
 		votes ? `${left}/${budget} ${plVotes(budget)}` : `${left}/${budget} pkt`,
 	budgetHelp: (r) => {
@@ -1063,11 +1056,10 @@ const en: Dict = {
 				: m
 					? `${m} min left`
 					: `${s} s left`,
-	timeLeftShort: (d, h, m, s) =>
-		d ? `${d} ${en2(d, 'day', 'days')}` : h ? `${h} h` : m ? `${m} min` : `${s} s`,
 	votingClosed: 'voting is closed',
 	roomPicking: (code) => `the room is picking, code ${code}`,
 	openRoom: "Pick tonight's film",
+	roomGo: 'To the room',
 	budgetPill: (left, budget, votes) =>
 		votes ? `${left}/${budget} ${en2(budget, 'vote', 'votes')}` : `${left}/${budget} pts`,
 	budgetHelp: (r) => {

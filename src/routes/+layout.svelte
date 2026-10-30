@@ -3,7 +3,7 @@
 	import '../themes.css';
 	import { page } from '$app/state';
 	import Avatar from '$lib/components/Avatar.svelte';
-	import { formatNight, formatNightDay } from '$lib/datetime';
+	import { formatNight } from '$lib/datetime';
 	import { dictFor, isVotes, LANGS } from '$lib/i18n';
 	import { THEMES } from '$lib/themes';
 	import Banana from '$lib/components/Banana.svelte';
@@ -42,19 +42,6 @@
 			Math.floor(left / 1000) % 60
 		);
 	});
-	// §3.6: a phone's bar with the special round's chips in it has no room for the verb
-	const countdownShort = $derived.by(() => {
-		if (!data.week) return '';
-		const left = new Date(data.week.closesAt).getTime() - now;
-		if (left <= 0) return null;
-		return T.timeLeftShort(
-			Math.floor(left / 86400000),
-			Math.floor(left / 3600000) % 24,
-			Math.floor(left / 60000) % 60,
-			Math.floor(left / 1000) % 60
-		);
-	});
-
 	const title = $derived.by(() => {
 		if (path.startsWith('/history')) return T.watchedH;
 		if (path.startsWith('/stats')) return T.statsH;
@@ -112,7 +99,7 @@
 	// round's number is nobody's reason for opening this, so it waits in the tip
 	const lean = $derived(!bare && Boolean(data.week));
 	const leanLabel = $derived(
-		home && data.week ? formatNightDay(data.week.closesAt, data.lang) : title
+		home && data.week ? formatNight(data.week.closesAt, data.lang) : title
 	);
 
 	// how much of the round is spent
@@ -523,9 +510,10 @@
 				<div class="hrow">
 					{@render identity()}
 
-					<!-- the rung lives on the pair, not the chip, so the tip the chip
-					     opens can wear it too. Only while voting is open: a round that is
-					     over has no heat left to report -->
+					<!-- when, in two lines: the night, and under it what is left of the
+					     round, in the rung's colour. The rung lives on the pair, so the tip
+					     it opens can wear it too. Only while voting is open: a round that
+					     is over has no heat left to report -->
 					<div
 						class="wk"
 						class:lit={data.week.status === 'open' && Boolean(countdown)}
@@ -533,26 +521,23 @@
 					>
 						<button
 							class="wkbtn"
-							class:urgent
 							aria-expanded={weekTip}
 							onclick={() => (weekTip = !weekTip)}
 							onblur={() => (weekTip = false)}
 						>
 							<span class="wlead">{leanLabel}</span>
-							{#if data.week.status === 'open' && countdown}
-								<!-- the words are the countdown already, down to the second, so
-								     colour is all that is left to say: how much of the round has
-								     gone. A bar said it worse and got read as a rank -->
-								<span class="wchip" class:urgent
-									><span class="wlong">{countdown}</span><span class="wshort"
-										>{countdownShort}</span
-									></span
-								>
-							{:else if data.week.status === 'runoff'}
-								<b>{T.roomPicking(data.runoffCode ?? '')}</b>
-							{:else}
-								<b>{T.votingClosed}</b>
-							{/if}
+							<!-- the words are the countdown already, so colour is all that is
+							     left to say: how much of the round has gone. A chip round it
+							     was one box too many in a bar that should be quiet -->
+							<span class="wsub">
+								{#if data.week.status === 'open' && countdown}
+									{countdown}
+								{:else if data.week.status === 'runoff'}
+									{T.roomPicking(data.runoffCode ?? '')}
+								{:else}
+									{T.votingClosed}
+								{/if}
+							</span>
 						</button>
 						<!-- the round in full, one tap away: which week it is, and the night
 						     down to the hour, which is no longer always Thursday at eight -->
@@ -562,9 +547,26 @@
 						</div>
 					</div>
 
-					{@render budget()}
-					{@render addFilm()}
-					{@render specialChip()}
+					<!-- what you have to spend, and the one thing to add -->
+					<div class="barend">
+						{#if data.week.status === 'runoff' && data.runoffCode}
+							<!-- the room is picking: nothing left to spend or add, so the
+							     bar's one lit thing is the way in. Not on the projector,
+							     which is the room -->
+							{#if !path.startsWith('/host')}
+								<a class="pill roomgo" href="/f/{data.runoffCode}" title={T.openRoom}
+									>{T.roomGo}
+									<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"
+										><path d="M2 6h8M6.5 2.5 10 6l-3.5 3.5" /></svg
+									></a
+								>
+							{/if}
+						{:else}
+							{@render budget()}
+							{@render addFilm()}
+							{@render specialChip()}
+						{/if}
+					</div>
 				</div>
 			</header>
 		{:else}
@@ -606,12 +608,6 @@
 			     under the bar and its menu: §3.6's look lifts the column into a layer
 			     of its own, and a backdrop outside it would cover the menu too -->
 			<button class="menu-backdrop" aria-label={T.close} onclick={() => (menuOpen = false)}></button>
-		{/if}
-
-		{#if data.week?.status === 'runoff' && data.runoffCode && !path.startsWith('/host')}
-			<p class="banner accent">
-				<a href="/f/{data.runoffCode}">{T.openRoom}</a>
-			</p>
 		{/if}
 
 		{@render children()}

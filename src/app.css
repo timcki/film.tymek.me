@@ -188,10 +188,13 @@ header.lean::after {
 	flex: 1;
 	min-width: 0;
 }
+/* the night over what is left of the round: two lines rather than a chip, so
+   nothing is cut short on a narrow phone and the bar holds one box fewer */
 .wkbtn {
 	display: flex;
-	align-items: center;
-	gap: 8px;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 1px;
 	background: none;
 	border: 0;
 	padding: 0;
@@ -213,22 +216,28 @@ header.lean::after {
 	font-weight: 650;
 	letter-spacing: -0.01em;
 	flex: 0 1 auto;
+	line-height: 1.25;
+	white-space: nowrap;
 	min-width: 0;
+	max-width: 100%;
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
-.wkbtn b {
-	color: var(--ink2);
+.wsub {
+	font-size: 12.5px;
 	font-weight: 600;
-}
-.wkbtn.urgent b {
-	color: var(--warn);
-}
-.wlead,
-.wkbtn b,
-.wchip {
+	line-height: 1.25;
+	color: var(--dim);
+	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
+	transition: color 0.6s linear;
 }
+/* what is left of the round, worn by the words that already say it: how much
+   of it has gone, as one rung of the ramp */
+.wk.lit .wsub {
+	color: var(--heat);
+}
+
 .wk .tip {
 	position: absolute;
 	top: calc(100% + 8px);
@@ -257,33 +266,6 @@ header.lean::after {
    the chip is showing, so it answers to the rung instead */
 .wk.lit .tip b {
 	color: var(--heat);
-}
-/* what is left of the round, worn by the words that already say it. A hairline
-   had no area to hold a colour, and a colour is the only thing the text was not
-   saying; so the bar goes and the countdown takes the heat itself */
-.wchip {
-	flex: 0 0 auto;
-	border-radius: 99px;
-	padding: 4px 9px 5px;
-	font-size: 12.5px;
-	font-weight: 650;
-	line-height: 1;
-	font-variant-numeric: tabular-nums;
-	color: var(--heat);
-	/* the wash alone was too thin to hold a colour at this size, so the rung is
-	   drawn round the chip as well as under it */
-	background: color-mix(in srgb, var(--heat) 24%, transparent);
-	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--heat) 38%, transparent);
-	transition:
-		color 0.6s linear,
-		background 0.6s linear,
-		box-shadow 0.6s linear;
-}
-/* the last day stops being a tint and becomes the thing itself */
-.wchip.urgent {
-	color: var(--onbright);
-	background: var(--heat);
-	box-shadow: none;
 }
 h1 {
 	margin: 0;
@@ -504,20 +486,48 @@ header .sub b {
 	color: var(--ink);
 	font-variant-numeric: normal;
 }
-/* the + that opens the nomination sheet, the list's or a special round's. A
-   sibling of the points pill beside it rather than a button dropped into the
-   bar: the same raised surface and the same height, the + in the accent the
-   pips are drawn in, so whichever palette or flavour is on dresses it too */
+/* the bar's end: what you have to spend, and the + that opens the nomination
+   modal. The pips stand on the bar itself, as the cards' dots do, rather than
+   in a box of their own; a special round's chip keeps its pill, since it is a
+   word and a chevron that open the rules */
+.barend {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex: none;
+}
+.barend .budget > .pill:not(.spchip) {
+	background: none;
+	padding: 6px 2px;
+}
+/* while the room picks, the way in stands where the + was, in its colours */
+.pill.roomgo {
+	height: 34px;
+	padding: 0 14px;
+	gap: 6px;
+	background: var(--accent);
+	color: var(--accent-ink);
+	font-size: 13px;
+	font-weight: 700;
+	text-decoration: none;
+	cursor: pointer;
+}
+.pill.roomgo svg {
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.7;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+/* the + keeps the accent's own fill: the one call to action in the bar */
 .pill.spadd {
 	padding: 0;
-	width: 31px;
-	height: 31px;
+	width: 34px;
+	height: 34px;
 	justify-content: center;
-	color: var(--accent);
+	background: var(--accent);
+	color: var(--accent-ink);
 	cursor: pointer;
-	/* tucked in beside the pill, closer than the bar's own gap, so the two
-	   read as one widget: what you have to spend, and the one thing to add */
-	margin-left: -8px;
 	flex: none;
 }
 .pill.spadd svg {
@@ -540,16 +550,15 @@ header .sub b {
 .pill.spadd:active {
 	transform: scale(0.9);
 }
-/* open, it is the sheet's close, and only then takes the accent's fill: the
-   one lit thing above the dimmed page */
+/* open, it is the modal's close, ringed in its own colour */
 .pill.spadd.on {
-	background: var(--accent);
-	color: var(--accent-ink);
 	box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
 }
-/* every pick put up, or this week's film nominated: still there, but spent */
+/* every pick put up, or this week's film nominated: still there and still the
+   accent's, but quietened, so it reads as done rather than as broken */
 .pill.spadd:disabled {
-	color: var(--dimmer);
+	background: color-mix(in srgb, var(--accent) 30%, var(--raise));
+	color: color-mix(in srgb, var(--accent-ink) 55%, var(--accent));
 	cursor: default;
 	transform: none;
 }
@@ -559,28 +568,12 @@ header .sub b {
 		transition: none;
 	}
 }
-.wshort {
-	display: none;
-}
-/* a phone's bar holds the special round's two chips, or the list's points and
-   its +, by dropping words: the pumpkin alone stands for the round, and the
-   countdown loses its verb */
+/* a phone's bar holds the special round's chip and its + by tightening it: the
+   pumpkin alone stands for the round */
 @media (max-width: 560px) {
-	.hrow:has(.spchip, .spadd) .wlong {
-		display: none;
-	}
-	.hrow:has(.spchip, .spadd) .wshort {
-		display: inline;
-	}
 	.pill.spchip {
 		padding: 6px 8px 6px 7px;
 		gap: 4px;
-	}
-	.pill.spadd {
-		margin-left: -10px;
-	}
-	.hrow:has(.spchip, .spadd) .wk .wkbtn {
-		gap: 6px;
 	}
 }
 /* the narrowest phones (an SE, a mini) are a dozen pixels short of the date,
@@ -590,14 +583,6 @@ header .sub b {
 		padding: 5px 6px 5px 5px;
 		gap: 3px;
 		font-size: 11.5px;
-	}
-	.pill.spadd {
-		width: 30px;
-		height: 30px;
-		margin-left: -11px;
-	}
-	.hrow:has(.spchip, .spadd) .wk .wkbtn {
-		gap: 3px;
 	}
 }
 /* the patch the rules end on: a skull and a lantern, out of the text's way */
