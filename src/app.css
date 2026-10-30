@@ -504,22 +504,25 @@ header .sub b {
 	color: var(--ink);
 	font-variant-numeric: normal;
 }
-/* the + that opens the nomination sheet, the list's or a special round's: the
-   accent's own fill, the one call to action in the bar */
+/* the + that opens the nomination sheet, the list's or a special round's. A
+   sibling of the points pill beside it rather than a button dropped into the
+   bar: the same raised surface and the same height, the + in the accent the
+   pips are drawn in, so whichever palette or flavour is on dresses it too */
 .pill.spadd {
 	padding: 0;
-	width: 34px;
-	height: 34px;
+	width: 31px;
+	height: 31px;
 	justify-content: center;
-	background: var(--accent);
-	color: var(--accent-ink);
+	color: var(--accent);
 	cursor: pointer;
-	margin-left: 6px;
+	/* tucked in beside the pill, closer than the bar's own gap, so the two
+	   read as one widget: what you have to spend, and the one thing to add */
+	margin-left: -8px;
 	flex: none;
 }
 .pill.spadd svg {
 	stroke: currentColor;
-	stroke-width: 1.8;
+	stroke-width: 1.6;
 	stroke-linecap: round;
 	transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -530,18 +533,23 @@ header .sub b {
 .pill.spadd {
 	transition:
 		transform 0.18s ease,
+		background-color 0.25s ease,
+		color 0.25s ease,
 		box-shadow 0.25s ease;
 }
 .pill.spadd:active {
 	transform: scale(0.9);
 }
+/* open, it is the sheet's close, and only then takes the accent's fill: the
+   one lit thing above the dimmed page */
 .pill.spadd.on {
+	background: var(--accent);
+	color: var(--accent-ink);
 	box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 /* every pick put up, or this week's film nominated: still there, but spent */
 .pill.spadd:disabled {
-	background: var(--raise);
-	color: var(--dim);
+	color: var(--dimmer);
 	cursor: default;
 	transform: none;
 }
@@ -569,9 +577,7 @@ header .sub b {
 		gap: 4px;
 	}
 	.pill.spadd {
-		width: 32px;
-		height: 32px;
-		margin-left: 3px;
+		margin-left: -10px;
 	}
 	.hrow:has(.spchip, .spadd) .wk .wkbtn {
 		gap: 6px;
@@ -588,7 +594,7 @@ header .sub b {
 	.pill.spadd {
 		width: 30px;
 		height: 30px;
-		margin-left: 2px;
+		margin-left: -11px;
 	}
 	.hrow:has(.spchip, .spadd) .wk .wkbtn {
 		gap: 3px;
