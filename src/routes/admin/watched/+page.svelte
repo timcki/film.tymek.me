@@ -2,6 +2,8 @@
 	import { enhance } from '$app/forms';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
+	import FilmEditForm from '$lib/components/FilmEditForm.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import FilmSearch, { type Picked } from '$lib/components/FilmSearch.svelte';
 	import { formatDay } from '$lib/datetime';
@@ -17,6 +19,7 @@
 	const T = $derived(dictFor(data.lang));
 
 	let picked = $state<Picked | null>(null);
+	let editing = $state<number | null>(null);
 
 	const submit = (onOk?: () => void): SubmitFunction => {
 		return () =>
@@ -116,7 +119,19 @@
 			</div>
 			<span class="adate">{T.evening(film.evening)} · {formatDay(film.at, data.lang)}</span>
 
+			{#if editing === film.id}
+				<FilmEditForm
+					{film}
+					{A}
+					submit={submit(() => (editing = null))}
+					oncancel={() => (editing = null)}
+				/>
+			{/if}
+
 			<div class="acts">
+				{#if editing !== film.id}
+					<button class="tap" onclick={() => (editing = film.id)}>{A.filEdit}</button>
+				{/if}
 				<form method="POST" action="?/credit" use:enhance={submit()} class="awho">
 					<input type="hidden" name="id" value={film.id} />
 					<Avatar
@@ -137,7 +152,7 @@
 				{#if film.archival}
 					<form method="POST" action="?/remove" use:enhance={submit()}>
 						<input type="hidden" name="id" value={film.id} />
-						<button class="tap bad">{A.filDelete}</button>
+						<ConfirmButton label={A.filDelete} sure={A.sure} />
 					</form>
 				{/if}
 			</div>

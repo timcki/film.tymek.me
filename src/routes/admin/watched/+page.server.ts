@@ -1,7 +1,14 @@
 import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import { logAdmin, requireAdmin } from '$lib/server/admin';
-import { deleteFilm, reassignFilm, recordWatched, watchedRecord } from '$lib/server/manage';
+import {
+	deleteFilm,
+	editFilm,
+	filmEditFrom,
+	reassignFilm,
+	recordWatched,
+	watchedRecord
+} from '$lib/server/manage';
 import { allPeople, avatarUrl } from '$lib/server/people';
 import { detailsOf } from '$lib/server/tmdb';
 import { fromLocalInput } from '$lib/server/time';
@@ -75,6 +82,19 @@ export const actions: Actions = {
 				`${String(form.get('title') ?? '')}, ${isOuting(where) ? where : 'night'}`
 			);
 			return { added: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	edit: async ({ request, locals }) => {
+		const person = requireAdmin(locals.person);
+		const form = await request.formData();
+		const id = Number(form.get('id'));
+		try {
+			editFilm(getDb(), id, filmEditFrom(form));
+			logAdmin(getDb(), person.id, 'film.edit', String(id), String(form.get('title') ?? ''));
+			return { saved: true };
 		} catch (error) {
 			return ruleFail(error);
 		}

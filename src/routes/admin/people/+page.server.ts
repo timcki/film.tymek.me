@@ -24,6 +24,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return {
 		people: managedPeople(db),
 		colours: COLOURS,
+		banking: activeRules().banking,
 		bankCap: activeRules().bankCap,
 		audit: recentAudit(db, 15)
 	};

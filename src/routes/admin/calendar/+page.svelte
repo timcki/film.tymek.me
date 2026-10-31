@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import type { SubmitFunction } from '@sveltejs/kit';
+	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import { daysUntil, formatNight, toLocalInput } from '$lib/datetime';
 	import { adminDict } from '$lib/i18n.admin';
 	import { dictFor } from '$lib/i18n';
@@ -31,8 +32,11 @@
 			};
 	};
 
-	const upcoming = $derived(data.nights.filter((n) => n.status !== 'used'));
-	const past = $derived([...data.nights].reverse().filter((n) => n.status === 'used'));
+	// a skipped night that has gone by is history, not something still to come
+	const gone = (night: Night) =>
+		night.status === 'used' || (night.status === 'skipped' && Date.parse(night.at) < Date.now());
+	const upcoming = $derived(data.nights.filter((n) => !gone(n)));
+	const past = $derived([...data.nights].reverse().filter(gone));
 
 	// the next date the round would run to if this one were skipped
 	function nextAfter(night: Night): string | null {
@@ -140,7 +144,7 @@
 				</form>
 				<form method="POST" action="?/remove" use:enhance={submit()}>
 					<input type="hidden" name="id" value={night.id} />
-					<button class="tap bad">{A.calDelete}</button>
+					<ConfirmButton label={A.calDelete} sure={A.sure} />
 				</form>
 			</div>
 		{/if}
@@ -155,7 +159,11 @@
 		<div class="nmain">
 			<b>{when(night.at)}</b>
 			<span class="nmeta">
-				<span class="badge">{A.calUsed(data.evenings[night.week_number ?? 0])}</span>
+				{#if night.status === 'skipped'}
+					<span class="badge off">{A.calSkipped}</span>
+				{:else}
+					<span class="badge">{A.calUsed(data.evenings[night.week_number ?? 0])}</span>
+				{/if}
 				{#if night.note}<span class="nnote">{night.note}</span>{/if}
 			</span>
 		</div>

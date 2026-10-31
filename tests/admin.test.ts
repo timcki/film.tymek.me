@@ -165,6 +165,24 @@ describe('curating the films', () => {
 		expect(fixed.year).toBe(1972);
 	});
 
+	it('still edits a film that shares its title with a rewatch', () => {
+		const { db } = freshDb('banked');
+		const first = addFilm(db, 'Stalker', 'ala', 1);
+		const rewatch = addFilm(db, 'Stalker', 'bartek', 1);
+
+		editFilm(db, rewatch, {
+			title: 'Stalker',
+			year: 1979,
+			director: null,
+			genre: null,
+			runtime: null,
+			posterUrl: 'https://image.tmdb.org/t/p/w342/stalker.jpg',
+			note: null
+		});
+		expect(filmById(db, rewatch)!.poster_url).toBe('https://image.tmdb.org/t/p/w342/stalker.jpg');
+		expect(filmById(db, first)!.poster_url).toBeNull();
+	});
+
 	// the demo's admin persona reaches this form too, and it writes the one field
 	// every reader's browser then goes and fetches
 	it('holds an admin edit to the same poster host as a nomination', () => {

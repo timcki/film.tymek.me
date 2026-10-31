@@ -2,7 +2,14 @@ import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import { activeRules } from '$lib/server/config';
 import { logAdmin, requireAdmin } from '$lib/server/admin';
-import { deleteFilm, editFilm, reassignFilm, roundFilms, setFilmStatus } from '$lib/server/manage';
+import {
+	deleteFilm,
+	editFilm,
+	filmEditFrom,
+	reassignFilm,
+	roundFilms,
+	setFilmStatus
+} from '$lib/server/manage';
 import { filmById, holdFilm, releaseFilm } from '$lib/server/films';
 import { heldIn } from '$lib/server/holds';
 import { allPeople } from '$lib/server/people';
@@ -17,7 +24,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const db = getDb();
 	const week = currentWeek(db);
 	return {
-		// watched films and the written record live on /admin/archive
+		// watched films live on /admin/watched
 		films: roundFilms(db),
 		people: allPeople(db).map((p) => ({ id: p.id, name: p.name })),
 		closesAt: week?.closes_at ?? null,
@@ -52,20 +59,8 @@ export const actions: Actions = {
 		const person = requireAdmin(locals.person);
 		const form = await request.formData();
 		const id = Number(form.get('id'));
-		const number = (key: string) => {
-			const raw = String(form.get(key) ?? '').trim();
-			return raw ? Number(raw) : null;
-		};
 		try {
-			editFilm(getDb(), id, {
-				title: String(form.get('title') ?? ''),
-				year: number('year'),
-				director: String(form.get('director') ?? ''),
-				genre: String(form.get('genre') ?? ''),
-				runtime: number('runtime'),
-				posterUrl: String(form.get('poster') ?? ''),
-				note: String(form.get('note') ?? '')
-			});
+			editFilm(getDb(), id, filmEditFrom(form));
 			logAdmin(getDb(), person.id, 'film.edit', String(id), String(form.get('title') ?? ''));
 			return { saved: true };
 		} catch (error) {

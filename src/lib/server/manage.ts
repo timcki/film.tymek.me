@@ -300,13 +300,34 @@ export type FilmEdit = {
 	note: string | null;
 };
 
+/** the admin film editor's fields, read the way editFilm takes them */
+export function filmEditFrom(form: FormData): FilmEdit {
+	const number = (key: string) => {
+		const raw = String(form.get(key) ?? '').trim();
+		return raw ? Number(raw) : null;
+	};
+	return {
+		title: String(form.get('title') ?? ''),
+		year: number('year'),
+		director: String(form.get('director') ?? ''),
+		genre: String(form.get('genre') ?? ''),
+		runtime: number('runtime'),
+		posterUrl: String(form.get('poster') ?? ''),
+		note: String(form.get('note') ?? '')
+	};
+}
+
 export function editFilm(db: DB, id: number, edit: FilmEdit): void {
 	immediate(db, () => {
-		filmOr404(db, id);
+		const film = filmOr404(db, id);
 		const title = cleanTitle(edit.title);
-		const clash = db
-			.prepare(`SELECT id FROM film WHERE title_key = ? AND id != ? AND status != 'dropped'`)
-			.get(titleKey(title), id) as { id: number } | undefined;
+		// only a rename can collide: a rewatch written down on purpose shares its
+		// title with the first watching and still needs its poster fixed
+		const clash =
+			titleKey(title) !== film.title_key &&
+			(db
+				.prepare(`SELECT id FROM film WHERE title_key = ? AND id != ? AND status != 'dropped'`)
+				.get(titleKey(title), id) as { id: number } | undefined);
 		if (clash) throw new RuleError('dup_active', `${title} is already on the list`, { title });
 		db.prepare(
 			`UPDATE film SET title = ?, title_key = ?, year = ?, director = ?, genre = ?, runtime = ?,

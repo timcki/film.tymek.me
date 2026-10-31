@@ -13,6 +13,8 @@ export type AdminDict = {
 	navWatched: string;
 	navHost: string;
 	navBack: string;
+	/** what an armed destructive button says before the second tap */
+	sure: string;
 
 	/* calendar */
 	calH: string;
@@ -73,7 +75,7 @@ export type AdminDict = {
 	peoNewLink: (name: string) => string;
 
 	/* films */
-	filH: string;
+	filSearchPh: string;
 	filStatus: (status: string) => string;
 	filBy: (name: string, evening: number) => string;
 	filBallots: (n: number) => string;
@@ -93,11 +95,11 @@ export type AdminDict = {
 	filDelete: string;
 	filDeleteNote: string;
 	filReassignH: string;
-	filReassign: string;
 	/* §3.5: placing somebody's hold for them, because the ask came by group chat */
 	filHold: string;
 	filHoldWhy: string;
 	filRelease: string;
+	filHeld: string;
 	filEmpty: string;
 
 	/* the round in play */
@@ -147,6 +149,7 @@ const pl: AdminDict = {
 	navWatched: 'Obejrzane',
 	navHost: 'Prowadzący',
 	navBack: '← Wróć do aplikacji',
+	sure: 'Na pewno?',
 
 	calH: 'Terminy wieczorków',
 	calIntro:
@@ -208,7 +211,7 @@ const pl: AdminDict = {
 	peoCancel: 'Anuluj',
 	peoNewLink: (name) => `Nowy link dla ${name}. Przekaż go osobiście.`,
 
-	filH: 'Filmy',
+	filSearchPh: 'Szukaj filmu…',
 	filStatus: (status) => STATUS_PL[status] ?? status,
 	filBy: (name, evening) => `${name}, na wieczorek ${evening}`,
 	filBallots: (n) => `${n} głosów w bazie`,
@@ -226,12 +229,12 @@ const pl: AdminDict = {
 	filArchive: 'Poza listę',
 	filDrop: 'Wyrzuć',
 	filDelete: 'Usuń na zawsze',
-	filDeleteNote: 'Tylko dla filmów bez ani jednego głosu.',
+	filDeleteNote: 'Nie da się usunąć: ktoś już na niego głosował.',
 	filReassignH: 'Zgłaszający',
-	filReassign: 'Przepisz',
 	filHold: 'Liberum veto',
 	filHoldWhy: 'Powód (opcjonalnie)',
 	filRelease: 'Wycofaj',
+	filHeld: 'veto',
 	filEmpty: 'Brak filmów.',
 
 	rndH: 'Bieżąca runda',
@@ -348,6 +351,7 @@ const en: AdminDict = {
 	navWatched: 'Watched',
 	navHost: 'Host',
 	navBack: '← Back to the app',
+	sure: 'Sure?',
 
 	calH: 'Film night dates',
 	calIntro:
@@ -409,7 +413,7 @@ const en: AdminDict = {
 	peoCancel: 'Cancel',
 	peoNewLink: (name) => `New link for ${name}. Hand it over in person.`,
 
-	filH: 'Films',
+	filSearchPh: 'Find a film…',
 	filStatus: (status) => STATUS_EN[status] ?? status,
 	filBy: (name, evening) => `${name}, for night ${evening}`,
 	filBallots: (n) => `${n} ballots on record`,
@@ -427,12 +431,12 @@ const en: AdminDict = {
 	filArchive: 'Take off the list',
 	filDrop: 'Drop',
 	filDelete: 'Delete for good',
-	filDeleteNote: 'Only for films nobody has voted for.',
+	filDeleteNote: 'Cannot be deleted: somebody has voted for it.',
 	filReassignH: 'Nominated by',
-	filReassign: 'Reassign',
 	filHold: 'Liberum veto',
 	filHoldWhy: 'Reason (optional)',
 	filRelease: 'Put it back',
+	filHeld: 'held',
 	filEmpty: 'No films.',
 
 	rndH: 'Current round',

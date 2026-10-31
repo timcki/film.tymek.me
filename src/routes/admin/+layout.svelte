@@ -1,21 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { adminDict } from '$lib/i18n.admin';
-	import { toast } from '$lib/toast.svelte';
 	import type { LayoutData } from './$types';
 
 	let { data, children }: { data: LayoutData; children: import('svelte').Snippet } = $props();
 
 	const A = $derived(adminDict(data.lang));
 	const path = $derived(page.url.pathname);
-
-	let visible = $state(false);
-	$effect(() => {
-		if (!toast.seq) return;
-		visible = true;
-		const timer = setTimeout(() => (visible = false), 3200);
-		return () => clearTimeout(timer);
-	});
 
 	const tabs = $derived([
 		{ href: '/admin/calendar', label: A.navCalendar },
@@ -46,9 +37,13 @@
 	{@render children()}
 </div>
 
-<div class="toast" class:on={visible} class:bad={toast.bad}>{toast.text}</div>
-
 <style>
+	/* the back office has no bar for the desktop moon to ride in, so it lands
+	   here; the header stays above it to keep the way back clickable */
+	header {
+		position: relative;
+		z-index: 4;
+	}
 	.back {
 		font-size: 12px;
 		color: var(--dim);

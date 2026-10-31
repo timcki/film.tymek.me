@@ -2,12 +2,15 @@
 	import { enhance } from '$app/forms';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
+	import FilmEditForm from '$lib/components/FilmEditForm.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import { adminDict } from '$lib/i18n.admin';
+	import { fmtScore } from '$lib/i18n';
 	import { say } from '$lib/toast.svelte';
-	import type { ActionData, PageData } from './$types';
+	import type { PageData } from './$types';
 
-	let { data, form }: { data: PageData; form: ActionData } = $props();
+	let { data }: { data: PageData } = $props();
 
 	const A = $derived(adminDict(data.lang));
 
@@ -28,6 +31,14 @@
 			};
 	};
 
+	function saveOnChange(event: Event) {
+		(event.currentTarget as HTMLSelectElement).form?.requestSubmit();
+	}
+
+	const STATUSES = ['active', 'archived', 'dropped'] as const;
+	const statusLabel = (status: (typeof STATUSES)[number]) =>
+		status === 'active' ? A.filActivate : status === 'archived' ? A.filArchive : A.filDrop;
+
 	const shown = $derived(
 		data.films.filter((film) => film.title.toLowerCase().includes(filter.trim().toLowerCase()))
 	);
@@ -36,19 +47,21 @@
 <h2 class="ah">{A.rndH}</h2>
 <p class="ahint">{A.rndIntro}</p>
 
-<input class="sinput" placeholder={A.filH} bind:value={filter} autocomplete="off" />
+<input class="sinput" placeholder={A.filSearchPh} bind:value={filter} autocomplete="off" />
 
 {#each shown as film (film.id)}
-	<div class="frow" class:off={film.status !== 'active'}>
+	{@const held = data.held.includes(film.id)}
+	<div class="frow" class:off={film.status !== 'active'} class:open={editing === film.id}>
 		<div class="fth"><Poster title={film.title} url={film.poster_url} /></div>
 
 		<div class="fbody">
 			<div class="fhead">
 				<b>{film.title}{film.year ? ` (${film.year})` : ''}</b>
-				<span class="fscore">{film.score}</span>
+				<span class="fscore">{fmtScore(film.score)}</span>
 			</div>
 			<div class="fmeta">
 				<span class="badge soft">{A.filStatus(film.status)}</span>
+				{#if held}<span class="badge warn">{A.filHeld}</span>{/if}
 				{A.filBy(film.added_by_name, data.evenings[film.added_week])} · {A.filBallots(film.ballots)}
 			</div>
 			{#if film.backers.length}
@@ -60,63 +73,45 @@
 			{/if}
 
 			{#if editing === film.id}
-				<form class="fedit" method="POST" action="?/edit" use:enhance={submit(() => (editing = null))}>
-					<input type="hidden" name="id" value={film.id} />
-					<label>{A.filTitle}<input type="text" name="title" value={film.title} required /></label>
-					<label>{A.filYear}<input type="number" name="year" value={film.year ?? ''} /></label>
-					<label
-						>{A.filDirector}<input type="text" name="director" value={film.director ?? ''} /></label
-					>
-					<label>{A.filGenre}<input type="text" name="genre" value={film.genre ?? ''} /></label>
-					<label
-						>{A.filRuntime}<input type="number" name="runtime" value={film.runtime ?? ''} /></label
-					>
-					<label
-						>{A.filPoster}<input type="text" name="poster" value={film.poster_url ?? ''} /></label
-					>
-					<label>{A.filNote}<input type="text" name="note" value={film.note ?? ''} maxlength="160" /></label>
-					<div class="acts">
-						<button type="button" class="tap" onclick={() => (editing = null)}>{A.filCancel}</button>
-						<button class="tap go">{A.filSave}</button>
-					</div>
-				</form>
-			{:else}
-				<div class="acts">
-					<button class="tap" onclick={() => (editing = film.id)}>{A.filEdit}</button>
+				<FilmEditForm
+					{film}
+					{A}
+					submit={submit(() => (editing = null))}
+					oncancel={() => (editing = null)}
+				/>
 
-					{#each ['active', 'archived', 'dropped'] as status (status)}
-						{#if film.status !== status}
-							<form method="POST" action="?/status" use:enhance={submit()}>
-								<input type="hidden" name="id" value={film.id} />
-								<input type="hidden" name="status" value={status} />
-								<button class="tap">
-									{status === 'active'
-										? A.filActivate
-										: status === 'archived'
-											? A.filArchive
-											: A.filDrop}
-								</button>
-							</form>
-						{/if}
-					{/each}
-
+				<div class="fmore">
 					<form method="POST" action="?/reassign" use:enhance={submit()}>
 						<input type="hidden" name="id" value={film.id} />
-						<select name="personId">
-							{#each data.people as person (person.id)}
-								<option value={person.id} selected={person.id === film.added_by}>
-									{person.name}
-								</option>
-							{/each}
-						</select>
-						<button class="tap">{A.filReassign}</button>
+						<label class="bankin">
+							{A.filReassignH}
+							<select name="personId" onchange={saveOnChange}>
+								{#each data.people as person (person.id)}
+									<option value={person.id} selected={person.id === film.added_by}>
+										{person.name}
+									</option>
+								{/each}
+							</select>
+						</label>
 					</form>
+
+					<div class="acts">
+						{#each STATUSES as status (status)}
+							{#if film.status !== status}
+								<form method="POST" action="?/status" use:enhance={submit()}>
+									<input type="hidden" name="id" value={film.id} />
+									<input type="hidden" name="status" value={status} />
+									<button class="tap">{statusLabel(status)}</button>
+								</form>
+							{/if}
+						{/each}
+					</div>
 
 					<!-- the group-chat ask, pressed on the absentee's behalf -->
 					{#if film.status === 'active'}
-						<form method="POST" action="?/hold" use:enhance={submit()}>
+						<form class="acts" method="POST" action="?/hold" use:enhance={submit()}>
 							<input type="hidden" name="id" value={film.id} />
-							{#if data.held.includes(film.id)}
+							{#if held}
 								<button class="tap on">{A.filRelease}</button>
 							{:else}
 								<input type="text" name="reason" placeholder={A.filHoldWhy} maxlength="160" />
@@ -126,12 +121,20 @@
 						</form>
 					{/if}
 
-					{#if film.ballots === 0}
-						<form method="POST" action="?/remove" use:enhance={submit()}>
-							<input type="hidden" name="id" value={film.id} />
-							<button class="tap bad">{A.filDelete}</button>
-						</form>
-					{/if}
+					<div class="acts">
+						{#if film.ballots === 0}
+							<form method="POST" action="?/remove" use:enhance={submit()}>
+								<input type="hidden" name="id" value={film.id} />
+								<ConfirmButton label={A.filDelete} sure={A.sure} />
+							</form>
+						{:else}
+							<span class="ahint">{A.filDeleteNote}</span>
+						{/if}
+					</div>
+				</div>
+			{:else}
+				<div class="acts">
+					<button class="tap" onclick={() => (editing = film.id)}>{A.filEdit}</button>
 				</div>
 			{/if}
 		</div>
@@ -139,5 +142,3 @@
 {:else}
 	<p class="ahint">{A.filEmpty}</p>
 {/each}
-
-<p class="ahint">{A.filDeleteNote}</p>

@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import { formatDay } from '$lib/datetime';
 	import { adminDict } from '$lib/i18n.admin';
 	import { say } from '$lib/toast.svelte';
@@ -32,6 +33,20 @@
 	const inactive = $derived(data.people.filter((p) => !p.active));
 </script>
 
+{#snippet colours(chosen: string)}
+	<div class="pickcol">
+		<span>{A.peoColour}</span>
+		<div class="swatches">
+			{#each data.colours.includes(chosen) ? data.colours : [chosen, ...data.colours] as colour (colour)}
+				<label class="swatch" title={colour}>
+					<input type="radio" name="colour" value={colour} checked={colour === chosen} />
+					<span style:background={colour}></span>
+				</label>
+			{/each}
+		</div>
+	</div>
+{/snippet}
+
 {#if form && 'created' in form && form.created}
 	<div class="linkcard">
 		<b>{A.peoNewLink(form.created.name)}</b>
@@ -47,92 +62,73 @@
 		<span>{A.peoName}</span>
 		<input type="text" name="name" maxlength="60" required />
 	</label>
-	<label>
-		<span>{A.peoColour}</span>
-		<select name="colour">
-			{#each data.colours as colour (colour)}
-				<option value={colour}>{colour}</option>
-			{/each}
-		</select>
-	</label>
+	{@render colours(data.colours[0])}
 	<button class="tap go">{A.peoAdd}</button>
 </form>
 
 {#snippet personRow(person: PageData['people'][number])}
-	<div class="prow" class:off={!person.active}>
+	<div class="prow" class:off={!person.active} class:open={editing === person.id}>
+		<div class="pwho">
+			<Avatar name={person.name} colour={person.colour} avatar={person.avatar} size={34} font={13} />
+			<div class="pnames">
+				<b>
+					{person.name}
+					{#if person.is_admin}<span class="badge">{A.peoAdminBadge}</span>{/if}
+					{#if person.id === me}<span class="badge soft">{A.peoYou}</span>{/if}
+				</b>
+				<span class="pmeta">
+					{A.peoStats(person.nominated, person.watched)} · {formatDay(person.created_at, data.lang)}
+				</span>
+			</div>
+			{#if editing !== person.id}
+				<button class="tap pedit" onclick={() => (editing = person.id)}>{A.peoEdit}</button>
+			{/if}
+		</div>
+
 		{#if editing === person.id}
 			<form class="edit" method="POST" action="?/rename" use:enhance={submit(() => (editing = null))}>
 				<input type="hidden" name="id" value={person.id} />
-				<input type="text" name="name" value={person.name} maxlength="60" required />
-				<select name="colour">
-					{#each data.colours as colour (colour)}
-						<option value={colour} selected={colour === person.colour}>{colour}</option>
-					{/each}
-				</select>
+				<label>
+					<span>{A.peoName}</span>
+					<input type="text" name="name" value={person.name} maxlength="60" required />
+				</label>
+				{@render colours(person.colour)}
 				<div class="acts">
 					<button type="button" class="tap" onclick={() => (editing = null)}>{A.peoCancel}</button>
 					<button class="tap go">{A.peoSave}</button>
 				</div>
 			</form>
-		{:else}
-			<div class="pwho">
-				<Avatar
-					name={person.name}
-					colour={person.colour}
-					avatar={person.avatar}
-					size={34}
-					font={13}
-				/>
-				<div class="pnames">
-					<b>
-						{person.name}
-						{#if person.is_admin}<span class="badge">{A.peoAdminBadge}</span>{/if}
-						{#if person.id === me}<span class="badge soft">{A.peoYou}</span>{/if}
-					</b>
-					<span class="pmeta">
-						{A.peoStats(person.nominated, person.watched)} · {formatDay(
-							person.created_at,
-							data.lang
-						)}
-					</span>
+
+			<div class="fmore">
+				{#if data.banking}
+					<form class="acts" method="POST" action="?/bank" use:enhance={submit()}>
+						<input type="hidden" name="id" value={person.id} />
+						<label class="bankin">
+							{A.peoBank}
+							<input type="number" name="balance" value={person.balance} min="0" max={data.bankCap} />
+						</label>
+						<button class="tap">{A.peoSave}</button>
+					</form>
+				{/if}
+
+				<div class="acts">
+					<form method="POST" action="?/admin" use:enhance={submit()}>
+						<input type="hidden" name="id" value={person.id} />
+						<input type="hidden" name="on" value={person.is_admin ? '0' : '1'} />
+						<button class="tap">{person.is_admin ? A.peoDropAdmin : A.peoMakeAdmin}</button>
+					</form>
+
+					<form method="POST" action="?/active" use:enhance={submit()}>
+						<input type="hidden" name="id" value={person.id} />
+						<input type="hidden" name="on" value={person.active ? '0' : '1'} />
+						<button class="tap">{person.active ? A.peoDeactivate : A.peoActivate}</button>
+					</form>
 				</div>
-			</div>
 
-			<div class="acts">
-				<button class="tap" onclick={() => (editing = person.id)}>{A.peoEdit}</button>
-
-				<form method="POST" action="?/bank" use:enhance={submit()}>
+				<form class="acts" method="POST" action="?/rotate" use:enhance={submit()}>
 					<input type="hidden" name="id" value={person.id} />
-					<label class="bankin">
-						{A.peoBank}
-						<input
-							type="number"
-							name="balance"
-							value={person.balance}
-							min="0"
-							max={data.bankCap}
-						/>
-					</label>
-					<button class="tap">{A.peoSave}</button>
-				</form>
-
-				<form method="POST" action="?/admin" use:enhance={submit()}>
-					<input type="hidden" name="id" value={person.id} />
-					<input type="hidden" name="on" value={person.is_admin ? '0' : '1'} />
-					<button class="tap">{person.is_admin ? A.peoDropAdmin : A.peoMakeAdmin}</button>
-				</form>
-
-				<form method="POST" action="?/rotate" use:enhance={submit()}>
-					<input type="hidden" name="id" value={person.id} />
-					<button class="tap">{A.peoRotate}</button>
-				</form>
-
-				<form method="POST" action="?/active" use:enhance={submit()}>
-					<input type="hidden" name="id" value={person.id} />
-					<input type="hidden" name="on" value={person.active ? '0' : '1'} />
-					<button class="tap" class:bad={person.active}>
-						{person.active ? A.peoDeactivate : A.peoActivate}
-					</button>
+					<ConfirmButton label={A.peoRotate} sure={A.sure} />
+					<span class="ahint">{A.peoRotateNote}</span>
 				</form>
 			</div>
 		{/if}
@@ -149,8 +145,6 @@
 		{@render personRow(person)}
 	{/each}
 {/if}
-
-<p class="ahint">{A.peoRotateNote}</p>
 
 <div class="sec">{A.audH}</div>
 {#each data.audit as row (row.id)}
