@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { addFilm, castBallot, ensureWeek, freshDb } from './helpers.js';
 import type { DB } from '../src/lib/server/db.js';
-import { bandLabel, bandOf, bandsFor } from '../src/lib/bands.js';
 import { shortNames } from '../src/lib/names.js';
 import {
 	byDecade,
@@ -401,55 +400,6 @@ describe('what a chart row calls somebody', () => {
 
 	it('leaves a one-word name alone', () => {
 		expect(shortNames([{ id: 'a', name: 'ala' }]).get('a')).toBe('ala');
-	});
-});
-
-describe('the bands the engagement grid is cut into', () => {
-	const labels = (outOf: number) => bandsFor(outOf).map(bandLabel);
-
-	/**
-	 * The bug this pins twice over. By fraction, three nights out of four and all
-	 * four both came out above two thirds and shared a cell. Banding four ways
-	 * regardless then put three out of five and four out of five together, which
-	 * is the same failure wearing different numbers: at this scale a band is
-	 * always wider than the difference anybody cares about.
-	 */
-	it('gives every count its own column while they still fit', () => {
-		expect(labels(5)).toEqual(['0', '1', '2', '3', '4', '5']);
-		expect(bandOf(4, 5)).toBe(4);
-		expect(bandOf(3, 5)).toBe(3);
-		expect(bandOf(5, 5)).toBe(5);
-	});
-
-	it('falls back to ranges once the history outgrows the screen', () => {
-		expect(labels(7)).toEqual(['0', '1-3', '4-6', '7']);
-		expect(labels(40)).toEqual(['0', '1-20', '21-39', '40']);
-		// and the top of the range is the full set, never merely most of it
-		expect(bandOf(40, 40)).toBe(3);
-		expect(bandOf(39, 40)).toBe(2);
-	});
-
-	it('puts nobody above zero', () => {
-		expect(bandOf(0, 5)).toBe(0);
-		expect(bandOf(-1, 5)).toBe(0);
-	});
-
-	/** a window with nothing in it must not promote everybody to the top band */
-	it('survives a window holding no nights at all', () => {
-		expect(labels(0)).toEqual(['0']);
-		expect(bandOf(0, 0)).toBe(0);
-		expect(bandOf(3, 0)).toBe(0);
-	});
-
-	it('never sends anybody outside the grid it drew', () => {
-		for (const outOf of [0, 1, 5, 6, 7, 40]) {
-			const width = bandsFor(outOf).length;
-			for (const count of [-1, 0, 1, outOf - 1, outOf, outOf + 5]) {
-				const index = bandOf(count, outOf);
-				expect(index).toBeGreaterThanOrEqual(0);
-				expect(index).toBeLessThan(width);
-			}
-		}
 	});
 });
 

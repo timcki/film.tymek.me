@@ -3,11 +3,10 @@
 	import FacePeek, { peekFor, type Peek } from '$lib/components/FacePeek.svelte';
 	import Bars, { type Bar } from '$lib/components/chart/Bars.svelte';
 	import Columns from '$lib/components/chart/Columns.svelte';
-	import Matrix, { type Pin } from '$lib/components/chart/Matrix.svelte';
+	import Scatter, { type Dot } from '$lib/components/chart/Scatter.svelte';
 	import Split, { type Slice } from '$lib/components/chart/Split.svelte';
 	import StatCards, { type StatCard } from '$lib/components/chart/StatCards.svelte';
 	import Strip from '$lib/components/chart/Strip.svelte';
-	import { bandLabel, bandOf, bandsFor } from '$lib/bands';
 	import { dictFor, fmtScore, isVotes } from '$lib/i18n';
 	import { shortNames } from '$lib/names';
 	import type { PageData } from './$types';
@@ -61,7 +60,7 @@
 	let openBucket = $state<string | null>(null);
 	const filmsIn = $derived.by(() => {
 		if (!openBucket) return [];
-		const all = [...data.decades, ...data.genres, ...data.directors];
+		const all = [...data.decades, ...data.genres, ...data.directors, ...runtimeBuckets];
 		const ids = all.find((bucket) => bucket.key === openBucket)?.films ?? [];
 		return ids.map((id) => data.films.find((film) => film.id === id)).filter((f) => f != null);
 	});
@@ -127,15 +126,6 @@
 		}))
 	);
 
-	/**
-	 * Both axes are counts out of what the window holds, banded into four so the
-	 * grid keeps its shape whether the group has played five rounds or fifty. The
-	 * bands are labelled with the counts themselves, because an adverb cannot be
-	 * checked against anything and a number can.
-	 */
-	const votedBands = $derived(bandsFor(counts.rounds));
-	const nightBands = $derived(bandsFor(counts.nights));
-
 	/** everything the page knows about the person whose row is filled in */
 	const focus = $derived.by(() => {
 		if (!lit) return null;
@@ -149,22 +139,18 @@
 		};
 	});
 
-	const grid = $derived.by(() => {
-		const cells: Pin[][][] = nightBands.map(() => votedBands.map(() => [] as Pin[]));
-		for (const row of data.engagement) {
-			// row 0 is the top of the grid, which is the busiest band
-			const y = nightBands.length - 1 - bandOf(row.nightsAttended, counts.nights);
-			const x = bandOf(row.roundsVoted, counts.rounds);
-			cells[y][x].push({
-				key: row.person.id,
-				name: row.person.name,
-				colour: row.person.colour,
-				avatar: row.person.avatar,
-				xp: row.person.xp
-			});
-		}
-		return cells;
-	});
+	/** both axes are counts out of what the window holds, drawn to scale */
+	const dots = $derived<Dot[]>(
+		data.engagement.map((row) => ({
+			key: row.person.id,
+			name: row.person.name,
+			colour: row.person.colour,
+			avatar: row.person.avatar,
+			xp: row.person.xp,
+			x: row.roundsVoted,
+			y: row.nightsAttended
+		}))
+	);
 
 	/* ------------------------------------------------------------ the films -- */
 
@@ -272,23 +258,28 @@
 		}))
 	);
 
-	/** twenty-minute bands: fine enough to show the shape, coarse enough to have one */
-	const runtimeBars = $derived.by<Bar[]>(() => {
+	/**
+	 * Twenty-minute bands: fine enough to show the shape, coarse enough to have
+	 * one. A band nothing we watched falls in is left out rather than drawn empty.
+	 */
+	const runtimeBuckets = $derived.by(() => {
 		const spread = data.runtimes;
 		if (!spread) return [];
 		const step = 20;
 		const first = Math.floor(spread.min / step) * step;
 		const last = Math.floor(spread.max / step) * step;
-		const out: Bar[] = [];
+		const out: { key: string; label: string; films: number[] }[] = [];
 		for (let low = first; low <= last; low += step) {
-			out.push({
-				key: String(low),
-				label: `${low}-${low + step - 1}`,
-				value: spread.films.filter((f) => f.runtime >= low && f.runtime < low + step).length
-			});
+			const films = spread.films.filter((f) => f.runtime >= low && f.runtime < low + step);
+			if (films.length) {
+				out.push({ key: `min${low}`, label: `${low}-${low + step - 1}`, films: films.map((f) => f.id) });
+			}
 		}
 		return out;
 	});
+	const runtimeBars = $derived<Bar[]>(
+		runtimeBuckets.map((bucket) => ({ key: bucket.key, label: bucket.label, value: bucket.films.length }))
+	);
 </script>
 
 <nav class="seg lenses">
@@ -457,10 +448,10 @@
 
 			<section class="spanel engage">
 				<div class="sec">{T.engageH}</div>
-				<Matrix
-					{grid}
-					xLabels={votedBands.map(bandLabel)}
-					yLabels={[...nightBands].reverse().map(bandLabel)}
+				<Scatter
+					{dots}
+					xMax={counts.rounds}
+					yMax={counts.nights}
 					xTitle={T.engageX}
 					yTitle={T.engageY}
 					{lit}
@@ -506,7 +497,8 @@
 				<p class="explain">
 					{T.runtimeSub(data.runtimes.min, data.runtimes.max, Math.round(data.runtimes.mean))}
 				</p>
-				<Bars bars={runtimeBars} colour="var(--warn)" />
+				<Bars bars={runtimeBars} colour="var(--warn)" lit={openBucket} onpick={openBar} />
+				{#if from(runtimeBuckets)}{@render picked()}{/if}
 			{/if}
 		</section>
 	</div>
