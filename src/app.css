@@ -1962,6 +1962,12 @@ button.holdchip:hover {
 	.spanel.engage {
 		order: 4;
 	}
+	.spanel.seen {
+		order: 5;
+	}
+	.spanel.talk {
+		order: 6;
+	}
 	/* the stat tiles four across: packed as tightly as they fit, the eighth
 	   sat alone on a row of its own */
 	.sboard .spanel .cards {
@@ -4465,6 +4471,23 @@ button.wcard:focus-visible img {
 .picked .stat {
 	font-size: 12.5px;
 	padding: 7px 8px;
+}
+.ptitle {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 12px;
+	padding: 10px 8px 0;
+	border-top: 1px solid var(--line);
+	font-size: 12.5px;
+	font-weight: 650;
+	color: var(--ink);
+}
+.ptitle b {
+	color: var(--dim);
+	font-variant-numeric: tabular-nums;
+}
+.picked.titled {
+	margin-top: 6px;
 }
 
 /* ------------------------------------------------------------------ demo -- */

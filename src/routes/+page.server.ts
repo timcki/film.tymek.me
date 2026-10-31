@@ -19,7 +19,7 @@ import { addComment, commentsOf, deleteComment, reactComment } from '$lib/server
 import { logAdmin, requireAdmin } from '$lib/server/admin';
 import { seenOf, toggleSeen } from '$lib/server/seen';
 import { ruleFail } from '$lib/server/respond';
-import { detailsOf } from '$lib/server/tmdb';
+import { detailsOf, NO_DETAILS } from '$lib/server/tmdb';
 import { generation } from '$lib/server/live';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -113,17 +113,13 @@ export const actions: Actions = {
 		if (!title) return fail(400, { code: 'no_title', params: {}, message: 'type a title first' });
 
 		// §8.2: the details cost one request per nomination, not seven per keystroke
-		const details = tmdbId
-			? await detailsOf(tmdbId)
-			: { director: null, genre: null, runtime: null };
+		const details = tmdbId ? await detailsOf(tmdbId) : NO_DETAILS;
 
 		try {
 			nominate(getDb(), activeRules(), locals.person!.id, {
 				title,
 				year: yearRaw ? Number(yearRaw) : null,
-				director: details.director,
-				genre: details.genre,
-				runtime: details.runtime,
+				...details,
 				tmdbId,
 				posterUrl: (form.get('poster') as string) || null,
 				overview: (form.get('overview') as string) || null,

@@ -386,6 +386,7 @@ export type RecordedFilm = {
 	director: string | null;
 	genre: string | null;
 	runtime: number | null;
+	countries?: string | null;
 	tmdbId: number | null;
 	posterUrl: string | null;
 	overview: string | null;
@@ -436,10 +437,10 @@ export function recordWatched(db: DB, film: RecordedFilm, now = new Date()): num
 		// final_score stays NULL: nobody spent points on it
 		const result = db
 			.prepare(
-				`INSERT INTO film (title, title_key, year, director, genre, runtime, tmdb_id, poster_url,
-				                   overview, added_by, added_week, status, watched_week, outing, watched_at,
-				                   score, created_at, archival)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'watched', ?, ?, ?, 0, ?, 1)`
+				`INSERT INTO film (title, title_key, year, director, genre, runtime, countries, tmdb_id,
+				                   poster_url, overview, added_by, added_week, status, watched_week,
+				                   outing, watched_at, score, created_at, archival)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'watched', ?, ?, ?, 0, ?, 1)`
 			)
 			.run(
 				title,
@@ -448,6 +449,7 @@ export function recordWatched(db: DB, film: RecordedFilm, now = new Date()): num
 				film.director,
 				film.genre,
 				film.runtime,
+				film.countries ?? null,
 				film.tmdbId,
 				cleanPoster(film.posterUrl),
 				cleanOverview(film.overview),

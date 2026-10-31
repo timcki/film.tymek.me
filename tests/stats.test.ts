@@ -2,16 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { addFilm, castBallot, ensureWeek, freshDb } from './helpers.js';
 import type { DB } from '../src/lib/server/db.js';
 import { shortNames } from '../src/lib/names.js';
+import { countriesOf } from '../src/lib/server/tmdb.js';
 import {
+	byCountry,
 	byDecade,
 	byDirector,
 	byGenre,
+	commenters,
 	counts,
 	engagement,
 	filmFacts,
 	eraOf,
 	lensOf,
 	openness,
+	rewatches,
 	whoseNights,
 	roundRows,
 	runtimes,
@@ -34,6 +38,7 @@ function film(extra: Partial<WatchedFilm>): WatchedFilm {
 		director: null,
 		genre: null,
 		runtime: null,
+		countries: [],
 		posterUrl: null,
 		evening: 1,
 		addedBy: 'ala',
@@ -281,6 +286,58 @@ describe('turning up', () => {
 	});
 });
 
+describe('who had seen it already', () => {
+	const seen = (db: DB, filmId: number, person: string, at: string) =>
+		db
+			.prepare('INSERT INTO film_seen (film_id, person_id, created_at) VALUES (?, ?, ?)')
+			.run(filmId, person, at);
+
+	it('counts a film marked as seen before its evening, out of every evening', () => {
+		const { db } = freshDb();
+		const { closes_at } = db.prepare('SELECT closes_at FROM week WHERE number = 1').get() as {
+			closes_at: string;
+		};
+		const night = addFilm(db, 'Night', 'ala', 1);
+		const other = addFilm(db, 'Other', 'darek', 1);
+		watch(db, night, 1);
+		watch(db, other, 1);
+		seen(db, night, 'bartek', '2026-08-01T10:00:00.000Z');
+		// owning up after the night says nothing: everybody had seen it by then
+		seen(db, other, 'bartek', new Date(Date.parse(closes_at) + 3600_000).toISOString());
+		seen(db, other, 'celina', '2026-08-01T10:00:00.000Z');
+
+		const { evenings, rows } = rewatches(db, ALL);
+		expect(evenings).toBe(2);
+		expect(rows.map((row) => [row.person.id, row.seen])).toEqual([
+			['bartek', 1],
+			['celina', 1]
+		]);
+	});
+});
+
+describe('who talks about the films', () => {
+	it('counts comments from the window opening until the round after it does', () => {
+		const { db } = freshDb();
+		const id = addFilm(db, 'Talked about', 'ala', 1);
+		const say = (person: string, at: string) =>
+			db
+				.prepare('INSERT INTO film_comment (film_id, person_id, body, created_at) VALUES (?, ?, ?, ?)')
+				.run(id, person, 'x', at);
+		const { opens_at } = db.prepare('SELECT opens_at FROM week WHERE number = 1').get() as {
+			opens_at: string;
+		};
+		say('bartek', opens_at);
+		say('bartek', '2026-08-03T11:00:00.000Z');
+		say('celina', '2026-08-03T11:00:00.000Z');
+		say('darek', '2020-01-01T00:00:00.000Z');
+
+		expect(commenters(db, ALL).map((row) => [row.person.id, row.comments])).toEqual([
+			['bartek', 2],
+			['celina', 1]
+		]);
+	});
+});
+
 describe('when in the round the votes land', () => {
 	it('places each ballot between the round opening and its deadline', () => {
 		const { db } = freshDb();
@@ -329,6 +386,29 @@ describe('the canon', () => {
 		]);
 		expect(buckets.map((b) => b.label)).toEqual(['70s', '80s', '90s']);
 		expect(buckets.map((b) => b.films.length)).toEqual([2, 0, 1]);
+	});
+
+	it('counts a co-production for every country, and a vanished one where it was', () => {
+		const buckets = byCountry([
+			film({ id: 1, countries: ['FR', 'PL'] }),
+			film({ id: 2, countries: ['PL'] }),
+			film({ id: 3, countries: ['SU'] }),
+			film({ id: 4, countries: ['RU', 'SU'] }),
+			film({ id: 5 })
+		]);
+		expect(buckets.map((b) => [b.label, b.films])).toEqual([
+			['PL', [1, 2]],
+			['RU', [3, 4]],
+			['FR', [1]]
+		]);
+	});
+
+	it('keeps the countries TMDB lists, once each, as ISO codes', () => {
+		expect(countriesOf([{ iso_3166_1: 'fr' }, { iso_3166_1: 'PL' }, { iso_3166_1: 'FR' }, {}])).toBe(
+			'FR,PL'
+		);
+		expect(countriesOf([])).toBeNull();
+		expect(countriesOf(undefined)).toBeNull();
 	});
 
 	it('counts a film under each of the genres TMDB gave it', () => {

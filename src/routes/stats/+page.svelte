@@ -7,6 +7,7 @@
 	import Split, { type Slice } from '$lib/components/chart/Split.svelte';
 	import StatCards, { type StatCard } from '$lib/components/chart/StatCards.svelte';
 	import Strip from '$lib/components/chart/Strip.svelte';
+	import WorldMap from '$lib/components/chart/WorldMap.svelte';
 	import { dictFor, fmtScore, isVotes } from '$lib/i18n';
 	import { shortNames } from '$lib/names';
 	import type { PageData } from './$types';
@@ -60,7 +61,13 @@
 	let openBucket = $state<string | null>(null);
 	const filmsIn = $derived.by(() => {
 		if (!openBucket) return [];
-		const all = [...data.decades, ...data.genres, ...data.directors, ...runtimeBuckets];
+		const all = [
+			...data.decades,
+			...data.countries,
+			...data.genres,
+			...data.directors,
+			...runtimeBuckets
+		];
 		const ids = all.find((bucket) => bucket.key === openBucket)?.films ?? [];
 		return ids.map((id) => data.films.find((film) => film.id === id)).filter((f) => f != null);
 	});
@@ -126,6 +133,36 @@
 		}))
 	);
 
+	const rewatchSlices = $derived<Slice[]>(
+		data.rewatches.rows.map((row) => ({
+			key: row.person.id,
+			name: row.person.name,
+			label: labelOf(row.person),
+			colour: row.person.colour,
+			avatar: row.person.avatar,
+			xp: row.person.xp,
+			left: row.seen,
+			right: Math.max(0, data.rewatches.evenings - row.seen),
+			text: `${row.seen}`
+		}))
+	);
+
+	/** drawn against whoever wrote the most, which is a count and not a share */
+	const talkSlices = $derived.by<Slice[]>(() => {
+		const most = data.commenters[0]?.comments ?? 0;
+		return data.commenters.map((row) => ({
+			key: row.person.id,
+			name: row.person.name,
+			label: labelOf(row.person),
+			colour: row.person.colour,
+			avatar: row.person.avatar,
+			xp: row.person.xp,
+			left: row.comments,
+			right: most - row.comments,
+			text: `${row.comments}`
+		}));
+	});
+
 	/** everything the page knows about the person whose row is filled in */
 	const focus = $derived.by(() => {
 		if (!lit) return null;
@@ -135,7 +172,9 @@
 			engaged,
 			open: data.openness.find((row) => row.person.id === lit),
 			nights: data.nights.find((row) => row.person.id === lit),
-			when: data.timing.find((row) => row.person.id === lit)
+			when: data.timing.find((row) => row.person.id === lit),
+			seen: data.rewatches.rows.find((row) => row.person.id === lit)?.seen ?? 0,
+			comments: data.commenters.find((row) => row.person.id === lit)?.comments ?? 0
 		};
 	});
 
@@ -243,6 +282,24 @@
 			value: bucket.films.length
 		}))
 	);
+	const regions = $derived(new Intl.DisplayNames([data.lang], { type: 'region' }));
+	const countryName = (code: string) => {
+		try {
+			return regions.of(code) ?? code;
+		} catch {
+			return code;
+		}
+	};
+	const countryCounts = $derived(
+		Object.fromEntries(data.countries.map((bucket) => [bucket.label, bucket.films.length]))
+	);
+	const countryBars = $derived<Bar[]>(
+		data.countries.slice(0, 10).map((bucket) => ({
+			key: bucket.key,
+			label: countryName(bucket.label),
+			value: bucket.films.length
+		}))
+	);
 	const genreBars = $derived<Bar[]>(
 		data.genres.slice(0, 12).map((bucket) => ({
 			key: bucket.key,
@@ -331,6 +388,12 @@
 				{/if}
 				{#if focus.when && focus.when.median !== null}
 					<span>{Math.round(focus.when.median * 100)}%<i>{T.timingH}</i></span>
+				{/if}
+				{#if focus.seen}
+					<span>{focus.seen}<i>{T.rewatchTag}</i></span>
+				{/if}
+				{#if focus.comments}
+					<span>{focus.comments}<i>{T.talkTag}</i></span>
 				{/if}
 			</div>
 
@@ -460,6 +523,35 @@
 				/>
 			</section>
 		{/if}
+
+		{#if rewatchSlices.length}
+			<section class="spanel seen">
+				<div class="sec">{T.rewatchH}</div>
+				<p class="explain">{T.rewatchSub(data.rewatches.evenings)}</p>
+				<Split
+					slices={rewatchSlices}
+					leftColour="var(--tier5)"
+					average={null}
+					{lit}
+					onpick={pick}
+					onface={hover}
+				/>
+			</section>
+		{/if}
+
+		{#if talkSlices.length}
+			<section class="spanel talk">
+				<div class="sec">{T.talkH}</div>
+				<Split
+					slices={talkSlices}
+					leftColour="var(--tier1)"
+					average={null}
+					{lit}
+					onpick={pick}
+					onface={hover}
+				/>
+			</section>
+		{/if}
 	</div>
 {:else}
 	<div class="sboard">
@@ -501,12 +593,35 @@
 				{#if from(runtimeBuckets)}{@render picked()}{/if}
 			{/if}
 		</section>
+
+		<section class="spanel wide">
+			<div class="sec">{T.countryH}</div>
+			{#if data.countries.length}
+				<p class="explain">{T.countrySub}</p>
+				<WorldMap
+					counts={countryCounts}
+					names={countryName}
+					lit={openBucket?.startsWith('c:') ? openBucket.slice(2) : null}
+					onpick={(code) => openBar(`c:${code}`)}
+				/>
+				<Bars bars={countryBars} lit={openBucket} onpick={openBar} />
+				{#if from(data.countries) && openBucket}
+					<!-- a country off the top ten has no row above to say whose films these are -->
+					{@render picked(countryName(openBucket.slice(2)))}
+				{/if}
+			{:else}
+				<p class="explain">{T.countryNone}</p>
+			{/if}
+		</section>
 	</div>
 {/if}
 
 <!-- what is actually in the bar somebody just tapped, listed under that chart -->
-{#snippet picked()}
-	<div class="picked">
+{#snippet picked(title?: string)}
+	{#if title}
+		<div class="ptitle"><span>{title}</span><b>{filmsIn.length}</b></div>
+	{/if}
+	<div class="picked" class:titled={Boolean(title)}>
 		{#each filmsIn as film (film.id)}
 			<div class="stat">
 				<span>{film.title}{film.year ? ` (${film.year})` : ''}</span>

@@ -381,6 +381,74 @@ export function timing(db: DB, window: Window): TimingRow[] {
 		.sort((a, b) => (a.median ?? 0) - (b.median ?? 0));
 }
 
+export type Rewatches = {
+	/** evenings in the window, outings included: what every row is a share of */
+	evenings: number;
+	rows: { person: PersonCard; seen: number }[];
+};
+
+/**
+ * Who had already seen the most of what we watched: a film marked as seen
+ * before its evening came round. A mark made afterwards says nothing, since by
+ * then everybody in the room had seen it.
+ */
+export function rewatches(db: DB, window: Window): Rewatches {
+	const cards = people(db);
+	const { evenings } = db
+		.prepare(
+			`SELECT COUNT(*) AS evenings FROM film
+			 WHERE status = 'watched' AND watched_week BETWEEN ? AND ?`
+		)
+		.get(window.from, window.to) as { evenings: number };
+	const rows = db
+		.prepare(
+			`SELECT s.person_id, COUNT(*) AS seen
+			 FROM film_seen s
+			 JOIN film f ON f.id = s.film_id
+			 JOIN week w ON w.number = f.watched_week
+			 WHERE f.status = 'watched' AND f.watched_week BETWEEN ? AND ?
+			   AND s.created_at <= COALESCE(f.watched_at, w.closes_at)
+			 GROUP BY s.person_id`
+		)
+		.all(window.from, window.to) as { person_id: string; seen: number }[];
+
+	return {
+		evenings,
+		rows: rows
+			.flatMap((row) => {
+				const person = cards.get(row.person_id);
+				return person ? [{ person, seen: row.seen }] : [];
+			})
+			.sort((a, b) => b.seen - a.seen || a.person.name.localeCompare(b.person.name))
+	};
+}
+
+export type CommentRow = { person: PersonCard; comments: number };
+
+/**
+ * Who talks about the films: comments written from the window's first round
+ * opening until the round after it does, so a word said in the room after the
+ * last deadline still counts.
+ */
+export function commenters(db: DB, window: Window): CommentRow[] {
+	const cards = people(db);
+	const rows = db
+		.prepare(
+			`SELECT c.person_id, COUNT(*) AS comments FROM film_comment c
+			 WHERE c.created_at >= (SELECT opens_at FROM week WHERE number = ?)
+			   AND c.created_at < COALESCE((SELECT opens_at FROM week WHERE number = ?), '9999')
+			 GROUP BY c.person_id`
+		)
+		.all(window.from, window.to + 1) as { person_id: string; comments: number }[];
+
+	return rows
+		.flatMap((row) => {
+			const person = cards.get(row.person_id);
+			return person ? [{ person, comments: row.comments }] : [];
+		})
+		.sort((a, b) => b.comments - a.comments || a.person.name.localeCompare(b.person.name));
+}
+
 /* ----------------------------------------------------------------- films -- */
 
 export type WatchedFilm = {
@@ -390,6 +458,8 @@ export type WatchedFilm = {
 	director: string | null;
 	genre: string | null;
 	runtime: number | null;
+	/** ISO alpha-2 production countries, empty until TMDB said */
+	countries: string[];
 	posterUrl: string | null;
 	evening: number;
 	addedBy: string;
@@ -405,7 +475,7 @@ export type WatchedFilm = {
 export function watchedFilms(db: DB): WatchedFilm[] {
 	const rows = db
 		.prepare(
-			`SELECT f.id, f.title, f.year, f.director, f.genre, f.runtime, f.poster_url,
+			`SELECT f.id, f.title, f.year, f.director, f.genre, f.runtime, f.countries, f.poster_url,
 			        f.watched_week, f.added_by, p.name AS added_by_name
 			 FROM film f JOIN person p ON p.id = f.added_by
 			 WHERE f.status = 'watched' AND f.watched_week IS NOT NULL
@@ -418,6 +488,7 @@ export function watchedFilms(db: DB): WatchedFilm[] {
 		director: string | null;
 		genre: string | null;
 		runtime: number | null;
+		countries: string | null;
 		poster_url: string | null;
 		watched_week: number;
 		added_by: string;
@@ -432,6 +503,7 @@ export function watchedFilms(db: DB): WatchedFilm[] {
 		director: row.director,
 		genre: row.genre,
 		runtime: row.runtime,
+		countries: row.countries ? row.countries.split(',') : [],
 		posterUrl: row.poster_url,
 		evening: evenings.get(row.id) ?? 0,
 		addedBy: row.added_by,
@@ -457,6 +529,24 @@ export function byDecade(films: WatchedFilm[]): Bucket[] {
 		});
 	}
 	return out;
+}
+
+/** countries TMDB still files films under that no map has any more, drawn where they were */
+const SUCCESSOR: Record<string, string> = { SU: 'RU', XC: 'CZ', CS: 'RS', YU: 'RS', DD: 'DE' };
+
+/** a co-production belongs to every country that made it, so a film can count more than once */
+export function byCountry(films: WatchedFilm[]): Bucket[] {
+	const out = new Map<string, number[]>();
+	for (const film of films) {
+		for (const code of new Set(film.countries.map((c) => SUCCESSOR[c] ?? c))) {
+			const ids = out.get(code) ?? [];
+			ids.push(film.id);
+			out.set(code, ids);
+		}
+	}
+	return [...out.entries()]
+		.map(([code, ids]) => ({ key: `c:${code}`, label: code, films: ids }))
+		.sort((a, b) => b.films.length - a.films.length || a.label.localeCompare(b.label));
 }
 
 /** TMDB hands genres over as "Crime / Drama"; both halves are the film's genre */

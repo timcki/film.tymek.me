@@ -11,7 +11,7 @@ import {
 	watchedRecord
 } from '$lib/server/manage';
 import { allPeople, avatarUrl } from '$lib/server/people';
-import { detailsOf } from '$lib/server/tmdb';
+import { detailsOf, NO_DETAILS } from '$lib/server/tmdb';
 import { fromLocalInput } from '$lib/server/time';
 import { ruleFail } from '$lib/server/respond';
 import { RuleError } from '$lib/server/types';
@@ -58,15 +58,11 @@ export const actions: Actions = {
 		try {
 			const at = whenFrom(form);
 			// §8.2: fetched once, when the film is actually written down
-			const details = tmdbId
-				? await detailsOf(tmdbId)
-				: { director: null, genre: null, runtime: null };
+			const details = tmdbId ? await detailsOf(tmdbId) : NO_DETAILS;
 			const id = recordWatched(getDb(), {
 				title: String(form.get('title') ?? ''),
 				year: num(form, 'year'),
-				director: details.director,
-				genre: details.genre,
-				runtime: details.runtime,
+				...details,
 				tmdbId,
 				posterUrl: String(form.get('poster') ?? '') || null,
 				overview: String(form.get('overview') ?? '') || null,

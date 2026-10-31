@@ -89,7 +89,22 @@ export async function search(db: DB, query: string): Promise<SearchResponse> {
 	}
 }
 
-export type Details = { director: string | null; genre: string | null; runtime: number | null };
+export type Details = {
+	director: string | null;
+	genre: string | null;
+	runtime: number | null;
+	/** ISO 3166-1 alpha-2 production countries, comma-separated, in TMDB's order */
+	countries: string | null;
+};
+
+export const NO_DETAILS: Details = { director: null, genre: null, runtime: null, countries: null };
+
+export function countriesOf(list: { iso_3166_1?: string }[] | undefined): string | null {
+	const codes = (list ?? [])
+		.map((c) => c.iso_3166_1?.toUpperCase())
+		.filter((code): code is string => Boolean(code && /^[A-Z]{2}$/.test(code)));
+	return codes.length ? [...new Set(codes)].join(',') : null;
+}
 
 /**
  * §8.2: fetched once, when a film is actually nominated, not per keystroke.
@@ -97,12 +112,12 @@ export type Details = { director: string | null; genre: string | null; runtime: 
  * fatal: the film goes on the list with a title and nothing else.
  */
 export async function detailsOf(tmdbId: number): Promise<Details> {
-	const empty: Details = { director: null, genre: null, runtime: null };
 	try {
 		const movie = (await tmdbFetch(`/movie/${tmdbId}?append_to_response=credits`)) as {
 			runtime?: number | null;
 			genres?: { name?: string }[];
 			credits?: { crew?: { job?: string; name?: string }[] };
+			production_countries?: { iso_3166_1?: string }[];
 		};
 		const director = movie.credits?.crew?.find((member) => member.job === 'Director');
 		const genre = (movie.genres ?? [])
@@ -113,10 +128,11 @@ export async function detailsOf(tmdbId: number): Promise<Details> {
 		return {
 			director: director?.name ?? null,
 			genre: genre || null,
-			runtime: movie.runtime ?? null
+			runtime: movie.runtime ?? null,
+			countries: countriesOf(movie.production_countries)
 		};
 	} catch (error) {
 		console.warn('[tmdb] details failed:', (error as Error).message);
-		return empty;
+		return NO_DETAILS;
 	}
 }

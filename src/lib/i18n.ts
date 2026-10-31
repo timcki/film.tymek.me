@@ -242,6 +242,12 @@ export type Dict = {
 	engageX: string;
 	engageY: string;
 
+	rewatchH: string;
+	rewatchSub: (evenings: number) => string;
+	rewatchTag: string;
+	talkH: string;
+	talkTag: string;
+
 	/** the compact units the fact cards are written in */
 	weeksShort: (n: number) => string;
 	factsH: string;
@@ -259,6 +265,9 @@ export type Dict = {
 	genreSub: string;
 	directorH: string;
 	directorNone: string;
+	countryH: string;
+	countrySub: string;
+	countryNone: string;
 	runtimeH: string;
 	runtimeSub: (min: number, max: number, mean: number) => string;
 
@@ -679,6 +688,13 @@ const pl: Dict = {
 	engageX: 'rundy z głosem',
 	engageY: 'wieczory na miejscu',
 
+	rewatchH: 'Kto najczęściej oglądał powtórkę',
+	rewatchSub: (n) =>
+		`Ile z ${n} ${pl3(n, 'obejrzanego filmu', 'obejrzanych filmów', 'obejrzanych filmów')} każdy znał już wcześniej, czyli zaznaczył „Już widziałem” przed ich wieczorkiem.`,
+	rewatchTag: 'powtórki',
+	talkH: 'Kto najwięcej komentuje',
+	talkTag: 'komentarze',
+
 	weeksShort: (n) => `${n} tyg`,
 	factsH: 'W liczbach',
 	factLongest: 'Najdłuższy',
@@ -695,6 +711,9 @@ const pl: Dict = {
 	genreSub: 'Film liczy się w każdym swoim gatunku, więc sumy są większe niż liczba filmów.',
 	directorH: 'Reżyserzy do których wracamy',
 	directorNone: 'Jeszcze do nikogo nie wróciliśmy.',
+	countryH: 'Skąd są filmy',
+	countrySub: 'Kraje produkcji według TMDB. Koprodukcja liczy się każdemu z krajów. Naciśnij kraj, żeby zobaczyć jego filmy.',
+	countryNone: 'Jeszcze nie wiemy, skąd są nasze filmy.',
 	runtimeH: 'Długości',
 	runtimeSub: (min, max, mean) => `Od ${min} do ${max} minut, typowo ${mean}.`,
 
@@ -1217,6 +1236,13 @@ const en: Dict = {
 	engageX: 'rounds voted in',
 	engageY: 'nights in the room',
 
+	rewatchH: 'Who sat through the most rewatches',
+	rewatchSub: (n) =>
+		`How many of the ${n} ${en2(n, 'film', 'films')} we watched each person knew already, going by the “Seen it already” they ticked before its evening.`,
+	rewatchTag: 'rewatches',
+	talkH: 'Who comments the most',
+	talkTag: 'comments',
+
 	weeksShort: (n) => `${n} ${en2(n, 'wk', 'wks')}`,
 	factsH: 'In numbers',
 	factLongest: 'Longest',
@@ -1233,6 +1259,9 @@ const en: Dict = {
 	genreSub: 'A film counts under each of its genres, so these add up to more than the films.',
 	directorH: 'Directors we come back to',
 	directorNone: 'Nobody twice yet.',
+	countryH: 'Where the films come from',
+	countrySub: 'Production countries as TMDB lists them. A co-production counts for every country in it. Tap a country to see its films.',
+	countryNone: 'We do not know where our films come from yet.',
 	runtimeH: 'Runtimes',
 	runtimeSub: (min, max, mean) => `From ${min} to ${max} minutes, typically ${mean}.`,
 

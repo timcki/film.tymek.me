@@ -1,14 +1,17 @@
 import type { PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import {
+	byCountry,
 	byDecade,
 	byDirector,
 	byGenre,
+	commenters,
 	counts,
 	engagement,
 	eraOf,
 	lensOf,
 	openness,
+	rewatches,
 	whoseNights,
 	roundRows,
 	filmFacts,
@@ -39,10 +42,13 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		nights: whoseNights(db, window),
 		engagement: engagement(db, window),
 		timing: timing(db, window),
+		rewatches: rewatches(db, window),
+		commenters: commenters(db, window),
 		// the canon is deliberately outside the window; see watchedFilms. The rows
 		// travel whole so a tapped bar can name the films inside it without a trip
 		films,
 		decades: byDecade(films),
+		countries: byCountry(films),
 		genres: byGenre(films),
 		directors: byDirector(films),
 		runtimes: runtimes(films),

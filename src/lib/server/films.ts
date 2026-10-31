@@ -202,6 +202,7 @@ export type NominationInput = {
 	director?: string | null;
 	genre?: string | null;
 	runtime?: number | null;
+	countries?: string | null;
 	tmdbId?: number | null;
 	posterUrl?: string | null;
 	overview?: string | null;
@@ -336,9 +337,10 @@ export function insertFilm(
 	const title = cleanTitle(input.title);
 	const result = db
 		.prepare(
-			`INSERT INTO film (title, title_key, year, director, genre, runtime, tmdb_id, poster_url,
-			                   overview, note, added_by, added_week, status, score, created_at, special)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0, ?, ?)`
+			`INSERT INTO film (title, title_key, year, director, genre, runtime, countries, tmdb_id,
+			                   poster_url, overview, note, added_by, added_week, status, score,
+			                   created_at, special)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0, ?, ?)`
 		)
 		.run(
 			title,
@@ -347,6 +349,7 @@ export function insertFilm(
 			input.director ?? null,
 			input.genre ?? null,
 			input.runtime ?? null,
+			input.countries ?? null,
 			input.tmdbId ?? null,
 			cleanPoster(input.posterUrl),
 			cleanOverview(input.overview),
@@ -397,6 +400,7 @@ export function renominate(db: DB, rules: RuleSet, personId: string, filmId: num
 			director: old.director,
 			genre: old.genre,
 			runtime: old.runtime,
+			countries: old.countries,
 			tmdbId: old.tmdb_id,
 			posterUrl: old.poster_url,
 			overview: old.overview,

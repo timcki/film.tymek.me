@@ -232,6 +232,9 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	['person', 'is_admin', 'INTEGER NOT NULL DEFAULT 0'],
 	['film', 'genre', 'TEXT'],
 	['film', 'runtime', 'INTEGER'],
+	// where a film was made, as TMDB's production countries in ISO alpha-2, comma
+	// separated: what the statistics map is coloured by. NULL until TMDB said
+	['film', 'countries', 'TEXT'],
 	['film', 'note', 'TEXT'],
 	['film', 'archival', 'INTEGER NOT NULL DEFAULT 0'],
 	['ballot', 'prev_points', 'INTEGER NOT NULL DEFAULT 0'],

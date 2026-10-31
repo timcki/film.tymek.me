@@ -60,6 +60,8 @@ export type Film = {
 	director: string | null;
 	genre: string | null;
 	runtime: number | null;
+	/** ISO alpha-2 production countries, comma-separated */
+	countries: string | null;
 	tmdb_id: number | null;
 	poster_url: string | null;
 	overview: string | null;

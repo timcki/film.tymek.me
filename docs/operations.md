@@ -336,6 +336,12 @@ are two different files on purpose, and only the second one is ever served.
 - `journalctl -u filmnight -f` for logs.
 - Restoring a backup: stop the service, copy the dated file over
   `/var/lib/filmnight/filmnight.db`, delete any `-wal`/`-shm` beside it, start again.
+- The statistics map reads `film.countries`, which TMDB fills on the way in for every film
+  added since it existed. The films from before it need one pass of
+  `TMDB_READ_TOKEN=... DATABASE_PATH=... npm run countries` (a dry run; add `-- --commit`
+  to write). It only touches rows with a TMDB id and no countries yet, so a second run
+  finds nothing to do. Try it on a snapshot first, and take a backup before pointing it
+  at production.
 - An admin can also take a copy from the panel: Ludzie → Kopia zapasowa, served by
   `/admin/backup` as `db.serialize()`, logged as `site.backup`, and off in the demo. It
   holds every personal link, so it is the same thing as `data/identity-links.md` and
