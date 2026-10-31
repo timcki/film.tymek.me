@@ -11,17 +11,27 @@
 	import { dictFor } from '$lib/i18n';
 	import { OUTINGS } from '$lib/outings';
 	import { say } from '$lib/toast.svelte';
-	import type { ActionData, PageData } from './$types';
+	import type { PageData } from './$types';
 
-	let { data, form }: { data: PageData; form: ActionData } = $props();
+	let { data }: { data: PageData } = $props();
 
 	const A = $derived(adminDict(data.lang));
 	const T = $derived(dictFor(data.lang));
 
 	let picked = $state<Picked | null>(null);
 	let editing = $state<number | null>(null);
+	/**
+	 * The same film coming up twice is a warning, not a refusal. The warning
+	 * belongs to the pick it was raised for: a different film is asked afresh.
+	 */
+	let duplicate = $state(false);
 
-	const submit = (onOk?: () => void): SubmitFunction => {
+	function pick(film: Picked | null) {
+		picked = film;
+		duplicate = false;
+	}
+
+	const submit = (onOk?: () => void, onFail?: (code: string) => void): SubmitFunction => {
 		return () =>
 			async ({ result, update }) => {
 				if (result.type === 'failure') {
@@ -29,6 +39,7 @@
 						| { code?: string; params?: Record<string, string | number>; message?: string }
 						| undefined;
 					say(A.error(body?.code ?? '', body?.params ?? {}, body?.message ?? ''), true);
+					onFail?.(body?.code ?? '');
 				}
 				if (result.type === 'success') onOk?.();
 				await update({ reset: false });
@@ -39,9 +50,6 @@
 	function saveOnPick(event: Event) {
 		(event.currentTarget as HTMLSelectElement).form?.requestSubmit();
 	}
-
-	/** the same film coming up twice is a warning, not a refusal */
-	const duplicate = $derived((form as { code?: string } | null)?.code === 'dup_recorded');
 </script>
 
 <h2 class="ah">{A.watH}</h2>
@@ -55,10 +63,17 @@
 			placeholder={A.watSearchPh}
 			byHandLabel={A.watByHand}
 			noResultsLabel={A.watNoResults}
-			onpick={(film) => (picked = film)}
+			onpick={pick}
 		/>
 	{:else}
-		<form method="POST" action="?/add" use:enhance={submit(() => (picked = null))}>
+		<form
+			method="POST"
+			action="?/add"
+			use:enhance={submit(
+				() => pick(null),
+				(code) => (duplicate = code === 'dup_recorded')
+			)}
+		>
 			<input type="hidden" name="title" value={picked.title} />
 			<input type="hidden" name="tmdbId" value={picked.tmdbId ?? ''} />
 			<input type="hidden" name="year" value={picked.year ?? ''} />
@@ -101,7 +116,7 @@
 			</div>
 
 			<div class="acts">
-				<button type="button" class="tap" onclick={() => (picked = null)}>{A.watCancel}</button>
+				<button type="button" class="tap" onclick={() => pick(null)}>{A.watCancel}</button>
 				<button class="tap go">{duplicate ? A.watAddAnyway : A.watAdd}</button>
 			</div>
 		</form>
