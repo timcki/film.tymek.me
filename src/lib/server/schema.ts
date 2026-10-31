@@ -256,6 +256,9 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	// a line an admin pins above every page, kept the way look is: the latest
 	// round's word stands until somebody changes it, '' for taking it down
 	['week', 'notice', 'TEXT'],
+	// §3.7: a special round an admin named and gave rules to, as JSON. Written once
+	// when the round goes special, so every round keeps the rules it was played by
+	['week', 'custom', 'TEXT'],
 	// §3.6: a pick for a special round rather than a nomination to the list. It
 	// never appears on the list, never takes points, and once its round is over
 	// it is either the night's film or dropped with the rest

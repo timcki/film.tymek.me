@@ -44,6 +44,8 @@ export type Week = {
 	resolved_at: string | null;
 	/** §3.6: the special night this round is given over to, or null for a list round */
 	special: string | null;
+	/** §3.7: the name and rules of a custom week, as JSON (custom-weeks.ts) */
+	custom: string | null;
 	/** §3.6: the look an admin put on the site this round, 'default' to take one off */
 	look: string | null;
 	/** the announcement an admin pinned this round, '' to take one down */

@@ -106,33 +106,71 @@ export function countriesOf(list: { iso_3166_1?: string }[] | undefined): string
 	return codes.length ? [...new Set(codes)].join(',') : null;
 }
 
+/** countries TMDB still files films under that no map has any more, read as today's */
+export const SUCCESSOR: Record<string, string> = { SU: 'RU', XC: 'CZ', CS: 'RS', YU: 'RS', DD: 'DE' };
+
+/**
+ * §3.7: what a custom week's rules are checked against, taken from TMDB at the
+ * moment of the pick rather than from what the film row keeps, which is less:
+ * every genre rather than the first two, the original language, and who directed
+ * it with their gender.
+ */
+export type Facts = {
+	year: number | null;
+	runtime: number | null;
+	countries: string[];
+	language: string | null;
+	genres: number[];
+	directors: { name: string; gender: number | null }[];
+};
+
 /**
  * §8.2: fetched once, when a film is actually nominated, not per keystroke.
  * append_to_response folds the credits into the same request. Failure is not
- * fatal: the film goes on the list with a title and nothing else.
+ * fatal: the film goes on the list with a title and nothing else, and no facts.
  */
-export async function detailsOf(tmdbId: number): Promise<Details> {
+export async function lookUpFilm(tmdbId: number): Promise<{ details: Details; facts: Facts | null }> {
 	try {
 		const movie = (await tmdbFetch(`/movie/${tmdbId}?append_to_response=credits`)) as {
 			runtime?: number | null;
-			genres?: { name?: string }[];
-			credits?: { crew?: { job?: string; name?: string }[] };
+			release_date?: string;
+			original_language?: string;
+			genres?: { id?: number; name?: string }[];
+			credits?: { crew?: { job?: string; name?: string; gender?: number }[] };
 			production_countries?: { iso_3166_1?: string }[];
 		};
-		const director = movie.credits?.crew?.find((member) => member.job === 'Director');
+		const directors = (movie.credits?.crew ?? []).filter(
+			(member) => member.job === 'Director' && member.name
+		);
 		const genre = (movie.genres ?? [])
 			.slice(0, 2)
 			.map((g) => g.name)
 			.filter(Boolean)
 			.join(' / ');
+		const countries = countriesOf(movie.production_countries);
+		const year = Number(movie.release_date?.slice(0, 4));
 		return {
-			director: director?.name ?? null,
-			genre: genre || null,
-			runtime: movie.runtime ?? null,
-			countries: countriesOf(movie.production_countries)
+			details: {
+				director: directors[0]?.name ?? null,
+				genre: genre || null,
+				runtime: movie.runtime ?? null,
+				countries
+			},
+			facts: {
+				year: Number.isFinite(year) && year > 0 ? year : null,
+				runtime: movie.runtime || null,
+				countries: countries ? countries.split(',') : [],
+				language: movie.original_language || null,
+				genres: (movie.genres ?? []).map((g) => g.id).filter((id): id is number => Number.isInteger(id)),
+				directors: directors.map((d) => ({ name: d.name as string, gender: d.gender ?? null }))
+			}
 		};
 	} catch (error) {
 		console.warn('[tmdb] details failed:', (error as Error).message);
-		return NO_DETAILS;
+		return { details: NO_DETAILS, facts: null };
 	}
+}
+
+export async function detailsOf(tmdbId: number): Promise<Details> {
+	return (await lookUpFilm(tmdbId)).details;
 }

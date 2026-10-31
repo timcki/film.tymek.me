@@ -6,14 +6,29 @@
 	 * viewer lights. The words sit beside a dark pumpkin; lighting it sets a flame
 	 * going in its lid and spreads the light out from it until it fills the pill.
 	 * The words never change with the state, the light does, so nothing reflows
-	 * mid-animation. It is the form's submit button.
+	 * mid-animation. It is the form's submit button. Without the Halloween look
+	 * the pumpkin is a plain tick, and the light spreads all the same.
 	 */
-	let { on, label, disabled = false }: { on: boolean; label: string; disabled?: boolean } = $props();
+	let {
+		on,
+		label,
+		disabled = false,
+		spooky = false
+	}: { on: boolean; label: string; disabled?: boolean; spooky?: boolean } = $props();
 </script>
 
 <button class="lamp" class:on {disabled} aria-pressed={on}>
 	<span class="fill" aria-hidden="true"></span>
-	<span class="icon"><Pumpkin size={21} lit={on} live /></span>
+	<span class="icon">
+		{#if spooky}
+			<Pumpkin size={21} lit={on} live />
+		{:else}
+			<svg class="tick" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true">
+				<circle cx="12" cy="12" r="9" />
+				<path d="M8 12.5l2.7 2.7L16 9.8" />
+			</svg>
+		{/if}
+	</span>
 	<span class="words">{label}</span>
 </button>
 
@@ -48,6 +63,17 @@
 		z-index: 1;
 		display: inline-flex;
 	}
+	.tick {
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		transition: color 0.3s ease;
+	}
+	.on .tick {
+		color: var(--accent-ink);
+	}
 	.words {
 		position: relative;
 		z-index: 1;
@@ -79,6 +105,7 @@
 	}
 	@media (prefers-reduced-motion: reduce) {
 		.fill,
+		.tick,
 		.words {
 			transition: none;
 		}

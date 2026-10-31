@@ -92,6 +92,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 					number: week.number,
 					status: week.status,
 					special: week.special,
+					custom: week.custom,
 					// both ends, so the header can draw how much of the round is gone
 					opensAt: week.opens_at,
 					closesAt: week.closes_at

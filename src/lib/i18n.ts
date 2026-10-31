@@ -5,6 +5,7 @@
  */
 import { formatNight } from './datetime.js';
 import type { Outing } from './outings.js';
+import { ruleFromParams, rulesOf, type CodedId, type CustomWeek, type WeekRule } from './custom-weeks.js';
 
 export type Lang = 'pl' | 'en';
 
@@ -65,7 +66,32 @@ export function fmtScore(n: number): string {
 export type ErrorParams = Record<string, string | number>;
 
 /** §3.6: the parts of a special round its own rules screen reads */
-export type SpecialView = { id: string; picksPerPerson: number; shortlistSize: number };
+export type SpecialView = {
+	id: string;
+	picksPerPerson: number;
+	shortlistSize: number;
+	/** §3.7: the admin's name, description and rules, when the round has them */
+	custom?: CustomWeek | null;
+};
+
+/** country or language names in the reader's language, as "a, b or c" */
+function oneOf(lang: Lang, type: 'region' | 'language', codes: string[]): string {
+	const names = new Intl.DisplayNames([lang], { type });
+	return orList(
+		lang,
+		codes.map((code) => {
+			try {
+				return names.of(code) ?? code;
+			} catch {
+				return code;
+			}
+		})
+	);
+}
+
+function orList(lang: Lang, items: string[]): string {
+	return new Intl.ListFormat(lang, { type: 'disjunction' }).format(items);
+}
 
 /* ---------------------------------------------------------------- plurals -- */
 
@@ -416,9 +442,18 @@ export type Dict = {
 	spPicking: string;
 	spNomH: (name: string) => string;
 	spNomHint: (max: number) => string;
+	/** §3.7: one of a custom week's rules, as the page lists it and a refusal names it */
+	weekRule: (rule: WeekRule) => string;
+	/** TMDB's genres, by id */
+	genreName: (id: number) => string;
 
 	error: (code: string, params: ErrorParams, fallback: string) => string;
 };
+
+const GENRES_PL: Record<number, string> = { 28: 'Akcja', 12: 'Przygodowy', 16: 'Animacja', 35: 'Komedia', 80: 'Kryminał', 99: 'Dokumentalny', 18: 'Dramat', 10751: 'Familijny', 14: 'Fantasy', 36: 'Historyczny', 27: 'Horror', 10402: 'Muzyczny', 9648: 'Tajemnica', 10749: 'Romans', 878: 'Sci-Fi', 53: 'Thriller', 10752: 'Wojenny', 37: 'Western' };
+const CODED_PL: Record<CodedId, string> = { woman_director: 'Wyreżyserowany przez kobietę.' };
+const CODED_EN: Record<CodedId, string> = { woman_director: 'Directed by a woman.' };
+const GENRES_EN: Record<number, string> = { 28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime', 99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History', 27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance', 878: 'Science Fiction', 53: 'Thriller', 10752: 'War', 37: 'Western' };
 
 /* --------------------------------------------------------------- polish -- */
 
@@ -856,11 +891,20 @@ const pl: Dict = {
 	spRules: (s, closesAt, look) => [
 		{
 			head: `${s.picksPerPerson} ${pl3(s.picksPerPerson, 'propozycja', 'propozycje', 'propozycji')} na osobę.`,
-			body:
-				look === 'halloween'
+			body: s.custom?.about
+				? s.custom.about
+				: look === 'halloween'
 					? 'Coś spooky, scary i dziwnego, najlepiej nieoczywistego.'
 					: 'Coś, co chcesz obejrzeć z resztą, najlepiej nieoczywistego.'
 		},
+		...(s.custom && rulesOf(s.custom.rules).length
+			? [
+					{
+						head: 'Film musi spełniać zasady tygodnia.',
+						body: rulesOf(s.custom.rules).map((rule) => pl.weekRule(rule)).join(' ')
+					}
+				]
+			: []),
 		{
 			head: 'Zaznacz każdy film, który chcesz zobaczyć.',
 			body: 'Bez limitu (swoje też). Zdanie można zmieniać do zamknięcia głosowania.'
@@ -890,6 +934,30 @@ const pl: Dict = {
 	spNomH: (name) => `Zgłoś film na ${name}`,
 	spNomHint: (max) =>
 		`${max} ${pl3(max, 'propozycja', 'propozycje', 'propozycji')} na osobę, bez powtórek.`,
+	weekRule: (rule) => {
+		const minutes = (n: number) => `${n} ${pl3(n, 'minuta', 'minuty', 'minut')}`;
+		switch (rule.kind) {
+			case 'countries':
+				return `Kraj produkcji: ${oneOf('pl', 'region', rule.codes)}.`;
+			case 'languages':
+				return `Język oryginału: ${oneOf('pl', 'language', rule.codes)}.`;
+			case 'genres':
+				return `Gatunek: ${orList('pl', rule.ids.map((id) => (GENRES_PL[id] ?? String(id)).toLowerCase()))}.`;
+			case 'years':
+				if (rule.from != null && rule.to != null) return `Z lat ${rule.from}-${rule.to}.`;
+				return rule.from != null ? `Z ${rule.from} roku albo późniejszy.` : `Z ${rule.to} roku albo wcześniejszy.`;
+			case 'runtime':
+				if (rule.min != null && rule.max != null) return `Od ${rule.min} do ${minutes(rule.max)}.`;
+				return rule.max != null ? `Najwyżej ${minutes(rule.max)}.` : `Co najmniej ${minutes(rule.min ?? 0)}.`;
+			case 'directors':
+				return `Reżyseria: ${orList('pl', rule.names)}.`;
+			case 'coded':
+				return CODED_PL[rule.id];
+			case 'tmdb':
+				return 'Film musi pochodzić z wyszukiwarki TMDB, żeby dało się sprawdzić zasady.';
+		}
+	},
+	genreName: (id) => GENRES_PL[id] ?? String(id),
 
 	error: (code, p, fallback) => {
 		switch (code) {
@@ -979,6 +1047,8 @@ const pl: Dict = {
 				return 'To nie jest żadna z propozycji tej rundy.';
 			case 'special_pick':
 				return `Na ${p.title} nie daje się punktów, tylko się go zaznacza.`;
+			case 'off_theme':
+				return offTheme('pl', p, fallback);
 			default:
 				return fallback;
 		}
@@ -1406,11 +1476,20 @@ const en: Dict = {
 	spRules: (s, closesAt, look) => [
 		{
 			head: `${s.picksPerPerson} ${en2(s.picksPerPerson, 'pick', 'picks')} each.`,
-			body:
-				look === 'halloween'
+			body: s.custom?.about
+				? s.custom.about
+				: look === 'halloween'
 					? 'Something spooky, scary or strange.'
 					: 'Something you want to watch with the rest, ideally not the obvious one.'
 		},
+		...(s.custom && rulesOf(s.custom.rules).length
+			? [
+					{
+						head: 'The film has to fit the week.',
+						body: rulesOf(s.custom.rules).map((rule) => en.weekRule(rule)).join(' ')
+					}
+				]
+			: []),
 		{
 			head: 'Tick every film you want to watch.',
 			body: 'As many as you like, your own as well. You can change your mind until voting closes.'
@@ -1439,9 +1518,46 @@ const en: Dict = {
 	spPicking: 'Voting is closed. The room is choosing between the most ticked.',
 	spNomH: (name) => `Put up a film for ${name}`,
 	spNomHint: (max) => `${max} ${en2(max, 'pick', 'picks')} each, no repeats.`,
+	weekRule: (rule) => {
+		const minutes = (n: number) => `${n} ${en2(n, 'minute', 'minutes')}`;
+		switch (rule.kind) {
+			case 'countries':
+				return `Production country: ${oneOf('en', 'region', rule.codes)}.`;
+			case 'languages':
+				return `Original language: ${oneOf('en', 'language', rule.codes)}.`;
+			case 'genres':
+				return `Genre: ${orList('en', rule.ids.map((id) => GENRES_EN[id] ?? String(id)))}.`;
+			case 'years':
+				if (rule.from != null && rule.to != null) return `Released ${rule.from}-${rule.to}.`;
+				return rule.from != null ? `Released in ${rule.from} or later.` : `Released in ${rule.to} or earlier.`;
+			case 'runtime':
+				if (rule.min != null && rule.max != null) return `${rule.min} to ${minutes(rule.max)}.`;
+				return rule.max != null ? `At most ${minutes(rule.max)}.` : `At least ${minutes(rule.min ?? 0)}.`;
+			case 'directors':
+				return `Directed by ${orList('en', rule.names)}.`;
+			case 'coded':
+				return CODED_EN[rule.id];
+			case 'tmdb':
+				return 'It has to come from the TMDB search, so the rules can be checked.';
+		}
+	},
+	genreName: (id) => GENRES_EN[id] ?? String(id),
 
-	error: (_code, _params, fallback) => fallback
+	error: (code, p, fallback) => (code === 'off_theme' ? offTheme('en', p, fallback) : fallback)
 };
+
+/** §3.7: a pick refused for breaking one of the week's rules, named in the reader's words */
+function offTheme(lang: Lang, p: ErrorParams, fallback: string): string {
+	const rule = ruleFromParams(p);
+	if (!rule) return fallback;
+	if (rule.kind === 'tmdb') {
+		return lang === 'pl'
+			? 'Ten tydzień ma zasady, a TMDB nie powiedziało nic o tym filmie. Wybierz go z wyszukiwarki albo spróbuj za chwilę.'
+			: 'This week has rules and TMDB told us nothing about that film. Pick it from the search, or try again in a moment.';
+	}
+	const line = DICT[lang].weekRule(rule);
+	return lang === 'pl' ? `Nie pasuje do zasad tygodnia. ${line}` : `That film does not fit this week. ${line}`;
+}
 
 export const DICT: Record<Lang, Dict> = { pl, en };
 

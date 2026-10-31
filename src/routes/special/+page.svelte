@@ -18,12 +18,15 @@
 	import { nomSheet } from '$lib/special-sheet.svelte';
 	import { portal } from '$lib/portal';
 	import { fitViewport } from '$lib/fit-viewport';
+	import { rulesOf } from '$lib/custom-weeks';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
 	const T = $derived(dictFor(data.lang));
-	const name = $derived(T.spName(data.special.id));
+	const name = $derived(data.special.custom?.name ?? T.spName(data.special.id));
+	// §3.7: what a pick has to be this week, said from the rules the server checks
+	const weekRules = $derived(data.special.custom ? rulesOf(data.special.custom.rules) : []);
 	const open = $derived(data.week?.status === 'open');
 
 	/* ------------------------------------------------------------- motion -- */
@@ -308,6 +311,19 @@
 	<p class="banner">{T.spPicking}</p>
 {/if}
 
+{#if data.special.custom && (data.special.custom.about || weekRules.length)}
+	<div class="banner spweek">
+		{#if data.special.custom.about}<p>{data.special.custom.about}</p>{/if}
+		{#if weekRules.length}
+			<ul>
+				{#each weekRules as rule (rule.kind + T.weekRule(rule))}
+					<li>{T.weekRule(rule)}</li>
+				{/each}
+			</ul>
+		{/if}
+	</div>
+{/if}
+
 <div class="list">
 	{#each data.picks as pick, i (pick.id)}
 		<div
@@ -429,7 +445,7 @@
 						<input type="hidden" name="filmId" value={pick.id} />
 						<input type="hidden" name="title" value={pick.title} />
 						<input type="hidden" name="on" value={lit(pick) ? '0' : '1'} />
-						<LampToggle on={lit(pick)} label={T.spYes} disabled={!open} />
+						<LampToggle on={lit(pick)} label={T.spYes} disabled={!open} spooky={data.look === 'halloween'} />
 					</form>
 				</div>
 			</div>
@@ -438,7 +454,7 @@
 		<!-- an empty round is an invitation, not an absence: a lantern lit for
 		     whoever goes first, and the button that makes them first -->
 		<div class="spempty">
-			<span class="spempty-lamp"><Pumpkin size={68} /></span>
+			{#if data.look === 'halloween'}<span class="spempty-lamp"><Pumpkin size={68} /></span>{/if}
 			<h3>{T.spEmptyH}</h3>
 			<p>{T.spEmpty}</p>
 			{#if open && data.used < data.special.picksPerPerson}
@@ -521,6 +537,13 @@
 				<div class="hintline" in:rise={1}>
 					{degraded ? T.nomOffline : T.spNomHint(data.special.picksPerPerson)}
 				</div>
+				{#if weekRules.length}
+					<ul class="spweek-rules" in:rise={1}>
+						{#each weekRules as rule (rule.kind + T.weekRule(rule))}
+							<li>{T.weekRule(rule)}</li>
+						{/each}
+					</ul>
+				{/if}
 				<input
 					class="sinput"
 					bind:value={query}
@@ -553,7 +576,8 @@
 						{#if query.trim().length >= 2 && !results.length}
 							<div class="hintline">{T.nomNone(query.trim())}</div>
 						{/if}
-						{#if query.trim().length >= 2}
+						<!-- a typed title has nothing for a week's rules to be checked against -->
+						{#if query.trim().length >= 2 && !weekRules.length}
 							<button class="ghostbtn" onclick={() => (picked = byHand())}>
 								{T.nomByHand(query.trim())}
 							</button>
@@ -680,6 +704,24 @@
 />
 
 <style>
+	/* §3.7: the week's own description and rules */
+	.spweek p,
+	.spweek ul {
+		margin: 0;
+	}
+	.spweek p + ul {
+		margin-top: 6px;
+	}
+	.spweek ul,
+	.spweek-rules {
+		padding-left: 18px;
+	}
+	.spweek-rules {
+		margin: 6px 0 0;
+		color: var(--dimmer);
+		font-size: 12px;
+	}
+
 	/* who is in on it: faces overlapping in a chip, the count, and your picks */
 	.spturn {
 		display: flex;

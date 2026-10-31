@@ -5,6 +5,7 @@ import { activeRules } from '$lib/server/config';
 import { currentWeek } from '$lib/server/weeks';
 import {
 	nominateSpecial,
+	picksAllowed,
 	picksUsed,
 	setApproval,
 	specialPicks,
@@ -15,9 +16,10 @@ import { setNote } from '$lib/server/films';
 import { addComment, commentsOf, deleteComment, reactComment } from '$lib/server/comments';
 import { logAdmin, requireAdmin } from '$lib/server/admin';
 import { ruleFail } from '$lib/server/respond';
-import { detailsOf, NO_DETAILS } from '$lib/server/tmdb';
+import { lookUpFilm, NO_DETAILS } from '$lib/server/tmdb';
 import { generation } from '$lib/server/live';
 import { specialOf } from '$lib/specials';
+import { customOf } from '$lib/custom-weeks';
 
 /**
  * §3.6: the special round's own page, which stands in for the list while the
@@ -46,8 +48,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 		live,
 		special: {
 			id: special.id,
-			picksPerPerson: special.picksPerPerson,
-			shortlistSize: special.shortlistSize
+			picksPerPerson: picksAllowed(week),
+			shortlistSize: special.shortlistSize,
+			custom: customOf(week.custom)
 		},
 		picks: picks.map((pick) => {
 			const faces = seen.get(pick.id) ?? [];
@@ -73,8 +76,9 @@ export const actions: Actions = {
 
 		if (!title) return fail(400, { code: 'no_title', params: {}, message: 'type a title first' });
 
-		// §8.2: one details request per pick, as for a nomination
-		const details = tmdbId ? await detailsOf(tmdbId) : NO_DETAILS;
+		// §8.2: one details request per pick, as for a nomination; §3.7: the same
+		// request is what a custom week's rules are checked against
+		const { details, facts } = tmdbId ? await lookUpFilm(tmdbId) : { details: NO_DETAILS, facts: null };
 
 		try {
 			nominateSpecial(getDb(), activeRules(), locals.person!.id, {
@@ -85,7 +89,7 @@ export const actions: Actions = {
 				posterUrl: (form.get('poster') as string) || null,
 				overview: (form.get('overview') as string) || null,
 				note: (form.get('note') as string) || null
-			});
+			}, facts);
 			return { nominated: title };
 		} catch (error) {
 			return ruleFail(error);

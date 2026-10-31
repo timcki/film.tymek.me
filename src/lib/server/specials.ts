@@ -10,17 +10,30 @@ import { rexpAll } from './xp.js';
 import { assertNotDuplicate, filmById, insertFilm, type NominationInput } from './films.js';
 import { currentWeek, requireOpenWeek, requireSpecialWeek } from './weeks.js';
 import { SPECIALS, specialOf, type Special, type SpecialId } from '../specials.js';
+import { customOf, type CustomWeek } from '../custom-weeks.js';
+import { assertFits } from './custom-weeks.js';
+import type { Facts } from './tmdb.js';
 
 /**
  * §3.6. An admin gives the open round over to a special night. The list goes to
  * sleep on the spot: points already spent this round stand, nothing more can be
  * spent or nominated, and the round will not age anything on it.
  */
-export function startSpecial(db: DB, rules: RuleSet, id: SpecialId, now: Date = new Date()): Week {
+export function startSpecial(
+	db: DB,
+	rules: RuleSet,
+	id: SpecialId,
+	custom: CustomWeek | null = null,
+	now: Date = new Date()
+): Week {
 	return immediate(db, () => {
 		const week = requireOpenWeek(db, now);
 		if (week.special) throw new RuleError('special_on', 'this round is already a special one');
-		db.prepare('UPDATE week SET special = ? WHERE number = ?').run(SPECIALS[id].id, week.number);
+		db.prepare('UPDATE week SET special = ?, custom = ? WHERE number = ?').run(
+			SPECIALS[id].id,
+			custom ? JSON.stringify(custom) : null,
+			week.number
+		);
 		rescoreAll(db, rules, week.number);
 		return currentWeek(db) as Week;
 	});
@@ -38,7 +51,7 @@ export function stopSpecial(db: DB, rules: RuleSet, now: Date = new Date()): voi
 			.prepare('SELECT COUNT(*) AS n FROM film WHERE special = ? AND added_week = ?')
 			.get(week.special, week.number) as { n: number };
 		if (n > 0) throw new RuleError('special_has_picks', 'somebody has already put a pick up');
-		db.prepare('UPDATE week SET special = NULL WHERE number = ?').run(week.number);
+		db.prepare('UPDATE week SET special = NULL, custom = NULL WHERE number = ?').run(week.number);
 		rescoreAll(db, rules, week.number);
 	});
 }
@@ -53,26 +66,32 @@ function picksOf(db: DB, week: Week, personId: string): number {
 	).n;
 }
 
+/** §3.7: a custom week says how many picks each, otherwise the special round does */
+export function picksAllowed(week: Week): number {
+	return customOf(week.custom)?.picks ?? (specialOf(week.special) as Special).picksPerPerson;
+}
+
 /**
  * §3.6: a pick for the night. A few each rather than one, and the usual
  * duplicate rules (§4.1) against everything, the list included: a film already
- * waiting on the list is one the list will get to.
+ * waiting on the list is one the list will get to. §3.7: in a custom week it
+ * also has to meet the week's rules, checked against what TMDB says about it.
  */
 export function nominateSpecial(
 	db: DB,
 	rules: RuleSet,
 	personId: string,
 	input: NominationInput,
+	facts: Facts | null = null,
 	now: Date = new Date()
 ): number {
 	return immediate(db, () => {
 		const week = requireSpecialWeek(db, now);
-		const special = specialOf(week.special) as Special;
-		if (picksOf(db, week, personId) >= special.picksPerPerson) {
-			throw new RuleError('picks_spent', `you have put up all ${special.picksPerPerson} of yours`, {
-				max: special.picksPerPerson
-			});
+		const max = picksAllowed(week);
+		if (picksOf(db, week, personId) >= max) {
+			throw new RuleError('picks_spent', `you have put up all ${max} of yours`, { max });
 		}
+		assertFits(customOf(week.custom), facts);
 		assertNotDuplicate(db, input);
 		const id = insertFilm(db, input, personId, week.number, week.special);
 		rescoreAll(db, rules, week.number);

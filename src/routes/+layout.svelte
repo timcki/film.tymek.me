@@ -12,6 +12,7 @@
 	import Pumpkin from '$lib/components/Pumpkin.svelte';
 	import Skull from '$lib/components/Skull.svelte';
 	import { specialOf } from '$lib/specials';
+	import { customOf } from '$lib/custom-weeks';
 	import { nomSheet } from '$lib/special-sheet.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import type { LayoutServerData } from './$types';
@@ -68,7 +69,14 @@
 	const home = $derived(path === '/' || path === '/special');
 	// §3.6: the special round's name and rules ride in the bar, where the points
 	// pill would be: a special round spends no points, so the slot is free
-	const special = $derived(path === '/special' ? specialOf(data.week?.special) : null);
+	const special = $derived.by(() => {
+		const base = path === '/special' ? specialOf(data.week?.special) : null;
+		if (!base) return null;
+		// §3.7: a custom week brings its own name, pick count and rules
+		const custom = customOf(data.week?.custom);
+		return { ...base, picksPerPerson: custom?.picks ?? base.picksPerPerson, custom };
+	});
+	const spName = $derived(special ? (special.custom?.name ?? T.spName(special.id)) : '');
 	let rulesOpen = $state(false);
 	// until somebody has read the rules once, the chip says it can be opened:
 	// a dot and a slow ring, put away for good the first time it is tapped
@@ -447,12 +455,12 @@
 				class="pill spchip"
 				class:fresh={!rulesSeen}
 				aria-expanded={rulesOpen}
-				aria-label="{T.spName(special.id)}: {T.youRules}"
+				aria-label="{spName}: {T.youRules}"
 				onclick={openRules}
 				onblur={() => (rulesOpen = false)}
 			>
-				<Pumpkin size={17} />
-				<span class="splabel">{T.spName(special.id)}</span>
+				{#if data.look === 'halloween'}<Pumpkin size={17} />{/if}
+				<span class="splabel">{spName}</span>
 				<svg class="spchev" class:up={rulesOpen} viewBox="0 0 10 10" width="9" height="9" aria-hidden="true"
 					><path d="M2 3.6 5 6.6 8 3.6" /></svg
 				>
@@ -463,7 +471,9 @@
 						<li><b>{rule.head}</b> {rule.body}</li>
 					{/each}
 				</ol>
-				<div class="spfoot" aria-hidden="true"><Skull size={15} /><Pumpkin size={24} /></div>
+				{#if data.look === 'halloween'}
+					<div class="spfoot" aria-hidden="true"><Skull size={15} /><Pumpkin size={24} /></div>
+				{/if}
 			</div>
 		</div>
 		{#if data.week.status === 'open'}

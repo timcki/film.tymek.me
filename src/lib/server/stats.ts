@@ -10,6 +10,7 @@
  * nominator but no ballots at all, and the rounds since, which have everything.
  */
 import type { DB } from './db.js';
+import { SUCCESSOR } from './tmdb.js';
 import { avatarUrl } from './people.js';
 import { filmEvenings } from './evenings.js';
 
@@ -530,9 +531,6 @@ export function byDecade(films: WatchedFilm[]): Bucket[] {
 	}
 	return out;
 }
-
-/** countries TMDB still files films under that no map has any more, drawn where they were */
-const SUCCESSOR: Record<string, string> = { SU: 'RU', XC: 'CZ', CS: 'RS', YU: 'RS', DD: 'DE' };
 
 /** a co-production belongs to every country that made it, so a film can count more than once */
 export function byCountry(films: WatchedFilm[]): Bucket[] {

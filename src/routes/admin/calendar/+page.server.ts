@@ -16,6 +16,8 @@ import { fromLocalInput, iso, nextDeadline } from '$lib/server/time';
 import { toLocalInput } from '$lib/datetime';
 import { activeRules } from '$lib/server/config';
 import { startSpecial, stopSpecial } from '$lib/server/specials';
+import { cleanCustom } from '$lib/server/custom-weeks';
+import { customOf } from '$lib/custom-weeks';
 import { lookAt, setLook } from '$lib/server/looks';
 import { NOTICE_MAX, noticeAt, setNotice } from '$lib/server/notice';
 import { isSpecialId, SPECIALS, specialOf } from '$lib/specials';
@@ -37,7 +39,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 					number: week.number,
 					status: week.status,
 					closesAt: week.closes_at,
-					special: specialOf(week.special)?.id ?? null
+					special: specialOf(week.special)?.id ?? null,
+					custom: customOf(week.custom)
 				}
 			: null,
 		// §3.6: what an open round could be given over to, and whether it still can be taken back
@@ -145,8 +148,24 @@ export const actions: Actions = {
 				return { unspecial: true };
 			}
 			if (!isSpecialId(id)) throw new RuleError('no_special', 'no such special round');
-			const week = startSpecial(getDb(), activeRules(), id);
-			logAdmin(getDb(), person.id, 'round.special', String(week.number), id);
+			const text = (key: string) => String(form.get(key) ?? '');
+			const all = (key: string) => form.getAll(key).map(String);
+			const custom = cleanCustom({
+				name: text('name'),
+				about: text('about'),
+				picks: text('picks'),
+				countries: all('countries'),
+				languages: all('languages'),
+				genres: all('genres'),
+				yearFrom: text('yearFrom'),
+				yearTo: text('yearTo'),
+				runtimeMin: text('runtimeMin'),
+				runtimeMax: text('runtimeMax'),
+				directors: text('directors'),
+				coded: all('coded')
+			});
+			const week = startSpecial(getDb(), activeRules(), id, custom);
+			logAdmin(getDb(), person.id, 'round.special', String(week.number), custom.name ?? id);
 			return { special: id };
 		} catch (error) {
 			return ruleFail(error);

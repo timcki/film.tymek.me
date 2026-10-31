@@ -262,6 +262,30 @@ the latest one, so it stays on until somebody takes it off and each round still 
 what it looked like. It is decoration only, and asks for less motion are honoured
 throughout.
 
+### 3.7 Custom weeks
+
+**Added after Halloween 2026.** A special round (§3.6) can be set up before it starts: a name,
+a line about it, how many picks each person gets (up to three), and rules a pick has to
+meet. It is set up fresh each time; there are no templates. The setup is stored on the
+round as `week.custom` and goes when the round is called off. The menus and the rule
+shapes live in `src/lib/custom-weeks.ts`, so the special page, the rules screen and the
+admin's summary all say the rules from the values the server checks.
+
+- **Every rule set has to hold, any value of each will do.** A rule is a list of
+  production countries, original languages or genres, a range of release years or of
+  runtimes, a list of directors (matched by name, case and diacritics aside), or one of
+  the rules written by hand (`CODED`, so far "directed by a woman", read off TMDB's
+  gender field). A country that has since split counts as its successor, as in `/stats`.
+  "Polish week" is the production-country rule or the original-language rule, whichever
+  the admin means.
+- **Checked at pick time, against TMDB.** The facts come from the same details fetch the
+  pick already makes. A week with rules takes no typed-in titles, and a pick TMDB says
+  nothing about is refused, because there is nothing to check it against.
+- **A refusal names the rule it broke** (`off_theme`, with the rule folded into flat
+  parameters), said in the reader's language at the edge (invariant 6).
+- **Everything else is §3.6.** Approval voting, the room, the list asleep. The look stays
+  a separate choice even when it is an obvious pair with the week.
+
 ---
 
 ## 4. Data model

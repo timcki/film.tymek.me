@@ -49,6 +49,28 @@ export type AdminDict = {
 	spcList: string;
 	spcIntro: string;
 	spcLocked: string;
+	/** §3.7: setting a special round up as a custom week */
+	cwIntro: string;
+	cwName: string;
+	cwAbout: string;
+	cwAboutPh: string;
+	cwPicks: string;
+	cwRulesH: string;
+	cwRulesIntro: string;
+	cwCountries: string;
+	cwLanguages: string;
+	cwMulti: string;
+	cwGenres: string;
+	cwYears: string;
+	cwRuntime: string;
+	cwFrom: string;
+	cwTo: string;
+	cwDirectors: string;
+	cwDirectorsPh: string;
+	cwCoded: string;
+	cwStart: string;
+	cwCancel: string;
+	cwNoRules: string;
 	lookLabel: string;
 	lookDefault: string;
 	lookIntro: string;
@@ -197,6 +219,29 @@ const pl: AdminDict = {
 		'Lista śpi do jego końca: nikt nie wydaje punktów, nic nie traci na wartości i nic nie wypada. ' +
 		'Punkty wydane w tej rundzie wcześniej zostają. Odwołać go można, dopóki nikt nic nie zgłosił.',
 	spcLocked: 'Ktoś już zgłosił propozycję, więc runda dobiegnie końca.',
+	cwIntro: 'Wszystko jest opcjonalne. Bez nazwy i zasad to zwykły wieczór specjalny.',
+	cwName: 'Nazwa',
+	cwAbout: 'Opis',
+	cwAboutPh: 'np. Tylko polskie kino, od Wajdy po dziś',
+	cwPicks: 'Propozycji na osobę',
+	cwRulesH: 'Zasady',
+	cwRulesIntro:
+		'Film musi spełnić każdą ustawioną zasadę, a w każdej wystarczy jedna z wybranych wartości. ' +
+		'Sprawdzamy to w TMDB przy zgłoszeniu, więc z zasadami nie da się wpisać tytułu ręcznie.',
+	cwCountries: 'Kraj produkcji',
+	cwLanguages: 'Język oryginału',
+	cwMulti: 'Kilka naraz: Ctrl albo Cmd przy kliknięciu.',
+	cwGenres: 'Gatunek',
+	cwYears: 'Rok premiery',
+	cwRuntime: 'Długość w minutach',
+	cwFrom: 'od',
+	cwTo: 'do',
+	cwDirectors: 'Reżyseria',
+	cwDirectorsPh: 'np. Kieślowski, Holland',
+	cwCoded: 'Inne',
+	cwStart: 'Zacznij',
+	cwCancel: 'Anuluj',
+	cwNoRules: 'Bez zasad: pasuje każdy film.',
 	lookLabel: 'Wygląd strony',
 	lookDefault: 'Domyślny (każdy wybiera sam)',
 	lookIntro:
@@ -351,6 +396,16 @@ const pl: AdminDict = {
 				return 'Ta runda nie jest specjalna.';
 			case 'no_look':
 				return 'Nie ma takiego wyglądu.';
+			case 'custom_name_long':
+				return `Nazwa może mieć najwyżej ${p.max} znaków.`;
+			case 'custom_about_long':
+				return `Opis może mieć najwyżej ${p.max} znaków.`;
+			case 'custom_picks':
+				return `Każdy może zgłosić od 1 do ${p.max} propozycji.`;
+			case 'custom_years':
+				return 'Lata muszą być między 1870 a 2100, a „od” nie później niż „do”.';
+			case 'custom_runtime':
+				return 'Długość musi być między 1 a 1000 minut, a „od” nie więcej niż „do”.';
 			case 'notice_too_long':
 				return `Ogłoszenie może mieć najwyżej ${p.max} znaków.`;
 			case 'not_a_record':
@@ -430,6 +485,29 @@ const en: AdminDict = {
 		'The list sleeps until it is over: nobody spends points, nothing fades and nothing drops. ' +
 		'Points already spent this round stay where they are. It can be called off until somebody puts a pick up.',
 	spcLocked: 'Somebody has already put a pick up, so the round runs its course.',
+	cwIntro: 'Everything is optional. With no name and no rules it is a plain special night.',
+	cwName: 'Name',
+	cwAbout: 'Description',
+	cwAboutPh: 'e.g. Polish cinema only, from Wajda to now',
+	cwPicks: 'Picks each',
+	cwRulesH: 'Rules',
+	cwRulesIntro:
+		'A film has to meet every rule that is set, and any one of the values chosen for each. ' +
+		'TMDB is asked when the pick goes up, so a week with rules takes no typed-in titles.',
+	cwCountries: 'Production country',
+	cwLanguages: 'Original language',
+	cwMulti: 'More than one: hold Ctrl or Cmd while clicking.',
+	cwGenres: 'Genre',
+	cwYears: 'Release year',
+	cwRuntime: 'Runtime in minutes',
+	cwFrom: 'from',
+	cwTo: 'to',
+	cwDirectors: 'Director',
+	cwDirectorsPh: 'e.g. Kieślowski, Holland',
+	cwCoded: 'Other',
+	cwStart: 'Start',
+	cwCancel: 'Cancel',
+	cwNoRules: 'No rules: any film fits.',
 	lookLabel: 'Site look',
 	lookDefault: 'Default (everyone picks their own)',
 	lookIntro:
