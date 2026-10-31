@@ -52,6 +52,10 @@ export type AdminDict = {
 	lookLabel: string;
 	lookDefault: string;
 	lookIntro: string;
+	noticeH: string;
+	noticePh: string;
+	noticeSave: string;
+	noticeIntro: string;
 
 	/* people */
 	peoH: string;
@@ -122,12 +126,16 @@ export type AdminDict = {
 	watWho: string;
 	watAdd: string;
 	watAddAnyway: string;
+	watMove: string;
 	watCancel: string;
 	watEmpty: string;
 
 	/* audit */
 	audH: string;
 	audEmpty: string;
+	backupH: string;
+	backupIntro: string;
+	backupGet: string;
 	audLine: (who: string, action: string, target: string) => string;
 
 	error: (code: string, params: Record<string, string | number>, fallback: string) => string;
@@ -193,6 +201,11 @@ const pl: AdminDict = {
 	lookDefault: 'Domyślny (każdy wybiera sam)',
 	lookIntro:
 		'Domyślnie każdy wybiera sobie ciemny, jasny albo bananowy. Inny wygląd widzą wszyscy, dopóki go nie zmienisz.',
+	noticeH: 'Ogłoszenie',
+	noticePh: 'np. W czwartek oglądamy u Ani',
+	noticeSave: 'Zapisz',
+	noticeIntro:
+		'Pasek nad każdą stroną, dla wszystkich, dopóki go nie zmienisz. Każdy może go u siebie zamknąć. Puste pole zdejmuje ogłoszenie.',
 
 	peoH: 'Ludzie',
 	peoAddH: 'Dodaj osobę',
@@ -258,11 +271,16 @@ const pl: AdminDict = {
 	watWho: 'Kto zaproponował',
 	watAdd: 'Dopisz',
 	watAddAnyway: 'Dopisz mimo to',
+	watMove: 'Zapisz kiedy i gdzie',
 	watCancel: 'Anuluj',
 	watEmpty: 'Jeszcze nic nie obejrzeliśmy.',
 
 	audH: 'Ostatnie zmiany',
 	audEmpty: 'Jeszcze nic.',
+	backupH: 'Kopia zapasowa',
+	backupIntro:
+		'Cała baza w jednym pliku, taka jak teraz. Są w niej osobiste linki wszystkich, więc trzymaj ją u siebie i nikomu nie wysyłaj.',
+	backupGet: 'Pobierz kopię',
 	audLine: (who, action, target) => `${who} · ${action}${target ? ` · ${target}` : ''}`,
 
 	error: (code, p, fallback) => {
@@ -331,6 +349,10 @@ const pl: AdminDict = {
 				return 'Ta runda nie jest specjalna.';
 			case 'no_look':
 				return 'Nie ma takiego wyglądu.';
+			case 'notice_too_long':
+				return `Ogłoszenie może mieć najwyżej ${p.max} znaków.`;
+			case 'not_a_record':
+				return 'Ten film wybrała runda, więc zostaje przy jej wieczorku.';
 			case 'room_picking':
 				return 'Sala właśnie wybiera film.';
 			case 'week_closed':
@@ -400,6 +422,11 @@ const en: AdminDict = {
 	lookDefault: 'Default (everyone picks their own)',
 	lookIntro:
 		'By default everyone picks dark, light or banana for themselves. Any other look is what everybody sees until you change it.',
+	noticeH: 'Announcement',
+	noticePh: 'e.g. Thursday we watch at Ania’s',
+	noticeSave: 'Save',
+	noticeIntro:
+		'A bar above every page, for everyone, until you change it. Anyone can close it for themselves. An empty field takes it down.',
 
 	peoH: 'People',
 	peoAddH: 'Add someone',
@@ -465,11 +492,16 @@ const en: AdminDict = {
 	watWho: 'Suggested by',
 	watAdd: 'Add',
 	watAddAnyway: 'Add anyway',
+	watMove: 'Save when and where',
 	watCancel: 'Cancel',
 	watEmpty: 'Nothing watched yet.',
 
 	audH: 'Recent changes',
 	audEmpty: 'Nothing yet.',
+	backupH: 'Backup',
+	backupIntro:
+		'The whole database in one file, as it is right now. It holds everyone’s personal links, so keep it to yourself and send it to nobody.',
+	backupGet: 'Download a copy',
 	audLine: (who, action, target) => `${who} · ${action}${target ? ` · ${target}` : ''}`,
 
 	error: (_code, _params, fallback) => fallback

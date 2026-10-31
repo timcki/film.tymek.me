@@ -6,6 +6,7 @@ import { currentWeek } from '$lib/server/weeks';
 import { roundEvenings } from '$lib/server/evenings';
 import { openRunoff } from '$lib/server/runoffs';
 import { lookAt } from '$lib/server/looks';
+import { noticeAt } from '$lib/server/notice';
 import { avatarUrl, bankBalance, spentInWeek } from '$lib/server/people';
 import { langOf } from '$lib/i18n';
 import { unseenChangelog } from '$lib/changelog';
@@ -50,6 +51,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 		theme: look ? ('dark' as const) : themeOf(cookies.get(THEME_COOKIE)),
 		banana: bananaOf(cookies.get(BANANA_COOKIE)),
 		look,
+		notice: person ? noticeAt(db) : null,
 		// news this person has not dismissed yet, already said in their language
 		changelog: person
 			? unseenChangelog(person.changelog_seen).map((entry) => ({

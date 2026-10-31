@@ -6,7 +6,7 @@
 	import FilmEditForm from '$lib/components/FilmEditForm.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import FilmSearch, { type Picked } from '$lib/components/FilmSearch.svelte';
-	import { formatDay } from '$lib/datetime';
+	import { formatDay, toLocalInput } from '$lib/datetime';
 	import { adminDict } from '$lib/i18n.admin';
 	import { dictFor } from '$lib/i18n';
 	import { OUTINGS } from '$lib/outings';
@@ -141,6 +141,26 @@
 					submit={submit(() => (editing = null))}
 					oncancel={() => (editing = null)}
 				/>
+				<!-- §2: a written-down evening can be put right; a round's night is the round's -->
+				{#if film.archival}
+					<form class="acts" method="POST" action="?/move" use:enhance={submit(() => (editing = null))}>
+						<input type="hidden" name="id" value={film.id} />
+						<label class="bankin">
+							{A.watWhen}
+							<input type="datetime-local" name="at" value={toLocalInput(film.at)} max={data.now} required />
+						</label>
+						<label class="bankin">
+							{A.watWhere}
+							<select name="outing">
+								<option value="" selected={!film.outing}>{A.watFilmNight}</option>
+								{#each OUTINGS as where (where)}
+									<option value={where} selected={film.outing === where}>{T.outing(where)}</option>
+								{/each}
+							</select>
+						</label>
+						<button class="tap go">{A.watMove}</button>
+					</form>
+				{/if}
 			{/if}
 
 			<div class="acts">

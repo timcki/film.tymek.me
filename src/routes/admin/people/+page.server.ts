@@ -1,6 +1,6 @@
 import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
-import { activeRules, origin } from '$lib/server/config';
+import { activeRules, isDemo, origin } from '$lib/server/config';
 import { logAdmin, recentAudit, requireAdmin } from '$lib/server/admin';
 import {
 	createPerson,
@@ -26,7 +26,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		colours: COLOURS,
 		banking: activeRules().banking,
 		bankCap: activeRules().bankCap,
-		audit: recentAudit(db, 15)
+		audit: recentAudit(db, 15),
+		demo: isDemo()
 	};
 };
 

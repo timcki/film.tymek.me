@@ -46,6 +46,8 @@ export type Week = {
 	special: string | null;
 	/** §3.6: the look an admin put on the site this round, 'default' to take one off */
 	look: string | null;
+	/** the announcement an admin pinned this round, '' to take one down */
+	notice: string | null;
 };
 
 export type FilmStatus = 'active' | 'archived' | 'dropped' | 'watched';

@@ -12,7 +12,8 @@ import {
 } from '$lib/server/specials';
 import { seenOf, toggleSeen } from '$lib/server/seen';
 import { setNote } from '$lib/server/films';
-import { addComment, commentsOf, reactComment } from '$lib/server/comments';
+import { addComment, commentsOf, deleteComment, reactComment } from '$lib/server/comments';
+import { logAdmin, requireAdmin } from '$lib/server/admin';
 import { ruleFail } from '$lib/server/respond';
 import { detailsOf } from '$lib/server/tmdb';
 import { generation } from '$lib/server/live';
@@ -134,6 +135,18 @@ export const actions: Actions = {
 		try {
 			reactComment(getDb(), locals.person!.id, Number(form.get('commentId')), String(form.get('emoji') ?? ''));
 			return { reacted: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	uncomment: async ({ request, locals }) => {
+		const person = requireAdmin(locals.person);
+		const form = await request.formData();
+		const id = Number(form.get('commentId'));
+		try {
+			logAdmin(getDb(), person.id, 'comment.delete', String(id), deleteComment(getDb(), id));
+			return { uncommented: true };
 		} catch (error) {
 			return ruleFail(error);
 		}

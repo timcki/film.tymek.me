@@ -17,6 +17,7 @@ import { toLocalInput } from '$lib/datetime';
 import { activeRules } from '$lib/server/config';
 import { startSpecial, stopSpecial } from '$lib/server/specials';
 import { lookAt, setLook } from '$lib/server/looks';
+import { NOTICE_MAX, noticeAt, setNotice } from '$lib/server/notice';
 import { isSpecialId, SPECIALS, specialOf } from '$lib/specials';
 import { isLook, LOOKS } from '$lib/themes';
 
@@ -44,6 +45,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		// §3.6: what the whole site could be made to wear, and what it wears now
 		looks: [...LOOKS],
 		look: lookAt(db),
+		notice: noticeAt(db),
+		noticeMax: NOTICE_MAX,
 		specialPicks: week?.special
 			? (
 					db
@@ -151,6 +154,18 @@ export const actions: Actions = {
 			setLook(getDb(), isLook(look) ? look : null);
 			logAdmin(getDb(), person.id, 'site.look', look || 'default');
 			return { look: look || null };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	notice: async ({ request, locals }) => {
+		const person = requireAdmin(locals.person);
+		const form = await request.formData();
+		try {
+			const notice = setNotice(getDb(), String(form.get('notice') ?? ''));
+			logAdmin(getDb(), person.id, 'site.notice', null, notice);
+			return { notice };
 		} catch (error) {
 			return ruleFail(error);
 		}

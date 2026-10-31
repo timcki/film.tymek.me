@@ -1009,7 +1009,7 @@ Steps 1–4 are a working system for six people. Everything after is comfort.
 - Attendance rewards that touch the economy. See above.
 - ~~Comments, ratings, or a chat. There's a group chat already.~~ **Revised, August
   2026.** Comments on a suggestion landed after all (`film_comment`): members only,
-  permanent, shown in the film's detail sheet and on the host's winner screen. Ratings
+  permanent to their author (an admin can take one down), shown in the film's detail sheet and on the host's winner screen. Ratings
   and a chat remain out; there's a group chat already.
 - Undo of a watched film. If you watched the wrong thing, edit the database.
 

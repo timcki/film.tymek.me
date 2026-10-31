@@ -581,7 +581,7 @@
 
 <!-- one thread, two homes: the detail sheet and the badge's modal -->
 {#snippet commentThread(film: { id: number; comments: Film['comments'] })}
-	<CommentThread {film} lang={data.lang} {submit} />
+	<CommentThread {film} lang={data.lang} {submit} admin={data.person?.isAdmin} />
 {/snippet}
 
 <!-- §3.5, said on the title line rather than in the fine print: a sleeper's row

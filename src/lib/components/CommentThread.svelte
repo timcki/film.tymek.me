@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Avatar from './Avatar.svelte';
+	import ConfirmButton from './ConfirmButton.svelte';
 	import { dictFor, type Lang } from '$lib/i18n';
 	import { REACTIONS } from '$lib/reactions';
 
@@ -26,12 +27,15 @@
 	let {
 		film,
 		lang,
-		submit
+		submit,
+		admin = false
 	}: {
 		film: { id: number; comments: Comment[] };
 		lang: Lang;
 		/** the page's form handler; `onOk` runs once the write has gone through */
 		submit: (onOk?: () => void) => SubmitFunction;
+		/** an admin can take a comment down */
+		admin?: boolean;
 	} = $props();
 
 	const T = $derived(dictFor(lang));
@@ -65,6 +69,12 @@
 				<div class="who">
 					<b>{comment.name}</b>
 					<time>{commentDay(comment.created_at)}</time>
+					{#if admin}
+						<form method="POST" action="?/uncomment" use:enhance={submit()}>
+							<input type="hidden" name="commentId" value={comment.id} />
+							<ConfirmButton label={T.commentDelete} sure={T.commentDeleteSure} small />
+						</form>
+					{/if}
 				</div>
 				<p>{comment.body}</p>
 				<div class="rrow">

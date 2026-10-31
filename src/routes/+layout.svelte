@@ -92,6 +92,25 @@
 			// private mode: it nags again next visit, which is the lesser harm
 		}
 	}
+	// closing the announcement closes that one; a new text comes back up
+	const NOTICE_CLOSED = 'fn_notice_closed';
+	let noticeClosed = $state(true);
+	$effect(() => {
+		if (!data.notice) return;
+		try {
+			noticeClosed = localStorage.getItem(NOTICE_CLOSED) === data.notice;
+		} catch {
+			noticeClosed = false;
+		}
+	});
+	function closeNotice() {
+		noticeClosed = true;
+		try {
+			localStorage.setItem(NOTICE_CLOSED, data.notice ?? '');
+		} catch {
+			// private mode: it is back next visit, which is the lesser harm
+		}
+	}
 	// picks the viewer still has, read off the round's own page data
 	const picksLeft = $derived(
 		special ? Math.max(0, special.picksPerPerson - Number(page.data.used ?? 0)) : 0
@@ -576,6 +595,17 @@
 			<p class="banner accent">
 				<a href="/f/{data.runoffCode}">{T.openRoom}</a>
 			</p>
+		{/if}
+
+		{#if data.notice && !noticeClosed && !path.startsWith('/host')}
+			<div class="banner notice">
+				<p>{data.notice}</p>
+				<button aria-label={T.close} onclick={closeNotice}>
+					<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"
+						><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" /></svg
+					>
+				</button>
+			</div>
 		{/if}
 
 		{@render children()}

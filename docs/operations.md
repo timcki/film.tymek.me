@@ -336,3 +336,7 @@ are two different files on purpose, and only the second one is ever served.
 - `journalctl -u filmnight -f` for logs.
 - Restoring a backup: stop the service, copy the dated file over
   `/var/lib/filmnight/filmnight.db`, delete any `-wal`/`-shm` beside it, start again.
+- An admin can also take a copy from the panel: Ludzie → Kopia zapasowa, served by
+  `/admin/backup` as `db.serialize()`, logged as `site.backup`, and off in the demo. It
+  holds every personal link, so it is the same thing as `data/identity-links.md` and
+  stays off anything shared. A downloaded copy restores the same way as a dated one.

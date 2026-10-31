@@ -1243,6 +1243,22 @@ header .sub b {
 	font-size: 10.5px;
 	color: var(--dimmer);
 }
+.cmt .who form {
+	margin-left: auto;
+}
+.cdel {
+	border: 0;
+	background: none;
+	padding: 0;
+	font: inherit;
+	font-size: 10.5px;
+	color: var(--dimmer);
+	cursor: pointer;
+}
+.cdel.armed {
+	color: var(--bad);
+	font-weight: 650;
+}
 .cmt p {
 	margin: 2px 0 0;
 	font-size: 13.5px;
@@ -3792,6 +3808,31 @@ button.wcard:focus-visible img {
 .banner a {
 	font-weight: 650;
 }
+.banner.notice {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	background: color-mix(in srgb, var(--accent) 14%, transparent);
+	color: var(--ink);
+}
+.banner.notice p {
+	flex: 1;
+	margin: 0;
+}
+.banner.notice button {
+	border: 0;
+	background: none;
+	padding: 4px;
+	margin: -2px -4px 0 0;
+	color: var(--dim);
+	cursor: pointer;
+}
+.banner.notice svg {
+	display: block;
+	stroke: currentColor;
+	stroke-width: 1.6;
+	stroke-linecap: round;
+}
 
 /* ------------------------------------------------------------------ admin -- */
 /* a back office for two people: dense, plain, and deliberately duller than the
@@ -3926,6 +3967,9 @@ button.wcard:focus-visible img {
 .bankin input {
 	width: 62px;
 	padding: 6px 8px;
+}
+.bankin input[type='datetime-local'] {
+	width: auto;
 }
 .acts {
 	display: flex;

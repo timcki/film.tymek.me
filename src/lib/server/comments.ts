@@ -33,7 +33,7 @@ export type FilmComment = {
 
 /**
  * Like cleanNote, but a blank comment is a mistake rather than a deletion:
- * comments are permanent, so there is nothing a blank one could clear.
+ * an author cannot take a comment back, so there is nothing a blank one could clear.
  */
 export function cleanComment(body: string | null | undefined): string {
 	const trimmed = (body ?? '').trim().replace(/\s+/g, ' ');
@@ -46,7 +46,7 @@ export function cleanComment(body: string | null | undefined): string {
 	return trimmed;
 }
 
-/** anyone with an account may comment on any suggestion; there is no editing or deleting */
+/** anyone with an account may comment on any suggestion; there is no editing, and only an admin deletes */
 export function addComment(
 	db: DB,
 	personId: string,
@@ -63,6 +63,19 @@ export function addComment(
 			)
 			.run(filmId, personId, cleaned, iso(now));
 		return Number(result.lastInsertRowid);
+	});
+}
+
+/** an admin taking a comment down, the reactions to it with it; the caller checks who is asking */
+export function deleteComment(db: DB, commentId: number): string {
+	return immediate(db, () => {
+		const comment = db.prepare('SELECT body FROM film_comment WHERE id = ?').get(commentId) as
+			| { body: string }
+			| undefined;
+		if (!comment) throw new RuleError('no_comment', 'no such comment');
+		db.prepare('DELETE FROM comment_react WHERE comment_id = ?').run(commentId);
+		db.prepare('DELETE FROM film_comment WHERE id = ?').run(commentId);
+		return comment.body;
 	});
 }
 

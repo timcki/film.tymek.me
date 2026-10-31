@@ -100,6 +100,19 @@
 	</div>
 	<p class="ahint">{data.week.special && data.specialPicks > 0 ? A.spcLocked : A.spcIntro}</p>
 	<p class="ahint">{A.lookIntro}</p>
+
+	<div class="sec">{A.noticeH}</div>
+	<form class="acts" method="POST" action="?/notice" use:enhance={submit()}>
+		<input
+			class="nin"
+			name="notice"
+			value={data.notice ?? ''}
+			maxlength={data.noticeMax}
+			placeholder={A.noticePh}
+		/>
+		<button class="tap go">{A.noticeSave}</button>
+	</form>
+	<p class="ahint">{A.noticeIntro}</p>
 {/if}
 
 <div class="sec">{A.calAddH}</div>

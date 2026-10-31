@@ -3,7 +3,7 @@
 	 * A submit button for what cannot be taken back: the first tap only arms it
 	 * and says so, the second submits. Left armed, it relaxes on its own.
 	 */
-	let { label, sure }: { label: string; sure: string } = $props();
+	let { label, sure, small = false }: { label: string; sure: string; small?: boolean } = $props();
 
 	let armed = $state(false);
 	let timer: ReturnType<typeof setTimeout> | undefined;
@@ -19,4 +19,4 @@
 	$effect(() => () => clearTimeout(timer));
 </script>
 
-<button class="tap bad" class:armed onclick={tap}>{armed ? sure : label}</button>
+<button class={small ? 'cdel' : 'tap bad'} class:armed onclick={tap}>{armed ? sure : label}</button>

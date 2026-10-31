@@ -155,3 +155,9 @@
 {:else}
 	<p class="ahint">{A.audEmpty}</p>
 {/each}
+
+{#if !data.demo}
+	<div class="sec">{A.backupH}</div>
+	<p class="ahint">{A.backupIntro}</p>
+	<a class="tap" href="/admin/backup" download data-sveltekit-reload>{A.backupGet}</a>
+{/if}

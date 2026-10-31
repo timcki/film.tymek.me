@@ -409,35 +409,7 @@ export function recordWatched(db: DB, film: RecordedFilm, now = new Date()): num
 	return immediate(db, () => {
 		const title = cleanTitle(film.title);
 		personOr404(db, film.personId);
-		if (Number.isNaN(film.at.getTime())) throw new RuleError('bad_date', 'give a date and a time');
-		if (film.at > now) throw new RuleError('watched_future', 'that has not happened yet');
-
-		const round = db
-			.prepare('SELECT number, closes_at FROM week WHERE closes_at >= ? ORDER BY number LIMIT 1')
-			.get(iso(film.at)) as { number: number; closes_at: string } | undefined;
-		if (!round) throw new RuleError('no_round_then', 'no round covers that date yet');
-
-		if (!film.outing) {
-			// what is being written down is the round's night, so it has to have been
-			if (new Date(round.closes_at) > now) {
-				throw new RuleError(
-					'night_not_yet',
-					'that round has not had its night yet; if it was an outing, say where'
-				);
-			}
-			const taken = db
-				.prepare(
-					`SELECT title FROM film WHERE status = 'watched' AND outing IS NULL AND watched_week = ?`
-				)
-				.get(round.number) as { title: string } | undefined;
-			if (taken) {
-				throw new RuleError(
-					'night_taken',
-					`that night we watched ${taken.title}; if this was a separate outing, say where`,
-					{ title: taken.title }
-				);
-			}
-		}
+		const round = eveningRound(db, film.at, film.outing, now);
 
 		if (!film.allowDuplicate) {
 			const clash = db
@@ -480,14 +452,70 @@ export function recordWatched(db: DB, film: RecordedFilm, now = new Date()): num
 				cleanPoster(film.posterUrl),
 				cleanOverview(film.overview),
 				film.personId,
-				round.number,
-				round.number,
+				round,
+				round,
 				film.outing,
 				film.outing ? iso(film.at) : null,
 				iso(now)
 			);
 		rexpAll(db);
 		return Number(result.lastInsertRowid);
+	});
+}
+
+/**
+ * The round a written-down evening falls in. A film night is the round's own
+ * night, so it has to have been had, and by no film but this one.
+ */
+function eveningRound(db: DB, at: Date, outing: Outing | null, now: Date, filmId: number | null = null): number {
+	if (Number.isNaN(at.getTime())) throw new RuleError('bad_date', 'give a date and a time');
+	if (at > now) throw new RuleError('watched_future', 'that has not happened yet');
+
+	const round = db
+		.prepare('SELECT number, closes_at FROM week WHERE closes_at >= ? ORDER BY number LIMIT 1')
+		.get(iso(at)) as { number: number; closes_at: string } | undefined;
+	if (!round) throw new RuleError('no_round_then', 'no round covers that date yet');
+
+	if (!outing) {
+		if (new Date(round.closes_at) > now) {
+			throw new RuleError(
+				'night_not_yet',
+				'that round has not had its night yet; if it was an outing, say where'
+			);
+		}
+		const taken = db
+			.prepare(
+				`SELECT title FROM film
+				 WHERE status = 'watched' AND outing IS NULL AND watched_week = ? AND id IS NOT ?`
+			)
+			.get(round.number, filmId) as { title: string } | undefined;
+		if (taken) {
+			throw new RuleError(
+				'night_taken',
+				`that night we watched ${taken.title}; if this was a separate outing, say where`,
+				{ title: taken.title }
+			);
+		}
+	}
+	return round.number;
+}
+
+/**
+ * §2: a written-down evening put right, when it was and whether it was a film
+ * night or somewhere we went instead. A film a round decided keeps the round's
+ * night: that is what the round was for.
+ */
+export function moveWatched(db: DB, id: number, at: Date, outing: Outing | null, now = new Date()): void {
+	immediate(db, () => {
+		const film = filmOr404(db, id);
+		if (film.status !== 'watched' || !film.archival) {
+			throw new RuleError('not_a_record', 'a round decided that evening, so it keeps its night');
+		}
+		const round = eveningRound(db, at, outing, now, id);
+		db.prepare(
+			'UPDATE film SET added_week = ?, watched_week = ?, outing = ?, watched_at = ? WHERE id = ?'
+		).run(round, round, outing, outing ? iso(at) : null, id);
+		rexpAll(db);
 	});
 }
 

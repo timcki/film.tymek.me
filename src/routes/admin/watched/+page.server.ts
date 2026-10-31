@@ -5,6 +5,7 @@ import {
 	deleteFilm,
 	editFilm,
 	filmEditFrom,
+	moveWatched,
 	reassignFilm,
 	recordWatched,
 	watchedRecord
@@ -94,6 +95,21 @@ export const actions: Actions = {
 		try {
 			editFilm(getDb(), id, filmEditFrom(form));
 			logAdmin(getDb(), person.id, 'film.edit', String(id), String(form.get('title') ?? ''));
+			return { saved: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	move: async ({ request, locals }) => {
+		const person = requireAdmin(locals.person);
+		const form = await request.formData();
+		const id = Number(form.get('id'));
+		const where = String(form.get('outing') ?? '');
+		try {
+			const outing = isOuting(where) ? where : null;
+			moveWatched(getDb(), id, whenFrom(form), outing);
+			logAdmin(getDb(), person.id, 'film.move', String(id), outing ?? 'night');
 			return { saved: true };
 		} catch (error) {
 			return ruleFail(error);

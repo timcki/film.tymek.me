@@ -665,7 +665,7 @@
 			</div>
 		</div>
 		<div class="dblock" in:rise={4}>
-			<CommentThread film={detail} lang={data.lang} {submit} />
+			<CommentThread film={detail} lang={data.lang} {submit} admin={data.person?.isAdmin} />
 		</div>
 	</div>
 	</div>

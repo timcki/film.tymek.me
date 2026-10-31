@@ -15,7 +15,8 @@ import {
 import { filmById } from '../src/lib/server/films.js';
 import { personById } from '../src/lib/server/people.js';
 import { RuleError } from '../src/lib/server/types.js';
-import { addFilm, castBallot, freshDb } from './helpers.js';
+import { NOTICE_MAX, noticeAt, setNotice } from '../src/lib/server/notice.js';
+import { addFilm, castBallot, forceAdvanceTo, freshDb } from './helpers.js';
 
 const asPerson = (over: Record<string, unknown> = {}) =>
 	({ id: 'ala', name: 'Ala', active: 1, is_admin: 1, ...over }) as never;
@@ -223,5 +224,24 @@ describe('the audit trail', () => {
 		expect(rows[0].action).toBe('person.rotate');
 		expect(rows[0].person_name).toBe('bartek');
 		expect(rows[1].target).toBe('2026-08-05T18:00:00.000Z');
+	});
+});
+
+describe('the announcement', () => {
+	it('stays up from round to round until a blank one takes it down', () => {
+		const { db } = freshDb('weekly');
+		expect(noticeAt(db)).toBeNull();
+		expect(setNotice(db, '  w czwartek   u Ani ')).toBe('w czwartek u Ani');
+		forceAdvanceTo(db, 2);
+		expect(noticeAt(db)).toBe('w czwartek u Ani');
+		expect(setNotice(db, '   ')).toBeNull();
+		expect(noticeAt(db)).toBeNull();
+	});
+
+	it('refuses one too long to be a line', () => {
+		const { db } = freshDb('weekly');
+		expect(() => setNotice(db, 'x'.repeat(NOTICE_MAX + 1))).toThrowError(
+			expect.objectContaining({ code: 'notice_too_long' })
+		);
 	});
 });

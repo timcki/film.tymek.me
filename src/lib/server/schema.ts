@@ -250,6 +250,9 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	// round's choice, so a look stays on until somebody takes it off, and every
 	// round still says what it looked like
 	['week', 'look', 'TEXT'],
+	// a line an admin pins above every page, kept the way look is: the latest
+	// round's word stands until somebody changes it, '' for taking it down
+	['week', 'notice', 'TEXT'],
 	// §3.6: a pick for a special round rather than a nomination to the list. It
 	// never appears on the list, never takes points, and once its round is over
 	// it is either the night's film or dropped with the rest

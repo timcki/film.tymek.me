@@ -4,8 +4,10 @@ import {
 	cleanComment,
 	COMMENT_MAX,
 	commentsOf,
+	deleteComment,
 	reactComment
 } from '../src/lib/server/comments.js';
+import { REACTIONS } from '../src/lib/reactions.js';
 import { RuleError } from '../src/lib/server/types.js';
 import { freshDb, nominateAs } from './helpers.js';
 
@@ -116,5 +118,21 @@ describe('comment reactions', () => {
 		const comment = addComment(db, 'ala', film, 'the zone waits');
 		expect(() => reactComment(db, 'bartek', comment, '🦑')).toThrow(RuleError);
 		expect(() => reactComment(db, 'bartek', 999, '👍')).toThrow(/no such comment/);
+	});
+});
+
+describe('taking a comment down', () => {
+	it('removes the comment and every reaction to it, and leaves the rest', () => {
+		const { db, rules } = freshDb('banked');
+		const id = nominateAs(db, rules, 'ala', 'Stalker');
+		const gone = addComment(db, 'bartek', id, 'spoiler');
+		const kept = addComment(db, 'celina', id, 'strefa');
+		reactComment(db, 'ala', gone, REACTIONS[0]);
+		reactComment(db, 'ala', kept, REACTIONS[0]);
+
+		expect(deleteComment(db, gone)).toBe('spoiler');
+		expect(commentsOf(db, [id]).get(id)!.map((c) => c.id)).toEqual([kept]);
+		expect(db.prepare('SELECT comment_id FROM comment_react').all()).toEqual([{ comment_id: kept }]);
+		expect(() => deleteComment(db, gone)).toThrowError(expect.objectContaining({ code: 'no_comment' }));
 	});
 });

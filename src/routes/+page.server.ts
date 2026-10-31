@@ -15,7 +15,8 @@ import {
 	standings
 } from '$lib/server/films';
 import { holdOf } from '$lib/server/holds';
-import { addComment, commentsOf, reactComment } from '$lib/server/comments';
+import { addComment, commentsOf, deleteComment, reactComment } from '$lib/server/comments';
+import { logAdmin, requireAdmin } from '$lib/server/admin';
 import { seenOf, toggleSeen } from '$lib/server/seen';
 import { ruleFail } from '$lib/server/respond';
 import { detailsOf } from '$lib/server/tmdb';
@@ -197,6 +198,18 @@ export const actions: Actions = {
 				String(form.get('body') ?? '')
 			);
 			return { commented: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	uncomment: async ({ request, locals }) => {
+		const person = requireAdmin(locals.person);
+		const form = await request.formData();
+		const id = Number(form.get('commentId'));
+		try {
+			logAdmin(getDb(), person.id, 'comment.delete', String(id), deleteComment(getDb(), id));
+			return { uncommented: true };
 		} catch (error) {
 			return ruleFail(error);
 		}

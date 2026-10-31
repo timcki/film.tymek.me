@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { reassignFilm, recordWatched, type RecordedFilm } from '../src/lib/server/manage.js';
+import { moveWatched, reassignFilm, recordWatched, type RecordedFilm } from '../src/lib/server/manage.js';
 import { filmEvenings, roundEvenings } from '../src/lib/server/evenings.js';
 import { filmById, setPoints, standings } from '../src/lib/server/films.js';
 import { applyAttrition } from '../src/lib/server/weeks.js';
@@ -167,6 +167,49 @@ describe('what a written-down film is kept out of', () => {
 		// a film night earns its nominator a nomination and a watching; an outing earns nothing
 		expect(personById(db, 'bartek')!.xp).toBe(16);
 		expect(personById(db, 'celina')!.xp).toBe(0);
+	});
+});
+
+describe('putting a written-down evening right', () => {
+	it('turns a film night into an outing and back, and the XP follows', () => {
+		const { db } = fourRounds();
+		const id = recordWatched(db, film());
+		expect(personById(db, 'ala')!.xp).toBe(16);
+
+		moveWatched(db, id, new Date('2026-07-26T15:00:00Z'), 'cinema');
+		expect(filmById(db, id)).toMatchObject({
+			watched_week: 3,
+			outing: 'cinema',
+			watched_at: '2026-07-26T15:00:00.000Z'
+		});
+		expect(personById(db, 'ala')!.xp).toBe(0);
+
+		// its own night is no clash with itself
+		moveWatched(db, id, new Date(NIGHTS[2]), null);
+		moveWatched(db, id, new Date(NIGHTS[2]), null);
+		expect(filmById(db, id)).toMatchObject({ watched_week: 3, outing: null, watched_at: null });
+		expect(personById(db, 'ala')!.xp).toBe(16);
+	});
+
+	it('will not put it on a night another film already has', () => {
+		const { db } = fourRounds();
+		recordWatched(db, film());
+		const mirror = recordWatched(
+			db,
+			film({ title: 'Mirror', tmdbId: 1396, at: new Date('2026-07-19T15:00:00Z'), outing: 'cinema' })
+		);
+		expect(() => moveWatched(db, mirror, new Date(NIGHTS[1]), null)).toThrowError(
+			expect.objectContaining({ code: 'night_taken', params: { title: 'Stalker' } })
+		);
+	});
+
+	it('leaves a film a round decided on that round’s night', () => {
+		const { db } = fourRounds();
+		const id = addFilm(db, 'Solaris', 'bartek', 1);
+		db.prepare(`UPDATE film SET status = 'watched', watched_week = 1 WHERE id = ?`).run(id);
+		expect(() => moveWatched(db, id, new Date(NIGHTS[1]), 'cinema')).toThrowError(
+			expect.objectContaining({ code: 'not_a_record' })
+		);
 	});
 });
 

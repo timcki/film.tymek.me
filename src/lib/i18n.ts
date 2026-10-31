@@ -363,6 +363,8 @@ export type Dict = {
 	commentNone: string;
 	commentPh: string;
 	commentSend: string;
+	commentDelete: string;
+	commentDeleteSure: string;
 
 	tNominated: (title: string) => string;
 	tVoted: (title: string) => string;
@@ -807,6 +809,8 @@ const pl: Dict = {
 	seenBtn: 'Już widziałem',
 	commentPh: 'Napisz komentarz…',
 	commentSend: 'Dodaj komentarz',
+	commentDelete: 'Usuń',
+	commentDeleteSure: 'Na pewno?',
 
 	tNominated: (title) => `Zgłoszono: ${title}`,
 	tVoted: (title) => `Głos na: ${title}`,
@@ -1343,6 +1347,8 @@ const en: Dict = {
 	seenBtn: 'Seen it already',
 	commentPh: 'Add your two cents…',
 	commentSend: 'Add comment',
+	commentDelete: 'Delete',
+	commentDeleteSure: 'Sure?',
 
 	tNominated: (title) => `Nominated ${title}`,
 	tVoted: (title) => `Voted for ${title}`,
