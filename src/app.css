@@ -1567,8 +1567,31 @@ button.holdchip:hover {
    stands its own on a stage instead (below, in the wide layout) */
 .film:has(.fbase) .pw,
 .film:has(.fbase) .p {
-	flex-basis: 88px;
-	width: 88px;
+	flex-basis: 100px;
+	width: 100px;
+}
+/* and it runs the card's whole height, so the column beside it never leaves
+   a gap under it; a taller card crops the poster a touch at its sides */
+.film:has(.fbase):not(.held) .pw {
+	align-self: stretch;
+}
+.film:has(.fbase):not(.held) .p {
+	height: 100%;
+	min-height: 150px;
+	aspect-ratio: auto;
+}
+/* a desktop's podium keeps its poster on its stage, at the poster's own shape */
+@media (min-width: 960px) {
+	.wrap.home .film.lead:has(.fbase) .pw {
+		width: auto;
+		align-self: stretch;
+	}
+	.wrap.home .film.lead:has(.fbase) .p {
+		width: 136px;
+		height: auto;
+		min-height: 0;
+		aspect-ratio: 2/3;
+	}
 }
 /* seen-it in one glance: the count of everyone, the accent for the viewer */
 .eyebtn {
@@ -4477,9 +4500,16 @@ details[open] > .iconbtn {
    and fade in a beat behind it */
 .crowdfold {
 	flex-basis: 100%;
+	/* folded it is nothing at all; the card's row gap is taken off cards that
+	   carry it (below), and it brings its own space when it opens */
+	margin-top: 0;
+	/* its own height, never the card's leftover stretched over it */
+	align-self: flex-start;
 	display: grid;
 	grid-template-rows: 0fr;
-	transition: grid-template-rows 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+	transition:
+		grid-template-rows 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+		margin-top 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .crowdfold.open {
 	grid-template-rows: 1fr;
@@ -4491,6 +4521,17 @@ details[open] > .iconbtn {
 	   the edge is never shaved */
 	padding: 0 8px;
 	margin: 0 -8px;
+}
+.crowdfold.open {
+	margin-top: 12px;
+}
+/* a card with the faces ends at the foot of its poster: no gap waiting for
+   a row that is shut, and the fine print under it keeps its own space */
+.film:has(.crowdfold) {
+	row-gap: 0;
+}
+.film:has(.crowdfold) .cardfoot {
+	margin-top: 10px;
 }
 .crowd {
 	display: grid;
