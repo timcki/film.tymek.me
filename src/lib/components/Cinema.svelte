@@ -33,14 +33,14 @@
 	const plants: Plant[] = [
 		// round the sofa
 		{ kind: 'succulent', by: 'sofa', at: -114, w: 22, wide: true },
-		{ kind: 'monstera', by: 'sofa', at: 128, w: 64, sway: 'fast', wide: true },
-		{ kind: 'fig', by: 'sofa', at: 184, w: 46, sway: 'slow', wide: true },
+		{ kind: 'monstera', by: 'sofa', at: 136, w: 64, sway: 'fast', wide: true },
+		{ kind: 'fig', by: 'sofa', at: 200, w: 46, sway: 'slow', wide: true },
 		{ kind: 'sprout', by: 'sofa', at: 226, w: 40, sway: 'slow', wide: true },
 		// round the beanbag
 		{ kind: 'monstera', by: 'bag', at: -100, w: 64, sway: 'slow', wide: true },
 		{ kind: 'fern', by: 'bag', at: 34, w: 52, sway: 'fast', wide: true },
 		// against the left wall
-		{ kind: 'tree', by: 'left', at: 46, w: 52, sway: 'slow' },
+		{ kind: 'tree', by: 'left', at: 40, w: 48, sway: 'slow' },
 		// against the right wall
 		{ kind: 'fern', by: 'right', at: -12, w: 52, sway: 'slow' },
 		{ kind: 'snake', by: 'sofa', at: 98, w: 40 },
@@ -181,6 +181,10 @@
 	     after dark, the sun by day), and its sill out into the room, pots on it -->
 	<svg class="wall" viewBox="0 0 180 140" preserveAspectRatio="xMinYMax meet">
 		<defs>
+			<radialGradient id="orbglow">
+				<stop offset="0.3" style="stop-color: var(--orb); stop-opacity: 0.45" />
+				<stop offset="1" style="stop-color: var(--orb); stop-opacity: 0" />
+			</radialGradient>
 			<linearGradient id="walllight" x1="0" y1="0" x2="1" y2="0.6">
 				<stop offset="0" style="stop-color: var(--window-light)" />
 				<stop offset="1" style="stop-color: var(--window-light); stop-opacity: 0" />
@@ -193,14 +197,19 @@
 		<rect class="frame" x="0" y="10" width="13" height="4" />
 		<rect class="sill" x="0" y="76" width="40" height="3.5" rx="1.2" />
 		<path class="sillshade" d="M12 79.5h26" />
+		<!-- in the corner on the floor, a ball lamp, softly lit -->
+		<circle class="orbglow" cx="22" cy="122" r="22" />
+		<!-- its foot: a little stand the ball sits in -->
+		<path class="orbfoot" d="M16 132.5h12l-1.6-4.4h-8.8z" />
+		<circle class="orb" cx="22" cy="121" r="7.5" />
 		<!-- on the sill, two small leafy pots -->
-		<path class="pot" d="M15 70h8l-1 6h-6z" />
-		{#each [[19, 65, 0], [15.5, 67, -55], [22.5, 67, 55]] as [x, y, r] (`${x}${y}`)}
+		<path class="pot" d="M13 70h7l-1 6h-5z" />
+		{#each [[16.5, 65, 0], [13.5, 67, -55], [19.5, 67, 55]] as [x, y, r] (`${x}${y}`)}
 			<ellipse class="leaf l2" cx={x} cy={y} rx="2" ry="4.4" transform="rotate({r} {x} {y})" />
 		{/each}
-		<path class="pot" d="M27 70h9l-1 6h-7z" />
-		<path class="vine" d="M28.5 71c-2 4-2 9-1 13" />
-		{#each [[28, 76], [28, 81], [31, 64], [29, 67], [34, 66]] as [x, y] (`${x}${y}`)}
+		<path class="pot" d="M21.5 70h8l-1 6h-6z" />
+		<path class="vine" d="M23 71c-2 4-2 9-1 13" />
+		{#each [[22.5, 76], [22.5, 81], [25.5, 64], [23.5, 67], [28, 66]] as [x, y] (`${x}${y}`)}
 			<ellipse class="leaf l1" cx={x} cy={y} rx="2" ry="1.6" />
 		{/each}
 	</svg>
@@ -239,10 +248,15 @@
 		<ellipse class="contact" cx="17" cy="111.5" rx="11" ry="1.6" />
 		<path class="pole" d="M17 30v80" />
 		<path class="base" d="M9 111.4h16" />
-		<path class="shade" d="M7 30h20l-5-22H12z" />
 	</svg>
 
 	{#each plants as p, i (i)}{@render plant(p)}{/each}
+
+	<!-- the lamp's shade, over the leaves round it, so the lamp reads among
+	     them while its foot stays behind the pots -->
+	<svg class="thing lamp" style="left:calc(var(--sofa-x) + 92px);--w:34px" viewBox="0 0 34 113">
+		<path class="shade" d="M7 30h20l-5-22H12z" />
+	</svg>
 
 	<!-- with bananas on, a banana plant, fruit and all -->
 	<svg class="thing plant sway nana wide" style="left:70px;--w:56px" viewBox="0 0 56 112">
@@ -257,13 +271,15 @@
 		</g>
 	</svg>
 
-	{#each behind as p, i (i)}{@render plant(p)}{/each}
+	<!-- behind the sofa, further back in the room, so their pots sit higher
+	     than its foot and never show under it -->
+	<div class="behind">{#each behind as p, i (i)}{@render plant(p)}{/each}</div>
 
 
 	<!-- the sofa from behind: the back of it, the group's heads over it, one
 	     leaning on the next, and the red blanket thrown over the top -->
 	<svg class="thing sofa" style="left:calc(var(--sofa-x) - 90px);--w:180px" viewBox="0 0 180 77">
-		<ellipse class="contact" cx="90" cy="75" rx="92" ry="2.8" />
+		<ellipse class="contact" cx="90" cy="76" rx="94" ry="3.2" />
 		<g class="figure">
 			<circle cx="52" cy="16" r="10" />
 			<path d="M36 40a16 14 0 0 1 32 0z" />
@@ -272,10 +288,12 @@
 			<circle cx="128" cy="18" r="9.5" />
 			<path d="M113 40a15 13 0 0 1 30 0z" />
 		</g>
-		<rect class="arm" x="0" y="36" width="24" height="40" rx="10" />
-		<rect class="arm" x="156" y="36" width="24" height="40" rx="10" />
+		<!-- arms rounded on top only: the sofa meets the floor flat, all along -->
+		<path class="arm" d="M0 76V46a10 10 0 0 1 10-10h4a10 10 0 0 1 10 10v30z" />
+		<path class="arm" d="M156 76V46a10 10 0 0 1 10-10h4a10 10 0 0 1 10 10v30z" />
 		<path class="back" d="M12 76V40c0-8 6-12 14-12h128c8 0 14 4 14 12v36z" />
 		<path class="seam" d="M22 44h136" />
+		<rect class="plinth" x="0" y="72" width="180" height="4.5" />
 		<path
 			class="blanket"
 			d="M98 30c18-4 40-4 58 0 6 2 10 6 10 12v22c0 4-4 6-8 4l-6-4c-2 6-6 8-10 4-4-6-2-14-6-18-8-4-22-2-30-4-8-2-12-12-8-16z"
@@ -309,7 +327,7 @@
 	   window to make room for the screen between them */
 	.room {
 		--sofa-x: calc(50% + 56px);
-		--bag-x: calc(50% - 70px);
+		--bag-x: calc(50% - 78px);
 		position: absolute;
 		left: 0;
 		right: 0;
@@ -403,6 +421,17 @@
 	.wall .sillshade {
 		stroke: rgba(0, 0, 0, 0.25);
 		stroke-width: 1.5;
+	}
+	.wall .orb {
+		fill: var(--orb);
+		filter: drop-shadow(0 0 6px var(--orb));
+	}
+	.wall .orbfoot {
+		fill: var(--orb-foot);
+	}
+	.wall .orbglow {
+		fill: url(#orbglow);
+		animation: breathe 5s ease-in-out infinite alternate;
 	}
 	.wall .inlight {
 		fill: url(#walllight);
@@ -499,6 +528,13 @@
 		fill: var(--sofa);
 	}
 
+	.behind {
+		position: absolute;
+		inset: 0 0 12px;
+	}
+	.plinth {
+		fill: rgba(0, 0, 0, 0.22);
+	}
 	.seam {
 		fill: none;
 		stroke: var(--sofa-lit);

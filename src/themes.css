@@ -198,6 +198,8 @@
 	--zzz: rgba(240, 225, 200, 0.75);
 	--projection: 0.92;
 	--wall: #2b2520;
+	--orb: #ffd9a0;
+	--orb-foot: #8a6a4a;
 	--window-sky: #1b2440;
 	--window-glass: rgba(180, 205, 255, 0.55);
 	--window-frame: #4a3a2e;
@@ -233,6 +235,8 @@
 	--zzz: rgba(90, 70, 60, 0.7);
 	--projection: 0.62;
 	--wall: #e2d3c0;
+	--orb: #f5b867;
+	--orb-foot: #7a5a42;
 	--window-sky: #cfe8f6;
 	--window-glass: rgba(255, 255, 255, 0.9);
 	--window-frame: #c9b394;
