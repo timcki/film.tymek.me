@@ -98,13 +98,16 @@
 			try {
 				const response = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
 				const body = await response.json();
+				// a slow answer to an older query must not land over a newer one
+				if (q !== query.trim()) return;
 				results = body.results ?? [];
 				degraded = Boolean(body.degraded);
 			} catch {
+				if (q !== query.trim()) return;
 				degraded = true;
 				results = [];
 			} finally {
-				searching = false;
+				if (q === query.trim()) searching = false;
 			}
 		}, 250);
 	}

@@ -4,7 +4,7 @@
  * voting had no say in it, so nothing that measures the game counts it. Kept
  * out of server/ because the admin form offers the same choices.
  */
-export const OUTINGS = ['cinema', 'other'] as const;
+export const OUTINGS = ['cinema', 'trip'] as const;
 
 export type Outing = (typeof OUTINGS)[number];
 

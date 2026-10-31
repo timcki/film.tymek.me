@@ -2961,6 +2961,24 @@ details[open] > .iconbtn {
 	box-shadow: var(--lift);
 	position: relative;
 }
+/* on the watched wall a card opens the film */
+button.wcard {
+	padding: 0;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+button.wcard:hover img,
+button.wcard:focus-visible img {
+	filter: none;
+}
+.dlink {
+	margin: 12px 4px 16px;
+	font-size: 13px;
+}
+.dlink a {
+	color: var(--accent);
+}
 .wcard img,
 .wcard .noimg {
 	width: 100%;

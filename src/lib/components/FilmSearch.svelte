@@ -46,19 +46,22 @@
 			try {
 				const response = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
 				const body = await response.json();
-				results = body.results ?? [];
+				// a slow answer to an older query must not land over a newer one
+				if (q === query.trim()) results = body.results ?? [];
 			} catch {
-				results = [];
+				if (q === query.trim()) results = [];
 			} finally {
-				searching = false;
+				if (q === query.trim()) searching = false;
 			}
 		}, 250);
 	}
 
 	function take(film: Picked) {
+		clearTimeout(timer);
 		onpick(film);
 		query = '';
 		results = [];
+		searching = false;
 	}
 
 	/** a title TMDB does not have is still a title worth writing down */

@@ -231,13 +231,16 @@ function backersFor(db: DB, filmIds: number[]): Map<number, Face[]> {
 	return faces;
 }
 
-export type WatchedEvening = ManagedFilm & {
+export type WatchedEvening = RoundFilm & {
 	evening: number;
 	/** when the evening was: an outing's own date, or its round's night */
 	at: string;
 };
 
-/** every film we have watched, newest evening first: the record the admin keeps */
+/**
+ * Every film we have watched, newest evening first: the record the admin keeps,
+ * and the wall everybody else looks at.
+ */
 export function watchedRecord(db: DB): WatchedEvening[] {
 	const evenings = filmEvenings(db);
 	const nights = new Map(
@@ -246,11 +249,16 @@ export function watchedRecord(db: DB): WatchedEvening[] {
 		)
 	);
 	const rows = db.prepare(`${FILM_SELECT} WHERE f.status = 'watched'`).all() as FilmRow[];
+	const backers = backersFor(
+		db,
+		rows.map((row) => row.id)
+	);
 	return rows
 		.map((row) => {
 			const film = toManaged(row);
 			return {
 				...film,
+				backers: backers.get(film.id) ?? [],
 				evening: evenings.get(film.id) ?? 0,
 				at: film.watched_at ?? nights.get(film.watched_week ?? 0) ?? film.created_at
 			};

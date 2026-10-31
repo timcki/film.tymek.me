@@ -205,7 +205,7 @@ export type Dict = {
 	/* --------------------------------------------------- the statistics screen -- */
 	tabStats: string;
 	statsH: string;
-	statsLink: string;
+	tmdbLink: string;
 	lensPeople: string;
 	lensFilms: string;
 	eraApp: string;
@@ -519,7 +519,7 @@ const pl: Dict = {
 	themeBanana: 'Bananowo',
 
 	evening: (n) => `Wieczorek ${n}`,
-	outing: (where) => (where === 'cinema' ? 'Kino' : 'Gdzie indziej'),
+	outing: (where) => (where === 'cinema' ? 'Kino' : 'Wyjazd'),
 	// tiered: only the unit that matters now, down to seconds in the last minute
 	timeLeft: (d, h, m, s) => {
 		if (d) return plLeft(d, 'dzień', 'dni', 'dni');
@@ -636,7 +636,7 @@ const pl: Dict = {
 	thWatched: 'Obejrzane',
 	tabStats: 'Statystyki',
 	statsH: 'Statystyki',
-	statsLink: 'Zobacz liczby',
+	tmdbLink: 'Zobacz na TMDB',
 	lensPeople: 'Ludzie',
 	lensFilms: 'Filmy',
 	eraApp: 'Od startu apki',
@@ -1058,7 +1058,7 @@ const en: Dict = {
 	themeBanana: 'Bananas',
 
 	evening: (n) => `Night ${n}`,
-	outing: (where) => (where === 'cinema' ? 'Cinema' : 'Elsewhere'),
+	outing: (where) => (where === 'cinema' ? 'Cinema' : 'Trip'),
 	// tiered: only the unit that matters now, down to seconds in the last minute
 	timeLeft: (d, h, m, s) =>
 		d
@@ -1168,7 +1168,7 @@ const en: Dict = {
 	thWatched: 'Watched',
 	tabStats: 'Stats',
 	statsH: 'Statistics',
-	statsLink: 'See the numbers',
+	tmdbLink: 'See it on TMDB',
 	lensPeople: 'People',
 	lensFilms: 'Films',
 	eraApp: 'Since the app',

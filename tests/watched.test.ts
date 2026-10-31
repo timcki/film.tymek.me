@@ -91,7 +91,7 @@ describe('writing down a film we watched', () => {
 	it('takes an outing in the round still running, which moves its night along', () => {
 		const { db } = fourRounds();
 		expect(roundEvenings(db)[4]).toBe(1);
-		recordWatched(db, film({ at: new Date('2026-08-01T19:00:00Z'), outing: 'other' }));
+		recordWatched(db, film({ at: new Date('2026-08-01T19:00:00Z'), outing: 'trip' }));
 		expect(roundEvenings(db)[4]).toBe(2);
 	});
 
