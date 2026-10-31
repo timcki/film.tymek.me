@@ -33,7 +33,7 @@ export type AdminDict = {
 	calClosesRound: string;
 	calOverdue: string;
 	calSkipped: string;
-	calUsed: (week: number) => string;
+	calUsed: (evening: number) => string;
 	calRunsTo: (date: string) => string;
 	calSkip: string;
 	calUnskip: string;
@@ -75,7 +75,7 @@ export type AdminDict = {
 	/* films */
 	filH: string;
 	filStatus: (status: string) => string;
-	filBy: (name: string, week: number) => string;
+	filBy: (name: string, evening: number) => string;
 	filBallots: (n: number) => string;
 	filEdit: string;
 	filSave: string;
@@ -177,7 +177,7 @@ const pl: AdminDict = {
 	calClosesRound: 'zamyka bieżącą rundę',
 	calOverdue: 'termin minął',
 	calSkipped: 'pominięty',
-	calUsed: (week) => `runda ${week}`,
+	calUsed: (evening) => `wieczorek ${evening}`,
 	calRunsTo: (date) => `runda potrwa do ${date}`,
 	calSkip: 'Pomiń',
 	calUnskip: 'Przywróć',
@@ -219,7 +219,7 @@ const pl: AdminDict = {
 
 	filH: 'Filmy',
 	filStatus: (status) => STATUS_PL[status] ?? status,
-	filBy: (name, week) => `${name}, tydzień ${week}`,
+	filBy: (name, evening) => `${name}, na wieczorek ${evening}`,
 	filBallots: (n) => `${n} głosów w bazie`,
 	filEdit: 'Edytuj',
 	filSave: 'Zapisz',
@@ -382,7 +382,7 @@ const en: AdminDict = {
 	calClosesRound: 'closes the current round',
 	calOverdue: 'overdue',
 	calSkipped: 'skipped',
-	calUsed: (week) => `round ${week}`,
+	calUsed: (evening) => `night ${evening}`,
 	calRunsTo: (date) => `the round runs to ${date}`,
 	calSkip: 'Skip',
 	calUnskip: 'Restore',
@@ -424,7 +424,7 @@ const en: AdminDict = {
 
 	filH: 'Films',
 	filStatus: (status) => STATUS_EN[status] ?? status,
-	filBy: (name, week) => `${name}, week ${week}`,
+	filBy: (name, evening) => `${name}, for night ${evening}`,
 	filBallots: (n) => `${n} ballots on record`,
 	filEdit: 'Edit',
 	filSave: 'Save',

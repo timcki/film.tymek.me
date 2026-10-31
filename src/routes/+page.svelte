@@ -28,6 +28,8 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const T = $derived(dictFor(data.lang));
+	/** a round said as the evening it ends in */
+	const nominatedFor = (week: number) => T.nomPop(data.evenings[week]);
 	const rules = $derived(data.rules);
 	const votes = $derived(isVotes(rules));
 	const left = $derived(data.person?.left ?? 0);
@@ -229,7 +231,7 @@
 			face,
 			sub,
 			tap,
-			rows.map((row) => ({ label: T.week(row.week), value: String(row.points) }))
+			rows.map((row) => ({ label: T.evening(data.evenings[row.week]), value: String(row.points) }))
 		);
 		if (!next) return;
 		shutPops();
@@ -800,14 +802,14 @@
 				aria-label={film.nominator.name}
 				onpointerenter={(event) => {
 					mousing = event.pointerType === 'mouse';
-					if (mousing) peekAt(event.currentTarget, film.nominator, T.nomPop(film.added_week), false);
+					if (mousing) peekAt(event.currentTarget, film.nominator, nominatedFor(film.added_week), false);
 				}}
 				onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
 				onclick={(event) =>
-					!mousing && peekAt(event.currentTarget, film.nominator, T.nomPop(film.added_week), true)}
+					!mousing && peekAt(event.currentTarget, film.nominator, nominatedFor(film.added_week), true)}
 				onfocus={(event) => {
 					if (event.currentTarget.matches(':focus-visible'))
-						peekAt(event.currentTarget, film.nominator, T.nomPop(film.added_week), false);
+						peekAt(event.currentTarget, film.nominator, nominatedFor(film.added_week), false);
 				}}
 				onblur={unpeek}
 			>
@@ -1174,7 +1176,7 @@
 					{#if detail.genre}<span class="mchip">{detail.genre}</span>{/if}
 					{#if detail.runtime}<span class="mchip">{T.minutes(detail.runtime)}</span>{/if}
 					{@render facePill(detail.nominator)}
-					<span class="dwhen">{T.nomPop(detail.added_week)}</span>
+					<span class="dwhen">{nominatedFor(detail.added_week)}</span>
 				</div>
 			</div>
 
@@ -1549,7 +1551,7 @@
 	>
 		{#each scorePop.rows as row (row.week)}
 			<div class="srow">
-				<span>{T.week(row.week)}</span>
+				<span>{T.evening(data.evenings[row.week])}</span>
 				<b>
 					{row.points} × {row.mult.toFixed(2)}
 					{row.mult === 1 ? '=' : '≈'}

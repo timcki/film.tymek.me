@@ -47,13 +47,14 @@ describe('nominations', () => {
 		expect(() => nominateAs(db, rules, 'bartek', 'Satantango')).toThrow(/already on the list/);
 	});
 
-	it('rejects nominating something already watched, naming the week', () => {
+	it('rejects nominating something already watched, naming the evening', () => {
 		const { db, rules } = freshDb('banked');
 		const film = addFilm(db, 'Stalker', 'ala', 1);
 		ensureWeek(db, 12);
 		db.prepare(`UPDATE film SET status = 'watched', watched_week = 12 WHERE id = ?`).run(film);
 		openWeek(db, 13, new Date()); // a live week to nominate into
-		expect(() => nominateAs(db, rules, 'bartek', 'Stalker')).toThrow(/watched Stalker in week 12/);
+		// the first film anybody watched, however many weeks went by before it
+		expect(() => nominateAs(db, rules, 'bartek', 'Stalker')).toThrow(/watched Stalker on night 1/);
 	});
 
 	// 8. re-nominating a dropped film succeeds, starts at zero, consumes the slot

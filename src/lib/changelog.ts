@@ -124,6 +124,24 @@ export const CHANGELOG: ChangelogEntry[] = [
 				'The nights before the app have no ballots behind them, so by default we count from the week we started voting in. The switch at the top shows the whole history.'
 			]
 		}
+	},
+	{
+		id: 6,
+		date: '2026-10-31',
+		title: {
+			pl: 'Tygodnie są teraz wieczorkami',
+			en: 'Weeks are now nights'
+		},
+		body: {
+			pl: [
+				'Zamiast „Tydzień 59” jest teraz „Wieczorek” z numerem. Liczymy tylko wieczory, na których coś obejrzeliśmy, więc tygodnie bez spotkania nie robią już dziur w historii i numery są mniejsze niż wcześniej.',
+				'Zasady się nie zmieniają: punkty, zgłoszenia i głosowanie działają tak samo jak do tej pory.'
+			],
+			en: [
+				'Instead of "Week 59" it now says "Night" and a number. Only the nights we actually watched something count, so weeks we did not meet no longer leave gaps in the history, and the numbers are smaller than before.',
+				'The rules have not changed: points, nominations and voting work exactly as they did.'
+			]
+		}
 	}
 ];
 

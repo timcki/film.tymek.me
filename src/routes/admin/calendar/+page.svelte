@@ -155,7 +155,7 @@
 		<div class="nmain">
 			<b>{when(night.at)}</b>
 			<span class="nmeta">
-				<span class="badge">{A.calUsed(night.week_number ?? 0)}</span>
+				<span class="badge">{A.calUsed(data.evenings[night.week_number ?? 0])}</span>
 				{#if night.note}<span class="nnote">{night.note}</span>{/if}
 			</span>
 		</div>

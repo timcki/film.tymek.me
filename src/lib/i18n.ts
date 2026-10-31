@@ -110,7 +110,8 @@ export type Dict = {
 	themeLight: string;
 	themeBanana: string;
 
-	week: (n: number) => string;
+	/** a film night by its number: the nights we watched something, counted from the first */
+	evening: (n: number) => string;
 	/** the whole phrase, verb included, because the bar has no room for a sentence around it */
 	timeLeft: (d: number, h: number, m: number, s: number) => string;
 	/** the same, for a bar with no room for the verb */
@@ -148,8 +149,7 @@ export type Dict = {
 	holdSpent: (title: string) => string;
 	holdSig: (name: string) => string;
 
-	addedBy: (name: string, week: number) => string;
-	nomPop: (week: number) => string;
+	nomPop: (evening: number) => string;
 	nomCta: string;
 	nomCtaSub: string;
 	nomDone: (title: string) => string;
@@ -198,7 +198,6 @@ export type Dict = {
 	thPerson: string;
 	thNominated: string;
 	thWatched: string;
-	noWinners: (n: number) => string;
 
 	/* --------------------------------------------------- the statistics screen -- */
 	tabStats: string;
@@ -516,7 +515,7 @@ const pl: Dict = {
 	themeLight: 'Jasny',
 	themeBanana: 'Bananowo',
 
-	week: (n) => `Tydzień ${n}`,
+	evening: (n) => `Wieczorek ${n}`,
 	// tiered: only the unit that matters now, down to seconds in the last minute
 	timeLeft: (d, h, m, s) => {
 		if (d) return plLeft(d, 'dzień', 'dni', 'dni');
@@ -557,7 +556,7 @@ const pl: Dict = {
 	btnRenominate: 'Zgłoś ponownie',
 	warnDrops: 'odpada w tym tyg, jeśli nie dostanie głosów',
 	warnFades: (n) => `znika za ${n} ${plWeeks(n)}`,
-	campaign: (n) => `${n}. tydzień kampanii`,
+	campaign: (n) => `${n}. runda kampanii`,
 
 	holdCta: 'Liberum veto',
 	holdMine: 'Uśpiony przez ciebie',
@@ -575,8 +574,7 @@ const pl: Dict = {
 	holdSpent: (title) => `W tym tygodniu uśpiony jest już ${title}.`,
 	holdSig: (name) => name,
 
-	addedBy: (name, week) => `${name}, tydzień ${week}`,
-	nomPop: (week) => `Zgłoszenie z tygodnia ${week}`,
+	nomPop: (evening) => `Zgłoszenie na wieczorek ${evening}`,
 	nomCta: '+ Zgłoś film',
 	nomCtaSub: 'jedno zgłoszenie na osobę w tygodniu',
 	nomDone: (title) => `Twoje zgłoszenie w tym tygodniu: ${title}`,
@@ -632,8 +630,6 @@ const pl: Dict = {
 	thPerson: 'Osoba',
 	thNominated: 'Zgłoszone',
 	thWatched: 'Obejrzane',
-	noWinners: (n) => `${n} ${plWeeks(n)} zamknięto bez głosów, więc nic nie oglądaliśmy.`,
-
 	tabStats: 'Statystyki',
 	statsH: 'Statystyki',
 	statsLink: 'Zobacz liczby',
@@ -744,7 +740,7 @@ const pl: Dict = {
 
 	hostH: 'Prowadzący',
 	hostIdle: 'Sala jeszcze nie głosuje',
-	hostClose: 'Zamknij tydzień teraz',
+	hostClose: 'Zamknij rundę teraz',
 	hostQrH: 'Kod dla sali (można wyświetlić)',
 	hostJoinH: 'Zeskanuj, żeby głosować',
 	hostCastH: 'Zagłosuj za kogoś, komu padł telefon',
@@ -876,7 +872,7 @@ const pl: Dict = {
 			case 'no_title':
 				return 'Podaj tytuł filmu.';
 			case 'dup_watched':
-				return `${p.title} oglądaliśmy w tygodniu ${p.week}.`;
+				return `${p.title} oglądaliśmy na wieczorku ${p.evening}.`;
 			case 'dup_archived':
 				return `${p.title} jest w archiwum; jeden głos go przywraca.`;
 			case 'dup_active':
@@ -1057,7 +1053,7 @@ const en: Dict = {
 	themeLight: 'Light',
 	themeBanana: 'Bananas',
 
-	week: (n) => `Week ${n}`,
+	evening: (n) => `Night ${n}`,
 	// tiered: only the unit that matters now, down to seconds in the last minute
 	timeLeft: (d, h, m, s) =>
 		d
@@ -1094,7 +1090,7 @@ const en: Dict = {
 	btnRenominate: 'Re-nominate',
 	warnDrops: 'drops this week unless it gets votes',
 	warnFades: (n) => `fades in ${n} ${en2(n, 'week', 'weeks')}`,
-	campaign: (n) => `week ${n} of this campaign`,
+	campaign: (n) => `round ${n} of this campaign`,
 
 	holdCta: 'Liberum veto',
 	holdMine: 'Asleep, yours',
@@ -1111,8 +1107,7 @@ const en: Dict = {
 	holdSpent: (title) => `${title} is already asleep this week.`,
 	holdSig: (name) => name,
 
-	addedBy: (name, week) => `${name}, week ${week}`,
-	nomPop: (week) => `Nominated in week ${week}`,
+	nomPop: (evening) => `Nominated for night ${evening}`,
 	nomCta: '+ Nominate a film',
 	nomCtaSub: 'one nomination per person per week',
 	nomDone: (title) => `You nominated ${title} this week`,
@@ -1166,9 +1161,6 @@ const en: Dict = {
 	thPerson: 'Person',
 	thNominated: 'Nominated',
 	thWatched: 'Watched',
-	noWinners: (n) =>
-		`${n} ${en2(n, 'week', 'weeks')} closed with nobody voting, so nothing was watched.`,
-
 	tabStats: 'Stats',
 	statsH: 'Statistics',
 	statsLink: 'See the numbers',
@@ -1279,7 +1271,7 @@ const en: Dict = {
 
 	hostH: 'Host',
 	hostIdle: 'The room is not voting yet',
-	hostClose: 'Close the week now',
+	hostClose: 'Close the round now',
 	hostQrH: 'Room QR (safe to project)',
 	hostJoinH: 'Scan to vote',
 	hostCastH: 'Cast for someone whose phone is dead',

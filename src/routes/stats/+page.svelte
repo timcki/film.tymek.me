@@ -518,7 +518,7 @@
 		{#each filmsIn as film (film.id)}
 			<div class="stat">
 				<span>{film.title}{film.year ? ` (${film.year})` : ''}</span>
-				<b>{T.week(film.week)}</b>
+				<b>{T.evening(data.evenings[film.week])}</b>
 			</div>
 		{/each}
 	</div>

@@ -17,6 +17,7 @@ import {
 import { heldIn, holdOf, liftHold, placeHold } from './holds.js';
 import { rexpAll } from './xp.js';
 import { requireListWeek } from './weeks.js';
+import { eveningOf } from './evenings.js';
 
 export function filmById(db: DB, id: number): Film | undefined {
 	return db.prepare('SELECT * FROM film WHERE id = ?').get(id) as Film | undefined;
@@ -264,11 +265,12 @@ export function cleanPoster(url: string | null | undefined): string | null {
 	return trimmed;
 }
 
-function duplicate(clash: Film): RuleError {
+function duplicate(db: DB, clash: Film): RuleError {
 	if (clash.status === 'watched') {
-		return new RuleError('dup_watched', `we watched ${clash.title} in week ${clash.watched_week}`, {
+		const evening = eveningOf(db, clash.watched_week ?? 0);
+		return new RuleError('dup_watched', `we watched ${clash.title} on night ${evening}`, {
 			title: clash.title,
-			week: clash.watched_week ?? 0
+			evening
 		});
 	}
 	if (clash.status === 'archived') {
@@ -298,7 +300,7 @@ export function assertNotDuplicate(db: DB, input: NominationInput): void {
 			   AND (archival = 0 OR status = 'watched') LIMIT 1`
 			)
 			.get(input.tmdbId) as Film | undefined;
-		if (clash) throw duplicate(clash);
+		if (clash) throw duplicate(db, clash);
 	}
 
 	const byTitle = db
@@ -307,7 +309,7 @@ export function assertNotDuplicate(db: DB, input: NominationInput): void {
 			   AND (archival = 0 OR status = 'watched') LIMIT 1`
 		)
 		.get(key) as Film | undefined;
-	if (byTitle) throw duplicate(byTitle);
+	if (byTitle) throw duplicate(db, byTitle);
 }
 
 function assertNominationSlot(db: DB, rules: RuleSet, personId: string, week: number): void {

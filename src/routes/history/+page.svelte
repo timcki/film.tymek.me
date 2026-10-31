@@ -18,7 +18,7 @@
 			{/if}
 			<div class="lb">
 				<b>{film.title}</b>
-				{T.week(film.watched_week)}{#if film.final_score !== null}
+				{T.evening(data.evenings[film.watched_week])}{#if film.final_score !== null}
 					· {fmtScore(film.final_score)}
 					{T.unit(film.final_score, votes)}
 				{/if}
@@ -28,10 +28,6 @@
 		<div class="empty" style="grid-column:1/-1">{T.seenEmpty}</div>
 	{/each}
 </div>
-
-{#if data.weeksWithoutWinner}
-	<p class="banner">{T.noWinners(data.weeksWithoutWinner)}</p>
-{/if}
 
 <!-- the wall is the archive; everything that counts anything lives one tap away -->
 <p class="banner accent"><a href="/stats">{T.statsLink}</a></p>

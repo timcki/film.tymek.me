@@ -49,7 +49,7 @@
 			</div>
 			<div class="fmeta">
 				<span class="badge soft">{A.filStatus(film.status)}</span>
-				{A.filBy(film.added_by_name, film.added_week)} · {A.filBallots(film.ballots)}
+				{A.filBy(film.added_by_name, data.evenings[film.added_week])} · {A.filBallots(film.ballots)}
 			</div>
 			{#if film.backers.length}
 				<div class="backers">

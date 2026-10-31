@@ -33,6 +33,7 @@ must be implemented exactly; everything else has room for judgement.
 |---|---|
 | **Person** | One of the six. Has a permanent secret token. |
 | **Week** | A voting cycle. Opens the moment the previous one closes, closes Thursday 20:00 Europe/Warsaw. |
+| **Evening** | A night we watched something, numbered from the first. What a round is called on screen: the week number counts Thursdays, met or not, so it never appears there. A round that ends without a film shares its number with the next. |
 | **Nomination** | Adding a film to the list. One per person per week, free, doesn't bank. |
 | **Ballot** | Points a person has put on a film in a given week. |
 | **Score** | A film's current standing, computed from ballots per the active rule set. |
@@ -766,7 +767,7 @@ live tally, nothing else. Assume a dim room and someone holding a beer.
 **`/me`** — your Device QR with the red warning, rotate button, and your own numbers:
 points spent all-time, films you nominated that got watched, longest campaign.
 
-**`/history`** — watched films newest first with their final scores, plus a small table of
+**`/history`** — watched films newest first, each under its evening (§2) with its final score, plus a small table of
 who has had how many of their nominations watched. That table is the group's own check on
 whether the active rule set is being fair.
 

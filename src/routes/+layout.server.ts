@@ -3,6 +3,7 @@ import { getDb } from '$lib/server/db';
 import { activeRules, demoHome, isDemo } from '$lib/server/config';
 import { PERSONAS, personas, type PersonaKind } from '$lib/server/demo';
 import { currentWeek } from '$lib/server/weeks';
+import { roundEvenings } from '$lib/server/evenings';
 import { openRunoff } from '$lib/server/runoffs';
 import { lookAt } from '$lib/server/specials';
 import { avatarUrl, bankBalance, spentInWeek } from '$lib/server/people';
@@ -94,6 +95,8 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 					closesAt: week.closes_at
 				}
 			: null,
-		runoffCode: runoff && !runoff.closed_at ? runoff.code : null
+		runoffCode: runoff && !runoff.closed_at ? runoff.code : null,
+		// what each round is called on screen, by week number
+		evenings: roundEvenings(db)
 	};
 };

@@ -519,10 +519,10 @@
 								<b>{T.votingClosed}</b>
 							{/if}
 						</button>
-						<!-- the round in full, one tap away: which week it is, and the night
-						     down to the hour, which is no longer always Thursday at eight -->
+						<!-- the round in full, one tap away: which evening it is heading for,
+						     and the night down to the hour, which is no longer always Thursday at eight -->
 						<div class="tip" style:display={weekTip ? 'block' : 'none'}>
-							{T.week(data.week.number)} ·
+							{T.evening(data.evenings[data.week.number])} ·
 							<b>{countdown ?? '—'}</b> · {formatNight(data.week.closesAt, data.lang)}
 						</div>
 					</div>
@@ -537,7 +537,7 @@
 					<h1>{title}</h1>
 					{#if data.week}
 						<div class="sub">
-							{T.week(data.week.number)} ·
+							{T.evening(data.evenings[data.week.number])} ·
 							{#if data.week.status === 'open' && countdown}
 								<b>{countdown}</b>
 								<!-- the date is no longer always a Thursday, so it is worth saying -->
