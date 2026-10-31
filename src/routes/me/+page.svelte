@@ -18,8 +18,7 @@
 		{ label: T.xpRowAttend, count: data.xp.nightsAttended, per: data.xpRates.attend },
 		{ label: T.xpRowVote, count: data.xp.weeksVoted, per: data.xpRates.vote },
 		{ label: T.xpRowNominate, count: data.xp.nominations, per: data.xpRates.nominate },
-		{ label: T.xpRowWatched, count: data.xp.nominationsWatched, per: data.xpRates.nominationWatched },
-		{ label: T.xpRowBacked, count: data.xp.winnersBacked, per: data.xpRates.backedWinner }
+		{ label: T.xpRowWatched, count: data.xp.nominationsWatched, per: data.xpRates.nominationWatched }
 	]);
 
 	let fileInput = $state<HTMLInputElement | null>(null);

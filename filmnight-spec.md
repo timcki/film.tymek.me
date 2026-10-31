@@ -817,11 +817,12 @@ tables alone, which makes it retroactive to week 1 and impossible to corrupt.
 | Spent at least one point that week | 2 |
 | Nominated a film | 1 |
 | A film you nominated got watched | 15 |
-| Had points on the winner in its winning week | 3 |
 
 Attendance dominates by design. The nomination reward is token-sized so the list cannot
 be farmed; the watched-nomination jackpot rewards nominating things *other people* end
-up wanting.
+up wanting. Backing the winner earns nothing: it used to pay 3, until the group decided
+that paying people for picking the favourite pushes everyone towards the safe,
+mainstream film (removed October 2026).
 
 Twelve named ranks, thresholds in `src/lib/levels.ts`, names in both dictionaries:
 Widz 0, Bywalec 25, Zapaleniec 60, Kinofil 110, Kinoman 175, Maniak kina 255,
@@ -972,8 +973,7 @@ of done.
 
 **XP**
 42. Each source pays at the published rate; a week of voting counts once however many
-    films got points; only points on the winner in its winning week pay the backer
-    bonus.
+    films got points; points on the winner are worth no more than points anywhere else.
 43. `person.xp` equals a from-scratch derivation after every event kind that touches
     its inputs, and catches up retroactively when history is seeded.
 

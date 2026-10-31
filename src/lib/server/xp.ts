@@ -14,9 +14,7 @@ export const XP = {
 	/** you nominated a film */
 	nominate: 1,
 	/** a film you nominated got watched */
-	nominationWatched: 15,
-	/** you had points on the winner in its winning week */
-	backedWinner: 3
+	nominationWatched: 15
 } as const;
 
 /**
@@ -42,7 +40,6 @@ export type XpBreakdown = {
 	weeksVoted: number;
 	nominations: number;
 	nominationsWatched: number;
-	winnersBacked: number;
 	total: number;
 };
 
@@ -51,8 +48,7 @@ function totalFrom(b: Omit<XpBreakdown, 'total'>): number {
 		b.nightsAttended * XP.attend +
 		b.weeksVoted * XP.vote +
 		b.nominations * XP.nominate +
-		b.nominationsWatched * XP.nominationWatched +
-		b.winnersBacked * XP.backedWinner
+		b.nominationsWatched * XP.nominationWatched
 	);
 }
 
@@ -65,11 +61,6 @@ export function xpBreakdown(db: DB, personId: string): XpBreakdown {
 		nominations: one(`SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND ${IN_PLAY}`),
 		nominationsWatched: one(
 			`SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND status = 'watched' AND ${IN_PLAY}`
-		),
-		winnersBacked: one(
-			`SELECT COUNT(DISTINCT f.id) AS n FROM film f
-			 JOIN ballot b ON b.film_id = f.id AND b.week_number = f.watched_week
-			 WHERE f.status = 'watched' AND b.person_id = ?`
 		)
 	};
 	return { ...counts, total: totalFrom(counts) };
@@ -115,16 +106,6 @@ export function rexpAll(db: DB): void {
 			)
 			.all() as { person_id: string; n: number }[],
 		XP.nominationWatched
-	);
-	add(
-		db
-			.prepare(
-				`SELECT b.person_id, COUNT(DISTINCT f.id) AS n FROM film f
-				 JOIN ballot b ON b.film_id = f.id AND b.week_number = f.watched_week
-				 WHERE f.status = 'watched' GROUP BY b.person_id`
-			)
-			.all() as { person_id: string; n: number }[],
-		XP.backedWinner
 	);
 
 	const update = db.prepare('UPDATE person SET xp = ? WHERE id = ? AND xp IS NOT ?');

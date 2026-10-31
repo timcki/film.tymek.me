@@ -160,6 +160,24 @@ export const CHANGELOG: ChangelogEntry[] = [
 				'They earn nobody nomination XP and do not count towards whose films win.'
 			]
 		}
+	},
+	{
+		id: 8,
+		date: '2026-10-31',
+		title: {
+			pl: 'Koniec XP za głosowanie na zwycięzcę',
+			en: 'No more XP for backing the winner'
+		},
+		body: {
+			pl: [
+				'Punkty oddane na film, który potem wygrał, nie dają już 3 XP. Zachęcało to do głosowania na pewniaki zamiast na to, co naprawdę chce się obejrzeć.',
+				'XP jest liczone od nowa od pierwszego tygodnia, więc każdemu ubyło trochę XP i komuś mógł spaść poziom. Za przychodzenie, głosowanie i zgłoszenia wszystko zostaje po staremu.'
+			],
+			en: [
+				'Points on a film that went on to win no longer earn 3 XP. It nudged people towards voting for the safe bet instead of what they actually want to watch.',
+				'XP is counted again from week one, so everybody has a little less of it and somebody may have dropped a level. Coming, voting and nominating pay exactly as before.'
+			]
+		}
 	}
 ];
 

@@ -328,7 +328,6 @@ export type Dict = {
 	xpRowVote: string;
 	xpRowNominate: string;
 	xpRowWatched: string;
-	xpRowBacked: string;
 	xpLadder: string;
 	chlogH: string;
 	chlogOk: string;
@@ -797,7 +796,6 @@ const pl: Dict = {
 	xpRowVote: 'Tygodnie z głosem',
 	xpRowNominate: 'Zgłoszenia',
 	xpRowWatched: 'Twoje filmy obejrzane',
-	xpRowBacked: 'Trafieni zwycięzcy',
 	xpLadder: 'Wszystkie poziomy',
 	chlogH: 'Changelog',
 	chlogOk: 'OK',
@@ -1383,7 +1381,6 @@ const en: Dict = {
 	xpRowVote: 'Weeks voted',
 	xpRowNominate: 'Nominations',
 	xpRowWatched: 'Your films watched',
-	xpRowBacked: 'Winners backed',
 	xpLadder: 'All levels',
 	chlogH: "What's new",
 	chlogOk: 'Got it',

@@ -30,15 +30,14 @@ describe('deriving XP', () => {
 		closeRunoff(db, rules, runoff.id);
 
 		// nominated (1), voted one week (2), attended via flash vote (10),
-		// nomination watched (15), had points on the winner in its week (3)
+		// nomination watched (15)
 		const breakdown = xpBreakdown(db, 'ala');
 		expect(breakdown).toEqual({
 			nightsAttended: 1,
 			weeksVoted: 1,
 			nominations: 1,
 			nominationsWatched: 1,
-			winnersBacked: 1,
-			total: XP.attend + XP.vote + XP.nominate + XP.nominationWatched + XP.backedWinner
+			total: XP.attend + XP.vote + XP.nominate + XP.nominationWatched
 		});
 	});
 
@@ -53,7 +52,7 @@ describe('deriving XP', () => {
 		expect(xpBreakdown(db, 'ala').total).toBe(XP.vote);
 	});
 
-	it('pays the backer bonus only for points on the winner in its winning week', () => {
+	it('pays nothing extra for having had points on the winner', () => {
 		const { db, rules } = freshDb('weekly');
 		const winner = addFilm(db, 'Winner', 'ala', 1);
 		const loser = addFilm(db, 'Loser', 'bartek', 1);
@@ -64,8 +63,10 @@ describe('deriving XP', () => {
 		flashVote(db, openRunoff(db)!.id, 'someone', null, [winner, loser]);
 		closeRunoff(db, rules, openRunoff(db)!.id);
 
-		expect(xpBreakdown(db, 'ala').winnersBacked).toBe(1);
-		expect(xpBreakdown(db, 'bartek').winnersBacked).toBe(0);
+		// the winner's nominator is paid for it being watched; backing it is
+		// worth exactly what backing the loser is
+		expect(xpBreakdown(db, 'ala').total - XP.nominate - XP.nominationWatched).toBe(XP.vote);
+		expect(xpBreakdown(db, 'bartek').total - XP.nominate).toBe(XP.vote);
 	});
 });
 
