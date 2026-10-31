@@ -13,11 +13,12 @@
 	 * `sky` is a string of lights along the top of the page, a bat roosting on
 	 * it and colonies of them crossing the sky, `ground` the pumpkins and skulls
 	 * the page ends on, and `land` the far horizon and the fog behind and in
-	 * front of them, which spans the whole window rather than the page's column.
+	 * front of them, which spans the whole window rather than the page's column;
+	 * `foot` is a skull and a pumpkin under the rules tip.
 	 * Only the roosting bat takes a pointer, and with less motion asked for,
 	 * nothing moves.
 	 */
-	let { part }: { part: 'sky' | 'ground' | 'land' } = $props();
+	let { part }: { part: 'sky' | 'ground' | 'land' | 'foot' } = $props();
 
 	/** one bulb every SPACE px, sagging in swags of SWAG bulbs */
 	const SPACE = 34;
@@ -144,6 +145,8 @@
 	<div class="land front" aria-hidden="true">
 		<div class="fog front"><span></span></div>
 	</div>
+{:else if part === 'foot'}
+	<Skull size={15} /><Pumpkin size={24} />
 {:else}
 	<div class="ground" aria-hidden="true">
 		<span class="seat"><Cat /></span>

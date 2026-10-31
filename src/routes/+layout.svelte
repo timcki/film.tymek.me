@@ -8,9 +8,8 @@
 	import { THEMES } from '$lib/themes';
 	import Banana from '$lib/components/Banana.svelte';
 	import Check from '$lib/components/Check.svelte';
-	import Halloween from '$lib/components/Halloween.svelte';
-	import Pumpkin from '$lib/components/Pumpkin.svelte';
-	import Skull from '$lib/components/Skull.svelte';
+	import LookToken from '$lib/components/LookToken.svelte';
+	import Scenery from '$lib/components/Scenery.svelte';
 	import { specialOf } from '$lib/specials';
 	import { customOf } from '$lib/custom-weeks';
 	import { nomSheet } from '$lib/special-sheet.svelte';
@@ -459,7 +458,7 @@
 				onclick={openRules}
 				onblur={() => (rulesOpen = false)}
 			>
-				{#if data.look === 'halloween'}<Pumpkin size={17} />{/if}
+				{#if data.look}<LookToken look={data.look} size={17} />{/if}
 				<span class="splabel">{spName}</span>
 				<svg class="spchev" class:up={rulesOpen} viewBox="0 0 10 10" width="9" height="9" aria-hidden="true"
 					><path d="M2 3.6 5 6.6 8 3.6" /></svg
@@ -471,8 +470,8 @@
 						<li><b>{rule.head}</b> {rule.body}</li>
 					{/each}
 				</ol>
-				{#if data.look === 'halloween'}
-					<div class="spfoot" aria-hidden="true"><Skull size={15} /><Pumpkin size={24} /></div>
+				{#if data.look}
+					<div class="spfoot" aria-hidden="true"><Scenery look={data.look} part="foot" /></div>
 				{/if}
 			</div>
 		</div>
@@ -620,18 +619,18 @@
 
 		{@render children()}
 
-		{#if data.look === 'halloween'}
-			<Halloween part="ground" />
+		{#if data.look}
+			<Scenery look={data.look} part="ground" />
 		{/if}
 	</div>
-	{#if data.look === 'halloween'}
-		<Halloween part="land" />
+	{#if data.look}
+		<Scenery look={data.look} part="land" />
 	{/if}
 
 {/if}
 
-{#if data.look === 'halloween'}
-	<Halloween part="sky" />
+{#if data.look}
+	<Scenery look={data.look} part="sky" />
 {/if}
 
 {#if !bare && data.changelog.length}

@@ -7,8 +7,7 @@
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import RankingBallot from '$lib/components/RankingBallot.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
-	import Confetti from '$lib/components/Confetti.svelte';
-	import BatBurst from '$lib/components/BatBurst.svelte';
+	import LookBurst from '$lib/components/LookBurst.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import SeenCount from '$lib/components/SeenCount.svelte';
 	import { dictFor } from '$lib/i18n';
@@ -181,16 +180,12 @@
 	{#key `${data.code}:${data.me?.id ?? who}`}
 		<RankingBallot films={data.tally.map((r) => r.film)} seen={data.seen} lang={data.lang}
 			savedRanking={data.identified || who === 'guest' ? data.myRanking : undefined}
-			personId={who === 'guest' ? '' : who} withdraw="?/withdraw" spooky={data.look === 'halloween'} />
+			personId={who === 'guest' ? '' : who} withdraw="?/withdraw" look={data.look} />
 	{/key}
 {/if}
 
 {#if burst}
-	{#if data.look === 'halloween'}
-		<BatBurst onDone={() => (burst = false)} />
-	{:else}
-		<Confetti onDone={() => (burst = false)} />
-	{/if}
+	<LookBurst look={data.look} onDone={() => (burst = false)} />
 {/if}
 
 <style>

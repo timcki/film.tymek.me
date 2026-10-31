@@ -2,6 +2,7 @@
 	import { Tween } from 'svelte/motion';
 	import { cubicOut } from 'svelte/easing';
 	import Poster from './Poster.svelte';
+	import type { Look } from '$lib/themes';
 
 	/**
 	 * §7.3: one film's line in the count. Its bar is its points against the most
@@ -19,7 +20,7 @@
 		leading,
 		won,
 		behind,
-		spooky
+		look
 	}: {
 		title: string;
 		poster: string | null;
@@ -32,7 +33,7 @@
 		leading: boolean;
 		won: boolean;
 		behind: boolean;
-		spooky: boolean;
+		look: Look | null;
 	} = $props();
 
 	const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -42,7 +43,7 @@
 	});
 </script>
 
-<div class="lane" class:leading class:won class:behind class:spooky>
+<div class="lane" class:leading class:won class:behind data-look={look}>
 	<span class="lposter"><Poster {title} url={poster} /></span>
 	<b class="ltitle">{title}</b>
 	<div class="track">
@@ -92,11 +93,11 @@
 	.lane.won .fill { background: var(--accent); }
 	/* on Halloween the bars are lantern light: deep ember running into a bright
 	   tip, and the one in front glowing */
-	.lane.spooky .fill {
+	.lane[data-look='halloween'] .fill {
 		background: linear-gradient(90deg, #7a2a08, color-mix(in srgb, var(--accent) 70%, #7a2a08));
 	}
-	.lane.spooky.leading .fill,
-	.lane.spooky.won .fill {
+	.lane[data-look='halloween'].leading .fill,
+	.lane[data-look='halloween'].won .fill {
 		background: linear-gradient(90deg, #a8400c, var(--accent) 70%, #ffd27a);
 		box-shadow: 0 0 22px -4px color-mix(in srgb, var(--accent) 80%, transparent);
 	}

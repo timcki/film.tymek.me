@@ -6,7 +6,8 @@
 	import { say } from '$lib/toast.svelte';
 	import Poster from './Poster.svelte';
 	import SeenCount from './SeenCount.svelte';
-	import Pumpkin from './Pumpkin.svelte';
+	import type { Look } from '$lib/themes';
+	import LookToken from './LookToken.svelte';
 
 	let {
 		films,
@@ -16,7 +17,7 @@
 		personId = '',
 		action = '?/flashVote',
 		withdraw,
-		spooky = false
+		look = null
 	}: {
 		films: { id: number; title: string; year: number | null; runtime: number | null; poster_url: string | null }[];
 		seen: Record<number, number>;
@@ -26,8 +27,8 @@
 		action?: string;
 		/** where a saved ranking is taken back from; without it the save only saves */
 		withdraw?: string;
-		/** §3.6: a Halloween night ranks with pumpkins, lit once the ranking is saved */
-		spooky?: boolean;
+		/** §3.6: a night with a look ranks with its lanterns, lit once the ranking is saved */
+		look?: Look | null;
 	} = $props();
 	const T = $derived(dictFor(lang));
 
@@ -243,12 +244,12 @@
 					<b>{film.title}</b>
 					<span>{[film.year, film.runtime ? T.minutes(film.runtime) : null].filter(Boolean).join(' · ')} · <SeenCount n={seen[film.id] ?? 0} size={11} /></span>
 				</div>
-				{#if spooky}
+				{#if look}
 					<!-- the place carved into a pumpkin: dark until the ranking is
 					     saved, then lit with a candle, the film in first burning
 					     brightest -->
 					<span class="pcoin" class:on={isSaved} class:first={isSaved && position === 1} aria-hidden="true">
-						<Pumpkin size={44} lit={isSaved} live carve={String(position)} />
+						<LookToken {look} size={44} lit={isSaved} live carve={String(position)} />
 					</span>
 				{:else}
 					<!-- the place, ringed the way the list rings an unspent vote until

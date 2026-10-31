@@ -5,7 +5,7 @@ import { isDemo } from '$lib/server/config';
 import { personByToken } from '$lib/server/people';
 import { limiter } from '$lib/server/ratelimit';
 import { startScheduler } from '$lib/server/scheduler';
-import { BANANA_BG, LOOK_BG, THEME_BG, bananaOf, themeOf } from '$lib/themes';
+import { BANANA_BG, LOOK_BG, LOOK_THEME, THEME_BG, bananaOf, themeOf } from '$lib/themes';
 import { lookAt } from '$lib/server/looks';
 
 export const PERSON_COOKIE = 'fn_person';
@@ -132,10 +132,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// the phone, which is what the media-scoped pair is for
 	const banana = bananaOf(event.cookies.get(BANANA_COOKIE));
 	// §3.6: an admin's look dresses everybody, over bananas too, until it is taken off.
-	// It is drawn for the dark only, so it is dark for everybody too; the cookie
-	// is left alone and the chosen palette comes back when the look ends
+	// It is drawn for one palette only, so everybody is in that one too; the
+	// cookie is left alone and the chosen palette comes back when the look ends
 	const look = lookAt(db);
-	const theme = look ? 'dark' : themeOf(event.cookies.get(THEME_COOKIE));
+	const theme = look ? LOOK_THEME[look] : themeOf(event.cookies.get(THEME_COOKIE));
 	const bg = look ? LOOK_BG[look] : banana ? BANANA_BG : THEME_BG;
 	const tint =
 		theme === 'auto'

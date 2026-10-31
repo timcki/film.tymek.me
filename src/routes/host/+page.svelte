@@ -11,10 +11,9 @@
 	import RankingBallot from '$lib/components/RankingBallot.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import SeenCount from '$lib/components/SeenCount.svelte';
-	import Confetti from '$lib/components/Confetti.svelte';
-	import BatBurst from '$lib/components/BatBurst.svelte';
 	import Poster from '$lib/components/Poster.svelte';
-	import Pumpkin from '$lib/components/Pumpkin.svelte';
+	import LookToken from '$lib/components/LookToken.svelte';
+	import LookBurst from '$lib/components/LookBurst.svelte';
 	import PointsRace from '$lib/components/PointsRace.svelte';
 	import { lights } from '$lib/lights';
 	import { dictFor } from '$lib/i18n';
@@ -71,19 +70,21 @@
 
 	let castingFor = $state('');
 
-	/* ---------------------------------------------------------- halloween -- */
+	/* --------------------------------------------------------------- looks -- */
 
-	// §3.6: a Halloween night dresses the room: a web and a spider on the way
-	// in, a pumpkin lit for every ballot, fog at the posters' feet, and the
-	// lights along the top shivering each time somebody's ranking lands
-	const spooky = $derived(data.look === 'halloween');
+	// §3.6: a night with a look dresses the room: a lantern lit for every
+	// ballot, and the lights along the top shivering each time somebody's
+	// ranking lands. Halloween also hangs a web and a spider on the way in and
+	// rolls fog about the posters' feet
+	const look = $derived(data.look);
+	const spooky = $derived(look === 'halloween');
 	const turnout = $derived(data.runoff?.turnout ?? 0);
 	// one lit for every ballot in, and a single dark one waiting for the next
-	const pumpkins = $derived(Math.min(30, turnout + 1));
+	const lanterns = $derived(Math.min(30, turnout + 1));
 	let heard = -1;
 	$effect(() => {
 		const now = turnout;
-		if (spooky && heard >= 0 && now > heard) lights.flicker();
+		if (look && heard >= 0 && now > heard) lights.flicker();
 		heard = now;
 	});
 
@@ -164,10 +165,10 @@
 					<b>{data.runoff.turnout}</b>
 					<span>{T.turnoutWord(data.runoff.turnout)}</span>
 				</div>
-				{#if spooky}
+				{#if look}
 					<div class="patch" aria-hidden="true">
-						{#each { length: pumpkins } as _, i (i)}
-							<Pumpkin size={26} lit={i < turnout} live />
+						{#each { length: lanterns } as _, i (i)}
+							<LookToken {look} size={26} lit={i < turnout} live />
 						{/each}
 					</div>
 				{/if}
@@ -227,7 +228,7 @@
 				<p class="hintline">{T.hostCastPick}</p>
 				{#key `${data.runoff.code}:${castingFor}`}
 					<RankingBallot films={rows.map((r) => r.film)} seen={data.runoff.seen}
-						lang={data.lang} personId={castingFor} action="?/voteFor" spooky={data.look === 'halloween'} />
+						lang={data.lang} personId={castingFor} action="?/voteFor" {look} />
 				{/key}
 			{/if}
 		</details>
@@ -309,7 +310,7 @@
 					{counted}
 					{revealed}
 					lang={data.lang}
-					spooky={data.look === 'halloween'}
+					{look}
 					onreplay={count}
 				/>
 			</section>
@@ -345,8 +346,8 @@
 	<section class="countpanel idle">
 		<div class="sec">{T.hostIdle}</div>
 		<div class="idleart" aria-hidden="true">
-			{#if data.look === 'halloween'}
-				<span class="lantern"><Pumpkin size={120} live /></span>
+			{#if look}
+				<span class="lantern"><LookToken {look} size={120} live /></span>
 			{:else}
 				<svg viewBox="0 0 48 48"
 					><path d="M7 19h34v20a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3z" /><path d="m6.2 12.6 32.6-7.4 1.6 7-32.6 7.4z" /><path
@@ -363,11 +364,7 @@
 {/if}
 
 {#if burst}
-	{#if data.look === 'halloween'}
-		<BatBurst count={70} from={burstFrom} onDone={() => (burst = false)} />
-	{:else}
-		<Confetti count={120} duration={2400} onDone={() => (burst = false)} />
-	{/if}
+	<LookBurst {look} big from={burstFrom} onDone={() => (burst = false)} />
 {/if}
 
 <style>

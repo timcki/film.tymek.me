@@ -10,7 +10,7 @@ import { noticeAt } from '$lib/server/notice';
 import { avatarUrl, bankBalance, spentInWeek } from '$lib/server/people';
 import { langOf } from '$lib/i18n';
 import { unseenChangelog } from '$lib/changelog';
-import { bananaOf, themeOf } from '$lib/themes';
+import { LOOK_THEME, bananaOf, themeOf } from '$lib/themes';
 import { BANANA_COOKIE, LANG_COOKIE, THEME_COOKIE } from '../hooks.server';
 
 export const load: LayoutServerLoad = async ({ locals, cookies }) => {
@@ -46,9 +46,9 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 		lang,
 		demo,
 		// the palette is already on <html>; the layout only needs it to know
-		// which half of the switch is lit. A special look is dark only, as in
+		// which half of the switch is lit. A special look brings its own, as in
 		// hooks.server.ts
-		theme: look ? ('dark' as const) : themeOf(cookies.get(THEME_COOKIE)),
+		theme: look ? LOOK_THEME[look] : themeOf(cookies.get(THEME_COOKIE)),
 		banana: bananaOf(cookies.get(BANANA_COOKIE)),
 		look,
 		notice: person ? noticeAt(db) : null,

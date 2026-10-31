@@ -57,6 +57,11 @@ export function isLook(value: string | null | undefined): value is Look {
 	return LOOKS.includes(value as Look);
 }
 
+/** each look is drawn for one palette, and dresses everybody in it while it is on */
+export const LOOK_THEME: Record<Look, 'dark' | 'light'> = {
+	halloween: 'dark'
+};
+
 export const LOOK_BG: Record<Look, Record<'dark' | 'light', string>> = {
 	// --bg itself: the Halloween wash glows from the bottom, so the top is unwashed
 	halloween: {

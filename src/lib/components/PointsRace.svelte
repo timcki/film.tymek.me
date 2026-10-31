@@ -6,6 +6,7 @@
 	import Poster from './Poster.svelte';
 	import RaceLane from './RaceLane.svelte';
 	import { dictFor, type Lang } from '$lib/i18n';
+	import type { Look } from '$lib/themes';
 	import { unfold } from '$lib/unfold';
 
 	/**
@@ -31,7 +32,7 @@
 		counted,
 		revealed,
 		lang,
-		spooky = false,
+		look = null,
 		onreplay
 	}: {
 		/** in the recorded result order, winner first */
@@ -41,7 +42,7 @@
 		counted: number;
 		revealed: boolean;
 		lang: Lang;
-		spooky?: boolean;
+		look?: Look | null;
 		/** plays the count again on the screen; the phones are not told */
 		onreplay?: () => void;
 	} = $props();
@@ -139,7 +140,7 @@
 					leading={!ranked && points > 0 && points === top}
 					won={ranked && film.id === winnerId}
 					behind={ranked && film.id !== winnerId}
-					{spooky}
+					{look}
 				/>
 			</div>
 		{/each}

@@ -9,7 +9,7 @@
 	import CommentThread from '$lib/components/CommentThread.svelte';
 	import FacePeek, { peekFor, type Peek, type PeekFace } from '$lib/components/FacePeek.svelte';
 	import Poster from '$lib/components/Poster.svelte';
-	import Pumpkin from '$lib/components/Pumpkin.svelte';
+	import LookToken from '$lib/components/LookToken.svelte';
 	import Spider from '$lib/components/Spider.svelte';
 	import LampToggle from '$lib/components/LampToggle.svelte';
 	import { dictFor } from '$lib/i18n';
@@ -448,7 +448,7 @@
 						<input type="hidden" name="filmId" value={pick.id} />
 						<input type="hidden" name="title" value={pick.title} />
 						<input type="hidden" name="on" value={lit(pick) ? '0' : '1'} />
-						<LampToggle on={lit(pick)} label={T.spYes} disabled={!open} spooky={data.look === 'halloween'} />
+						<LampToggle on={lit(pick)} label={T.spYes} disabled={!open} look={data.look} />
 					</form>
 				</div>
 			</div>
@@ -457,7 +457,7 @@
 		<!-- an empty round is an invitation, not an absence: a lantern lit for
 		     whoever goes first, and the button that makes them first -->
 		<div class="spempty">
-			{#if data.look === 'halloween'}<span class="spempty-lamp"><Pumpkin size={68} /></span>{/if}
+			{#if data.look}<span class="spempty-lamp"><LookToken look={data.look} size={68} /></span>{/if}
 			<h3>{T.spEmptyH}</h3>
 			<p>{T.spEmpty}</p>
 			{#if open && data.used < data.special.picksPerPerson}

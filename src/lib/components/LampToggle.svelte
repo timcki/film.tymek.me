@@ -1,27 +1,28 @@
 <script lang="ts">
-	import Pumpkin from './Pumpkin.svelte';
+	import type { Look } from '$lib/themes';
+	import LookToken from './LookToken.svelte';
 
 	/**
 	 * §3.6: "I want to watch this" on a special round's pick, as a lantern the
 	 * viewer lights. The words sit beside a dark pumpkin; lighting it sets a flame
 	 * going in its lid and spreads the light out from it until it fills the pill.
 	 * The words never change with the state, the light does, so nothing reflows
-	 * mid-animation. It is the form's submit button. Without the Halloween look
-	 * the pumpkin is a plain tick, and the light spreads all the same.
+	 * mid-animation. It is the form's submit button. Without a look the lantern
+	 * is a plain tick, and the light spreads all the same.
 	 */
 	let {
 		on,
 		label,
 		disabled = false,
-		spooky = false
-	}: { on: boolean; label: string; disabled?: boolean; spooky?: boolean } = $props();
+		look = null
+	}: { on: boolean; label: string; disabled?: boolean; look?: Look | null } = $props();
 </script>
 
 <button class="lamp" class:on {disabled} aria-pressed={on}>
 	<span class="fill" aria-hidden="true"></span>
 	<span class="icon">
-		{#if spooky}
-			<Pumpkin size={21} lit={on} live />
+		{#if look}
+			<LookToken {look} size={21} lit={on} live />
 		{:else}
 			<svg class="tick" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true">
 				<circle cx="12" cy="12" r="9" />
