@@ -1,10 +1,11 @@
 /**
  * §3.6: special rounds. A round an admin gives over to one night with its own
- * picks, its own way of voting and its own look; the list sleeps through it.
- * Kept here rather than under server/ because the page needs the same numbers to
- * say what the round is, the way the rules screen reads the RuleSet.
+ * picks and its own way of voting; the list sleeps through it. What the site
+ * looks like is a separate choice (themes.ts). Kept here rather than under
+ * server/ because the page needs the same numbers to say what the round is, the
+ * way the rules screen reads the RuleSet.
  */
-export type SpecialId = 'halloween';
+export type SpecialId = 'approval';
 
 export type Special = {
 	id: SpecialId;
@@ -12,26 +13,26 @@ export type Special = {
 	picksPerPerson: number;
 	/** how many of the most approved picks go to the room */
 	shortlistSize: number;
-	/**
-	 * The month (1 to 12, Europe/Warsaw) the look stays on through, once the round
-	 * has been held: the night itself may come before the date it celebrates.
-	 */
-	themeMonth: number;
 };
 
 export const SPECIALS: Record<SpecialId, Special> = {
-	halloween: {
-		id: 'halloween',
+	approval: {
+		id: 'approval',
 		picksPerPerson: 1,
-		shortlistSize: 3,
-		themeMonth: 10
+		shortlistSize: 3
 	}
 };
 
 export function isSpecialId(value: string | null | undefined): value is SpecialId {
-	return value === 'halloween';
+	return value === 'approval';
 }
 
+/**
+ * The rules a stored round runs by. The first special round was written down as
+ * 'halloween', back when the way of voting and the look were one thing; its
+ * films and its week still say so, and it voted the approval way.
+ */
 export function specialOf(value: string | null | undefined): Special | null {
+	if (value === 'halloween') return SPECIALS.approval;
 	return isSpecialId(value) ? SPECIALS[value] : null;
 }

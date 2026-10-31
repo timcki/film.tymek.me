@@ -4,7 +4,6 @@ import { closeWeek, currentWeek, weekByNumber } from '../src/lib/server/weeks.js
 import { closeRunoff, flashVote, openRunoff, runoffFilms } from '../src/lib/server/runoffs.js';
 import { pointsInWindow } from '../src/lib/server/scoring.js';
 import {
-	lookAt,
 	nominateSpecial,
 	picksUsed,
 	setApproval,
@@ -13,6 +12,7 @@ import {
 	startSpecial,
 	stopSpecial
 } from '../src/lib/server/specials.js';
+import { lookAt, setLook } from '../src/lib/server/looks.js';
 import { screenStats } from '../src/lib/server/stats.js';
 import { xpBreakdown } from '../src/lib/server/xp.js';
 import { addFilm, castBallot, forceAdvanceTo, freshDb } from './helpers.js';
@@ -23,15 +23,15 @@ import { addFilm, castBallot, forceAdvanceTo, freshDb } from './helpers.js';
  * asleep throughout, so it wakes up exactly where it was left.
  */
 describe('a special round', () => {
-	function halloween() {
+	function special() {
 		const { db, rules } = freshDb('weekly');
-		startSpecial(db, rules, 'halloween');
+		startSpecial(db, rules, 'approval');
 		const pick = (person: string, title: string) => nominateSpecial(db, rules, person, { title });
 		return { db, rules, pick };
 	}
 
 	it('gives each person one pick, kept off the list and outside its nomination slot', () => {
-		const { db, rules, pick } = halloween();
+		const { db, rules, pick } = special();
 		addFilm(db, 'Paddington', 'ala', 1);
 		pick('ala', 'The Thing');
 		expect(() => pick('ala', 'Halloween')).toThrow(expect.objectContaining({ code: 'picks_spent' }));
@@ -46,7 +46,7 @@ describe('a special round', () => {
 	});
 
 	it('holds a pick to the duplicate rules, the list included', () => {
-		const { db, rules, pick } = halloween();
+		const { db, rules, pick } = special();
 		addFilm(db, 'Alien', 'bartek', 1);
 		expect(() => pick('ala', 'Alien')).toThrow(expect.objectContaining({ code: 'dup_active' }));
 		pick('ala', 'The Thing');
@@ -57,7 +57,7 @@ describe('a special round', () => {
 		const { db, rules } = freshDb('weekly');
 		const film = addFilm(db, 'Paddington', 'ala', 1);
 		setPoints(db, rules, 'bartek', film, 1);
-		startSpecial(db, rules, 'halloween');
+		startSpecial(db, rules, 'approval');
 
 		const asleep = expect.objectContaining({ code: 'list_asleep' });
 		expect(() => setPoints(db, rules, 'bartek', film, 2)).toThrow(asleep);
@@ -68,7 +68,7 @@ describe('a special round', () => {
 	});
 
 	it('takes approvals freely, both ways, on any pick including your own', () => {
-		const { db, rules, pick } = halloween();
+		const { db, rules, pick } = special();
 		const thing = pick('ala', 'The Thing');
 		setApproval(db, rules, 'ala', thing, true);
 		setApproval(db, rules, 'bartek', thing, true);
@@ -81,14 +81,14 @@ describe('a special round', () => {
 	it('refuses approvals on anything but this round’s picks', () => {
 		const { db, rules } = freshDb('weekly');
 		const film = addFilm(db, 'Paddington', 'ala', 1);
-		startSpecial(db, rules, 'halloween');
+		startSpecial(db, rules, 'approval');
 		expect(() => setApproval(db, rules, 'bartek', film, true)).toThrow(
 			expect.objectContaining({ code: 'not_a_pick' })
 		);
 	});
 
 	it('keeps the counts to itself while the round is open', () => {
-		const { db, rules, pick } = halloween();
+		const { db, rules, pick } = special();
 		const thing = pick('ala', 'The Thing');
 		const suspiria = pick('bartek', 'Suspiria');
 		for (const person of ['ala', 'bartek', 'celina']) setApproval(db, rules, person, suspiria, true);
@@ -108,7 +108,7 @@ describe('a special round', () => {
 	});
 
 	it('sends the three most approved to the room, ties to the earlier pick', () => {
-		const { db, rules, pick } = halloween();
+		const { db, rules, pick } = special();
 		const ids = [
 			pick('ala', 'One'),
 			pick('bartek', 'Two'),
@@ -130,7 +130,7 @@ describe('a special round', () => {
 	});
 
 	it('lets the room decide, then drops the picks it did not watch and opens a list round', () => {
-		const { db, rules, pick } = halloween();
+		const { db, rules, pick } = special();
 		const a = pick('ala', 'A');
 		const b = pick('bartek', 'B');
 		setApproval(db, rules, 'celina', a, true);
@@ -156,7 +156,7 @@ describe('a special round', () => {
 	});
 
 	it('closes without a night when nobody ticked anything', () => {
-		const { db, rules, pick } = halloween();
+		const { db, rules, pick } = special();
 		pick('ala', 'A');
 		expect(closeWeek(db, rules).kind).toBe('no-winner');
 		expect(currentWeek(db)!.number).toBe(2);
@@ -169,7 +169,7 @@ describe('a special round', () => {
 		castBallot(db, 1, 'ala', film, 2);
 		castBallot(db, 1, 'bartek', other, 2);
 		forceAdvanceTo(db, 2);
-		startSpecial(db, rules, 'halloween');
+		startSpecial(db, rules, 'approval');
 		const pick = nominateSpecial(db, rules, 'celina', { title: 'The Thing' });
 		setApproval(db, rules, 'celina', pick, true);
 		// week 2 had points on one of them before it went special, which stand
@@ -189,34 +189,48 @@ describe('a special round', () => {
 
 	it('changes its mind only while nobody has put a pick up', () => {
 		const { db, rules } = freshDb('weekly');
-		startSpecial(db, rules, 'halloween');
-		expect(() => startSpecial(db, rules, 'halloween')).toThrow(
+		startSpecial(db, rules, 'approval');
+		expect(() => startSpecial(db, rules, 'approval')).toThrow(
 			expect.objectContaining({ code: 'special_on' })
 		);
 		stopSpecial(db, rules);
 		expect(currentWeek(db)!.special).toBeNull();
-		startSpecial(db, rules, 'halloween');
+		startSpecial(db, rules, 'approval');
 		nominateSpecial(db, rules, 'ala', { title: 'A' });
 		expect(() => stopSpecial(db, rules)).toThrow(
 			expect.objectContaining({ code: 'special_has_picks' })
 		);
 	});
 
-	it('wears its look while in play and for the rest of its month', () => {
-		const { db, rules } = freshDb('weekly', new Date('2026-08-03T10:00:00Z'));
-		expect(lookAt(db)).toBeNull();
-		startSpecial(db, rules, 'halloween');
-		expect(lookAt(db)?.id).toBe('halloween');
-		closeWeek(db, rules);
-		// the round closed without a night; the look follows the month, which is
-		// October for Halloween, so a round held in August has none to keep
-		expect(lookAt(db)).toBeNull();
+	it('still runs a round written down before the vote and the look were apart', () => {
+		const { db, rules } = freshDb('weekly');
+		db.prepare("UPDATE week SET special = 'halloween'").run();
+		nominateSpecial(db, rules, 'ala', { title: 'A' });
+		expect(() => nominateSpecial(db, rules, 'ala', { title: 'B' })).toThrow(
+			expect.objectContaining({ code: 'picks_spent' })
+		);
+		expect(specialPicks(db, currentWeek(db)!, 'ala')).toHaveLength(1);
+	});
+});
 
-		const october = freshDb('weekly', new Date('2026-10-25T10:00:00Z'));
-		october.db.prepare('UPDATE week SET closes_at = ?').run('2026-10-29T19:00:00.000Z');
-		startSpecial(october.db, october.rules, 'halloween', new Date('2026-10-25T10:00:00Z'));
-		closeWeek(october.db, october.rules, new Date('2026-10-29T19:00:00Z'));
-		expect(lookAt(october.db, new Date('2026-10-31T21:00:00Z'))?.id).toBe('halloween');
-		expect(lookAt(october.db, new Date('2026-10-31T23:30:00Z'))).toBeNull();
+/** §3.6: the look is the admin's to put on and take off, whatever the round votes by */
+describe('the site look', () => {
+	it('is not put on by a special round', () => {
+		const { db, rules } = freshDb('weekly');
+		startSpecial(db, rules, 'approval');
+		expect(lookAt(db)).toBeNull();
+	});
+
+	it('stays on from round to round until it is taken off', () => {
+		const { db } = freshDb('weekly');
+		setLook(db, 'halloween');
+		expect(lookAt(db)).toBe('halloween');
+		forceAdvanceTo(db, 2);
+		expect(currentWeek(db)?.number).toBe(2);
+		expect(lookAt(db)).toBe('halloween');
+		setLook(db, null);
+		expect(lookAt(db)).toBeNull();
+		// and the round it was worn in still says so
+		expect(weekByNumber(db, 1)?.look).toBe('halloween');
 	});
 });

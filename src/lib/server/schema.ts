@@ -245,6 +245,11 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	// no points, no nominations, and the round does not count towards fade or
 	// attrition, so the list wakes up exactly where it was left
 	['week', 'special', 'TEXT'],
+	// §3.6: the look an admin put on the site during this round, 'default' for
+	// taking one off, NULL when nobody touched it. The site wears the latest
+	// round's choice, so a look stays on until somebody takes it off, and every
+	// round still says what it looked like
+	['week', 'look', 'TEXT'],
 	// §3.6: a pick for a special round rather than a nomination to the list. It
 	// never appears on the list, never takes points, and once its round is over
 	// it is either the night's film or dropped with the rest

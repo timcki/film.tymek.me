@@ -32,6 +32,11 @@
 			};
 	};
 
+	/** picking is the whole action; there is no button to go and find */
+	function saveOnChange(event: Event) {
+		(event.currentTarget as HTMLSelectElement).form?.requestSubmit();
+	}
+
 	// a skipped night that has gone by is history, not something still to come
 	const gone = (night: Night) =>
 		night.status === 'used' || (night.status === 'skipped' && Date.parse(night.at) < Date.now());
@@ -65,28 +70,36 @@
 		<p class="ahint">{A.calDefaultNote(when(data.fallback))}</p>
 	{/if}
 
-	<!-- §3.6: the round, not a date, is what goes special; the date is the row below -->
+	<!-- §3.6: the round, not a date, is what goes special; the date is the row below.
+	     How it votes and what the site wears are two separate choices -->
+	{@const locked = data.week.status !== 'open' || data.specialPicks > 0}
 	<div class="sec">{A.spcH}</div>
-	<p class="ahint">{A.spcIntro}</p>
-	{#if data.week.special}
-		<div class="nextcard">
-			<b>{A.spcOn(T.spName(data.week.special))}</b>
-			{#if data.specialPicks === 0}
-				<form method="POST" action="?/unspecial" use:enhance={submit()}>
-					<button class="tap">{A.spcStop}</button>
-				</form>
-			{:else}
-				<span class="tag soft">{A.spcLocked}</span>
-			{/if}
-		</div>
-	{:else if data.week.status === 'open'}
-		{#each data.specials as id (id)}
-			<form method="POST" action="?/special" use:enhance={submit()}>
-				<input type="hidden" name="special" value={id} />
-				<button class="tap go">{A.spcStart(T.spName(id))}</button>
-			</form>
-		{/each}
-	{/if}
+	<div class="acts">
+		<form method="POST" action="?/special" use:enhance={submit()}>
+			<label class="bankin">
+				{A.spcVote}
+				<select name="special" onchange={saveOnChange} disabled={locked}>
+					<option value="" selected={!data.week.special}>{A.spcList}</option>
+					{#each data.specials as id (id)}
+						<option value={id} selected={data.week.special === id}>{T.spName(id)}</option>
+					{/each}
+				</select>
+			</label>
+		</form>
+		<form method="POST" action="?/look" use:enhance={submit()}>
+			<label class="bankin">
+				{A.lookLabel}
+				<select name="look" onchange={saveOnChange}>
+					<option value="" selected={!data.look}>{A.lookDefault}</option>
+					{#each data.looks as id (id)}
+						<option value={id} selected={data.look === id}>{T.lookName(id)}</option>
+					{/each}
+				</select>
+			</label>
+		</form>
+	</div>
+	<p class="ahint">{data.week.special && data.specialPicks > 0 ? A.spcLocked : A.spcIntro}</p>
+	<p class="ahint">{A.lookIntro}</p>
 {/if}
 
 <div class="sec">{A.calAddH}</div>

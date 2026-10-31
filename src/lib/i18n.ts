@@ -387,7 +387,10 @@ export type Dict = {
 
 	/** §3.6: a special round, said from the numbers the round actually runs on */
 	spName: (id: string) => string;
-	spRules: (s: SpecialView, closesAt?: string | null) => Rule[];
+	/** the look decides what kind of film the first rule asks for */
+	spRules: (s: SpecialView, closesAt?: string | null, look?: string | null) => Rule[];
+	/** §3.6: a look an admin can put on the whole site */
+	lookName: (id: string) => string;
 	spMine: (used: number, max: number) => string;
 	/** the bar's + chip, said out loud */
 	spAddAria: (left: number) => string;
@@ -826,11 +829,14 @@ const pl: Dict = {
 	demoFresh: 'ktoś, kto jeszcze nie głosował',
 	demoHome: 'wróć do portfolio',
 
-	spName: (id) => (id === 'halloween' ? 'Halloween' : id),
-	spRules: (s, closesAt) => [
+	spName: (id) => (id === 'halloween' ? 'Halloween' : 'Wieczór specjalny'),
+	spRules: (s, closesAt, look) => [
 		{
 			head: `${s.picksPerPerson} ${pl3(s.picksPerPerson, 'propozycja', 'propozycje', 'propozycji')} na osobę.`,
-			body: 'Coś spooky, scary i dziwnego, najlepiej nieoczywistego.'
+			body:
+				look === 'halloween'
+					? 'Coś spooky, scary i dziwnego, najlepiej nieoczywistego.'
+					: 'Coś, co chcesz obejrzeć z resztą, najlepiej nieoczywistego.'
 		},
 		{
 			head: 'Zaznacz każdy film, który chcesz zobaczyć.',
@@ -845,15 +851,16 @@ const pl: Dict = {
 		},
 		{
 			head: 'Zwykła lista jest uśpiona w tym tygodniu.',
-			body: 'Nic nie traci na wartości i nic nie odpada. Wracamy do stanu z poprzedniego czwartku po spooky wieczorku.'
+			body: 'Nic nie traci na wartości i nic nie odpada. Po tym wieczorze lista wraca do stanu sprzed niego.'
 		}
 	],
+	lookName: (id) => (id === 'halloween' ? 'Halloween' : id),
 	spMine: (used, max) => `Twoje propozycje: ${used} z ${max}`,
-	spAddAria: (left) => `Zgłoś straszny film, ${plLeft(left, 'propozycja', 'propozycje', 'propozycji', true)}`,
+	spAddAria: (left) => `Zgłoś film, ${plLeft(left, 'propozycja', 'propozycje', 'propozycji', true)}`,
 	spAddDone: 'Twoja propozycja już jest na liście',
 	spNomPop: (name) => `Propozycja na ${name}`,
 	spEmptyH: 'Jeszcze pusto.',
-	spEmpty: 'Zgłoś pierwszy film, jeśli się odważysz.',
+	spEmpty: 'Zgłoś pierwszy film.',
 	spEmptyCta: 'Zgłoś film',
 	spYes: 'Chcę obejrzeć',
 	spPicking: 'Głosowanie zamknięte. Sala wybiera najczęściej zaznaczane.',
@@ -1358,11 +1365,14 @@ const en: Dict = {
 	demoFresh: 'someone who has not voted yet',
 	demoHome: 'back to the portfolio',
 
-	spName: (id) => (id === 'halloween' ? 'Halloween' : id),
-	spRules: (s, closesAt) => [
+	spName: (id) => (id === 'halloween' ? 'Halloween' : 'Special night'),
+	spRules: (s, closesAt, look) => [
 		{
 			head: `${s.picksPerPerson} ${en2(s.picksPerPerson, 'pick', 'picks')} each.`,
-			body: 'Something spooky, scary or strange.'
+			body:
+				look === 'halloween'
+					? 'Something spooky, scary or strange.'
+					: 'Something you want to watch with the rest, ideally not the obvious one.'
 		},
 		{
 			head: 'Tick every film you want to watch.',
@@ -1377,15 +1387,16 @@ const en: Dict = {
 		},
 		{
 			head: 'The regular list is asleep.',
-			body: 'Nothing fades and nothing drops. Afterwards the list goes back to the state from last Thursday.'
+			body: 'Nothing fades and nothing drops. Afterwards the list goes back to where it was.'
 		}
 	],
+	lookName: (id) => (id === 'halloween' ? 'Halloween' : id),
 	spMine: (used, max) => `Your picks: ${used} of ${max}`,
-	spAddAria: (left) => `Propose a spooky film, ${left} ${en2(left, 'pick', 'picks')} left`,
+	spAddAria: (left) => `Propose a film, ${left} ${en2(left, 'pick', 'picks')} left`,
 	spAddDone: 'Your pick is already in',
 	spNomPop: (name) => `Picked for ${name}`,
 	spEmptyH: 'Nothing here yet.',
-	spEmpty: 'Put the first one up, if you dare.',
+	spEmpty: 'Put the first one up.',
 	spEmptyCta: 'Put one up',
 	spYes: 'I want to see it',
 	spPicking: 'Voting is closed. The room is choosing between the most ticked.',

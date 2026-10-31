@@ -5,8 +5,8 @@ import { isDemo } from '$lib/server/config';
 import { personByToken } from '$lib/server/people';
 import { limiter } from '$lib/server/ratelimit';
 import { startScheduler } from '$lib/server/scheduler';
-import { BANANA_BG, SPECIAL_BG, THEME_BG, bananaOf, themeOf } from '$lib/themes';
-import { lookAt } from '$lib/server/specials';
+import { BANANA_BG, LOOK_BG, THEME_BG, bananaOf, themeOf } from '$lib/themes';
+import { lookAt } from '$lib/server/looks';
 
 export const PERSON_COOKIE = 'fn_person';
 export const DEVICE_COOKIE = 'fn_device';
@@ -131,12 +131,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// status bar tint iOS reads off the meta tag. On auto the tint is left to
 	// the phone, which is what the media-scoped pair is for
 	const banana = bananaOf(event.cookies.get(BANANA_COOKIE));
-	// §3.6: a special round dresses everybody, over bananas too, for as long as it lasts.
-	// Its look is drawn for the dark only, so it is dark for everybody too; the
-	// cookie is left alone and the chosen palette comes back when the look ends
+	// §3.6: an admin's look dresses everybody, over bananas too, until it is taken off.
+	// It is drawn for the dark only, so it is dark for everybody too; the cookie
+	// is left alone and the chosen palette comes back when the look ends
 	const look = lookAt(db);
 	const theme = look ? 'dark' : themeOf(event.cookies.get(THEME_COOKIE));
-	const bg = look ? SPECIAL_BG[look.id] : banana ? BANANA_BG : THEME_BG;
+	const bg = look ? LOOK_BG[look] : banana ? BANANA_BG : THEME_BG;
 	const tint =
 		theme === 'auto'
 			? `<meta name="theme-color" content="${bg.dark}" media="(prefers-color-scheme: dark)" />
@@ -149,7 +149,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 				html
 					.replaceAll('%fn.theme%', theme)
 					.replace('%fn.banana%', banana ? ' data-banana' : '')
-					.replace('%fn.special%', look ? ` data-special="${look.id}"` : '')
+					.replace('%fn.special%', look ? ` data-special="${look}"` : '')
 					.replace('%fn.scheme%', theme === 'auto' ? 'light dark' : theme)
 					.replace('%fn.tint%', tint)
 		})

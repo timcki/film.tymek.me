@@ -232,9 +232,10 @@ group-chat message; without somewhere to put it, people would still write it the
 ### 3.6 Special rounds
 
 **Added October 2026, for Halloween.** An admin can give the open round over to one night
-with its own picks, its own way of voting and its own look (`/admin/calendar`). The
-round's numbers live in `src/lib/specials.ts`, so the page says what the round is from
-the same values the engine enforces, the way the rules screen reads the `RuleSet`.
+with its own picks and its own way of voting (`/admin/calendar`). The round's numbers
+live in `src/lib/specials.ts`, so the page says what the round is from the same values
+the engine enforces, the way the rules screen reads the `RuleSet`. The first such round
+was stored as `'halloween'`; it runs by the same rules as `'approval'`.
 
 - **Its own picks.** Each person puts up `picksPerPerson` films (one for Halloween),
   marked `film.special`, outside the list's one-nomination-a-round slot. The usual
@@ -251,11 +252,15 @@ the same values the engine enforces, the way the rules screen reads the `RuleSet
   week shares its ordinal with the week after it (`listClock`), so fade, attrition and the
   archive's ages all read as though the night had not happened. Picks nobody watched are
   dropped afterwards rather than joining the list.
-- **The look.** While the round is in play, and for the rest of its month (`themeMonth`,
-  Europe/Warsaw) once it has been held, every page wears the round's theme. It is
-  decoration only, and asks for less motion are honoured throughout.
-
 An admin can call a special round off only while nobody has put a pick up.
+
+**The look is a separate choice.** By default everyone picks their own palette (dark,
+light, bananas). An admin can instead put a look on the whole site (Halloween so far,
+`LOOKS` in `src/lib/themes.ts`), whatever the round votes by. The choice is written on
+the round it was made in (`week.look`, `'default'` for taking one off) and the site wears
+the latest one, so it stays on until somebody takes it off and each round still says
+what it looked like. It is decoration only, and asks for less motion are honoured
+throughout.
 
 ---
 

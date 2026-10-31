@@ -45,11 +45,19 @@ export const BANANA_BG: Record<'dark' | 'light', string> = {
 };
 
 /**
- * §3.6: a special round's look. Not chosen by anybody: the server puts it on
- * <html> as data-special while the round lasts, over whichever palette is
- * showing and over bananas too, and takes it off again when it is over.
+ * §3.6: a look an admin puts on the whole site. Not chosen by anybody else: the
+ * server puts it on <html> as data-special, over whichever palette is showing
+ * and over bananas too, until an admin takes it off again.
  */
-export const SPECIAL_BG: Record<string, Record<'dark' | 'light', string>> = {
+export const LOOKS = ['halloween'] as const;
+
+export type Look = (typeof LOOKS)[number];
+
+export function isLook(value: string | null | undefined): value is Look {
+	return LOOKS.includes(value as Look);
+}
+
+export const LOOK_BG: Record<Look, Record<'dark' | 'light', string>> = {
 	// --bg itself: the Halloween wash glows from the bottom, so the top is unwashed
 	halloween: {
 		dark: '#120c16',

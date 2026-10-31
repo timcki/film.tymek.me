@@ -44,6 +44,8 @@ export type Week = {
 	resolved_at: string | null;
 	/** §3.6: the special night this round is given over to, or null for a list round */
 	special: string | null;
+	/** §3.6: the look an admin put on the site this round, 'default' to take one off */
+	look: string | null;
 };
 
 export type FilmStatus = 'active' | 'archived' | 'dropped' | 'watched';

@@ -43,13 +43,15 @@ export type AdminDict = {
 	calEdit: string;
 	calSave: string;
 	calCancel: string;
-	/** §3.6: giving the open round over to a special night */
+	/** §3.6: how the open round votes, and what the whole site looks like */
 	spcH: string;
+	spcVote: string;
+	spcList: string;
 	spcIntro: string;
-	spcStart: (name: string) => string;
-	spcOn: (name: string) => string;
-	spcStop: string;
 	spcLocked: string;
+	lookLabel: string;
+	lookDefault: string;
+	lookIntro: string;
 
 	/* people */
 	peoH: string;
@@ -179,15 +181,18 @@ const pl: AdminDict = {
 	calEdit: 'Zmień',
 	calSave: 'Zapisz',
 	calCancel: 'Anuluj',
-	spcH: 'Wieczór specjalny',
+	spcH: 'Ta runda',
+	spcVote: 'Głosowanie',
+	spcList: 'Zwykłe, z listy',
 	spcIntro:
-		'Oddaje bieżącą rundę jednemu wieczorowi z własnymi propozycjami i własnym głosowaniem. ' +
+		'Wieczór specjalny ma własne propozycje i własne głosowanie. ' +
 		'Lista śpi do jego końca: nikt nie wydaje punktów, nic nie traci na wartości i nic nie wypada. ' +
-		'Punkty wydane w tej rundzie wcześniej zostają.',
-	spcStart: (name) => `Zrób z tej rundy ${name}`,
-	spcOn: (name) => `Ta runda to ${name}.`,
-	spcStop: 'Odwołaj',
+		'Punkty wydane w tej rundzie wcześniej zostają. Odwołać go można, dopóki nikt nic nie zgłosił.',
 	spcLocked: 'Ktoś już zgłosił propozycję, więc runda dobiegnie końca.',
+	lookLabel: 'Wygląd strony',
+	lookDefault: 'Domyślny (każdy wybiera sam)',
+	lookIntro:
+		'Domyślnie każdy wybiera sobie ciemny, jasny albo bananowy. Inny wygląd widzą wszyscy, dopóki go nie zmienisz.',
 
 	peoH: 'Ludzie',
 	peoAddH: 'Dodaj osobę',
@@ -324,6 +329,8 @@ const pl: AdminDict = {
 				return 'Ktoś już zgłosił propozycję, więc runda dobiegnie końca.';
 			case 'no_special':
 				return 'Ta runda nie jest specjalna.';
+			case 'no_look':
+				return 'Nie ma takiego wyglądu.';
 			case 'room_picking':
 				return 'Sala właśnie wybiera film.';
 			case 'week_closed':
@@ -381,15 +388,18 @@ const en: AdminDict = {
 	calEdit: 'Change',
 	calSave: 'Save',
 	calCancel: 'Cancel',
-	spcH: 'Special night',
+	spcH: 'This round',
+	spcVote: 'Voting',
+	spcList: 'The usual, off the list',
 	spcIntro:
-		'Gives the current round over to one night with its own picks and its own vote. ' +
+		'A special night has its own picks and its own vote. ' +
 		'The list sleeps until it is over: nobody spends points, nothing fades and nothing drops. ' +
-		'Points already spent this round stay where they are.',
-	spcStart: (name) => `Make this round ${name}`,
-	spcOn: (name) => `This round is ${name}.`,
-	spcStop: 'Call it off',
+		'Points already spent this round stay where they are. It can be called off until somebody puts a pick up.',
 	spcLocked: 'Somebody has already put a pick up, so the round runs its course.',
+	lookLabel: 'Site look',
+	lookDefault: 'Default (everyone picks their own)',
+	lookIntro:
+		'By default everyone picks dark, light or banana for themselves. Any other look is what everybody sees until you change it.',
 
 	peoH: 'People',
 	peoAddH: 'Add someone',

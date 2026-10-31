@@ -5,7 +5,7 @@ import { PERSONAS, personas, type PersonaKind } from '$lib/server/demo';
 import { currentWeek } from '$lib/server/weeks';
 import { roundEvenings } from '$lib/server/evenings';
 import { openRunoff } from '$lib/server/runoffs';
-import { lookAt } from '$lib/server/specials';
+import { lookAt } from '$lib/server/looks';
 import { avatarUrl, bankBalance, spentInWeek } from '$lib/server/people';
 import { langOf } from '$lib/i18n';
 import { unseenChangelog } from '$lib/changelog';
@@ -39,8 +39,8 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 			}
 		: null;
 
-	// §3.6: the special look already on <html>, for the few things drawn rather than coloured
-	const look = lookAt(db)?.id ?? null;
+	// §3.6: the admin's look already on <html>, for the few things drawn rather than coloured
+	const look = lookAt(db);
 	return {
 		lang,
 		demo,

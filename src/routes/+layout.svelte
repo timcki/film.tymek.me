@@ -440,7 +440,7 @@
 			</button>
 			<div class="tip sptip" style:display={rulesOpen ? 'block' : 'none'}>
 				<ol>
-					{#each T.spRules(special, data.week.closesAt) as rule (rule.head)}
+					{#each T.spRules(special, data.week.closesAt, data.look) as rule (rule.head)}
 						<li><b>{rule.head}</b> {rule.body}</li>
 					{/each}
 				</ol>

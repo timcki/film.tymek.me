@@ -16,7 +16,9 @@ import { fromLocalInput, iso, nextDeadline } from '$lib/server/time';
 import { toLocalInput } from '$lib/datetime';
 import { activeRules } from '$lib/server/config';
 import { startSpecial, stopSpecial } from '$lib/server/specials';
-import { isSpecialId, SPECIALS } from '$lib/specials';
+import { lookAt, setLook } from '$lib/server/looks';
+import { isSpecialId, SPECIALS, specialOf } from '$lib/specials';
+import { isLook, LOOKS } from '$lib/themes';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	requireAdmin(locals.person);
@@ -30,10 +32,18 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	return {
 		week: week
-			? { number: week.number, status: week.status, closesAt: week.closes_at, special: week.special }
+			? {
+					number: week.number,
+					status: week.status,
+					closesAt: week.closes_at,
+					special: specialOf(week.special)?.id ?? null
+				}
 			: null,
 		// §3.6: what an open round could be given over to, and whether it still can be taken back
 		specials: Object.keys(SPECIALS),
+		// §3.6: what the whole site could be made to wear, and what it wears now
+		looks: [...LOOKS],
+		look: lookAt(db),
 		specialPicks: week?.special
 			? (
 					db
@@ -110,11 +120,18 @@ export const actions: Actions = {
 		}
 	},
 
+	// §3.6: one picker for how the round votes; the empty choice is the list
 	special: async ({ request, locals }) => {
 		const person = requireAdmin(locals.person);
 		const form = await request.formData();
 		const id = String(form.get('special') ?? '');
 		try {
+			if (!id) {
+				const week = currentWeek(getDb());
+				stopSpecial(getDb(), activeRules());
+				logAdmin(getDb(), person.id, 'round.unspecial', String(week?.number ?? ''));
+				return { unspecial: true };
+			}
 			if (!isSpecialId(id)) throw new RuleError('no_special', 'no such special round');
 			const week = startSpecial(getDb(), activeRules(), id);
 			logAdmin(getDb(), person.id, 'round.special', String(week.number), id);
@@ -124,13 +141,16 @@ export const actions: Actions = {
 		}
 	},
 
-	unspecial: async ({ locals }) => {
+	// §3.6: what the whole site wears, whatever the round votes by
+	look: async ({ request, locals }) => {
 		const person = requireAdmin(locals.person);
+		const form = await request.formData();
+		const look = String(form.get('look') ?? '');
 		try {
-			const week = currentWeek(getDb());
-			stopSpecial(getDb(), activeRules());
-			logAdmin(getDb(), person.id, 'round.unspecial', String(week?.number ?? ''));
-			return { unspecial: true };
+			if (look && !isLook(look)) throw new RuleError('no_look', 'no such look');
+			setLook(getDb(), isLook(look) ? look : null);
+			logAdmin(getDb(), person.id, 'site.look', look || 'default');
+			return { look: look || null };
 		} catch (error) {
 			return ruleFail(error);
 		}
