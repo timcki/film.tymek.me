@@ -90,13 +90,15 @@ export function createPerson(db: DB, rules: RuleSet, name: string, colour: strin
 
 /** the id is never rewritten: it is what every film and ballot points at */
 export function renamePerson(db: DB, id: string, name: string, colour: string): void {
-	const person = db.prepare('SELECT 1 FROM person WHERE id = ?').get(id);
-	if (!person) throw new RuleError('no_person', 'no such person');
-	db.prepare('UPDATE person SET name = ?, colour = ? WHERE id = ?').run(
-		cleanName(name),
-		cleanColour(colour),
-		id
-	);
+	immediate(db, () => {
+		const person = db.prepare('SELECT 1 FROM person WHERE id = ?').get(id);
+		if (!person) throw new RuleError('no_person', 'no such person');
+		db.prepare('UPDATE person SET name = ?, colour = ? WHERE id = ?').run(
+			cleanName(name),
+			cleanColour(colour),
+			id
+		);
+	});
 }
 
 /**
@@ -140,10 +142,15 @@ export function setBank(db: DB, rules: RuleSet, id: string, balance: number): vo
 			cap: rules.bankCap
 		});
 	}
-	db.prepare(
-		`INSERT INTO bank (person_id, balance, updated_at) VALUES (?, ?, ?)
-		 ON CONFLICT(person_id) DO UPDATE SET balance = excluded.balance, updated_at = excluded.updated_at`
-	).run(id, balance, iso());
+	immediate(db, () => {
+		if (!db.prepare('SELECT 1 FROM person WHERE id = ?').get(id)) {
+			throw new RuleError('no_person', 'no such person');
+		}
+		db.prepare(
+			`INSERT INTO bank (person_id, balance, updated_at) VALUES (?, ?, ?)
+			 ON CONFLICT(person_id) DO UPDATE SET balance = excluded.balance, updated_at = excluded.updated_at`
+		).run(id, balance, iso());
+	});
 }
 
 /* ------------------------------------------------------------------- films -- */
@@ -541,8 +548,20 @@ export function deleteFilm(db: DB, id: number): void {
 			n: number;
 		};
 		if (shown.n) throw new RuleError('film_has_ballots', 'the room has seen it; archive it instead');
+		// §3.6: an approval is a special round's vote, and is history the same way
+		const approved = db.prepare('SELECT COUNT(*) AS n FROM approval WHERE film_id = ?').get(id) as {
+			n: number;
+		};
+		if (approved.n) throw new RuleError('film_has_ballots', 'people picked it; archive it instead');
 		// let go of the night first, or the week is left pointing at nothing
 		db.prepare('UPDATE week SET winner_film_id = NULL WHERE winner_film_id = ?').run(id);
+		// what people said about a mistake goes with it; foreign keys refuse otherwise
+		db.prepare(
+			'DELETE FROM comment_react WHERE comment_id IN (SELECT id FROM film_comment WHERE film_id = ?)'
+		).run(id);
+		db.prepare('DELETE FROM film_comment WHERE film_id = ?').run(id);
+		db.prepare('DELETE FROM film_seen WHERE film_id = ?').run(id);
+		db.prepare('DELETE FROM film_hold WHERE film_id = ?').run(id);
 		db.prepare('DELETE FROM film WHERE id = ?').run(id);
 		rexpAll(db);
 	});

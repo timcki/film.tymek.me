@@ -138,7 +138,11 @@ export const actions: Actions = {
 
 		const form = await request.formData();
 		const personId = String(form.get('personId') ?? '');
-		if (personId) checkIn(db, runoff.week_number, personId);
-		return { checkedInAs: personId || null };
+		try {
+			if (personId) checkIn(db, runoff.week_number, personId);
+			return { checkedInAs: personId || null };
+		} catch (err) {
+			return ruleFail(err);
+		}
 	}
 };

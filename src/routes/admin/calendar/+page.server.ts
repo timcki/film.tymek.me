@@ -1,5 +1,5 @@
 import type { Actions, PageServerLoad } from './$types';
-import { getDb } from '$lib/server/db';
+import { getDb, immediate, type DB } from '$lib/server/db';
 import { logAdmin, requireAdmin } from '$lib/server/admin';
 import {
 	addNight,
@@ -9,7 +9,7 @@ import {
 	nextNight,
 	setNightStatus
 } from '$lib/server/schedule';
-import { currentWeek, syncOpenWeek } from '$lib/server/weeks';
+import { currentWeek, deadlineAnchor, syncOpenWeek } from '$lib/server/weeks';
 import { ruleFail } from '$lib/server/respond';
 import { RuleError } from '$lib/server/types';
 import { fromLocalInput, iso, nextDeadline } from '$lib/server/time';
@@ -24,7 +24,7 @@ import { isLook, LOOKS } from '$lib/themes';
 export const load: PageServerLoad = async ({ locals }) => {
 	requireAdmin(locals.person);
 	const db = getDb();
-	const week = syncOpenWeek(db) ?? currentWeek(db);
+	const week = immediate(db, () => syncOpenWeek(db)) ?? currentWeek(db);
 	const nights = allNights(db);
 
 	// which row, if any, is the one the current round will actually close on
@@ -57,7 +57,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 		drivingId,
 		nights,
 		// what the round would fall back to with nothing planned
-		fallback: week ? iso(nextDeadline(new Date(week.opens_at))) : null,
+		fallback: week
+			? iso(nextDeadline(deadlineAnchor(db, week.number, new Date(week.opens_at))))
+			: null,
 		// the picker opens on the next Thursday at 20:00, the old default
 		suggested: toLocalInput(nextNight(db, new Date()))
 	};
@@ -71,9 +73,13 @@ function whenFrom(form: FormData): Date {
 	}
 }
 
-/** every calendar edit repoints the open round before it returns */
-function afterEdit(): void {
-	syncOpenWeek(getDb());
+/** every calendar edit repoints the open round in the same transaction */
+function edit(fn: (db: DB) => void): void {
+	const db = getDb();
+	immediate(db, () => {
+		fn(db);
+		syncOpenWeek(db);
+	});
 }
 
 export const actions: Actions = {
@@ -83,9 +89,10 @@ export const actions: Actions = {
 		const note = String(form.get('note') ?? '');
 		try {
 			const at = whenFrom(form);
-			addNight(getDb(), at, note);
-			logAdmin(getDb(), person.id, 'night.add', iso(at), note || null);
-			afterEdit();
+			edit((db) => {
+				addNight(db, at, note);
+				logAdmin(db, person.id, 'night.add', iso(at), note || null);
+			});
 			return { added: true };
 		} catch (error) {
 			return ruleFail(error);
@@ -99,9 +106,10 @@ export const actions: Actions = {
 		const note = String(form.get('note') ?? '');
 		try {
 			const at = whenFrom(form);
-			moveNight(getDb(), id, at, note);
-			logAdmin(getDb(), person.id, 'night.move', iso(at), note || null);
-			afterEdit();
+			edit((db) => {
+				moveNight(db, id, at, note);
+				logAdmin(db, person.id, 'night.move', iso(at), note || null);
+			});
 			return { moved: true };
 		} catch (error) {
 			return ruleFail(error);
@@ -114,9 +122,10 @@ export const actions: Actions = {
 		const id = Number(form.get('id'));
 		const restore = form.get('restore') === '1';
 		try {
-			setNightStatus(getDb(), id, restore ? 'planned' : 'skipped');
-			logAdmin(getDb(), person.id, restore ? 'night.restore' : 'night.skip', String(id));
-			afterEdit();
+			edit((db) => {
+				setNightStatus(db, id, restore ? 'planned' : 'skipped');
+				logAdmin(db, person.id, restore ? 'night.restore' : 'night.skip', String(id));
+			});
 			return { skipped: !restore };
 		} catch (error) {
 			return ruleFail(error);
@@ -176,9 +185,10 @@ export const actions: Actions = {
 		const form = await request.formData();
 		const id = Number(form.get('id'));
 		try {
-			deleteNight(getDb(), id);
-			logAdmin(getDb(), person.id, 'night.delete', String(id));
-			afterEdit();
+			edit((db) => {
+				deleteNight(db, id);
+				logAdmin(db, person.id, 'night.delete', String(id));
+			});
 			return { removed: true };
 		} catch (error) {
 			return ruleFail(error);

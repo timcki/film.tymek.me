@@ -16,6 +16,10 @@ import { filmById } from '../src/lib/server/films.js';
 import { personById } from '../src/lib/server/people.js';
 import { RuleError } from '../src/lib/server/types.js';
 import { NOTICE_MAX, noticeAt, setNotice } from '../src/lib/server/notice.js';
+import { addComment, reactComment } from '../src/lib/server/comments.js';
+import { toggleSeen } from '../src/lib/server/seen.js';
+import { placeHold } from '../src/lib/server/holds.js';
+import { REACTIONS } from '../src/lib/reactions.js';
 import { addFilm, castBallot, forceAdvanceTo, freshDb } from './helpers.js';
 
 const asPerson = (over: Record<string, unknown> = {}) =>
@@ -131,6 +135,23 @@ describe('curating the films', () => {
 		deleteFilm(db, mistake);
 		expect(filmById(db, mistake)).toBeUndefined();
 		expect(() => deleteFilm(db, backed)).toThrow(RuleError);
+	});
+
+	it('deletes a mistake somebody already talked about, ticked or held', () => {
+		const { db } = freshDb('banked');
+		const mistake = addFilm(db, 'Mistake', 'ala', 1);
+		const comment = addComment(db, 'bartek', mistake, 'to chyba pomyłka');
+		reactComment(db, 'celina', comment, REACTIONS[0]);
+		toggleSeen(db, 'darek', mistake);
+		placeHold(db, 1, mistake, 'ala', null);
+
+		deleteFilm(db, mistake);
+		expect(filmById(db, mistake)).toBeUndefined();
+		const left = (table: string) =>
+			(db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as { n: number }).n;
+		expect([left('film_comment'), left('comment_react'), left('film_seen'), left('film_hold')]).toEqual([
+			0, 0, 0, 0
+		]);
 	});
 
 	it('moves a nomination but refuses to double up someone week', () => {

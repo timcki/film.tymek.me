@@ -1,5 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { backTo } from '$lib/server/respond';
 import { bananaOf, themeOf } from '$lib/themes';
 import { BANANA_COOKIE, THEME_COOKIE, COOKIE_MAX_AGE } from '../../hooks.server';
 
@@ -17,9 +18,7 @@ export const actions: Actions = {
 			path: '/',
 			maxAge: COOKIE_MAX_AGE
 		});
-		// only ever back into this app, never to a URL someone else supplied
-		const to = String(form.get('to') ?? '/');
-		redirect(303, to.startsWith('/') && !to.startsWith('//') ? to : '/');
+		redirect(303, backTo(form.get('to'), url));
 	},
 	// a toggle rather than a choice: the form says what it should become
 	banana: async ({ request, cookies, url }) => {
@@ -31,7 +30,6 @@ export const actions: Actions = {
 			path: '/',
 			maxAge: COOKIE_MAX_AGE
 		});
-		const to = String(form.get('to') ?? '/');
-		redirect(303, to.startsWith('/') && !to.startsWith('//') ? to : '/');
+		redirect(303, backTo(form.get('to'), url));
 	}
 };

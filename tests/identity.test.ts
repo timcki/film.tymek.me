@@ -4,6 +4,7 @@ import { setPoints } from '../src/lib/server/films.js';
 import { flashVote } from '../src/lib/server/runoffs.js';
 import { closeWeek } from '../src/lib/server/weeks.js';
 import { openRunoff } from '../src/lib/server/runoffs.js';
+import { backTo } from '../src/lib/server/respond.js';
 import { addFilm, freshDb } from './helpers.js';
 
 describe('identity', () => {
@@ -55,5 +56,20 @@ describe('identity', () => {
 
 		// a weekly ballot always needs a real person; the foreign key sees to it
 		expect(() => setPoints(db, rules, 'nobody', first, 1)).toThrow();
+	});
+});
+
+describe('going back after a toggle', () => {
+	const here = new URL('https://film.tymek.me/lang');
+
+	it('returns to a page of this app, query and all', () => {
+		expect(backTo('/stats?lens=films&era=app', here)).toBe('/stats?lens=films&era=app');
+	});
+
+	it('never leaves for somebody else, however the address is dressed up', () => {
+		for (const to of ['//evil.com', '/\\evil.com', 'https://evil.com/', '\\\\evil.com', 'javascript:alert(1)']) {
+			expect(backTo(to, here)).toBe('/');
+		}
+		expect(backTo(null, here)).toBe('/');
 	});
 });

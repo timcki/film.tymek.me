@@ -4,6 +4,7 @@ import { attended, attendedWeeks, checkIn } from '../src/lib/server/attendance.j
 import { closeRunoff, flashVote, openRunoff } from '../src/lib/server/runoffs.js';
 import { closeWeek } from '../src/lib/server/weeks.js';
 import { setPoints } from '../src/lib/server/films.js';
+import { RuleError } from '../src/lib/server/types.js';
 import { addFilm, castBallot, freshDb } from './helpers.js';
 
 describe('checking in', () => {
@@ -16,6 +17,20 @@ describe('checking in', () => {
 		expect(attended(db, 1, 'ala')).toBe(true);
 		expect(attended(db, 1, 'celina')).toBe(false);
 		expect(attendedWeeks(db, 'ala')).toEqual([1]);
+	});
+
+	it('turns away a name that is not on the roster, from the list or the vote', () => {
+		const { db, rules } = freshDb('weekly');
+		db.prepare("UPDATE person SET active = 0 WHERE id = 'filip'").run();
+		expect(() => checkIn(db, 1, 'made-up')).toThrow(RuleError);
+		expect(() => checkIn(db, 1, 'filip')).toThrow(RuleError);
+
+		const film = addFilm(db, 'Only', 'ala', 1);
+		setPoints(db, rules, 'ala', film, 2);
+		closeWeek(db, rules);
+		const runoff = openRunoff(db)!;
+		expect(() => flashVote(db, runoff.id, 'made-up', 'made-up', [film])).toThrow(RuleError);
+		expect(attendedWeeks(db, 'filip')).toEqual([]);
 	});
 
 	it('every decided night has a room code to scan, even with one candidate', () => {

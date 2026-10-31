@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { immediate } from '../src/lib/server/db.js';
 import { generation } from '../src/lib/server/live.js';
 import { watchLive } from '../src/lib/live-poll.js';
+import { tick } from '../src/lib/server/scheduler.js';
 import { freshDb } from './helpers.js';
 
 describe('the generation', () => {
@@ -19,6 +20,21 @@ describe('the generation', () => {
 			})
 		).toThrow('rolled back');
 		expect(generation()).toBe(after);
+	});
+
+	it('stays put when a committed transaction changed nothing', () => {
+		const { db } = freshDb();
+		const before = generation();
+		immediate(db, () => db.prepare("UPDATE person SET name = 'x' WHERE id = 'nobody'").run());
+		expect(generation()).toBe(before);
+	});
+
+	it('is not moved by a scheduler tick with nothing to do', () => {
+		const { db } = freshDb();
+		tick(new Date('2026-08-03T10:01:00Z'), db);
+		const settled = generation();
+		tick(new Date('2026-08-03T10:02:00Z'), db);
+		expect(generation()).toBe(settled);
 	});
 
 	it('moves only when the outermost transaction commits', () => {

@@ -291,6 +291,8 @@ const pl: AdminDict = {
 				return 'Nie ma takiego terminu.';
 			case 'night_used':
 				return 'Ten wieczorek już się odbył.';
+			case 'night_past':
+				return 'Ten termin już minął. Wybierz datę w przyszłości.';
 			case 'bad_date':
 				return 'Podaj datę i godzinę.';
 			case 'name_required':
@@ -359,6 +361,16 @@ const pl: AdminDict = {
 				return 'Ta runda jest zamknięta.';
 			case 'deadline_passed':
 				return 'Termin tej rundy już minął.';
+			case 'title_too_long':
+				return `Tytuł może mieć najwyżej ${p.max} znaków.`;
+			case 'note_too_long':
+				return `Notka może mieć najwyżej ${p.max} znaków.`;
+			case 'bad_poster':
+				return 'Plakat musi pochodzić z TMDB.';
+			case 'list_asleep':
+				return 'Zwykła lista śpi do końca specjalnej rundy.';
+			case 'demo_no_rotate':
+				return 'W demo nie ma linków do zmiany.';
 			default:
 				return fallback;
 		}

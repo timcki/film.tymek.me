@@ -87,6 +87,30 @@ describe('the calendar', () => {
 		expect(() => setNightStatus(db, night, 'skipped')).toThrow(RuleError);
 	});
 
+	it('refuses a night that is already behind us, however it gets there', () => {
+		const { db } = freshDb('banked', MONDAY);
+		const past = at('2026-08-03T09:00:00.000Z');
+		const code = (fn: () => unknown) => {
+			try {
+				fn();
+			} catch (error) {
+				return (error as RuleError).code;
+			}
+		};
+		expect(code(() => addNight(db, past, null, MONDAY))).toBe('night_past');
+
+		const wednesday = addNight(db, at('2026-08-05T18:00:00.000Z'), null, MONDAY);
+		expect(code(() => moveNight(db, wednesday, past, null, MONDAY))).toBe('night_past');
+
+		// skipped on Monday, then somebody presses restore once Wednesday is over
+		setNightStatus(db, wednesday, 'skipped', MONDAY);
+		const friday = at('2026-08-07T10:00:00.000Z');
+		expect(code(() => setNightStatus(db, wednesday, 'planned', friday))).toBe('night_past');
+		// skipping a night that has passed is still fine; it changes no deadline
+		setNightStatus(db, wednesday, 'planned', MONDAY);
+		expect(() => setNightStatus(db, wednesday, 'skipped', friday)).not.toThrow();
+	});
+
 	it('is stable: recomputing does not walk the deadline forward', () => {
 		const { db } = freshDb('banked', MONDAY);
 		const first = syncOpenWeek(db)!.closes_at;
@@ -113,6 +137,34 @@ describe('a round that closes on a planned night', () => {
 		// the fortnight gap is the schedule doing what it was told, not a bug
 		expect(currentWeek(db)!.number).toBe(2);
 		expect(currentWeek(db)!.closes_at).toBe('2026-08-19T18:00:00.000Z');
+	});
+
+	it('gives a round decided early on the night itself a whole round after it', () => {
+		const { db, rules } = freshDb('banked', MONDAY);
+		const film = addFilm(db, 'Only', 'ala', 1);
+		castBallot(db, 1, 'ala', film, 2);
+
+		// nothing planned, so the round was due Thursday 20:00; the host closed at
+		// 19:30 and the room had decided by 19:50
+		closeWeek(db, rules, at('2026-08-06T17:30:00.000Z'));
+		closeRunoff(db, rules, openRunoff(db)!.id, at('2026-08-06T17:50:00.000Z'));
+
+		expect(currentWeek(db)!.number).toBe(2);
+		expect(currentWeek(db)!.closes_at).toBe('2026-08-13T18:00:00.000Z');
+		expect(syncOpenWeek(db)!.closes_at).toBe('2026-08-13T18:00:00.000Z');
+	});
+
+	it('does not hand the next round the night the early close already used', () => {
+		const { db, rules } = freshDb('banked', MONDAY);
+		addNight(db, at('2026-08-06T18:00:00.000Z'), null);
+		syncOpenWeek(db);
+		const film = addFilm(db, 'Only', 'ala', 1);
+		castBallot(db, 1, 'ala', film, 2);
+
+		closeWeek(db, rules, at('2026-08-05T18:00:00.000Z'));
+		closeRunoff(db, rules, openRunoff(db)!.id, at('2026-08-05T18:05:00.000Z'));
+
+		expect(currentWeek(db)!.closes_at).toBe('2026-08-13T18:00:00.000Z');
 	});
 
 	it('leaves the calendar alone when it closes on the Thursday fallback', () => {

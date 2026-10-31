@@ -278,6 +278,17 @@ describe('turning up', () => {
 		expect(rows.find((row) => row.person.id === 'celina')!.winnersBacked).toBe(0);
 	});
 
+	it('reads the winner off the film, not off a week an admin left pointing nowhere', () => {
+		const { db } = freshDb();
+		const winner = addFilm(db, 'Winner', 'ala', 1);
+		castBallot(db, 1, 'bartek', winner, 2);
+		watch(db, winner, 1);
+		db.prepare('UPDATE week SET winner_film_id = NULL WHERE number = 1').run();
+
+		const rows = engagement(db, ALL);
+		expect(rows.find((row) => row.person.id === 'bartek')!.winnersBacked).toBe(1);
+	});
+
 	it('lists everybody on the roster, including the ones who have done nothing', () => {
 		const { db } = freshDb();
 		const rows = engagement(db, ALL);

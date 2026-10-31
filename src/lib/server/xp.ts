@@ -127,7 +127,10 @@ export function rexpAll(db: DB): void {
 		XP.backedWinner
 	);
 
-	const update = db.prepare('UPDATE person SET xp = ? WHERE id = ?');
+	const update = db.prepare('UPDATE person SET xp = ? WHERE id = ? AND xp IS NOT ?');
 	const people = db.prepare('SELECT id FROM person').all() as { id: string }[];
-	for (const person of people) update.run(totals.get(person.id) ?? 0, person.id);
+	for (const person of people) {
+		const xp = totals.get(person.id) ?? 0;
+		update.run(xp, person.id, xp);
+	}
 }

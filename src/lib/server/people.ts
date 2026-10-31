@@ -1,4 +1,5 @@
 import type { DB } from './db.js';
+import { immediate } from './db.js';
 import type { Face, Person } from './types.js';
 import { RuleError } from './types.js';
 import { iso } from './time.js';
@@ -24,7 +25,7 @@ export function allPeople(db: DB): Person[] {
 
 export function rotateToken(db: DB, personId: string): string {
 	const token = newToken();
-	db.prepare('UPDATE person SET token = ? WHERE id = ?').run(token, personId);
+	immediate(db, () => db.prepare('UPDATE person SET token = ? WHERE id = ?').run(token, personId));
 	return token;
 }
 
@@ -92,15 +93,19 @@ export function setAvatar(db: DB, personId: string, bytes: Uint8Array): void {
 	if (bytes.length > MAX_AVATAR_BYTES) throw new RuleError('avatar_too_big', 'that picture is too big; 2 MB max', { mb: 2 });
 	const mime = sniffImage(bytes);
 	if (!mime) throw new RuleError('avatar_not_image', 'that is not a JPEG, PNG or WebP');
-	db.prepare(
-		'UPDATE person SET avatar = ?, avatar_mime = ?, avatar_updated_at = ? WHERE id = ?'
-	).run(Buffer.from(bytes), mime, iso(), personId);
+	immediate(db, () =>
+		db
+			.prepare('UPDATE person SET avatar = ?, avatar_mime = ?, avatar_updated_at = ? WHERE id = ?')
+			.run(Buffer.from(bytes), mime, iso(), personId)
+	);
 }
 
 export function clearAvatar(db: DB, personId: string): void {
-	db.prepare(
-		'UPDATE person SET avatar = NULL, avatar_mime = NULL, avatar_updated_at = NULL WHERE id = ?'
-	).run(personId);
+	immediate(db, () =>
+		db
+			.prepare('UPDATE person SET avatar = NULL, avatar_mime = NULL, avatar_updated_at = NULL WHERE id = ?')
+			.run(personId)
+	);
 }
 
 export function avatarOf(

@@ -55,10 +55,17 @@ export function getDb(): DB {
  * the open lists that something changed (live.ts). Only once the outermost
  * transaction has committed: a nested call is a savepoint, and a phone that
  * reloaded on it would read the state from before the commit it was told about.
+ * And only when a row actually changed, or the scheduler's minutely pass would
+ * send every phone to reload once a minute for nothing.
  */
 export function immediate<T>(db: DB, fn: () => T): T {
-	const tx = db.transaction(fn);
-	const result = tx.immediate();
-	if (!db.inTransaction) bumpGeneration();
+	const outermost = !db.inTransaction;
+	const before = outermost ? totalChanges(db) : 0;
+	const result = db.transaction(fn).immediate();
+	if (outermost && totalChanges(db) !== before) bumpGeneration();
 	return result;
+}
+
+function totalChanges(db: DB): number {
+	return (db.prepare('SELECT total_changes() AS n').get() as { n: number }).n;
 }

@@ -967,6 +967,8 @@ const pl: Dict = {
 				return 'W demo nie wgrywamy zdjęć.';
 			case 'demo_no_rotate':
 				return 'W demo nie ma linków do zmiany.';
+			case 'no_person':
+				return 'Nie ma takiej osoby na liście.';
 			case 'list_asleep':
 				return 'Zwykła lista śpi do końca spooky rundy.';
 			case 'no_special':

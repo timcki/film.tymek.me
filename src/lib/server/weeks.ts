@@ -56,12 +56,22 @@ export function requireSpecialWeek(db: DB, now: Date = new Date()): Week & { spe
 	return week as Week & { special: string };
 }
 
+/**
+ * What a round's deadline is counted from: its opening, or the night the round
+ * before it was due, whichever is later. A round decided early, at 19:50 on the
+ * night itself, would otherwise take that same 20:00 and be over in ten minutes.
+ */
+export function deadlineAnchor(db: DB, number: number, opensAt: Date): Date {
+	const due = weekByNumber(db, number - 1)?.closes_at;
+	return due && new Date(due) > opensAt ? new Date(due) : opensAt;
+}
+
 export function openWeek(db: DB, number: number, now: Date = new Date()): Week {
 	const existing = weekByNumber(db, number);
 	if (existing) return existing;
 	db.prepare(
 		`INSERT INTO week (number, opens_at, closes_at, status) VALUES (?, ?, ?, 'open')`
-	).run(number, iso(now), iso(nextNight(db, now)));
+	).run(number, iso(now), iso(nextNight(db, deadlineAnchor(db, number, now))));
 	return weekByNumber(db, number) as Week;
 }
 
@@ -73,7 +83,7 @@ export function openWeek(db: DB, number: number, now: Date = new Date()): Week {
 export function syncOpenWeek(db: DB): Week | undefined {
 	const week = currentWeek(db);
 	if (!week || week.status !== 'open') return week;
-	const closesAt = iso(nextNight(db, new Date(week.opens_at)));
+	const closesAt = iso(nextNight(db, deadlineAnchor(db, week.number, new Date(week.opens_at))));
 	if (closesAt === week.closes_at) return week;
 	db.prepare('UPDATE week SET closes_at = ? WHERE number = ?').run(closesAt, week.number);
 	return weekByNumber(db, week.number);
@@ -259,12 +269,12 @@ export function closeWeek(db: DB, rules: RuleSet, now: Date = new Date()): Close
 	});
 }
 
+/** runoff.code is unique across every room there has ever been, not just the open ones */
 function uniqueCode(db: DB): string {
-	const taken = db.prepare('SELECT code FROM runoff WHERE closed_at IS NULL');
+	const taken = db.prepare('SELECT 1 FROM runoff WHERE code = ?');
 	for (let i = 0; i < 50; i++) {
 		const code = newCode();
-		const clash = taken.all().some((row) => (row as { code: string }).code === code);
-		if (!clash) return code;
+		if (!taken.get(code)) return code;
 	}
 	throw new Error('could not allocate a unique runoff code');
 }

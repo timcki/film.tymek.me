@@ -51,7 +51,15 @@ function assertFree(db: DB, at: Date, exceptId: number | null): void {
 	if (clash) throw new RuleError('night_exists', 'that date and time is already in the calendar');
 }
 
+/** a planned night is a deadline, and one already behind us would close the round on the next tick */
+function assertAhead(at: Date, now: Date): void {
+	if (at.getTime() <= now.getTime()) {
+		throw new RuleError('night_past', 'that date and time is already behind us');
+	}
+}
+
 export function addNight(db: DB, at: Date, note: string | null, now: Date = new Date()): number {
+	assertAhead(at, now);
 	assertFree(db, at, null);
 	const result = db
 		.prepare(`INSERT INTO night (at, status, note, created_at) VALUES (?, 'planned', ?, ?)`)
@@ -59,12 +67,19 @@ export function addNight(db: DB, at: Date, note: string | null, now: Date = new 
 	return Number(result.lastInsertRowid);
 }
 
-export function moveNight(db: DB, id: number, at: Date, note: string | null): void {
+export function moveNight(
+	db: DB,
+	id: number,
+	at: Date,
+	note: string | null,
+	now: Date = new Date()
+): void {
 	const night = nightById(db, id);
 	if (!night) throw new RuleError('no_night', 'no such night');
 	if (night.status === 'used') {
 		throw new RuleError('night_used', 'that night has already happened');
 	}
+	assertAhead(at, now);
 	assertFree(db, at, id);
 	db.prepare(`UPDATE night SET at = ?, note = ? WHERE id = ?`).run(
 		iso(at),
@@ -74,12 +89,18 @@ export function moveNight(db: DB, id: number, at: Date, note: string | null): vo
 }
 
 /** skipping leaves the row in place, so the calendar still shows the week we sat out */
-export function setNightStatus(db: DB, id: number, status: 'planned' | 'skipped'): void {
+export function setNightStatus(
+	db: DB,
+	id: number,
+	status: 'planned' | 'skipped',
+	now: Date = new Date()
+): void {
 	const night = nightById(db, id);
 	if (!night) throw new RuleError('no_night', 'no such night');
 	if (night.status === 'used') {
 		throw new RuleError('night_used', 'that night has already happened');
 	}
+	if (status === 'planned') assertAhead(new Date(night.at), now);
 	db.prepare('UPDATE night SET status = ? WHERE id = ?').run(status, id);
 }
 

@@ -2,6 +2,7 @@ import { error, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getDb } from '$lib/server/db';
 import { isDemo } from '$lib/server/config';
+import { backTo } from '$lib/server/respond';
 import { isPersonaKind, personas } from '$lib/server/demo';
 import { COOKIE_MAX_AGE, PERSON_COOKIE } from '../../../hooks.server';
 
@@ -30,6 +31,5 @@ export const GET: RequestHandler = ({ url, cookies }) => {
 	});
 
 	// back to the page they were on, and only ever to a page of this app
-	const to = url.searchParams.get('to');
-	redirect(303, to && to.startsWith('/') && !to.startsWith('//') ? to : '/');
+	redirect(303, backTo(url.searchParams.get('to'), url));
 };

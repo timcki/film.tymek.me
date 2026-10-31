@@ -4,7 +4,7 @@ import type { Film, Runoff, Week } from './types.js';
 import { RuleError } from './types.js';
 import type { RuleSet } from './rules.js';
 import { orderFilms } from './rules.js';
-import { checkIn } from './attendance.js';
+import { checkIn, requireActive } from './attendance.js';
 import { avatarUrl } from './people.js';
 import { iso } from './time.js';
 import { finish, weekByNumber } from './weeks.js';
@@ -127,6 +127,7 @@ export function flashVote(
 			!ranking.every((id) => Number.isInteger(id) && candidates.some((f) => f.id === id))) {
 			throw new RuleError('invalid_ranking', 'rank every shortlisted film exactly once');
 		}
+		if (personId) requireActive(db, personId);
 		const encoded = JSON.stringify(ranking);
 		db.prepare(
 			`INSERT INTO runoff_ballot (runoff_id, voter_key, person_id, film_id, ranking, created_at)

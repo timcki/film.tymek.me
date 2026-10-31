@@ -13,6 +13,7 @@ import {
 import { personById, rotateToken } from '$lib/server/people';
 import { COLOURS } from '$lib/server/roster';
 import { ruleFail } from '$lib/server/respond';
+import { RuleError } from '$lib/server/types';
 
 function linkFor(token: string): string {
 	return `${origin().replace(/\/$/, '')}/u/${token}`;
@@ -106,8 +107,10 @@ export const actions: Actions = {
 		const person = requireAdmin(locals.person);
 		const form = await request.formData();
 		const id = String(form.get('id') ?? '');
+		// as on /me: a demo persona is shared, so a new link logs everybody else out of it
+		if (isDemo()) return ruleFail(new RuleError('demo_no_rotate', 'the demo has no links to roll'));
 		const target = personById(getDb(), id);
-		if (!target) return ruleFail(new Error('no such person'));
+		if (!target) return ruleFail(new RuleError('no_person', 'no such person'));
 		const token = rotateToken(getDb(), id);
 		logAdmin(getDb(), person.id, 'person.rotate', id);
 		return { created: { name: target.name, link: linkFor(token) } };

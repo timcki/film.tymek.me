@@ -1,15 +1,28 @@
 import type { DB } from './db.js';
+import { immediate } from './db.js';
+import { RuleError } from './types.js';
 import { iso } from './time.js';
 import { rexpAll } from './xp.js';
 
+/** a name picked on a shared phone arrives as a bare id, so it has to be somebody on the roster */
+export function requireActive(db: DB, personId: string): void {
+	const person = db.prepare('SELECT active FROM person WHERE id = ?').get(personId) as
+		| { active: number }
+		| undefined;
+	if (!person?.active) throw new RuleError('no_person', 'no such person');
+}
+
 /** §7.4: records presence once per night; scanning again changes nothing */
 export function checkIn(db: DB, weekNumber: number, personId: string, now: Date = new Date()): void {
-	const result = db
-		.prepare(
-			`INSERT OR IGNORE INTO attendance (week_number, person_id, checked_in_at) VALUES (?, ?, ?)`
-		)
-		.run(weekNumber, personId, iso(now));
-	if (result.changes > 0) rexpAll(db);
+	immediate(db, () => {
+		requireActive(db, personId);
+		const result = db
+			.prepare(
+				`INSERT OR IGNORE INTO attendance (week_number, person_id, checked_in_at) VALUES (?, ?, ?)`
+			)
+			.run(weekNumber, personId, iso(now));
+		if (result.changes > 0) rexpAll(db);
+	});
 }
 
 export function attended(db: DB, weekNumber: number, personId: string): boolean {

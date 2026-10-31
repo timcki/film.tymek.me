@@ -304,9 +304,9 @@ export function engagement(db: DB, window: Window): EngagementRow[] {
 		(
 			db
 				.prepare(
-					`SELECT b.person_id, COUNT(DISTINCT w.number) AS n
-					 FROM week w JOIN ballot b ON b.week_number = w.number AND b.film_id = w.winner_film_id
-					 WHERE w.number BETWEEN ? AND ? GROUP BY b.person_id`
+					`SELECT b.person_id, COUNT(DISTINCT f.id) AS n
+					 FROM film f JOIN ballot b ON b.film_id = f.id AND b.week_number = f.watched_week
+					 WHERE f.status = 'watched' AND f.watched_week BETWEEN ? AND ? GROUP BY b.person_id`
 				)
 				.all(from, to) as { person_id: string; n: number }[]
 		).map((row) => [row.person_id, row.n])

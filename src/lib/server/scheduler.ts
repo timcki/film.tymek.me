@@ -1,4 +1,4 @@
-import { getDb, type DB } from './db.js';
+import { getDb, immediate, type DB } from './db.js';
 import { activeRules } from './config.js';
 import type { RuleSet } from './rules.js';
 import { closeWeek, currentWeek, openWeek, syncOpenWeek } from './weeks.js';
@@ -30,20 +30,22 @@ export function tick(now: Date = new Date(), db: DB = getDb()): void {
 	const rules = activeRules();
 	closeExpiredRunoffs(db, rules, now);
 
-	// the calendar is the single source of truth for the deadline, so pick up any
-	// change to it before deciding whether the round is over
-	const week = syncOpenWeek(db) ?? currentWeek(db) ?? openWeek(db, 1, now);
-	noteRuleSet(db, rules, week.number, now);
+	immediate(db, () => {
+		// the calendar is the single source of truth for the deadline, so pick up any
+		// change to it before deciding whether the round is over
+		const week = syncOpenWeek(db) ?? currentWeek(db) ?? openWeek(db, 1, now);
+		noteRuleSet(db, rules, week.number, now);
 
-	if (week.status === 'open' && new Date(week.closes_at).getTime() <= now.getTime()) {
-		closeWeek(db, rules, now);
-		return;
-	}
+		if (week.status === 'open' && new Date(week.closes_at).getTime() <= now.getTime()) {
+			closeWeek(db, rules, now);
+			return;
+		}
 
-	// keeps the caches honest even when nobody has voted since a rule-set change
-	// or a migration seeded new data
-	rescoreAll(db, rules, week.number);
-	rexpAll(db);
+		// keeps the caches honest even when nobody has voted since a rule-set change
+		// or a migration seeded new data
+		rescoreAll(db, rules, week.number);
+		rexpAll(db);
+	});
 }
 
 export function startScheduler(): void {

@@ -69,7 +69,9 @@ export function rescoreAll(db: DB, rules: RuleSet, currentWeek: number): Map<num
 		id: number;
 		special: string | null;
 	}[];
-	const update = db.prepare('UPDATE film SET score = ? WHERE id = ?');
+	// a score that already holds its value is left alone, so a rescore that moved
+	// nothing changes no rows and immediate() tells no phone to reload
+	const update = db.prepare('UPDATE film SET score = ? WHERE id = ? AND score IS NOT ?');
 	const scores = new Map<number, number>();
 	for (const film of films) {
 		// §3.6: a special pick never takes points; its score is its approvals
@@ -77,7 +79,7 @@ export function rescoreAll(db: DB, rules: RuleSet, currentWeek: number): Map<num
 			? (approvals.get(film.id) ?? 0)
 			: scoreOf(rules, onClock(clock, points.get(film.id) ?? new Map()), now);
 		scores.set(film.id, value);
-		update.run(value, film.id);
+		update.run(value, film.id, value);
 	}
 	return scores;
 }

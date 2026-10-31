@@ -137,4 +137,10 @@ describe('rule violations', () => {
 	it('falls back to the English message for a code it does not know', () => {
 		expect(DICT.pl.error('something_new', {}, 'the raw message')).toBe('the raw message');
 	});
+
+	it('says in Polish what the back office can run into', () => {
+		const codes = ['title_too_long', 'note_too_long', 'bad_poster', 'list_asleep', 'night_past', 'demo_no_rotate'];
+		for (const code of codes) expect(ADMIN_DICT.pl.error(code, { max: 9 }, 'FALLBACK')).not.toBe('FALLBACK');
+		expect(DICT.pl.error('no_person', {}, 'FALLBACK')).not.toBe('FALLBACK');
+	});
 });
