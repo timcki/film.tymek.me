@@ -226,12 +226,14 @@
 	--warn: #a6e36c;
 }
 
-/* room under the string of lights, which stays strung across the top of the
+/* ---------------------------------------------------------------- looks -----
+   What every look's scenery needs of the page, whichever look it is. Room
+   under the string of lights, which stays strung across the top of the
    screen: the page starts below its band, and the header sticks below it too */
-:root[data-special='halloween'] body {
+:root[data-special] body {
 	padding-top: 18px;
 }
-:root[data-special='halloween'] header.lean {
+:root[data-special] header.lean {
 	top: 18px;
 }
 /* the ground glow. On an iPhone the page ends above Safari's floating bar and
@@ -240,18 +242,22 @@
    colour for the status area. So the root colour stays --bg, and the glow is a
    pool of light round the pumpkins that has faded back to --bg before the
    page's last pixel, which is what lets the page run on under the bar without
-   a seam. The root is at least a screen tall, and the pumpkins sit on the
-   bottom of the page, so a short page still glows where they are */
-:root[data-special='halloween'] {
+   a seam. The root is at least a screen tall, and the ground sits on the
+   bottom of the page, so a short page still glows where it is */
+:root[data-special] {
 	min-height: 100%;
 	background: var(--glow) no-repeat, var(--bg);
 }
-:root[data-special='halloween'] body {
+:root[data-special] body {
 	background: transparent;
 	/* what the full-width scenery at the foot of the page is laid out against */
 	position: relative;
 }
-:root[data-special='halloween'] .wrap {
+/* lifted one layer, so whatever flies or falls in the sky passes behind the
+   cards and only shows in the gaps between them, never across a line of text */
+:root[data-special] .wrap {
+	position: relative;
+	z-index: 2;
 	min-height: calc(100vh - 50px - env(safe-area-inset-bottom, 0px));
 	min-height: calc(100svh - 50px - env(safe-area-inset-bottom, 0px));
 	padding-bottom: 112px;
@@ -401,4 +407,101 @@
 		animation: none;
 		height: 40px;
 	}
+}
+
+/* --------------------------------------------------------------- swieta -----
+   §3.6, Christmas. A clear winter night gone blue-green, warm gold for the
+   accent like the lights on the string, and holly red for --warn. Drawn for
+   the dark only (LOOK_THEME). Lit from the ground, where the presents are,
+   the same way and for the same reason as Halloween. */
+:root[data-special='swieta'] {
+	--bg: #0b1319;
+	--wash: none;
+	--glow: radial-gradient(
+		80% calc(66px + env(safe-area-inset-bottom, 0px))
+			at 50% calc(100% - 74px - env(safe-area-inset-bottom, 0px)),
+		rgba(255, 190, 100, 0.17),
+		transparent
+	);
+	--card: #131e26;
+	--card2: #18252e;
+	--sunk: #1d2c36;
+	--raise: #1b2932;
+	--line: #1c2a33;
+	--line2: #26363f;
+	--line3: #3b4f5b;
+	--edge: #4d6371;
+	--ink: #eef4f6;
+	--ink2: #cfdbe0;
+	--dim: #90a4ad;
+	--dimmer: #6a7f89;
+	--sheen: rgba(220, 240, 255, 0.05);
+	--lead-tint: var(--card);
+	--lead-glow: rgba(242, 193, 78, 0.09);
+	--lead-ring: rgba(242, 193, 78, 0.15);
+	--lead-edge: rgba(242, 193, 78, 0.45);
+	--accent: #f2c14e;
+	--accent-ink: #2a1c00;
+	--warn: #ff6b5e;
+	/* the sleigh against the moon, and the land at the foot of the page */
+	--sleigh: #081016;
+	--sleigh-rim: drop-shadow(0 0 0.8px rgba(255, 236, 200, 0.55));
+	--horizon: #0f1a21;
+	--snowfield: #2c4050;
+	--snowcap: #c4d5e1;
+	--fog: rgba(225, 238, 250, 0.16);
+	--smoke: rgba(200, 212, 224, 0.45);
+	/* snow lying along the top of a card, a drip or two over its edge, and a
+	   sprig of holly. Data URIs, because a background image cannot read a var */
+	--snowcap-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 16'%3E%3Cpath d='M0 10C0 6 5 4 12 5c8-4 22-4 30 0 8-2 16-2 22 1 10-6 28-5 36-1 8-2 18-2 24 0 10-4 26-4 34 0 8-2 18-2 24 1 8-3 16-2 18 1v3c-10 0-20 0-28 1-2 3-6 4-7 0-5-1-25-1-45-1s-30 0-34 1c-1 2-3 3-4 0-4-1-22-1-42-1-10 0-14 0-16 2-1 3-4 3-4-1-5-1-14-1-20-1z' fill='%23e9f1f6'/%3E%3C/svg%3E");
+	--holly: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 24'%3E%3Cpath d='M16 13C12 6 6 4 1 6c2 1 2 3 1 4 2 0 3 2 2 3 2-1 4 0 4 2 1-2 3-2 4-1 0-1 2-2 4-1zM16 13c4-7 10-9 15-7-2 1-2 3-1 4-2 0-3 2-2 3-2-1-4 0-4 2-1-2-3-2-4-1 0-1-2-2-4-1z' fill='%232f8a57'/%3E%3Cpath d='M16 13C12 9 8 8 4 8M16 13c4-4 8-5 12-5' stroke='%231d5e3a' stroke-width='.7' fill='none'/%3E%3Ccircle cx='13.6' cy='14.6' r='2.4' fill='%23d6283a'/%3E%3Ccircle cx='18.4' cy='14.6' r='2.4' fill='%23d6283a'/%3E%3Ccircle cx='16' cy='17.6' r='2.4' fill='%23c01f30'/%3E%3Ccircle cx='13' cy='13.8' r='.7' fill='%23ff9a9a'/%3E%3Ccircle cx='17.8' cy='13.8' r='.7' fill='%23ff9a9a'/%3E%3C/svg%3E");
+}
+:root[data-special='swieta'] .sppick,
+:root[data-special='swieta'] .budget .tip.sptip {
+	position: relative;
+}
+/* the snow sits on the card, so it fades out before the card's rounded
+   corners rather than overhanging them */
+:root[data-special='swieta'] .sppick::before,
+:root[data-special='swieta'] .budget .tip.sptip::before {
+	content: '';
+	position: absolute;
+	top: -6px;
+	left: 6px;
+	right: 6px;
+	height: 16px;
+	background: var(--snowcap-img) repeat-x left top / 200px 16px;
+	-webkit-mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+	mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+	filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+	pointer-events: none;
+}
+/* holly tucked into the snow on every third card, left and right in turn */
+:root[data-special='swieta'] .sppick:nth-child(3n + 1)::after,
+:root[data-special='swieta'] .sppick:nth-child(3n + 2)::after,
+:root[data-special='swieta'] .budget .tip.sptip::after {
+	content: '';
+	position: absolute;
+	top: -15px;
+	width: 46px;
+	height: 34px;
+	background: var(--holly) no-repeat center / contain;
+	filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+	pointer-events: none;
+}
+:root[data-special='swieta'] .sppick:nth-child(3n + 1)::after {
+	right: 14px;
+}
+:root[data-special='swieta'] .sppick:nth-child(3n + 2)::after {
+	left: 14px;
+	scale: -1 1;
+}
+:root[data-special='swieta'] .budget .tip.sptip::after {
+	right: 10px;
+}
+:root[data-special='swieta'] .budget .tip.sptip {
+	box-shadow:
+		0 12px 30px var(--shadow),
+		inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent),
+		inset 0 -46px 50px -40px color-mix(in srgb, var(--accent) 18%, transparent);
 }

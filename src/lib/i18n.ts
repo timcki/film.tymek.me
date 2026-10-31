@@ -895,7 +895,9 @@ const pl: Dict = {
 				? s.custom.about
 				: look === 'halloween'
 					? 'Coś spooky, scary i dziwnego, najlepiej nieoczywistego.'
-					: 'Coś, co chcesz obejrzeć z resztą, najlepiej nieoczywistego.'
+					: look === 'swieta'
+						? 'Coś na zimowy wieczór: świątecznego albo wcale, byle pod koc.'
+						: 'Coś, co chcesz obejrzeć z resztą, najlepiej nieoczywistego.'
 		},
 		...(s.custom && rulesOf(s.custom.rules).length
 			? [
@@ -921,7 +923,7 @@ const pl: Dict = {
 			body: 'Nic nie traci na wartości i nic nie odpada. Po tym wieczorze lista wraca do stanu sprzed niego.'
 		}
 	],
-	lookName: (id) => (id === 'halloween' ? 'Halloween' : id),
+	lookName: (id) => (id === 'halloween' ? 'Halloween' : id === 'swieta' ? 'Święta' : id),
 	spMine: (used, max) => `Twoje propozycje: ${used} z ${max}`,
 	spAddAria: (left) => `Zgłoś film, ${plLeft(left, 'propozycja', 'propozycje', 'propozycji', true)}`,
 	spAddDone: 'Twoja propozycja już jest na liście',
@@ -1480,7 +1482,9 @@ const en: Dict = {
 				? s.custom.about
 				: look === 'halloween'
 					? 'Something spooky, scary or strange.'
-					: 'Something you want to watch with the rest, ideally not the obvious one.'
+					: look === 'swieta'
+						? 'Something for a winter night: festive or not at all, as long as it suits a blanket.'
+						: 'Something you want to watch with the rest, ideally not the obvious one.'
 		},
 		...(s.custom && rulesOf(s.custom.rules).length
 			? [
@@ -1506,7 +1510,7 @@ const en: Dict = {
 			body: 'Nothing fades and nothing drops. Afterwards the list goes back to where it was.'
 		}
 	],
-	lookName: (id) => (id === 'halloween' ? 'Halloween' : id),
+	lookName: (id) => (id === 'halloween' ? 'Halloween' : id === 'swieta' ? 'Christmas' : id),
 	spMine: (used, max) => `Your picks: ${used} of ${max}`,
 	spAddAria: (left) => `Propose a film, ${left} ${en2(left, 'pick', 'picks')} left`,
 	spAddDone: 'Your pick is already in',

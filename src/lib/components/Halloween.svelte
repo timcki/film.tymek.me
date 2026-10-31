@@ -1,12 +1,11 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import Pumpkin from './Pumpkin.svelte';
 	import Skull from './Skull.svelte';
 	import Bats from './Bats.svelte';
 	import HangingBat from './HangingBat.svelte';
 	import Night from './Night.svelte';
 	import Cat from './Cat.svelte';
-	import { lights } from '$lib/lights';
+	import Lights from './Lights.svelte';
 
 	/**
 	 * §3.6: the drawn half of the Halloween look; the colours are themes.css's.
@@ -20,96 +19,13 @@
 	 */
 	let { part }: { part: 'sky' | 'ground' | 'land' | 'foot' } = $props();
 
-	/** one bulb every SPACE px, sagging in swags of SWAG bulbs */
-	const SPACE = 34;
-	const SWAG = 4;
-	const BULBS = 60;
 	const HUES = ['#ff8a1f', '#a46bff', '#8fef5a', '#ff8a1f', '#ff5a3c'];
-	const sag = (t: number) => 3 + 36 * t * (1 - t);
-	const width = BULBS * SPACE;
-	const wire = Array.from({ length: BULBS / SWAG }, (_, k) => {
-		const x0 = k * SWAG * SPACE;
-		const x1 = x0 + SWAG * SPACE;
-		return `M${x0} 3Q${(x0 + x1) / 2} 21 ${x1} 3`;
-	}).join('');
-	const bulbs = Array.from({ length: BULBS }, (_, i) => {
-		const t = ((i % SWAG) + 0.5) / SWAG;
-		return {
-			x: Math.floor(i / SWAG) * SWAG * SPACE + t * SWAG * SPACE,
-			y: sag(t),
-			hue: HUES[i % HUES.length],
-			// a few are on their way out, which is what makes the rest look haunted
-			dying: i % 13 === 7,
-			delay: -((i * 0.73) % 4)
-		};
-	});
-
-	/* --------------------------------------------------------------- roost -- */
-
-	// bats hang from the wire's peaks, a few of them spread across the window;
-	// the peaks fall every swag, so a narrow phone may have room for fewer
-	let roosts = $state<number[]>([]);
-	onMount(() => {
-		const swag = SWAG * SPACE;
-		const peaks = [0.2, 0.52, 0.8]
-			.map((at) => Math.round((innerWidth * at) / swag) * swag)
-			.filter((x) => x > 16 && x < innerWidth - 16);
-		roosts = [...new Set(peaks)];
-	});
-
-	/* ------------------------------------------------------------- shiver -- */
-
-	// a shiver along the string: off again once its wave has reached the far end
-	let shivering = $state(false);
-	onMount(() => {
-		if (part !== 'sky') return;
-		let timer: ReturnType<typeof setTimeout>;
-		lights.flicker = () => {
-			clearTimeout(timer);
-			shivering = false;
-			requestAnimationFrame(() => {
-				shivering = true;
-				timer = setTimeout(() => (shivering = false), 1600);
-			});
-		};
-		return () => {
-			clearTimeout(timer);
-			lights.flicker = () => {};
-		};
-	});
 </script>
 
 {#if part === 'sky'}
-	<div class="lights" class:shivering aria-hidden="true">
-		<svg {width} height="34" viewBox="0 0 {width} 34">
-			<defs>
-				<filter id="hglow" x="-150%" y="-100%" width="400%" height="300%">
-					<feGaussianBlur stdDeviation="2.4" result="blur" />
-					<feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-				</filter>
-			</defs>
-			<path class="wire" d={wire} />
-			{#each bulbs as bulb, i (i)}
-				<g transform="translate({bulb.x} {bulb.y})">
-					<rect class="socket" x="-1.8" y="0" width="3.6" height="3.6" rx="0.8" />
-					<ellipse
-						class="bulb"
-						class:dying={bulb.dying}
-						cx="0"
-						cy="8"
-						rx="3"
-						ry="4.6"
-						fill={bulb.hue}
-						filter="url(#hglow)"
-						style="animation-delay:{bulb.delay}s;--i:{i}"
-					/>
-				</g>
-			{/each}
-		</svg>
-		{#each roosts as x (x)}
-			<span class="perch" style:left="{x - 10}px"><HangingBat /></span>
-		{/each}
-	</div>
+	<Lights hues={HUES} dying>
+		{#snippet perch()}<HangingBat />{/snippet}
+	</Lights>
 
 	<Night />
 	<Bats />
@@ -163,105 +79,6 @@
 {/if}
 
 <style>
-	/* ------------------------------------------------------------- lights -- */
-	/* fixed over the top of the screen, so it stays strung while the page
-	   scrolls. Its first 18px are solid page colour, which is where the
-	   wire runs and what the sticky header parks under (themes.css), so nothing
-	   scrolls into view behind the wire; the bulbs hang over the header below it */
-	.lights {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		height: 34px;
-		background: linear-gradient(var(--bg) 0 18px, transparent 18px);
-		overflow: hidden;
-		pointer-events: none;
-		z-index: 60;
-	}
-	.wire {
-		fill: none;
-		stroke: color-mix(in srgb, var(--ink) 30%, var(--bg));
-		stroke-width: 1.2;
-	}
-	.socket {
-		fill: color-mix(in srgb, var(--ink) 35%, var(--bg));
-	}
-	.bulb {
-		animation: glow 4s ease-in-out infinite;
-	}
-	.bulb.dying {
-		animation: dying 2.7s steps(1) infinite;
-	}
-	@keyframes glow {
-		0%,
-		100% {
-			opacity: 1;
-		}
-		50% {
-			opacity: 0.62;
-		}
-	}
-	/* something walked past: the bulbs falter one after another along the
-	   string, left to right, and come back */
-	.shivering .bulb,
-	.shivering .bulb.dying {
-		animation: shiver 0.55s steps(1) calc(var(--i) * 14ms) both;
-	}
-	@keyframes shiver {
-		0%,
-		100% {
-			opacity: 1;
-		}
-		18% {
-			opacity: 0.12;
-		}
-		34% {
-			opacity: 0.85;
-		}
-		52% {
-			opacity: 0.05;
-		}
-		78% {
-			opacity: 0.7;
-		}
-	}
-	@keyframes dying {
-		0%,
-		100% {
-			opacity: 0.9;
-		}
-		12% {
-			opacity: 0.12;
-		}
-		16% {
-			opacity: 0.8;
-		}
-		19% {
-			opacity: 0.1;
-		}
-		55% {
-			opacity: 0.15;
-		}
-		61% {
-			opacity: 0.85;
-		}
-	}
-
-	/* --------------------------------------------------------------- bats -- */
-	/* the page is lifted one layer so the bats fly behind the cards and only
-	   show in the gaps between them, never across a line of text */
-	:global(:root[data-special] .wrap) {
-		position: relative;
-		z-index: 2;
-	}
-
-	/* the roosting bat's peak on the wire */
-	.perch {
-		position: absolute;
-		top: 3px;
-	}
-
 	/* ------------------------------------------------------------- ground -- */
 	/* on the floor of the page: the wrap keeps room for it at its foot and is at
 	   least a screen tall, so a short page has its pumpkins at the bottom of the
@@ -437,10 +254,6 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.bulb,
-		.bulb.dying,
-		.shivering .bulb,
-		.shivering .bulb.dying,
 		.window,
 		.fog span {
 			animation: none;

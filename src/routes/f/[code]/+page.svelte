@@ -8,6 +8,7 @@
 	import RankingBallot from '$lib/components/RankingBallot.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import LookBurst from '$lib/components/LookBurst.svelte';
+	import Snowman from '$lib/components/Snowman.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import SeenCount from '$lib/components/SeenCount.svelte';
 	import { dictFor } from '$lib/i18n';
@@ -116,6 +117,9 @@
 				</svg>
 				<span class="spook-shade"></span>
 			</div>
+		{:else if data.look === 'swieta'}
+			<!-- §3.6: a snowman keeping watch with the room, its eyes on the screen -->
+			<div class="snowwatch" aria-hidden="true"><Snowman size={50} up /></div>
 		{:else}
 			<div class="eyes" aria-hidden="true">👀</div>
 		{/if}
@@ -243,6 +247,7 @@
 	@keyframes glance { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-6px); } 60% { transform: translateX(6px); } }
 	/* the ghost floats over its own faint shadow, and keeps glancing up at the
 	   screen and round the room, the way the eyes do on any other night */
+	.snowwatch { display: flex; justify-content: center; }
 	.spook { display: flex; flex-direction: column; align-items: center; }
 	.spook svg { display: block; overflow: visible; animation: hover 3.4s ease-in-out infinite; }
 	.spook .spook-sheet { fill: rgba(246, 241, 252, 0.88); filter: drop-shadow(0 0 8px rgba(230, 220, 255, 0.5)); }

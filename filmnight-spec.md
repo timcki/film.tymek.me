@@ -255,8 +255,8 @@ was stored as `'halloween'`; it runs by the same rules as `'approval'`.
 An admin can call a special round off only while nobody has put a pick up.
 
 **The look is a separate choice.** By default everyone picks their own palette (dark,
-light, bananas). An admin can instead put a look on the whole site (Halloween so far,
-`LOOKS` in `src/lib/themes.ts`), whatever the round votes by. The choice is written on
+light, bananas). An admin can instead put a look on the whole site (Halloween and
+Christmas so far, `LOOKS` in `src/lib/themes.ts`), whatever the round votes by. The choice is written on
 the round it was made in (`week.look`, `'default'` for taking one off) and the site wears
 the latest one, so it stays on until somebody takes it off and each round still says
 what it looked like. It is decoration only, and asks for less motion are honoured

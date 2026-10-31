@@ -101,6 +101,16 @@
 		background: linear-gradient(90deg, #a8400c, var(--accent) 70%, #ffd27a);
 		box-shadow: 0 0 22px -4px color-mix(in srgb, var(--accent) 80%, transparent);
 	}
+	/* at Christmas they are gold going warm toward the tip, and the one in front
+	   lit like the string of lights */
+	.lane[data-look='swieta'] .fill {
+		background: linear-gradient(90deg, #6e5216, color-mix(in srgb, var(--accent) 70%, #6e5216));
+	}
+	.lane[data-look='swieta'].leading .fill,
+	.lane[data-look='swieta'].won .fill {
+		background: linear-gradient(90deg, #a07418, var(--accent) 70%, #fff0c4);
+		box-shadow: 0 0 22px -4px color-mix(in srgb, var(--accent) 80%, transparent);
+	}
 	/* the tip lights up for a moment where the points went in */
 	.flare {
 		position: absolute;

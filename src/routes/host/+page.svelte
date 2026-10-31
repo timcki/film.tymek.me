@@ -73,11 +73,11 @@
 	/* --------------------------------------------------------------- looks -- */
 
 	// §3.6: a night with a look dresses the room: a lantern lit for every
-	// ballot, and the lights along the top shivering each time somebody's
+	// ballot, and the lights along the top answering each time somebody's
 	// ranking lands. Halloween also hangs a web and a spider on the way in and
-	// rolls fog about the posters' feet
+	// rolls fog about the posters' feet; Christmas lays snow along the way in
+	// and lets it fall past the posters
 	const look = $derived(data.look);
-	const spooky = $derived(look === 'halloween');
 	const turnout = $derived(data.runoff?.turnout ?? 0);
 	// one lit for every ballot in, and a single dark one waiting for the next
 	const lanterns = $derived(Math.min(30, turnout + 1));
@@ -147,8 +147,8 @@
 		<!-- the two things the room needs off a projector: how to get in, and how
 		     many are in already -->
 		<div class="hosttop">
-			<div class="joincard" class:haunted={spooky}>
-				{#if spooky}<span class="hdangle" aria-hidden="true"></span>{/if}
+			<div class="joincard" data-look={look}>
+				{#if look === 'halloween'}<span class="hdangle" aria-hidden="true"></span>{/if}
 				<div class="tkqr">
 					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 					{@html data.runoff.qr}
@@ -175,7 +175,7 @@
 			</div>
 		</div>
 
-		<div class="tkfilms" class:foggy={spooky}>
+		<div class="tkfilms">
 			{#each rows as row, i (row.film.id)}
 				<div class="tkfilm">
 					<div class="tkart" style:--i={i}>
@@ -184,9 +184,12 @@
 						{:else}
 							<div class="noimg"></div>
 						{/if}
-						{#if spooky}
+						{#if look === 'halloween'}
 							<!-- fog rolling about the poster's foot, and moonlight passing over it -->
 							<span class="mist" aria-hidden="true"></span>
+						{:else if look === 'swieta'}
+							<!-- snow coming down past the poster, settling along its foot -->
+							<span class="flurry" aria-hidden="true"></span>
 						{/if}
 					</div>
 					<div class="tkbody">
@@ -373,7 +376,7 @@
 	/* the way in, haunted: a web strung in the card's corner, faded out before
 	   the rounded edge, a spider lowering itself on a thread beside it, and the
 	   code glowing like the face of a lit pumpkin */
-	.joincard.haunted {
+	.joincard[data-look='halloween'] {
 		position: relative;
 		background:
 			radial-gradient(circle at 100% 0, transparent 34px, var(--card) 92px) no-repeat right top / 90px 90px,
@@ -396,12 +399,12 @@
 		from { height: 30px; }
 		to { height: 74px; }
 	}
-	.haunted .code {
+	[data-look='halloween'] .code {
 		color: #ffb347;
 		text-shadow: 0 0 6px rgba(255, 150, 40, 0.75), 0 0 18px rgba(255, 110, 20, 0.45);
 		animation: candle 3.4s infinite;
 	}
-	:global(:root[data-theme='light']) .haunted .code {
+	:global(:root[data-theme='light']) [data-look='halloween'] .code {
 		color: var(--accent);
 		text-shadow: 0 0 10px rgba(255, 140, 40, 0.45);
 	}
@@ -479,8 +482,91 @@
 		0%, 30% { background-position: 110% 0; }
 		70%, 100% { background-position: -10% 0; }
 	}
+
+	/* ---------------------------------------------------------- christmas -- */
+	/* the way in under snow, a sprig of holly in it, and the code lit warm like
+	   the string of lights over the screen */
+	.joincard[data-look='swieta'] {
+		position: relative;
+	}
+	.joincard[data-look='swieta']::before {
+		content: '';
+		position: absolute;
+		top: -8px;
+		left: 10px;
+		right: 10px;
+		height: 20px;
+		background: var(--snowcap-img) repeat-x left top / 250px 20px;
+		-webkit-mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent);
+		mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent);
+		filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+		pointer-events: none;
+	}
+	.joincard[data-look='swieta']::after {
+		content: '';
+		position: absolute;
+		top: -20px;
+		right: 22px;
+		width: 66px;
+		height: 50px;
+		background: var(--holly) no-repeat center / contain;
+		filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+		pointer-events: none;
+	}
+	[data-look='swieta'] .code {
+		color: #ffd98a;
+		text-shadow: 0 0 6px rgba(255, 200, 100, 0.65), 0 0 20px rgba(255, 170, 60, 0.35);
+		animation: twinkle 3.8s ease-in-out infinite;
+	}
+	@keyframes twinkle {
+		0%, 100% { opacity: 1; }
+		50% { opacity: 0.86; }
+	}
+	/* two layers of flakes falling at their own pace, so the snow has depth,
+	   and a soft drift lying along the foot of the poster */
+	.flurry {
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		background: linear-gradient(transparent 82%, rgba(236, 244, 250, 0.5)) no-repeat;
+	}
+	.flurry::before,
+	.flurry::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background-image:
+			radial-gradient(circle at 20% 30%, #fff 0 1.4px, transparent 2px),
+			radial-gradient(circle at 70% 10%, #fff 0 1px, transparent 1.6px),
+			radial-gradient(circle at 45% 60%, #fff 0 1.8px, transparent 2.4px),
+			radial-gradient(circle at 85% 75%, #fff 0 1.2px, transparent 1.8px),
+			radial-gradient(circle at 10% 85%, #fff 0 1px, transparent 1.6px);
+		background-size: 90px 90px;
+		opacity: 0.8;
+		animation: snowfall 9s linear infinite;
+		animation-delay: calc(var(--i) * -2.3s);
+	}
+	.flurry::after {
+		background-size: 140px 140px;
+		opacity: 0.55;
+		filter: blur(0.6px);
+		animation-duration: 14s;
+	}
+	@keyframes snowfall {
+		from { background-position: 0 0; }
+		to { background-position: 30px 90px; }
+	}
+	.flurry::after {
+		animation-name: snowfall-far;
+	}
+	@keyframes snowfall-far {
+		from { background-position: 0 0; }
+		to { background-position: -20px 140px; }
+	}
+
 	@media (prefers-reduced-motion: reduce) {
-		.hdangle, .haunted .code, .mist::before, .mist::after { animation: none; }
+		.hdangle, [data-look='halloween'] .code, .mist::before, .mist::after { animation: none; }
+		[data-look='swieta'] .code, .flurry::before, .flurry::after { animation: none; }
 	}
 
 	/* the decided night on the projector: one film, said big. This screen is a
