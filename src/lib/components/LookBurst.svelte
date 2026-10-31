@@ -2,6 +2,7 @@
 	import type { Look } from '$lib/themes';
 	import BatBurst from './BatBurst.svelte';
 	import Confetti from './Confetti.svelte';
+	import EmberBurst from './EmberBurst.svelte';
 	import PaperBurst from './PaperBurst.svelte';
 	import SnowBurst from './SnowBurst.svelte';
 
@@ -23,6 +24,8 @@
 	<SnowBurst count={big ? 90 : undefined} {from} {onDone} />
 {:else if look === 'prl'}
 	<PaperBurst count={big ? 110 : undefined} {from} {onDone} />
+{:else if look === 'folk'}
+	<EmberBurst count={big ? 110 : undefined} {from} {onDone} />
 {:else if big}
 	<Confetti count={120} duration={2400} {onDone} />
 {:else}

@@ -590,3 +590,70 @@
 	right: 18px;
 	rotate: 4deg;
 }
+
+/* ----------------------------------------------------------------- folk -----
+   §3.6, Slavic folk after dark, the Velen of it: soot black and smoked oak,
+   ink the colour of unbleached linen, the red of the thread a rushnyk is
+   embroidered in for the accent, and candle brass for --warn. Drawn for the
+   dark only (LOOK_THEME). The page hangs in front of a painting of the
+   Polish countryside at its bleakest (FolkPainting.svelte). */
+:root[data-special='folk'] {
+	--bg: #0f0e0c;
+	--wash: none;
+	--glow: radial-gradient(
+		80% calc(66px + env(safe-area-inset-bottom, 0px))
+			at 50% calc(100% - 74px - env(safe-area-inset-bottom, 0px)),
+		rgba(214, 150, 70, 0.1),
+		transparent
+	);
+	--card: #191714;
+	--card2: #1e1c18;
+	--sunk: #24211d;
+	--raise: #22201c;
+	--line: #2a2722;
+	--line2: #35312b;
+	--line3: #4b453c;
+	--edge: #5f574b;
+	--ink: #e9e1d1;
+	--ink2: #cfc6b4;
+	--dim: #9b9180;
+	--dimmer: #716858;
+	--sheen: rgba(255, 240, 215, 0.035);
+	--lead-tint: var(--card);
+	--lead-glow: rgba(214, 150, 70, 0.08);
+	--lead-ring: rgba(214, 150, 70, 0.14);
+	--lead-edge: rgba(214, 150, 70, 0.42);
+	--accent: #a9322a;
+	--accent-ink: #f4ecdc;
+	--warn: #d1a24f;
+	--shadow: rgba(0, 0, 0, 0.55);
+	--shadow-soft: rgba(0, 0, 0, 0.36);
+	/* a slip of linen, so a message still arrives as an interruption */
+	--toast-bg: #e9e1d1;
+	--toast-ink: #0f0e0c;
+	--toast-bad-bg: #a9322a;
+	--toast-bad-ink: #f4ecdc;
+	/* a band of red-thread cross-stitch: the sown field, a lozenge quartered
+	   with a seed in each quarter, running stitch above and below. A data URI,
+	   because a background image cannot read a var */
+	--stitch: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 26'%3E%3Cpath d='M0.35 0.35l1.3 1.3m0-1.3-1.3 1.3M0.35 24.35l1.3 1.3m0-1.3-1.3 1.3M4.35 0.35l1.3 1.3m0-1.3-1.3 1.3M4.35 24.35l1.3 1.3m0-1.3-1.3 1.3M8.35 0.35l1.3 1.3m0-1.3-1.3 1.3M8.35 24.35l1.3 1.3m0-1.3-1.3 1.3M12.35 0.35l1.3 1.3m0-1.3-1.3 1.3M12.35 24.35l1.3 1.3m0-1.3-1.3 1.3M16.35 0.35l1.3 1.3m0-1.3-1.3 1.3M16.35 24.35l1.3 1.3m0-1.3-1.3 1.3M20.35 0.35l1.3 1.3m0-1.3-1.3 1.3M20.35 24.35l1.3 1.3m0-1.3-1.3 1.3M0.35 12.35l1.3 1.3m0-1.3-1.3 1.3M22.35 12.35l1.3 1.3m0-1.3-1.3 1.3' stroke='%236e2019' stroke-width='.8' stroke-linecap='round'/%3E%3Cpath d='M4.35 12.35l1.3 1.3m0-1.3-1.3 1.3M6.35 10.35l1.3 1.3m0-1.3-1.3 1.3M6.35 12.35l1.3 1.3m0-1.3-1.3 1.3M6.35 14.35l1.3 1.3m0-1.3-1.3 1.3M8.35 8.35l1.3 1.3m0-1.3-1.3 1.3M8.35 12.35l1.3 1.3m0-1.3-1.3 1.3M8.35 16.35l1.3 1.3m0-1.3-1.3 1.3M10.35 6.35l1.3 1.3m0-1.3-1.3 1.3M10.35 12.35l1.3 1.3m0-1.3-1.3 1.3M10.35 18.35l1.3 1.3m0-1.3-1.3 1.3M12.35 4.35l1.3 1.3m0-1.3-1.3 1.3M12.35 6.35l1.3 1.3m0-1.3-1.3 1.3M12.35 8.35l1.3 1.3m0-1.3-1.3 1.3M12.35 10.35l1.3 1.3m0-1.3-1.3 1.3M12.35 12.35l1.3 1.3m0-1.3-1.3 1.3M12.35 14.35l1.3 1.3m0-1.3-1.3 1.3M12.35 16.35l1.3 1.3m0-1.3-1.3 1.3M12.35 18.35l1.3 1.3m0-1.3-1.3 1.3M12.35 20.35l1.3 1.3m0-1.3-1.3 1.3M14.35 6.35l1.3 1.3m0-1.3-1.3 1.3M14.35 12.35l1.3 1.3m0-1.3-1.3 1.3M14.35 18.35l1.3 1.3m0-1.3-1.3 1.3M16.35 8.35l1.3 1.3m0-1.3-1.3 1.3M16.35 12.35l1.3 1.3m0-1.3-1.3 1.3M16.35 16.35l1.3 1.3m0-1.3-1.3 1.3M18.35 10.35l1.3 1.3m0-1.3-1.3 1.3M18.35 12.35l1.3 1.3m0-1.3-1.3 1.3M18.35 14.35l1.3 1.3m0-1.3-1.3 1.3M20.35 12.35l1.3 1.3m0-1.3-1.3 1.3M10.35 10.35l1.3 1.3m0-1.3-1.3 1.3M10.35 14.35l1.3 1.3m0-1.3-1.3 1.3M14.35 10.35l1.3 1.3m0-1.3-1.3 1.3M14.35 14.35l1.3 1.3m0-1.3-1.3 1.3' stroke='%23b3322a' stroke-width='.8' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+:root[data-special='folk'] .sppick,
+:root[data-special='folk'] .budget .tip.sptip {
+	position: relative;
+}
+/* a strip of embroidery sewn along the top of every card, faded out before
+   the rounded corners */
+:root[data-special='folk'] .sppick::before,
+:root[data-special='folk'] .budget .tip.sptip::before {
+	content: '';
+	position: absolute;
+	top: -5px;
+	left: 12px;
+	right: 12px;
+	height: 11px;
+	background: var(--stitch) repeat-x left center / 10.15px 11px;
+	-webkit-mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+	mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+	pointer-events: none;
+}

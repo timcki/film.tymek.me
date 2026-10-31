@@ -138,6 +138,31 @@
 					<path class="painted-lash" d="M12 13.4 9 8.6M20 9 18.4 3.6M30 7.4V1.6M40 9l1.6-5.4M48 13.4 51 8.6" />
 				</svg>
 			</div>
+		{:else if data.look === 'folk'}
+			<!-- §3.6: a raven on a branch against the moon, craning up at the screen
+			     with the room -->
+			<div class="raven" aria-hidden="true">
+				<svg viewBox="0 0 60 56" width="72" height="67">
+					<circle class="raven-moon" cx="36" cy="26" r="21" />
+					<g class="raven-bird">
+					<path class="raven-branch" d="M6 51.5c14-1.6 32-1 50 .6" />
+					<path d="M20 38 5 49l2.2 1.6L9 50l1.4 1.8L23 42z" fill="#121116" />
+					<path class="raven-legs" d="m28 43.5-1 6.5m6-7 1 7m-9.5.5h5m2 0h5" />
+					<path d="M18 41c-5-6-3-15 6-18 7-2.3 14-.6 17 4 3 5 .4 12-6 15-5 2.3-12 2.4-17-1z" fill="#18171c" />
+					<path d="M21 28c7-3 14-1 17 3-3 6-11 10-21 11 2-4 2-9 4-14z" fill="#22232b" />
+					<path class="raven-feathers" d="M24 31c4 1 8 1 12 0m-14 4c5 1 9 1 13-1m-15 5c5 .5 9 0 12-2" />
+					<g class="raven-look">
+						<path d="M36 22c2-1 5-1.4 7-.4l-1 7c-2 .8-4.8.8-6.6-.4z" fill="#18171c" />
+						<path d="m36.5 27.5 1.2 3 1-2.4 1.1 2.8.9-2.6 1.2 2.2.6-3z" fill="#18171c" />
+						<circle cx="42" cy="21" r="6" fill="#1c1b21" />
+						<path d="M46.5 18.6c3.5.1 7.5 1.1 10 2.6-3 .8-6.8 1.2-10 .9z" fill="#141317" />
+						<path class="raven-sheen" d="M46.8 18.9c3.2.2 6.6 1 9.2 2.3M38 17.4c2-1.6 5-1.8 7-.6" />
+						<circle cx="44.4" cy="19.6" r="1.15" fill="#070608" />
+						<circle cx="44.8" cy="19.2" r="0.4" fill="#d9cfb8" />
+					</g>
+					</g>
+				</svg>
+			</div>
 		{:else}
 			<div class="eyes" aria-hidden="true">👀</div>
 		{/if}
@@ -274,6 +299,16 @@
 	.painted-lid { fill: none; stroke: #1d1a16; stroke-width: 2.6; stroke-linecap: round; }
 	.painted-lash { stroke: #1d1a16; stroke-width: 1.8; stroke-linecap: round; }
 	.painted-look { animation: watch 3.2s ease-in-out infinite; }
+	.raven { display: flex; justify-content: center; }
+	.raven svg { display: block; overflow: visible; }
+	.raven-moon { fill: #d9cfb4; opacity: 0.16; }
+	.raven-bird { filter: drop-shadow(0 0 0.8px rgba(225, 215, 190, 0.55)); }
+	.raven-branch { fill: none; stroke: #3b2f25; stroke-width: 2.6; stroke-linecap: round; }
+	.raven-legs { fill: none; stroke: #2e2a26; stroke-width: 1.3; stroke-linecap: round; }
+	.raven-feathers { fill: none; stroke: #3a3c4a; stroke-width: 0.7; stroke-linecap: round; }
+	.raven-sheen { fill: none; stroke: #4a4d62; stroke-width: 0.6; stroke-linecap: round; }
+	.raven-look { transform-box: view-box; transform-origin: 39px 27px; animation: crane 3.4s ease-in-out infinite; }
+	@keyframes crane { 0%, 100% { rotate: 0deg; } 35%, 75% { rotate: -16deg; } }
 	@keyframes watch { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-7px); } 60% { transform: translateX(7px); } }
 	.spook { display: flex; flex-direction: column; align-items: center; }
 	.spook svg { display: block; overflow: visible; animation: hover 3.4s ease-in-out infinite; }
@@ -307,7 +342,7 @@
 		50%, 64% { transform: translate(2px, -1.2px); }
 		74%, 88% { transform: translate(0, -2.2px); }
 	}
-	@media (prefers-reduced-motion: reduce) { .eyes, .spook svg, .spook .spook-look, .spook .spook-shade, .painted-look { animation: none; } }
+	@media (prefers-reduced-motion: reduce) { .eyes, .spook svg, .spook .spook-look, .spook .spook-shade, .painted-look, .raven-look { animation: none; } }
 	.roomstate { display: flex; justify-content: center; margin-top: 6px; }
 	.turnchip {
 		padding: 6px 14px;

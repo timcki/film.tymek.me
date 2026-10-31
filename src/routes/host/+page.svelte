@@ -77,7 +77,8 @@
 	// ranking lands. Halloween also hangs a web and a spider on the way in and
 	// rolls fog about the posters' feet; Christmas lays snow along the way in
 	// and lets it fall past the posters; PRL tapes the way in up like a bill and
-	// prints the posters again, halftone and all
+	// prints the posters again, halftone and all; folk hems the way in with red
+	// thread and lights a gromnica for every ballot
 	const look = $derived(data.look);
 	const turnout = $derived(data.runoff?.turnout ?? 0);
 	// one lit for every ballot in, and a single dark one waiting for the next
@@ -608,6 +609,31 @@
 		-webkit-mask-image: linear-gradient(transparent 55%, #000);
 		mask-image: linear-gradient(transparent 55%, #000);
 		mix-blend-mode: multiply;
+	}
+
+	/* --------------------------------------------------------------- folk -- */
+	/* the way in with a band of red-thread embroidery along its top and its
+	   foot, and the code in candlelight */
+	.joincard[data-look='folk'] {
+		position: relative;
+	}
+	.joincard[data-look='folk']::before,
+	.joincard[data-look='folk']::after {
+		content: '';
+		position: absolute;
+		left: 14px;
+		right: 14px;
+		height: 14px;
+		background: var(--stitch) repeat-x left center / 12.9px 14px;
+		-webkit-mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent);
+		mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent);
+		pointer-events: none;
+	}
+	.joincard[data-look='folk']::before { top: -7px; }
+	.joincard[data-look='folk']::after { bottom: -7px; }
+	[data-look='folk'] .code {
+		color: #e4b768;
+		text-shadow: 0 0 18px rgba(230, 150, 60, 0.4);
 	}
 
 	@media (prefers-reduced-motion: reduce) {

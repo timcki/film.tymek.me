@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Look } from '$lib/themes';
 	import Christmas from './Christmas.svelte';
+	import Folk from './Folk.svelte';
 	import Halloween from './Halloween.svelte';
 	import Prl from './Prl.svelte';
 
@@ -19,4 +20,6 @@
 	<Christmas {part} />
 {:else if look === 'prl'}
 	<Prl {part} />
+{:else if look === 'folk'}
+	<Folk {part} />
 {/if}

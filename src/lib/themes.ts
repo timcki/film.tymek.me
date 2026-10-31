@@ -49,7 +49,7 @@ export const BANANA_BG: Record<'dark' | 'light', string> = {
  * server puts it on <html> as data-special, over whichever palette is showing
  * and over bananas too, until an admin takes it off again.
  */
-export const LOOKS = ['halloween', 'swieta', 'prl'] as const;
+export const LOOKS = ['halloween', 'swieta', 'prl', 'folk'] as const;
 
 export type Look = (typeof LOOKS)[number];
 
@@ -61,7 +61,8 @@ export function isLook(value: string | null | undefined): value is Look {
 export const LOOK_THEME: Record<Look, 'dark' | 'light'> = {
 	halloween: 'dark',
 	swieta: 'dark',
-	prl: 'dark'
+	prl: 'dark',
+	folk: 'dark'
 };
 
 export const LOOK_BG: Record<Look, Record<'dark' | 'light', string>> = {
@@ -77,5 +78,9 @@ export const LOOK_BG: Record<Look, Record<'dark' | 'light', string>> = {
 	prl: {
 		dark: '#1a1a18',
 		light: '#1a1a18'
+	},
+	folk: {
+		dark: '#0f0e0c',
+		light: '#0f0e0c'
 	}
 };

@@ -899,7 +899,9 @@ const pl: Dict = {
 						? 'Coś na zimowy wieczór: świątecznego albo wcale, byle pod koc.'
 						: look === 'prl'
 							? 'Coś jak z plakatu z polskiej szkoły: polskie kino, kino zza żelaznej kurtyny albo po prostu coś starego.'
-							: 'Coś, co chcesz obejrzeć z resztą, najlepiej nieoczywistego.'
+							: look === 'folk'
+								? 'Coś z ludowej skrzyni: baśnie, mity i legendy, folk horror, kino słowiańskie albo po prostu wieś, las i to, co w nim straszy.'
+								: 'Coś, co chcesz obejrzeć z resztą, najlepiej nieoczywistego.'
 		},
 		...(s.custom && rulesOf(s.custom.rules).length
 			? [
@@ -926,7 +928,15 @@ const pl: Dict = {
 		}
 	],
 	lookName: (id) =>
-		id === 'halloween' ? 'Halloween' : id === 'swieta' ? 'Święta' : id === 'prl' ? 'PRL' : id,
+		id === 'halloween'
+			? 'Halloween'
+			: id === 'swieta'
+				? 'Święta'
+				: id === 'prl'
+					? 'PRL'
+					: id === 'folk'
+						? 'Ludowo'
+						: id,
 	spMine: (used, max) => `Twoje propozycje: ${used} z ${max}`,
 	spAddAria: (left) => `Zgłoś film, ${plLeft(left, 'propozycja', 'propozycje', 'propozycji', true)}`,
 	spAddDone: 'Twoja propozycja już jest na liście',
@@ -1489,7 +1499,9 @@ const en: Dict = {
 						? 'Something for a winter night: festive or not at all, as long as it suits a blanket.'
 						: look === 'prl'
 							? 'Something off a Polish School poster: Polish cinema, cinema from behind the Iron Curtain, or just something old.'
-							: 'Something you want to watch with the rest, ideally not the obvious one.'
+							: look === 'folk'
+								? 'Something out of the folk chest: fairy tales, myths and legends, folk horror, Slavic cinema, or just a village, a forest and whatever haunts it.'
+								: 'Something you want to watch with the rest, ideally not the obvious one.'
 		},
 		...(s.custom && rulesOf(s.custom.rules).length
 			? [
@@ -1516,7 +1528,15 @@ const en: Dict = {
 		}
 	],
 	lookName: (id) =>
-		id === 'halloween' ? 'Halloween' : id === 'swieta' ? 'Christmas' : id === 'prl' ? 'Polish poster' : id,
+		id === 'halloween'
+			? 'Halloween'
+			: id === 'swieta'
+				? 'Christmas'
+				: id === 'prl'
+					? 'Polish poster'
+					: id === 'folk'
+						? 'Slavic folk'
+						: id,
 	spMine: (used, max) => `Your picks: ${used} of ${max}`,
 	spAddAria: (left) => `Propose a film, ${left} ${en2(left, 'pick', 'picks')} left`,
 	spAddDone: 'Your pick is already in',

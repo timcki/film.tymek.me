@@ -121,6 +121,21 @@
 		background: var(--accent);
 		box-shadow: 4px 3px 0 color-mix(in srgb, var(--warn) 70%, transparent);
 	}
+	/* in folk they are worked in red thread, cross over cross, and the one in
+	   front catches the candlelight */
+	.lane[data-look='folk'] .fill {
+		--cross: rgba(0, 0, 0, 0.3);
+		background:
+			repeating-linear-gradient(45deg, transparent 0 3px, var(--cross) 3px 4.2px, transparent 4.2px 7px),
+			repeating-linear-gradient(-45deg, transparent 0 3px, var(--cross) 3px 4.2px, transparent 4.2px 7px),
+			#6e211b;
+	}
+	.lane[data-look='folk'].leading .fill,
+	.lane[data-look='folk'].won .fill {
+		--cross: rgba(60, 10, 5, 0.35);
+		background-color: var(--accent);
+		box-shadow: 0 0 24px -4px rgba(230, 150, 60, 0.55);
+	}
 	/* the tip lights up for a moment where the points went in */
 	.flare {
 		position: absolute;

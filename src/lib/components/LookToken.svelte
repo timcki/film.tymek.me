@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Look } from '$lib/themes';
 	import Bauble from './Bauble.svelte';
+	import Gromnica from './Gromnica.svelte';
 	import Pigeon from './Pigeon.svelte';
 	import Pumpkin from './Pumpkin.svelte';
 
@@ -24,4 +25,6 @@
 	<Bauble {size} {lit} {live} {carve} />
 {:else if look === 'prl'}
 	<Pigeon {size} {lit} {live} {carve} />
+{:else if look === 'folk'}
+	<Gromnica {size} {lit} {live} {carve} />
 {/if}
