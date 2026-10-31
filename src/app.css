@@ -4581,7 +4581,9 @@ details[open] > .iconbtn {
 	align-items: center;
 	gap: 1px;
 	margin-left: auto;
-	font-size: 11px;
+	/* one size for every mark, so a bunch is five of the same bananas (a
+	   stack five of the same tickets), not a bigger fruit */
+	font-size: 13px;
 	color: var(--accent);
 }
 .crowdpts i {
@@ -4590,8 +4592,7 @@ details[open] > .iconbtn {
 	font-style: normal;
 }
 .crowdpts i.five {
-	font-size: 16px;
-	margin-right: 3px;
+	margin-right: 2px;
 }
 .crowdpts b {
 	margin-left: 3px;
