@@ -19,13 +19,13 @@ export function themeOf(value: string | undefined | null): Theme {
 }
 
 /**
- * What iOS paints its status bar with. This is not --bg but --bg with the
- * palette's wash already over it, sampled at the top of the page, because that
- * is the colour the strip has to sit flush against. Re-sample if either changes.
+ * What iOS paints its status bar with: each palette's --bg exactly. The page
+ * is one flat colour from the status bar down, so the strip and the bar under
+ * it meet without a seam. Change these with --bg, or they part.
  */
 export const THEME_BG: Record<'dark' | 'light', string> = {
 	dark: '#0f1012',
-	light: '#f3e2d4'
+	light: '#f7f0e7'
 };
 
 /**
@@ -38,10 +38,10 @@ export function bananaOf(value: string | undefined | null): boolean {
 	return value === '1';
 }
 
-/** THEME_BG under the banana wash, sampled the same way */
+/** the banana palettes' --bg, the same way */
 export const BANANA_BG: Record<'dark' | 'light', string> = {
-	dark: '#16130e',
-	light: '#f0f0dc'
+	dark: '#0e0c09',
+	light: '#eef1e6'
 };
 
 /**

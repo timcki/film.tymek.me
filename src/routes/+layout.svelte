@@ -9,7 +9,7 @@
 	import { dictFor, isVotes, LANGS } from '$lib/i18n';
 	import { THEMES } from '$lib/themes';
 	import Banana from '$lib/components/Banana.svelte';
-	import Check from '$lib/components/Check.svelte';
+	import Ticket from '$lib/components/Ticket.svelte';
 	import Halloween from '$lib/components/Halloween.svelte';
 	import Cinema from '$lib/components/Cinema.svelte';
 	import Pumpkin from '$lib/components/Pumpkin.svelte';
@@ -423,30 +423,19 @@
 				onclick={() => (tipOpen = !tipOpen)}
 				onblur={() => (tipOpen = false)}
 			>
-				{#if data.banana}
-					<!-- with bananas the points are the fruit: a banana for every point
-					     still yours, and a faint one where a point has been spent, so
-					     the week starts full and ends on three ghosts -->
-					{#each Array(Math.max(0, spentNow)) as _, i (i)}
-						<span class="hpip spent ghost" in:scale={pipPop}><Banana /></span>
-					{/each}
-					{#each Array(Math.max(0, leftNow)) as _, i (i)}
-						<span class="hpip free nana" in:scale={pipPop}><Banana /></span>
-					{/each}
-				{:else}
+				<!-- the points are things you hold: a banana each with bananas on, a
+				     cinema ticket each without, and a faint ghost of one where a
+				     point has been spent, so the week starts full and ends on ghosts -->
 				{#each Array(Math.max(0, spentNow)) as _, i (i)}
-					<span class="hpip spent" in:scale={pipPop}><Check /></span>
+					<span class="hpip spent ghost" in:scale={pipPop}
+						>{#if data.banana}<Banana />{:else}<Ticket />{/if}</span
+					>
 				{/each}
 				{#each Array(Math.max(0, leftNow)) as _, i (i)}
-					<!-- the ring is drawn rather than bordered, exactly as the cards
-					     draw theirs: even dashes at this size -->
-					<span class="hpip free" in:scale={pipPop}>
-						<svg viewBox="0 0 12 12" aria-hidden="true"
-							><circle cx="6" cy="6" r="5.25" pathLength="12" /></svg
-						>
-					</span>
+					<span class="hpip free held" in:scale={pipPop}
+						>{#if data.banana}<Banana />{:else}<Ticket />{/if}</span
+					>
 				{/each}
-				{/if}
 			</button>
 			<div class="tip" style:display={tipOpen ? 'block' : 'none'}>
 				<b>{T.budgetPill(data.person.left, data.person.budget, isVotes(data.rules))}</b>

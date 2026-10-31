@@ -2,50 +2,85 @@
 	/**
 	 * The everyday look's scenery, drawn the way Halloween.svelte draws its own
 	 * and only while no special look is on; the colours are themes.css's. A
-	 * living room at the foot of the page, where film night actually happens:
-	 * a blue sofa with the group on it, a red beanbag with somebody asleep, a
-	 * floor lamp, and plants, more of them the wider the window. Lamplight at
-	 * night, sunlight on paper. Everything is placed from the middle outwards,
-	 * so a phone shows the sofa and its neighbours and a wide screen the whole
-	 * jungle. Nothing takes a pointer; with less motion asked for, nothing moves.
+	 * living room at the foot of the page, seen from behind the sofa: the group
+	 * on it, heads over the back, a red blanket over it, a sleeper on a beanbag,
+	 * a lamp, and plants gathered round the furniture and against the walls. On
+	 * a wide window the beanbag and the sofa part to either side and between
+	 * them a projector throws a film onto a screen. Lamplight at night,
+	 * sunlight on paper. Nothing takes a pointer; with less motion asked for,
+	 * nothing moves.
 	 */
 
-	// the jungle, placed from the middle of the window outwards: a phone shows
-	// the nearest few, a wide screen all of them. Each is a kind of plant drawn
-	// below, where it stands (its left edge, from the middle), how wide, and
-	// whether it sways. Two stand behind the sofa and peek over its back
-	type Kind = 'snake' | 'monstera' | 'fig' | 'cactus' | 'sprout' | 'pothos' | 'fern' | 'palm' | 'succulent';
-	type Plant = { kind: Kind; at: number; w: number; sway?: 'slow' | 'fast' };
+	type Kind = 'snake' | 'monstera' | 'fig' | 'tree' | 'sprout' | 'pothos' | 'fern' | 'palm' | 'succulent';
+	/**
+	 * Where a plant stands: by the sofa or the beanbag (its left edge from that
+	 * piece's middle), or against a wall (from that edge of the window). `wide`
+	 * ones only come in where there is room for them
+	 */
+	type Plant = {
+		kind: Kind;
+		by: 'sofa' | 'bag' | 'left' | 'right';
+		at: number;
+		w: number;
+		sway?: 'slow' | 'fast';
+		wide?: boolean;
+	};
+	// two stand behind the sofa and show over its back
 	const behind: Plant[] = [
-		{ kind: 'palm', at: -118, w: 54, sway: 'slow' },
-		{ kind: 'snake', at: 64, w: 40 }
+		{ kind: 'palm', by: 'sofa', at: -100, w: 54, sway: 'slow' },
+		{ kind: 'snake', by: 'sofa', at: 50, w: 40 }
 	];
 	const plants: Plant[] = [
-		// left of the beanbag
-		{ kind: 'monstera', at: -262, w: 64, sway: 'fast' },
-		{ kind: 'succulent', at: -200, w: 22 },
-		{ kind: 'pothos', at: -318, w: 40, sway: 'slow' },
-		{ kind: 'fern', at: -378, w: 52, sway: 'fast' },
-		{ kind: 'cactus', at: -420, w: 28 },
-		{ kind: 'fig', at: -476, w: 46, sway: 'slow' },
-		{ kind: 'snake', at: -530, w: 46 },
-		{ kind: 'sprout', at: -570, w: 40, sway: 'fast' },
-		{ kind: 'monstera', at: -650, w: 64, sway: 'slow' },
-		{ kind: 'succulent', at: -690, w: 22 },
-		// right of the lamp
-		{ kind: 'fern', at: 136, w: 52, sway: 'slow' },
-		{ kind: 'fig', at: 184, w: 46, sway: 'fast' },
-		{ kind: 'cactus', at: 234, w: 28 },
-		{ kind: 'snake', at: 262, w: 46 },
-		{ kind: 'pothos', at: 310, w: 40, sway: 'slow' },
-		{ kind: 'monstera', at: 352, w: 64, sway: 'fast' },
-		{ kind: 'succulent', at: 418, w: 22 },
-		{ kind: 'sprout', at: 444, w: 40, sway: 'slow' },
-		{ kind: 'palm', at: 486, w: 54, sway: 'fast' },
-		{ kind: 'cactus', at: 546, w: 28 },
-		{ kind: 'fig', at: 580, w: 46, sway: 'slow' },
-		{ kind: 'fern', at: 632, w: 52, sway: 'fast' }
+		// round the sofa
+		{ kind: 'succulent', by: 'sofa', at: -114, w: 22, wide: true },
+		{ kind: 'monstera', by: 'sofa', at: 128, w: 64, sway: 'fast', wide: true },
+		{ kind: 'fig', by: 'sofa', at: 184, w: 46, sway: 'slow', wide: true },
+		{ kind: 'sprout', by: 'sofa', at: 226, w: 40, sway: 'slow', wide: true },
+		// round the beanbag
+		{ kind: 'monstera', by: 'bag', at: -100, w: 64, sway: 'slow', wide: true },
+		{ kind: 'fern', by: 'bag', at: 34, w: 52, sway: 'fast', wide: true },
+		// against the left wall
+		{ kind: 'tree', by: 'left', at: 46, w: 52, sway: 'slow' },
+		// against the right wall
+		{ kind: 'fern', by: 'right', at: -12, w: 52, sway: 'slow' },
+		{ kind: 'snake', by: 'sofa', at: 98, w: 40 },
+		{ kind: 'sprout', by: 'right', at: 30, w: 36, sway: 'fast' },
+		{ kind: 'succulent', by: 'sofa', at: 88, w: 20 },
+		{ kind: 'palm', by: 'right', at: 44, w: 54, sway: 'fast', wide: true },
+		{ kind: 'fig', by: 'right', at: 96, w: 46, sway: 'slow', wide: true },
+		{ kind: 'succulent', by: 'right', at: 140, w: 22, wide: true }
 	];
+	// the tree's crown, leaf by leaf: clusters round the ends of its branches,
+	// each a fan of pointed leaves at their own angles, in three greens
+	const treeLeaves = [
+		[33, 30, 14],
+		[20, 42, 11],
+		[46, 40, 11],
+		[26, 22, 9],
+		[41, 21, 9],
+		[33, 48, 9],
+		[13, 30, 7],
+		[53, 28, 7]
+	].flatMap(([cx, cy, n], c) =>
+		Array.from({ length: n }, (_, k) => {
+			const turn = (k / n) * 360 + c * 23;
+			const reach = 3 + ((k * 7 + c * 3) % 5);
+			const a = (turn * Math.PI) / 180;
+			return {
+				x: +(cx + Math.sin(a) * reach).toFixed(1),
+				y: +(cy - Math.cos(a) * reach).toFixed(1),
+				r: Math.round(turn),
+				l: ['l1', 'l2', 'l3'][(k + c) % 3]
+			};
+		})
+	);
+
+	const place = (p: Plant) =>
+		p.by === 'left'
+			? `left:${p.at}px`
+			: p.by === 'right'
+				? `right:${p.at}px`
+				: `left:calc(var(--${p.by}-x) + ${p.at}px)`;
 </script>
 
 {#snippet plant(p: Plant)}
@@ -53,12 +88,13 @@
 		class="thing plant {p.kind}"
 		class:sway={p.sway}
 		class:slow={p.sway === 'slow'}
-		style="--at:{p.at}px;--w:{p.w}px"
+		class:wide={p.wide}
+		style="{place(p)};--w:{p.w}px"
 		viewBox={{
 			snake: '0 0 46 96',
 			monstera: '0 0 64 100',
 			fig: '0 0 46 108',
-			cactus: '0 0 28 64',
+			tree: '0 0 66 124',
 			sprout: '0 0 40 70',
 			pothos: '0 0 40 92',
 			fern: '0 0 52 70',
@@ -85,11 +121,18 @@
 			{#each [[23, 16, 0], [14, 28, -40], [32, 30, 40], [12, 44, -55], [34, 46, 50], [16, 60, -45], [30, 62, 45], [20, 74, -30]] as [x, y, r] (`${x}${y}`)}
 				<ellipse class="leaf {y % 3 ? 'l1' : 'l2'}" cx={x} cy={y} rx="7" ry="10" transform="rotate({r} {x} {y})" />
 			{/each}
-		{:else if p.kind === 'cactus'}
-			<path class="pot" d="M6 48h16l-2 16H8z" />
-			<path class="leaf l3" d="M10 50V18a4 4 0 0 1 8 0v32z" />
-			<path class="leaf l3" d="M10 36H6v-8a2.5 2.5 0 0 1 5 0" />
-			<path class="leaf l3" d="M18 30h4v-8a2.5 2.5 0 0 0-5 0" />
+		{:else if p.kind === 'tree'}
+			<!-- a small tree in a big pot: a trunk that forks, and a round crown
+			     of leaves in a few greens -->
+			<path class="pot" d="M20 102h26l-3 22H23z" />
+			<path class="trunkline" d="M33 103c0-14-2-24 0-38M33 76c-6-6-10-12-12-20M33 70c6-6 10-12 12-20" />
+			{#each treeLeaves as leaf, i (i)}
+				<path
+					class="leaf {leaf.l}"
+					transform="translate({leaf.x} {leaf.y}) rotate({leaf.r})"
+					d="M0 0C3.2-2.6 3.4-7.4 0-11-3.4 3.6-3.2 8.4 0 11z"
+				/>
+			{/each}
 		{:else if p.kind === 'sprout'}
 			<path class="pot" d="M12 52h16l-2 18H14z" />
 			<path class="leaf l1" d="M20 54c-8-6-16-6-18-14 8 2 14 6 18 14z" />
@@ -133,10 +176,76 @@
 	<span class="sun"></span>
 	<span class="rug"></span>
 
+	<!-- the left edge of the screen is the room's wall, seen end on: the
+	     window cut through it, the light it lets in across the floor (the moon
+	     after dark, the sun by day), and its sill out into the room, pots on it -->
+	<svg class="wall" viewBox="0 0 180 140" preserveAspectRatio="xMinYMax meet">
+		<defs>
+			<linearGradient id="walllight" x1="0" y1="0" x2="1" y2="0.6">
+				<stop offset="0" style="stop-color: var(--window-light)" />
+				<stop offset="1" style="stop-color: var(--window-light); stop-opacity: 0" />
+			</linearGradient>
+		</defs>
+		<path class="inlight" d="M12 14V76L110 132H170Z" />
+		<rect class="side" x="0" y="0" width="12" height="140" />
+		<rect class="opening" x="0" y="12" width="12" height="64" />
+		<path class="glass" d="M5 14v60" />
+		<rect class="frame" x="0" y="10" width="13" height="4" />
+		<rect class="sill" x="0" y="76" width="40" height="3.5" rx="1.2" />
+		<path class="sillshade" d="M12 79.5h26" />
+		<!-- on the sill, two small leafy pots -->
+		<path class="pot" d="M15 70h8l-1 6h-6z" />
+		{#each [[19, 65, 0], [15.5, 67, -55], [22.5, 67, 55]] as [x, y, r] (`${x}${y}`)}
+			<ellipse class="leaf l2" cx={x} cy={y} rx="2" ry="4.4" transform="rotate({r} {x} {y})" />
+		{/each}
+		<path class="pot" d="M27 70h9l-1 6h-7z" />
+		<path class="vine" d="M28.5 71c-2 4-2 9-1 13" />
+		{#each [[28, 76], [28, 81], [31, 64], [29, 67], [34, 66]] as [x, y] (`${x}${y}`)}
+			<ellipse class="leaf l1" cx={x} cy={y} rx="2" ry="1.6" />
+		{/each}
+	</svg>
+
+	<!-- the film, thrown on the wall: no screen, just the picture in light,
+	     soft at its edges. Behind the sofa on a phone, the group's heads before
+	     it; on a wide window out between the beanbag and the sofa, with the
+	     beam from the projector by the sofa -->
+	<div class="cinema">
+		<span class="spill"></span>
+		<span class="beam wide"></span>
+		<svg class="screen" viewBox="0 0 128 72">
+			<g class="film">
+				<rect class="sky" width="128" height="72" />
+				<circle class="sunset" cx="86" cy="42" r="14" />
+				<path class="hills" d="M0 72V52c18-10 34-8 50 0s32 4 46-6 24-2 32 4v22z" />
+				<path class="hills2" d="M0 72V60c22-6 40-2 60 2s44 0 68-6v16z" />
+				<path class="rider" d="M34 54h3l1-5 3-1 2 3h3l-1 3h-2l-1 3-2-3h-3l-1 3h-2z" />
+			</g>
+			<rect class="flicker" width="128" height="72" />
+		</svg>
+		<!-- a digital projector, a slim box on a side table, lens to the screen -->
+		<svg class="projector wide" viewBox="0 0 44 72">
+			<path class="stool" d="M8 72 10 44h24l2 28M10 58h24" />
+			<rect class="box" x="4" y="28" width="38" height="14" rx="4" />
+			<path class="vents" d="M28 32v6M31 32v6M34 32v6M37 32v6" />
+			<circle class="lensring" cx="10" cy="35" r="5" />
+			<circle class="lens" cx="10" cy="35" r="3" />
+			<circle class="led" cx="22" cy="31" r="0.9" />
+		</svg>
+	</div>
+
+	<!-- the floor lamp, at the sofa's end, the plants round it in front of it:
+	     lit at night and off by day -->
+	<svg class="thing lamp" style="left:calc(var(--sofa-x) + 92px);--w:34px" viewBox="0 0 34 113">
+		<ellipse class="contact" cx="17" cy="111.5" rx="11" ry="1.6" />
+		<path class="pole" d="M17 30v80" />
+		<path class="base" d="M9 111.4h16" />
+		<path class="shade" d="M7 30h20l-5-22H12z" />
+	</svg>
+
 	{#each plants as p, i (i)}{@render plant(p)}{/each}
 
 	<!-- with bananas on, a banana plant, fruit and all -->
-	<svg class="thing plant sway nana" style="--at:-610px;--w:56px" viewBox="0 0 56 112">
+	<svg class="thing plant sway nana wide" style="left:70px;--w:56px" viewBox="0 0 56 112">
 		<path class="pot" d="M18 94h20l-2 18H20z" />
 		<path class="trunk" d="M26 94V40h4v54z" />
 		<path class="leaf l2" d="M28 42C18 30 8 28 0 34c10-2 18 2 28 8z" />
@@ -148,48 +257,39 @@
 		</g>
 	</svg>
 
-	<!-- two peek over the back of the sofa -->
 	{#each behind as p, i (i)}{@render plant(p)}{/each}
 
-	<!-- the floor lamp, on the sofa's right: lit at night and off by day -->
-	<svg class="thing lamp" style="--at:100px;--w:34px" viewBox="0 0 34 112">
-		<path class="pole" d="M17 30v76M9 108h16" />
-		<path class="shade" d="M7 30h20l-5-22H12z" />
-	</svg>
 
-	<!-- the sofa, sat right on the floor, the group on it and a red blanket
-	     thrown over its right end -->
-	<svg class="thing sofa" style="--at:-95px;--w:190px" viewBox="0 0 190 84">
-		<!-- three of them, behind the cushions, one leaning on the next -->
+	<!-- the sofa from behind: the back of it, the group's heads over it, one
+	     leaning on the next, and the red blanket thrown over the top -->
+	<svg class="thing sofa" style="left:calc(var(--sofa-x) - 90px);--w:180px" viewBox="0 0 180 77">
+		<ellipse class="contact" cx="90" cy="75" rx="92" ry="2.8" />
 		<g class="figure">
-			<circle cx="58" cy="20" r="10" />
-			<path d="M42 58V40a16 14 0 0 1 32 0v18z" />
-			<circle cx="97" cy="18" r="10.5" transform="rotate(-12 97 40)" />
-			<path d="M80 58V38a17 14 0 0 1 34 0v20z" />
-			<circle cx="136" cy="22" r="9.5" />
-			<path d="M121 58V42a15 13 0 0 1 30 0v16z" />
+			<circle cx="52" cy="16" r="10" />
+			<path d="M36 40a16 14 0 0 1 32 0z" />
+			<circle cx="88" cy="15" r="10.5" transform="rotate(-14 88 34)" />
+			<path d="M72 40a17 14 0 0 1 34 0z" />
+			<circle cx="128" cy="18" r="9.5" />
+			<path d="M113 40a15 13 0 0 1 30 0z" />
 		</g>
-		<rect class="back" x="14" y="34" width="162" height="40" rx="12" />
-		<rect class="cushion" x="22" y="40" width="48" height="22" rx="8" />
-		<rect class="cushion" x="120" y="40" width="48" height="22" rx="8" />
-		<rect class="seat" x="10" y="60" width="170" height="24" rx="7" />
-		<rect class="arm" x="2" y="46" width="22" height="38" rx="10" />
-		<rect class="arm" x="166" y="46" width="22" height="38" rx="10" />
-		<!-- the blanket: over the back, down the cushion and off the arm -->
+		<rect class="arm" x="0" y="36" width="24" height="40" rx="10" />
+		<rect class="arm" x="156" y="36" width="24" height="40" rx="10" />
+		<path class="back" d="M12 76V40c0-8 6-12 14-12h128c8 0 14 4 14 12v36z" />
+		<path class="seam" d="M22 44h136" />
 		<path
 			class="blanket"
-			d="M118 36c14-4 34-4 50 0 8 2 12 8 12 16l2 22c1 6-3 9-8 8l-8-2c2-8 0-16-4-20-8-4-20-4-30-2-6 1-12-1-14-6-3-8 0-14 0-16z"
+			d="M98 30c18-4 40-4 58 0 6 2 10 6 10 12v22c0 4-4 6-8 4l-6-4c-2 6-6 8-10 4-4-6-2-14-6-18-8-4-22-2-30-4-8-2-12-12-8-16z"
 		/>
-		<path class="blanketfold" d="M126 44c10-2 24-2 36 2M150 60c6 2 10 6 12 12" />
+		<path class="blanketfold" d="M108 34c14-2 30-2 44 2M146 44c4 6 6 12 4 18" />
 	</svg>
 
-	<!-- the beanbag, on the sofa's left, and the one who has been asleep there
-	     since the trailers -->
-	<div class="thing bag" style="--at:-178px;--w:76px">
-		<svg viewBox="0 0 76 54">
+	<!-- the beanbag, and the one who has been asleep there since the trailers -->
+	<div class="thing bag" style="left:calc(var(--bag-x) - 38px);--w:76px">
+		<svg viewBox="0 0 76 53">
+			<ellipse class="contact" cx="38" cy="50.5" rx="36" ry="2.6" />
 			<path
 				class="bean"
-				d="M6 50C-2 40 4 22 18 16 30 10 40 18 50 14c14-4 26 8 24 22-1 10-4 14-8 14z"
+				d="M7 51C-2 41 4 22 18 16 30 10 40 18 50 14c14-4 26 8 24 22-1 10-4 15-8 15z"
 			/>
 			<path class="beanfold" d="M24 30c6 6 18 8 30 4" />
 			<g class="figure">
@@ -205,23 +305,26 @@
 	/* the width of the window at the foot of the body: the wrap keeps room for
 	   it and is at least a screen tall (themes.css), so a short page still has
 	   the room at the bottom of the window */
+	/* where the furniture stands: side by side on a phone, parted on a wide
+	   window to make room for the screen between them */
 	.room {
+		--sofa-x: calc(50% + 56px);
+		--bag-x: calc(50% - 70px);
 		position: absolute;
 		left: 0;
 		right: 0;
 		bottom: calc(26px + env(safe-area-inset-bottom, 0px));
-		height: 118px;
+		height: 140px;
 		overflow: hidden;
 		pointer-events: none;
 		/* the room fades into the page rather than stopping on a line */
-		-webkit-mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent);
-		mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent);
+		-webkit-mask-image: linear-gradient(transparent, #000 14%, #000 95%, transparent);
+		mask-image: linear-gradient(transparent, #000 14%, #000 95%, transparent);
 	}
-	/* everything stands on the floor, placed from the middle of the window */
+	/* everything stands on the floor */
 	.thing {
 		position: absolute;
 		bottom: 8px;
-		left: calc(50% + var(--at));
 		width: var(--w);
 		height: auto;
 		overflow: visible;
@@ -234,8 +337,8 @@
 	}
 	.rug {
 		position: absolute;
-		left: calc(50% - 200px);
-		width: 340px;
+		left: calc(var(--bag-x) - 70px);
+		right: calc(100% - var(--sofa-x) - 120px);
 		bottom: 2px;
 		height: 14px;
 		border-radius: 50%;
@@ -245,11 +348,11 @@
 	/* the light: a lamp's warm pool at night, a slant of sun on paper */
 	.glow {
 		position: absolute;
-		left: calc(50% - 300px);
+		left: calc(var(--sofa-x) - 200px);
 		width: 600px;
 		bottom: -40px;
 		height: 220px;
-		background: radial-gradient(closest-side at 70% 40%, var(--lamplight), transparent);
+		background: radial-gradient(closest-side at 50% 40%, var(--lamplight), transparent);
 		animation: breathe 6s ease-in-out infinite alternate;
 	}
 	@keyframes breathe {
@@ -273,6 +376,38 @@
 		display: none;
 	}
 
+	/* the wall at the window's edge, end on, full height of the room */
+	.wall {
+		position: absolute;
+		left: 0;
+		bottom: 0;
+		height: 100%;
+		width: auto;
+		overflow: visible;
+	}
+	.wall .side {
+		fill: var(--wall);
+	}
+	.wall .opening {
+		fill: var(--window-sky);
+	}
+	.wall .glass {
+		fill: none;
+		stroke: var(--window-glass);
+		stroke-width: 1.4;
+	}
+	.wall .frame,
+	.wall .sill {
+		fill: var(--window-frame);
+	}
+	.wall .sillshade {
+		stroke: rgba(0, 0, 0, 0.25);
+		stroke-width: 1.5;
+	}
+	.wall .inlight {
+		fill: url(#walllight);
+	}
+
 	/* the plants: a few greens, a terracotta pot, and a slow sway from the pot */
 	.pot {
 		fill: var(--pot);
@@ -292,6 +427,12 @@
 	}
 	.trunk {
 		fill: var(--leaf3);
+	}
+	.trunkline {
+		fill: none;
+		stroke: var(--wood);
+		stroke-width: 3;
+		stroke-linecap: round;
 	}
 	.leaf {
 		stroke: var(--leafline);
@@ -314,9 +455,7 @@
 	.nana {
 		display: none;
 	}
-	:global(:root[data-banana]) .nana {
-		display: block;
-	}
+	/* the banana plant only comes in where the room is wide (below) */
 	.sway {
 		transform-origin: 50% 100%;
 		animation: sway 7s ease-in-out infinite alternate;
@@ -347,15 +486,24 @@
 	.shade {
 		fill: var(--shade);
 	}
+	.lamp .base {
+		fill: none;
+		stroke: var(--wood);
+		stroke-width: 3;
+		stroke-linecap: round;
+	}
 
 	/* the sofa, and the people on it in silhouette */
 	.back,
 	.arm {
 		fill: var(--sofa);
 	}
-	.seat,
-	.cushion {
-		fill: var(--sofa-lit);
+
+	.seam {
+		fill: none;
+		stroke: var(--sofa-lit);
+		stroke-width: 1.4;
+		stroke-linecap: round;
 	}
 	.blanket {
 		fill: var(--blanket);
@@ -371,6 +519,11 @@
 	}
 
 	/* the beanbag and its sleeper */
+	/* what stands on the floor sits on a soft shadow of its own */
+	.contact {
+		fill: rgba(0, 0, 0, 0.35);
+		filter: blur(1.2px);
+	}
 	.bean {
 		fill: var(--beanbag);
 	}
@@ -417,6 +570,180 @@
 		}
 	}
 
+	/* the wide room: the pieces part, and the screen comes in between */
+	.wide {
+		display: none;
+	}
+	@media (min-width: 760px) {
+		.room {
+			--sofa-x: 78%;
+			--bag-x: 21%;
+		}
+		.wide {
+			display: block;
+		}
+		.nana {
+			display: none;
+		}
+		:global(:root[data-banana]) .nana {
+			display: block;
+		}
+	}
+	.cinema {
+		position: absolute;
+		inset: 0;
+	}
+	/* the picture on the wall: light, not a thing, so its edges fade into the
+	   wall and it glows a little onto it. On a phone it is over the sofa, the
+	   heads in front of it */
+	.screen {
+		position: absolute;
+		left: calc(var(--sofa-x) - 86px);
+		bottom: 30px;
+		width: 172px;
+		opacity: var(--projection);
+		/* a rectangle of light with feathered edges, as a projection lands */
+		-webkit-mask-image:
+			linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent),
+			linear-gradient(transparent, #000 7%, #000 93%, transparent);
+		-webkit-mask-composite: source-in;
+		mask-image:
+			linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent),
+			linear-gradient(transparent, #000 7%, #000 93%, transparent);
+		mask-composite: intersect;
+	}
+	/* the light the picture spills onto the wall round it */
+	.spill {
+		position: absolute;
+		left: calc(var(--sofa-x) - 116px);
+		bottom: 10px;
+		width: 232px;
+		height: 136px;
+		background: radial-gradient(closest-side, var(--spill), transparent);
+	}
+	@media (min-width: 760px) {
+		.spill {
+			left: calc(43% - 125px);
+			width: 250px;
+			height: 146px;
+		}
+	}
+	/* on a wide window it is left of the middle, so the beam has a room's
+	   width to cross from the projector by the sofa */
+	@media (min-width: 760px) {
+		.screen {
+			left: calc(43% - 95px);
+			bottom: 34px;
+			width: 190px;
+		}
+	}
+	.sky {
+		fill: var(--film-sky);
+	}
+	.sunset {
+		fill: var(--film-sun);
+	}
+	.hills {
+		fill: var(--film-hill);
+	}
+	.hills2 {
+		fill: var(--film-hill2);
+	}
+	.rider {
+		fill: var(--film-hill2);
+	}
+	/* the film runs: its light flickers, and the rider crosses the hills */
+	.flicker {
+		fill: #fff;
+		opacity: 0;
+		animation: flicker 3.2s steps(1) infinite;
+	}
+	@keyframes flicker {
+		0%,
+		100% {
+			opacity: 0;
+		}
+		8% {
+			opacity: 0.06;
+		}
+		12% {
+			opacity: 0;
+		}
+		47% {
+			opacity: 0.04;
+		}
+		51% {
+			opacity: 0;
+		}
+	}
+	.rider {
+		animation: ride 14s linear infinite;
+	}
+	@keyframes ride {
+		from {
+			transform: translateX(-30px);
+		}
+		to {
+			transform: translateX(80px);
+		}
+	}
+	.projector {
+		position: absolute;
+		left: calc(var(--sofa-x) - 142px);
+		bottom: 8px;
+		width: 44px;
+		overflow: visible;
+	}
+	.stool {
+		fill: none;
+		stroke: var(--wood);
+		stroke-width: 2.2;
+		stroke-linecap: round;
+	}
+	.box {
+		fill: var(--projector);
+	}
+	.vents {
+		fill: none;
+		stroke: var(--projector-dark);
+		stroke-width: 1.2;
+		stroke-linecap: round;
+	}
+	.lensring {
+		fill: var(--projector-dark);
+	}
+	.lens {
+		fill: var(--film-sun);
+	}
+	.led {
+		fill: #7cf08a;
+	}
+	/* the beam: from the lens to the screen, widening, a little haze in it */
+	/* the beam, from the lens (its right end, low) out to the screen's face */
+	.beam {
+		position: absolute;
+		left: calc(43% + 88px);
+		right: calc(100% - var(--sofa-x) + 132px);
+		bottom: 34px;
+		height: 107px;
+		background: linear-gradient(90deg, var(--beam-far), var(--beam-near));
+		clip-path: polygon(0 6%, 100% 86%, 100% 92%, 0 94%);
+		filter: blur(1.5px);
+		animation: beam 3.2s steps(1) infinite;
+	}
+	@keyframes beam {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		8% {
+			opacity: 0.8;
+		}
+		12% {
+			opacity: 1;
+		}
+	}
+
 	/* by day the lamp is off and the sun comes in */
 	:global(:root[data-theme='light']) .glow {
 		display: none;
@@ -428,6 +755,9 @@
 	@media (prefers-reduced-motion: reduce) {
 		.glow,
 		.sway,
+		.flicker,
+		.rider,
+		.beam,
 		.zzz i {
 			animation: none;
 		}

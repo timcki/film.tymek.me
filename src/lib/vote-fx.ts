@@ -41,16 +41,17 @@ export function fly(from: Element | null, to: Element | null): Promise<void> {
 	const lift = Math.min(120, 40 + Math.abs(b.x - a.x) * 0.25 + Math.abs(b.y - a.y) * 0.1);
 	const c = { x: (a.x + b.x) / 2, y: Math.min(a.y, b.y) - lift };
 	const dot = layer('vfx-dot');
-	// with bananas on, the point in flight is the app's own drawn banana, the
-	// one the bar and the cards wear, never the phone's emoji
-	if (document.documentElement.dataset.banana !== undefined) {
-		const banana = (from.querySelector('svg.banana') ?? document.querySelector('svg.banana'))?.cloneNode(true);
-		if (banana) {
-			dot.classList.add('nana');
-			// the same size it was where it hung, so it is that banana leaving
-			dot.style.fontSize = `${Math.max(12, from.getBoundingClientRect().height)}px`;
-			dot.append(banana);
-		}
+	// the point in flight is the very thing the bar holds: the drawn banana,
+	// or the ticket, never the phone's emoji or a plain dot. Taken from the
+	// bar's own points (the menu next to them has a banana of its own, the
+	// switch for them, which is not a point), at the size of one there
+	const pip = document.querySelector('header.lean .hpip');
+	const held = pip?.querySelector('svg')?.cloneNode(true);
+	if (held instanceof SVGElement && pip) {
+		dot.classList.add('nana');
+		dot.style.fontSize = getComputedStyle(pip).fontSize;
+		dot.style.color = 'var(--accent)';
+		dot.append(held);
 	}
 	const frames: Keyframe[] = [];
 	const steps = 14;

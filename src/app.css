@@ -4,7 +4,8 @@
 :root {
 	color-scheme: dark;
 	--bg: #0f1012;
-	/* something for a palette to wash the page with; flat by default */
+	/* something for a palette to wash the page with; flat by default, and in
+	   every palette now, so the page meets the status bar without a seam */
 	--wash: none;
 	--card: #16181c;
 	--card2: #1b1e23;
@@ -310,38 +311,22 @@ header .sub b {
 	color: var(--accent);
 	font-variant-numeric: tabular-nums;
 }
-/* the budget as dots, spelled like the card docks */
+/* the budget as things you hold: a banana or a ticket for every point still
+   yours, a faint ghost of one for every point spent */
 .hpip {
-	width: 15px;
-	height: 15px;
-	border-radius: 50%;
 	display: grid;
 	place-items: center;
 	flex: none;
+	font-size: 15px;
+	line-height: 0;
+	color: var(--accent);
 }
-.hpip.spent {
-	background: var(--accent);
-	color: var(--accent-ink);
-	font-size: 8px;
-	font-weight: 800;
-	line-height: 1;
+.hpip.ghost {
+	filter: grayscale(1);
+	opacity: 0.28;
 }
-.hpip.free svg {
-	display: block;
-	width: 100%;
-	height: 100%;
-}
-/* even dashes by construction, the same way the cards draw theirs: a border is
-   four arcs whose dashes each start afresh, so they bunch where the arcs meet.
-   pathLength normalises the circumference to 12, and a 0.9/1.1 pattern divides
-   that exactly six times whatever the radius happens to be */
-.hpip.free circle {
-	fill: none;
-	stroke: color-mix(in srgb, var(--accent) 55%, transparent);
-	stroke-width: 1.2;
-	stroke-linecap: round;
-	stroke-dasharray: 0.9 1.1;
-	stroke-dashoffset: 0.45;
+:root:not([data-banana]) .hpip {
+	font-size: 13px;
 }
 .tip b {
 	color: var(--accent);
@@ -2727,7 +2712,8 @@ details[open] > .iconbtn {
 	position: absolute;
 	inset: 0;
 }
-/* even dashes by construction, as .hpip.free explains. Thirty path-units to the
+/* even dashes by construction: a border is four arcs whose dashes start afresh,
+   so pathLength evens them out. Thirty path-units to the
    small dock's twelve, so a circle near three times the size keeps the same dash
    rhythm rather than six long strokes */
 .pip.empty circle {
@@ -4563,7 +4549,7 @@ details[open] > .iconbtn {
 	font-style: normal;
 }
 .crowdpts i.five {
-	font-size: 13px;
+	font-size: 16px;
 	margin-right: 3px;
 }
 .crowdpts b {

@@ -21,7 +21,8 @@
 	import { levelOf } from '$lib/levels';
 	import Banana from '$lib/components/Banana.svelte';
 	import BananaBunch from '$lib/components/BananaBunch.svelte';
-	import DieFive from '$lib/components/DieFive.svelte';
+	import Ticket from '$lib/components/Ticket.svelte';
+	import TicketStack from '$lib/components/TicketStack.svelte';
 	import Check from '$lib/components/Check.svelte';
 	import { say } from '$lib/toast.svelte';
 	import { watchLive } from '$lib/live-poll';
@@ -681,7 +682,7 @@
 					</button>
 				</form>
 			{:else}
-				<span class="pip set"><i>{#if data.banana}<Banana />{:else}<Check />{/if}</i></span>
+				<span class="pip set"><i>{#if data.banana}<Banana />{:else}<Ticket />{/if}</i></span>
 			{/if}
 		{/each}
 		{#each Array(Math.max(0, left)) as _, i (i)}
@@ -824,7 +825,7 @@
 					aria-label={T.dYours(film.myPoints, votes)}
 					in:scale={{ duration: 380, start: 0.5, easing: backOut }}
 				>
-					<i>{#if data.banana}<Banana />{:else}<Check />{/if}</i>
+					<i>{#if data.banana}<Banana />{:else}<Ticket />{/if}</i>
 					{#key film.myPoints}<b>{film.myPoints}</b>{/key}
 				</span>
 			{:else}
@@ -1156,10 +1157,10 @@
 						     a bunch of bananas, or a die showing five -->
 						<span class="crowdpts" aria-label={T.unit(backer.points, votes)}>
 							{#each Array(Math.floor(backer.points / 5)) as _, k (k)}
-								<i class="five">{#if data.banana}<BananaBunch />{:else}<DieFive />{/if}</i>
+								<i class="five">{#if data.banana}<BananaBunch />{:else}<TicketStack />{/if}</i>
 							{/each}
 							{#each Array(backer.points % 5) as _, k (k)}
-								<i>{#if data.banana}<Banana />{:else}<Check />{/if}</i>
+								<i>{#if data.banana}<Banana />{:else}<Ticket />{/if}</i>
 							{/each}
 						</span>
 					</div>
