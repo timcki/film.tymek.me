@@ -100,6 +100,41 @@ export function rulesOf(rules: WeekRules): WeekRule[] {
 	return out;
 }
 
+/** what is known about a film so far; a search result knows less than TMDB's details */
+export type KnownFacts = {
+	year?: number | null;
+	runtime?: number | null;
+	language?: string | null;
+	genres?: number[] | null;
+};
+
+/**
+ * The rules that need nothing beyond these facts, checked the same way on the page
+ * and on the server; null when the fact a rule needs is not known yet.
+ */
+export function meetsKnown(rule: WeekRule, facts: KnownFacts): boolean | null {
+	const within = (n: number | null | undefined, min: number | null, max: number | null) =>
+		n == null ? null : (min == null || n >= min) && (max == null || n <= max);
+	switch (rule.kind) {
+		case 'languages':
+			return facts.language == null ? null : rule.codes.includes(facts.language);
+		case 'genres':
+			return facts.genres == null ? null : facts.genres.some((id) => rule.ids.includes(id));
+		case 'years':
+			return within(facts.year, rule.from, rule.to);
+		case 'runtime':
+			return within(facts.runtime, rule.min, rule.max);
+		default:
+			return null;
+	}
+}
+
+/** the first rule a film is already known to break, before anyone has picked it */
+export function knownBreach(custom: CustomWeek | null | undefined, facts: KnownFacts): WeekRule | null {
+	if (!custom) return null;
+	return rulesOf(custom.rules).find((rule) => meetsKnown(rule, facts) === false) ?? null;
+}
+
 /**
  * A refusal travels as a code plus flat parameters (invariant 6), so the rule it
  * names is folded into strings on the server and unfolded here, at the edge.

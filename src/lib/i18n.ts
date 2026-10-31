@@ -446,6 +446,8 @@ export type Dict = {
 	weekRule: (rule: WeekRule) => string;
 	/** TMDB's genres, by id */
 	genreName: (id: number) => string;
+	/** a search result the week's rules already rule out */
+	spOff: string;
 
 	error: (code: string, params: ErrorParams, fallback: string) => string;
 };
@@ -958,6 +960,7 @@ const pl: Dict = {
 		}
 	},
 	genreName: (id) => GENRES_PL[id] ?? String(id),
+	spOff: 'nie pasuje do zasad tygodnia',
 
 	error: (code, p, fallback) => {
 		switch (code) {
@@ -1542,6 +1545,7 @@ const en: Dict = {
 		}
 	},
 	genreName: (id) => GENRES_EN[id] ?? String(id),
+	spOff: 'does not fit this week',
 
 	error: (code, p, fallback) => (code === 'off_theme' ? offTheme('en', p, fallback) : fallback)
 };

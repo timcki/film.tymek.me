@@ -5,6 +5,7 @@ import { breachOf, cleanCustom, type CustomInput } from '../src/lib/server/custo
 import type { Facts } from '../src/lib/server/tmdb.js';
 import {
 	customOf,
+	knownBreach,
 	ruleFromParams,
 	ruleToParams,
 	rulesOf,
@@ -137,6 +138,17 @@ describe('a custom week', () => {
 			expect(breachOf(week({}), null)).toBeNull();
 			expect(breachOf(null, null)).toBeNull();
 		});
+	});
+
+	it('greys out a search result only for what the search already says', () => {
+		const polish = week({ languages: ['pl'], countries: ['PL'] });
+		expect(knownBreach(polish, { year: 2001, language: 'fr', genres: [35] })?.kind).toBe('languages');
+		// the search has no countries, so that rule waits for the pick
+		expect(knownBreach(polish, { year: 2013, language: 'pl', genres: [18] })).toBeNull();
+		// a search cached before results carried these says nothing either way
+		expect(knownBreach(week({ genres: [27] }), { year: 1982 })).toBeNull();
+		expect(knownBreach(week({ yearTo: 1990 }), { year: 1999 })?.kind).toBe('years');
+		expect(knownBreach(null, { language: 'fr' })).toBeNull();
 	});
 
 	it('refuses an off-theme pick at nomination and lets a fitting one through', () => {

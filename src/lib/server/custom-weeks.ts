@@ -8,6 +8,7 @@ import {
 	NAME_MAX,
 	PICKS_MAX,
 	REGIONS,
+	meetsKnown,
 	rulesOf,
 	ruleToParams,
 	type CodedId,
@@ -99,20 +100,16 @@ const CODED_CHECKS: Record<CodedId, (facts: Facts) => boolean> = {
 /** Kieślowski, kieslowski and Krzysztof Kieślowski are the same director */
 const fold = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
 
+/** a fact TMDB did not give is a rule not met */
 function meets(rule: WeekRule, facts: Facts): boolean {
-	const within = (n: number | null, min: number | null, max: number | null) =>
-		n != null && (min == null || n >= min) && (max == null || n <= max);
 	switch (rule.kind) {
 		case 'countries':
 			return facts.countries.some((c) => rule.codes.includes(SUCCESSOR[c] ?? c));
 		case 'languages':
-			return facts.language != null && rule.codes.includes(facts.language);
 		case 'genres':
-			return facts.genres.some((id) => rule.ids.includes(id));
 		case 'years':
-			return within(facts.year, rule.from, rule.to);
 		case 'runtime':
-			return within(facts.runtime, rule.min, rule.max);
+			return meetsKnown(rule, facts) === true;
 		case 'directors':
 			return facts.directors.some((d) => rule.names.some((name) => fold(d.name).includes(fold(name))));
 		case 'coded':

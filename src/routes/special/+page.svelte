@@ -18,7 +18,7 @@
 	import { nomSheet } from '$lib/special-sheet.svelte';
 	import { portal } from '$lib/portal';
 	import { fitViewport } from '$lib/fit-viewport';
-	import { rulesOf } from '$lib/custom-weeks';
+	import { knownBreach, rulesOf } from '$lib/custom-weeks';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -65,6 +65,9 @@
 		thumb: string | null;
 		poster: string | null;
 		overview: string;
+		// missing from a typed title and from searches cached before they were kept
+		language?: string | null;
+		genres?: number[];
 	};
 
 	let picked = $state<Result | null>(null);
@@ -560,16 +563,19 @@
 					{:else}
 						{#each results as result, i (result.tmdbId)}
 							{@const dup = known.has(result.title.toLowerCase())}
+							{@const off = !dup && !!knownBreach(data.special.custom, result)}
 							<button
 								class="r"
-								disabled={dup}
+								disabled={dup || off}
 								onclick={() => (picked = result)}
 								in:fly={{ y: 8, duration: ms(240), delay: ms(i * 35) }}
 							>
 								<div class="th"><Poster title={result.title} url={result.thumb} /></div>
 								<div class="m">
 									<b>{result.title}</b>
-									<span>{result.year ?? T.dEmpty}{dup ? ` · ${T.nomDup}` : ''}</span>
+									<span
+										>{result.year ?? T.dEmpty}{dup ? ` · ${T.nomDup}` : off ? ` · ${T.spOff}` : ''}</span
+									>
 								</div>
 							</button>
 						{/each}

@@ -14,6 +14,9 @@ export type SearchResult = {
 	poster: string | null;
 	thumb: string | null;
 	overview: string;
+	/** §3.7: enough to tell some of a custom week's rules before the pick */
+	language: string | null;
+	genres: number[];
 };
 
 export type SearchResponse = { results: SearchResult[]; degraded?: boolean };
@@ -39,6 +42,8 @@ type RawMovie = {
 	release_date?: string;
 	poster_path?: string | null;
 	overview?: string;
+	original_language?: string;
+	genre_ids?: number[];
 };
 
 function mapMovie(movie: RawMovie): SearchResult {
@@ -49,7 +54,9 @@ function mapMovie(movie: RawMovie): SearchResult {
 		year: Number.isFinite(year) ? year : null,
 		poster: movie.poster_path ? `${IMAGE}/w342${movie.poster_path}` : null,
 		thumb: movie.poster_path ? `${IMAGE}/w92${movie.poster_path}` : null,
-		overview: movie.overview ?? ''
+		overview: movie.overview ?? '',
+		language: movie.original_language || null,
+		genres: movie.genre_ids ?? []
 	};
 }
 
