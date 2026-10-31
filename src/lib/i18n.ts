@@ -4,6 +4,7 @@
  * so a copy change is one edit in one file.
  */
 import { formatNight } from './datetime.js';
+import type { Outing } from './outings.js';
 
 export type Lang = 'pl' | 'en';
 
@@ -112,6 +113,8 @@ export type Dict = {
 
 	/** a film night by its number: the nights we watched something, counted from the first */
 	evening: (n: number) => string;
+	/** where we watched a film that was not a film night */
+	outing: (where: Outing) => string;
 	/** the whole phrase, verb included, because the bar has no room for a sentence around it */
 	timeLeft: (d: number, h: number, m: number, s: number) => string;
 	/** the same, for a bar with no room for the verb */
@@ -516,6 +519,7 @@ const pl: Dict = {
 	themeBanana: 'Bananowo',
 
 	evening: (n) => `Wieczorek ${n}`,
+	outing: (where) => (where === 'cinema' ? 'Kino' : 'Gdzie indziej'),
 	// tiered: only the unit that matters now, down to seconds in the last minute
 	timeLeft: (d, h, m, s) => {
 		if (d) return plLeft(d, 'dzień', 'dni', 'dni');
@@ -1054,6 +1058,7 @@ const en: Dict = {
 	themeBanana: 'Bananas',
 
 	evening: (n) => `Night ${n}`,
+	outing: (where) => (where === 'cinema' ? 'Cinema' : 'Elsewhere'),
 	// tiered: only the unit that matters now, down to seconds in the last minute
 	timeLeft: (d, h, m, s) =>
 		d

@@ -11,6 +11,7 @@
  */
 import type { DB } from './db.js';
 import { avatarUrl } from './people.js';
+import { filmEvenings } from './evenings.js';
 
 /** 'app' starts at the first round anybody voted in; 'all' starts at week 1 */
 export type Era = 'app' | 'all';
@@ -98,7 +99,10 @@ export function windowFor(db: DB, era: Era): Window {
 /* ------------------------------------------------------------------ room -- */
 
 export type Counts = {
-	/** films watched inside the window: what turning up is counted out of */
+	/**
+	 * film nights inside the window: what turning up is counted out of. An outing
+	 * has no room code to scan, so counting it would mark everybody absent from it
+	 */
 	nights: number;
 	/** rounds in the window: what voting is counted out of */
 	rounds: number;
@@ -113,7 +117,8 @@ export function counts(db: DB, window: Window): Counts {
 	return {
 		nights: scalar(
 			db,
-			`SELECT COUNT(*) AS n FROM film WHERE status = 'watched' AND watched_week BETWEEN ? AND ?`,
+			`SELECT COUNT(*) AS n FROM film
+			 WHERE status = 'watched' AND outing IS NULL AND watched_week BETWEEN ? AND ?`,
 			from,
 			to
 		),
@@ -138,7 +143,7 @@ export function roundRows(db: DB, window: Window): RoundRow[] {
 			        (SELECT COUNT(DISTINCT person_id) FROM ballot b WHERE b.week_number = w.number) AS voters,
 			        (SELECT COUNT(*) FROM attendance a WHERE a.week_number = w.number) AS attended,
 			        (SELECT f.title FROM film f
-			           WHERE f.status = 'watched' AND f.watched_week = w.number
+			           WHERE f.status = 'watched' AND f.outing IS NULL AND f.watched_week = w.number
 			           ORDER BY f.id LIMIT 1) AS winnerTitle
 			 FROM week w
 			 WHERE w.number BETWEEN ? AND ?
@@ -242,14 +247,15 @@ export type NightsRow = {
  *
  * Backfilled records count here. They are archival because they are not
  * nominations in play, but they are nights the group sat through, and leaving
- * them out would credit nobody for two thirds of the canon.
+ * them out would credit nobody for two thirds of the canon. An outing does not:
+ * no rule set chose it, so it says nothing about whether one is fair.
  */
 export function whoseNights(db: DB, window: Window): NightsRow[] {
 	const cards = people(db);
 	const rows = db
 		.prepare(
 			`SELECT added_by, COUNT(*) AS nights FROM film
-			 WHERE status = 'watched' AND watched_week BETWEEN ? AND ?
+			 WHERE status = 'watched' AND outing IS NULL AND watched_week BETWEEN ? AND ?
 			 GROUP BY added_by`
 		)
 		.all(window.from, window.to) as { added_by: string; nights: number }[];
@@ -385,15 +391,16 @@ export type WatchedFilm = {
 	genre: string | null;
 	runtime: number | null;
 	posterUrl: string | null;
-	week: number;
+	evening: number;
 	addedBy: string;
 	addedByName: string;
 };
 
 /**
- * Every night on record, whatever era it belongs to. The canon is what the
- * group has watched, and half of it predates the first ballot; narrowing it to
- * the rounds with votes in them would leave two films and nothing to look at.
+ * Every evening on record, whatever era it belongs to, outings included. The
+ * canon is what the group has watched, and half of it predates the first ballot;
+ * narrowing it to the rounds with votes in them would leave two films and nothing
+ * to look at.
  */
 export function watchedFilms(db: DB): WatchedFilm[] {
 	const rows = db
@@ -417,6 +424,7 @@ export function watchedFilms(db: DB): WatchedFilm[] {
 		added_by_name: string;
 	}[];
 
+	const evenings = filmEvenings(db);
 	return rows.map((row) => ({
 		id: row.id,
 		title: row.title,
@@ -425,7 +433,7 @@ export function watchedFilms(db: DB): WatchedFilm[] {
 		genre: row.genre,
 		runtime: row.runtime,
 		posterUrl: row.poster_url,
-		week: row.watched_week,
+		evening: evenings.get(row.id) ?? 0,
 		addedBy: row.added_by,
 		addedByName: row.added_by_name
 	}));

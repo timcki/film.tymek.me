@@ -69,7 +69,7 @@
 	const columns = $derived(
 		data.rounds.map((round) => ({
 			key: String(round.week),
-			label: String(round.week),
+			label: String(data.evenings[round.week]),
 			voted: round.voters,
 			attended: round.attended,
 			// the round still running has not finished collecting either number
@@ -518,7 +518,7 @@
 		{#each filmsIn as film (film.id)}
 			<div class="stat">
 				<span>{film.title}{film.year ? ` (${film.year})` : ''}</span>
-				<b>{T.evening(data.evenings[film.week])}</b>
+				<b>{T.evening(film.evening)}</b>
 			</div>
 		{/each}
 	</div>

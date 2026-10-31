@@ -1,22 +1,20 @@
 import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import { logAdmin, requireAdmin } from '$lib/server/admin';
-import {
-	addArchivalFilm,
-	archiveByWeek,
-	deleteFilm,
-	setFilmAttribution,
-	unattributedCount
-} from '$lib/server/manage';
+import { deleteFilm, reassignFilm, recordWatched, watchedRecord } from '$lib/server/manage';
 import { allPeople, avatarUrl } from '$lib/server/people';
 import { detailsOf } from '$lib/server/tmdb';
+import { fromLocalInput } from '$lib/server/time';
 import { ruleFail } from '$lib/server/respond';
+import { RuleError } from '$lib/server/types';
+import { toLocalInput } from '$lib/datetime';
+import { isOuting } from '$lib/outings';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	requireAdmin(locals.person);
 	const db = getDb();
 	return {
-		weeks: archiveByWeek(db),
+		films: watchedRecord(db),
 		// inactive people stay pickable: the stand-in account holding the backlog is
 		// one of them, and a film cannot be taken off it without showing it first
 		people: allPeople(db).map((person) => ({
@@ -26,7 +24,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			active: person.active,
 			avatar: avatarUrl(person.id, person.avatar_updated_at)
 		})),
-		progress: unattributedCount(db)
+		now: toLocalInput(new Date())
 	};
 };
 
@@ -35,33 +33,27 @@ const num = (form: FormData, key: string): number | null => {
 	return raw ? Number(raw) : null;
 };
 
-export const actions: Actions = {
-	/** who suggested it and which night it was, saved together */
-	attribute: async ({ request, locals }) => {
-		const person = requireAdmin(locals.person);
-		const form = await request.formData();
-		const id = Number(form.get('id'));
-		const to = String(form.get('personId') ?? '');
-		const week = Number(form.get('week'));
-		try {
-			setFilmAttribution(getDb(), id, to, week);
-			logAdmin(getDb(), person.id, 'film.attribute', String(id), `${to}, week ${week}`);
-			return { saved: true };
-		} catch (error) {
-			return ruleFail(error);
-		}
-	},
+function whenFrom(form: FormData): Date {
+	try {
+		return fromLocalInput(String(form.get('at') ?? ''));
+	} catch {
+		throw new RuleError('bad_date', 'give a date and a time');
+	}
+}
 
+export const actions: Actions = {
 	add: async ({ request, locals }) => {
 		const person = requireAdmin(locals.person);
 		const form = await request.formData();
 		const tmdbId = num(form, 'tmdbId');
-		// §8.2: fetched once, when the film is actually written down
-		const details = tmdbId
-			? await detailsOf(tmdbId)
-			: { director: null, genre: null, runtime: null };
+		const where = String(form.get('outing') ?? '');
 		try {
-			const id = addArchivalFilm(getDb(), {
+			const at = whenFrom(form);
+			// §8.2: fetched once, when the film is actually written down
+			const details = tmdbId
+				? await detailsOf(tmdbId)
+				: { director: null, genre: null, runtime: null };
+			const id = recordWatched(getDb(), {
 				title: String(form.get('title') ?? ''),
 				year: num(form, 'year'),
 				director: details.director,
@@ -71,18 +63,32 @@ export const actions: Actions = {
 				posterUrl: String(form.get('poster') ?? '') || null,
 				overview: String(form.get('overview') ?? '') || null,
 				personId: String(form.get('personId') ?? ''),
-				week: Number(form.get('week')),
-				watched: form.get('watched') === 'on',
+				at,
+				outing: isOuting(where) ? where : null,
 				allowDuplicate: form.get('allowDuplicate') === 'yes'
 			});
 			logAdmin(
 				getDb(),
 				person.id,
-				'film.archive.add',
+				'film.record',
 				String(id),
-				`${String(form.get('title') ?? '')}, week ${String(form.get('week') ?? '')}`
+				`${String(form.get('title') ?? '')}, ${isOuting(where) ? where : 'night'}`
 			);
 			return { added: true };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	credit: async ({ request, locals }) => {
+		const person = requireAdmin(locals.person);
+		const form = await request.formData();
+		const id = Number(form.get('id'));
+		const to = String(form.get('personId') ?? '');
+		try {
+			reassignFilm(getDb(), id, to);
+			logAdmin(getDb(), person.id, 'film.reassign', String(id), to);
+			return { saved: true };
 		} catch (error) {
 			return ruleFail(error);
 		}
@@ -94,7 +100,7 @@ export const actions: Actions = {
 		const id = Number(form.get('id'));
 		try {
 			deleteFilm(getDb(), id);
-			logAdmin(getDb(), person.id, 'film.archive.delete', String(id));
+			logAdmin(getDb(), person.id, 'film.delete', String(id));
 			return { saved: true };
 		} catch (error) {
 			return ruleFail(error);

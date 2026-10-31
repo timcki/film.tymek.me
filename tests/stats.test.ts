@@ -36,7 +36,7 @@ function film(extra: Partial<WatchedFilm>): WatchedFilm {
 		genre: null,
 		runtime: null,
 		posterUrl: null,
-		week: 1,
+		evening: 1,
 		addedBy: 'ala',
 		addedByName: 'ala',
 		...extra

@@ -147,6 +147,15 @@ announce a rule change that never happened.
 The script is a one-off and refuses to run against a database that does not have exactly
 one week numbered 1, so it cannot be applied twice.
 
+Anything watched together that no round decided, a cinema trip or a night nobody logged,
+is written down on the admin **Obejrzane** tab with a date rather than a week. It becomes
+an archival `watched` film in the round that date falls in and never touches
+`week.winner_film_id`. A regular night must fall in a round whose night has passed and
+has no film yet. An outing (`film.outing`, dated by `film.watched_at`) can be any day in
+the past and takes its own evening number. Outings count in history and in the film
+statistics, but never as a win for whoever suggested them: no nominator XP, no fairness
+night.
+
 ## The demo
 
 <https://demo.film.tymek.me> is this same code, run by a second service against a

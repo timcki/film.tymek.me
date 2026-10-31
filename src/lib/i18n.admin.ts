@@ -10,7 +10,7 @@ export type AdminDict = {
 	navCalendar: string;
 	navPeople: string;
 	navFilms: string;
-	navArchive: string;
+	navWatched: string;
 	navHost: string;
 	navBack: string;
 
@@ -92,9 +92,6 @@ export type AdminDict = {
 	filDrop: string;
 	filDelete: string;
 	filDeleteNote: string;
-	filWatchedH: string;
-	filWeek: string;
-	filMarkWatched: string;
 	filReassignH: string;
 	filReassign: string;
 	/* §3.5: placing somebody's hold for them, because the ask came by group chat */
@@ -107,28 +104,22 @@ export type AdminDict = {
 	rndH: string;
 	rndIntro: string;
 
-	/* the archive */
-	arcH: string;
-	arcIntro: string;
-	arcProgress: (done: number, total: number) => string;
-	arcOnlyUnattributed: string;
-	arcAllNights: string;
-	arcWinner: string;
-	arcNothing: string;
-	arcWho: string;
-	arcAddOpen: string;
-	arcAddH: (week: number) => string;
-	arcSearchPh: string;
-	arcNoResults: string;
-	arcByHand: string;
-	arcWasWatched: string;
-	arcWasProposed: string;
-	arcAdd: string;
-	arcAddAnyway: string;
-	arcCancel: string;
-	arcMoveH: string;
-	arcMove: string;
-	arcEmpty: string;
+	/* what we have watched, and writing down what no round decided */
+	watH: string;
+	watIntro: string;
+	watAddH: string;
+	watSearchPh: string;
+	watNoResults: string;
+	watByHand: string;
+	watWhen: string;
+	watWhere: string;
+	/** a film night that happened and was never written down */
+	watFilmNight: string;
+	watWho: string;
+	watAdd: string;
+	watAddAnyway: string;
+	watCancel: string;
+	watEmpty: string;
 
 	/* audit */
 	audH: string;
@@ -153,7 +144,7 @@ const pl: AdminDict = {
 	navCalendar: 'Kalendarz',
 	navPeople: 'Ludzie',
 	navFilms: 'Filmy',
-	navArchive: 'Archiwum',
+	navWatched: 'Obejrzane',
 	navHost: 'Prowadzący',
 	navBack: '← Wróć do aplikacji',
 
@@ -236,9 +227,6 @@ const pl: AdminDict = {
 	filDrop: 'Wyrzuć',
 	filDelete: 'Usuń na zawsze',
 	filDeleteNote: 'Tylko dla filmów bez ani jednego głosu.',
-	filWatchedH: 'Oznacz jako obejrzany',
-	filWeek: 'Tydzień',
-	filMarkWatched: 'Zapisz jako obejrzany',
 	filReassignH: 'Zgłaszający',
 	filReassign: 'Przepisz',
 	filHold: 'Liberum veto',
@@ -247,30 +235,23 @@ const pl: AdminDict = {
 	filEmpty: 'Brak filmów.',
 
 	rndH: 'Bieżąca runda',
-	rndIntro: 'Filmy, na które teraz się głosuje. Obejrzane trafiają do archiwum.',
+	rndIntro: 'Filmy, na które teraz się głosuje. Obejrzane są w zakładce Obejrzane.',
 
-	arcH: 'Archiwum',
-	arcIntro:
-		'Zapis tego, co już się wydarzyło, wieczór po wieczorze. Nic tutaj nie trafia na listę do głosowania.',
-	arcProgress: (done, total) => `${done} z ${total} filmów przypisanych`,
-	arcOnlyUnattributed: 'Tylko nieprzypisane',
-	arcAllNights: 'Wszystkie wieczory',
-	arcWinner: 'Obejrzany',
-	arcNothing: 'Nic nie zapisano.',
-	arcWho: 'Kto zaproponował',
-	arcAddOpen: '+ Dopisz film',
-	arcAddH: (week) => `Dopisz film do tygodnia ${week}`,
-	arcSearchPh: 'Szukaj w TMDB…',
-	arcNoResults: 'Nic nie znaleziono.',
-	arcByHand: 'Wpisz ręcznie',
-	arcWasWatched: 'Obejrzeliśmy go tego wieczoru',
-	arcWasProposed: 'Tylko zaproponowany',
-	arcAdd: 'Dopisz',
-	arcAddAnyway: 'Dopisz mimo to',
-	arcCancel: 'Anuluj',
-	arcMoveH: 'Wieczór',
-	arcMove: 'Przenieś',
-	arcEmpty: 'Archiwum jest puste.',
+	watH: 'Obejrzane',
+	watIntro:
+		'Wszystko, co obejrzeliśmy, wieczorek po wieczorku. Tu dopisujesz filmy obejrzane poza głosowaniem: kino, wyjazd albo wieczorek, którego nikt nie zapisał. Nic stąd nie trafia na listę do głosowania.',
+	watAddH: 'Dopisz obejrzany film',
+	watSearchPh: 'Szukaj w TMDB…',
+	watNoResults: 'Nic nie znaleziono.',
+	watByHand: 'Wpisz ręcznie',
+	watWhen: 'Kiedy',
+	watWhere: 'Gdzie',
+	watFilmNight: 'Zwykły wieczorek',
+	watWho: 'Kto zaproponował',
+	watAdd: 'Dopisz',
+	watAddAnyway: 'Dopisz mimo to',
+	watCancel: 'Anuluj',
+	watEmpty: 'Jeszcze nic nie obejrzeliśmy.',
 
 	audH: 'Ostatnie zmiany',
 	audEmpty: 'Jeszcze nic.',
@@ -309,23 +290,29 @@ const pl: AdminDict = {
 			case 'hold_taken':
 				return `Ta osoba uśpiła w tym tygodniu ${p.title}.`;
 			case 'film_has_ballots':
-				return 'Ktoś na niego głosował. Przenieś do archiwum zamiast usuwać.';
+				return 'Ktoś na niego głosował. Zdejmij go z listy zamiast usuwać.';
 			case 'film_watched':
 				return 'Ten film już oglądaliśmy.';
 			case 'nomination_clash':
-				return 'Ta osoba ma już zgłoszenie z tego tygodnia.';
-			case 'no_such_week':
-				return `Nie ma tygodnia ${p.week}.`;
+				return 'Ta osoba ma już zgłoszenie w tej rundzie.';
 			case 'use_mark_watched':
-				return 'Użyj „oznacz jako obejrzany”, żeby zapisać tydzień.';
+				return 'Obejrzany film wybiera runda albo dopisuje się go w zakładce Obejrzane.';
 			case 'no_title':
 				return 'Podaj tytuł.';
 			case 'dup_active':
 				return `${p.title} jest już na liście.`;
-			case 'week_has_winner':
-				return `W tygodniu ${p.week} oglądaliśmy już ${p.title}.`;
-			case 'dup_archival':
-				return `${p.title} jest już zapisany (tydzień ${p.week}).`;
+			case 'dup_recorded':
+				return p.evening
+					? `${p.title} oglądaliśmy już na wieczorku ${p.evening}.`
+					: `${p.title} jest na liście do głosowania.`;
+			case 'watched_future':
+				return 'Ta data jeszcze nie nadeszła.';
+			case 'no_round_then':
+				return 'Żadna runda nie obejmuje tej daty.';
+			case 'night_not_yet':
+				return 'Ta runda jeszcze nie miała swojego wieczorku. Jeśli to było wyjście, wybierz miejsce.';
+			case 'night_taken':
+				return `Tego wieczorku oglądaliśmy ${p.title}. Jeśli to było osobne wyjście, wybierz miejsce.`;
 			case 'film_archival':
 				return `${p.title} to zapis dawnego wieczoru, nie można na niego głosować.`;
 			case 'special_on':
@@ -358,7 +345,7 @@ const en: AdminDict = {
 	navCalendar: 'Calendar',
 	navPeople: 'People',
 	navFilms: 'Films',
-	navArchive: 'Archive',
+	navWatched: 'Watched',
 	navHost: 'Host',
 	navBack: '← Back to the app',
 
@@ -441,9 +428,6 @@ const en: AdminDict = {
 	filDrop: 'Drop',
 	filDelete: 'Delete for good',
 	filDeleteNote: 'Only for films nobody has voted for.',
-	filWatchedH: 'Mark as watched',
-	filWeek: 'Week',
-	filMarkWatched: 'Record as watched',
 	filReassignH: 'Nominated by',
 	filReassign: 'Reassign',
 	filHold: 'Liberum veto',
@@ -452,30 +436,23 @@ const en: AdminDict = {
 	filEmpty: 'No films.',
 
 	rndH: 'Current round',
-	rndIntro: 'What the room is voting on now. Watched films move to the archive.',
+	rndIntro: 'What the room is voting on now. Watched films are under Watched.',
 
-	arcH: 'Archive',
-	arcIntro:
-		'The record of what already happened, a night at a time. Nothing here reaches the voting list.',
-	arcProgress: (done, total) => `${done} of ${total} films attributed`,
-	arcOnlyUnattributed: 'Unattributed only',
-	arcAllNights: 'All nights',
-	arcWinner: 'Watched',
-	arcNothing: 'Nothing written down.',
-	arcWho: 'Suggested by',
-	arcAddOpen: '+ Add a film',
-	arcAddH: (week) => `Add a film to week ${week}`,
-	arcSearchPh: 'Search TMDB…',
-	arcNoResults: 'Nothing found.',
-	arcByHand: 'Type it by hand',
-	arcWasWatched: 'We watched it that night',
-	arcWasProposed: 'Only proposed',
-	arcAdd: 'Add',
-	arcAddAnyway: 'Add anyway',
-	arcCancel: 'Cancel',
-	arcMoveH: 'Night',
-	arcMove: 'Move',
-	arcEmpty: 'The archive is empty.',
+	watH: 'Watched',
+	watIntro:
+		'Everything we have watched, a night at a time. This is where a film watched outside the voting gets written down: the cinema, a trip, or a film night nobody recorded. Nothing here reaches the voting list.',
+	watAddH: 'Add a film we watched',
+	watSearchPh: 'Search TMDB…',
+	watNoResults: 'Nothing found.',
+	watByHand: 'Type it by hand',
+	watWhen: 'When',
+	watWhere: 'Where',
+	watFilmNight: 'A regular film night',
+	watWho: 'Suggested by',
+	watAdd: 'Add',
+	watAddAnyway: 'Add anyway',
+	watCancel: 'Cancel',
+	watEmpty: 'Nothing watched yet.',
 
 	audH: 'Recent changes',
 	audEmpty: 'Nothing yet.',

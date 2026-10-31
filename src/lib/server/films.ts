@@ -17,7 +17,7 @@ import {
 import { heldIn, holdOf, liftHold, placeHold } from './holds.js';
 import { rexpAll } from './xp.js';
 import { requireListWeek } from './weeks.js';
-import { eveningOf } from './evenings.js';
+import { filmEvenings } from './evenings.js';
 
 export function filmById(db: DB, id: number): Film | undefined {
 	return db.prepare('SELECT * FROM film WHERE id = ?').get(id) as Film | undefined;
@@ -267,7 +267,7 @@ export function cleanPoster(url: string | null | undefined): string | null {
 
 function duplicate(db: DB, clash: Film): RuleError {
 	if (clash.status === 'watched') {
-		const evening = eveningOf(db, clash.watched_week ?? 0);
+		const evening = filmEvenings(db).get(clash.id) ?? 0;
 		return new RuleError('dup_watched', `we watched ${clash.title} on night ${evening}`, {
 			title: clash.title,
 			evening

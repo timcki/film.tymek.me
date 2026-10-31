@@ -20,6 +20,13 @@ export const XP = {
 } as const;
 
 /**
+ * The films that earn their nominator anything. An outing is credited to
+ * whoever suggested it so the record says so, but the voting had no part in it
+ * and it earns nobody XP.
+ */
+const IN_PLAY = 'outing IS NULL';
+
+/**
  * (person, round) for every round somebody voted in. A special round's ticks
  * (§3.6) are its votes, so turning up to one is no worse for your XP than a
  * round of points; a round with both still counts once.
@@ -55,9 +62,9 @@ export function xpBreakdown(db: DB, personId: string): XpBreakdown {
 	const counts = {
 		nightsAttended: one('SELECT COUNT(*) AS n FROM attendance WHERE person_id = ?'),
 		weeksVoted: one(`SELECT COUNT(*) AS n FROM (${ROUNDS_VOTED}) WHERE person_id = ?`),
-		nominations: one('SELECT COUNT(*) AS n FROM film WHERE added_by = ?'),
+		nominations: one(`SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND ${IN_PLAY}`),
 		nominationsWatched: one(
-			`SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND status = 'watched'`
+			`SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND status = 'watched' AND ${IN_PLAY}`
 		),
 		winnersBacked: one(
 			`SELECT COUNT(DISTINCT f.id) AS n FROM film f
@@ -96,14 +103,15 @@ export function rexpAll(db: DB): void {
 	);
 	add(
 		db
-			.prepare('SELECT added_by AS person_id, COUNT(*) AS n FROM film GROUP BY added_by')
+			.prepare(`SELECT added_by AS person_id, COUNT(*) AS n FROM film WHERE ${IN_PLAY} GROUP BY added_by`)
 			.all() as { person_id: string; n: number }[],
 		XP.nominate
 	);
 	add(
 		db
 			.prepare(
-				`SELECT added_by AS person_id, COUNT(*) AS n FROM film WHERE status = 'watched' GROUP BY added_by`
+				`SELECT added_by AS person_id, COUNT(*) AS n FROM film
+				 WHERE status = 'watched' AND ${IN_PLAY} GROUP BY added_by`
 			)
 			.all() as { person_id: string; n: number }[],
 		XP.nominationWatched

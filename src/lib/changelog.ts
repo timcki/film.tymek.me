@@ -142,6 +142,24 @@ export const CHANGELOG: ChangelogEntry[] = [
 				'The rules have not changed: points, nominations and voting work exactly as they did.'
 			]
 		}
+	},
+	{
+		id: 7,
+		date: '2026-10-31',
+		title: {
+			pl: 'Kino też się liczy',
+			en: 'The cinema counts too'
+		},
+		body: {
+			pl: [
+				'Filmy obejrzane razem poza głosowaniem, w kinie albo gdziekolwiek indziej, trafiają teraz do obejrzanych jako osobny wieczorek z oznaczeniem miejsca. Liczą się w historii i statystykach.',
+				'Nie dają nikomu XP za zgłoszenie i nie wliczają się do tego, czyje filmy wygrywają.'
+			],
+			en: [
+				'Films we watch together outside the vote, at the cinema or anywhere else, now go into the watched list as a night of their own, marked with where. They count in the history and the stats.',
+				'They earn nobody nomination XP and do not count towards whose films win.'
+			]
+		}
 	}
 ];
 

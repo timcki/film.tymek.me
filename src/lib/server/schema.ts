@@ -248,7 +248,14 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	// §3.6: a pick for a special round rather than a nomination to the list. It
 	// never appears on the list, never takes points, and once its round is over
 	// it is either the night's film or dropped with the rest
-	['film', 'special', 'TEXT']
+	['film', 'special', 'TEXT'],
+	// a film watched together somewhere other than a film night: 'cinema' or
+	// 'other'. An evening like any other in what we have watched, and nowhere in
+	// what measures the game: no XP, no fairness table, no round's winner
+	['film', 'outing', 'TEXT'],
+	// when such an outing was, which is what puts it among the evenings. NULL for
+	// a film night, whose evening is its round's night
+	['film', 'watched_at', 'TEXT']
 ];
 
 /**

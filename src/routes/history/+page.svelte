@@ -18,7 +18,9 @@
 			{/if}
 			<div class="lb">
 				<b>{film.title}</b>
-				{T.evening(data.evenings[film.watched_week])}{#if film.final_score !== null}
+				{T.evening(film.evening)}
+				{#if film.outing}· {T.outing(film.outing)}{/if}
+				{#if film.final_score !== null}
 					· {fmtScore(film.final_score)}
 					{T.unit(film.final_score, votes)}
 				{/if}

@@ -100,15 +100,6 @@
 						{/if}
 					{/each}
 
-					<form method="POST" action="?/watched" use:enhance={submit()}>
-						<input type="hidden" name="id" value={film.id} />
-						<label class="bankin">
-							{A.filWeek}
-							<input type="number" name="week" value={data.weekNumber} min="1" />
-						</label>
-						<button class="tap">{A.filMarkWatched}</button>
-					</form>
-
 					<form method="POST" action="?/reassign" use:enhance={submit()}>
 						<input type="hidden" name="id" value={film.id} />
 						<select name="personId">

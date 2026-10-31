@@ -6,7 +6,6 @@ import {
 	editFilm,
 	roundFilms,
 	managedPeople,
-	markWatched,
 	reassignFilm,
 	renamePerson,
 	setBank,
@@ -141,19 +140,6 @@ describe('curating the films', () => {
 		expect(() => reassignFilm(db, film, 'bartek')).toThrow(RuleError);
 		reassignFilm(db, film, 'celina');
 		expect(filmById(db, film)!.added_by).toBe('celina');
-	});
-
-	it('records a night that happened outside the app', () => {
-		const { db, rules } = freshDb('banked');
-		const film = addFilm(db, 'Watched at Piotr', 'ala', 1);
-		castBallot(db, 1, 'ala', film, 2);
-
-		markWatched(db, rules, film, 1, 1);
-
-		const watched = filmById(db, film)!;
-		expect(watched.status).toBe('watched');
-		expect(watched.watched_week).toBe(1);
-		expect(watched.final_score).toBe(2);
 	});
 
 	it('renames a film without letting it collide with another', () => {

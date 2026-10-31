@@ -7,34 +7,36 @@ import type { DB } from './db.js';
  * gaps all through it. An evening is a night we watched something, counted from
  * the first, and a round is called after the evening it ends in.
  *
+ * A film night happened on its round's night. An outing (src/lib/outings.ts)
+ * happened when it was written down as happening, which puts a Saturday at the
+ * cinema between the Thursdays either side of it. Read off film.watched_week
+ * like the stats are, never off week.winner_film_id.
+ */
+const EVENING_AT = `COALESCE(f.watched_at, fw.closes_at)`;
+const WATCHED = `film f JOIN week fw ON fw.number = f.watched_week WHERE f.status = 'watched'`;
+
+/**
  * Indexed by week number. A round that went by without a film shares its number
  * with the round after it, because the evening it was heading for has not
- * happened yet. Read off film.watched_week like the stats are, never off
- * week.winner_film_id.
+ * happened yet.
  */
 export function roundEvenings(db: DB): Record<number, number> {
-	const rounds = db
+	const rows = db
 		.prepare(
 			`SELECT w.number,
-			        (SELECT COUNT(*) FROM film f
-			         WHERE f.status = 'watched' AND f.watched_week = w.number) AS watched
-			 FROM week w ORDER BY w.number`
+			        (SELECT COUNT(*) FROM ${WATCHED} AND ${EVENING_AT} < w.closes_at) + 1 AS evening
+			 FROM week w`
 		)
-		.all() as { number: number; watched: number }[];
-
-	const evenings: Record<number, number> = {};
-	let before = 0;
-	for (const round of rounds) {
-		evenings[round.number] = before + 1;
-		before += round.watched;
-	}
-	return evenings;
+		.all() as { number: number; evening: number }[];
+	return Object.fromEntries(rows.map((row) => [row.number, row.evening]));
 }
 
-/** the evening one round ends in, for a server message that has to name it */
-export function eveningOf(db: DB, week: number): number {
-	const row = db
-		.prepare(`SELECT COUNT(*) AS n FROM film WHERE status = 'watched' AND watched_week < ?`)
-		.get(week) as { n: number };
-	return row.n + 1;
+/** which evening every watched film was, by film id */
+export function filmEvenings(db: DB): Map<number, number> {
+	const rows = db
+		.prepare(
+			`SELECT f.id, ROW_NUMBER() OVER (ORDER BY ${EVENING_AT}, f.id) AS evening FROM ${WATCHED}`
+		)
+		.all() as { id: number; evening: number }[];
+	return new Map(rows.map((row) => [row.id, row.evening]));
 }

@@ -4064,11 +4064,6 @@ details[open] > .iconbtn {
 	font-size: 14.5px;
 	font-weight: 650;
 }
-/* the work queue: whatever is still credited to somebody off the roster */
-.afilm.unattributed {
-	border-left: 2px solid var(--accent);
-	padding-left: 8px;
-}
 .awho {
 	display: flex;
 	align-items: center;

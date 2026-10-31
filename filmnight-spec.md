@@ -34,6 +34,7 @@ must be implemented exactly; everything else has room for judgement.
 | **Person** | One of the six. Has a permanent secret token. |
 | **Week** | A voting cycle. Opens the moment the previous one closes, closes Thursday 20:00 Europe/Warsaw. |
 | **Evening** | A night we watched something, numbered from the first. What a round is called on screen: the week number counts Thursdays, met or not, so it never appears there. A round that ends without a film shares its number with the next. |
+| **Outing** | A film watched together outside the vote (the cinema, a trip), written down afterwards with its date. It is an evening of its own and counts in history and the film statistics, but never as a round's winner or a nominator's win. |
 | **Nomination** | Adding a film to the list. One per person per week, free, doesn't bank. |
 | **Ballot** | Points a person has put on a film in a given week. |
 | **Score** | A film's current standing, computed from ballots per the active rule set. |

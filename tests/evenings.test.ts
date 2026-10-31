@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { eveningOf, roundEvenings } from '../src/lib/server/evenings.js';
+import { roundEvenings } from '../src/lib/server/evenings.js';
 import { addFilm, ensureWeek, freshDb } from './helpers.js';
 
-/** week 1 is open from freshDb; films watched in 2, 3 and 5, nothing in 1, 4 and 6 */
+/** films watched in weeks 2, 3 and 5, nothing in 1, 4 and 6 */
 function gappyHistory() {
 	const { db } = freshDb('weekly');
+	// evenings run by date, so week 1 goes back in front of the weeks ensureWeek dates
+	db.prepare(`UPDATE week SET opens_at = ?, closes_at = ?, status = 'closed' WHERE number = 1`).run(
+		'2026-01-01T19:00:00.000Z',
+		'2026-01-08T19:00:00.000Z'
+	);
 	for (const week of [2, 3, 4, 5, 6]) ensureWeek(db, week);
 	const watch = (title: string, week: number) => {
 		const id = addFilm(db, title, 'ala', week);
@@ -30,11 +35,5 @@ describe('evenings', () => {
 		const db = gappyHistory();
 		// week 4 watched nothing, so it and week 5 both lead to the third evening
 		expect(roundEvenings(db)[4]).toBe(roundEvenings(db)[5]);
-	});
-
-	it('the single lookup agrees with the whole map', () => {
-		const db = gappyHistory();
-		const all = roundEvenings(db);
-		for (const week of [1, 2, 3, 4, 5, 6]) expect(eveningOf(db, week)).toBe(all[week]);
 	});
 });

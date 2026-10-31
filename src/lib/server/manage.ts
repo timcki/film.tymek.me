@@ -6,10 +6,12 @@ import type { RuleSet } from './rules.js';
 import { titleKey } from './rules.js';
 import { iso } from './time.js';
 import { newToken, slugify } from './tokens.js';
-import { rescoreAll, scoreFor } from './scoring.js';
+import { rescoreAll } from './scoring.js';
 import { rexpAll } from './xp.js';
 import { avatarUrl } from './people.js';
 import { cleanNote, cleanOverview, cleanPoster, cleanTitle } from './films.js';
+import { filmEvenings } from './evenings.js';
+import type { Outing } from '../outings.js';
 
 /**
  * Everything the admin screens can change. Kept apart from films.ts and
@@ -149,32 +151,24 @@ export function setBank(db: DB, rules: RuleSet, id: string, balance: number): vo
 export type ManagedFilm = Film & {
 	added_by_name: string;
 	added_by_face: Face;
-	/**
-	 * false while a film is still credited to somebody off the roster. The year of
-	 * nights that predate the app all landed on one inactive stand-in account, and
-	 * this is what counts down as they are handed back to the people who chose them
-	 */
-	attributed: boolean;
 	ballots: number;
 	raw_points: number;
 };
 
-type FilmRow = Omit<ManagedFilm, 'added_by_face' | 'attributed'> & {
+type FilmRow = Omit<ManagedFilm, 'added_by_face'> & {
 	added_by_colour: string | null;
 	added_by_avatar_at: string | null;
-	added_by_active: number | null;
 };
 
 /** every column the two admin screens read, with the face already joined on */
 const FILM_SELECT = `SELECT f.*, COALESCE(p.name, f.added_by) AS added_by_name,
         p.colour AS added_by_colour, p.avatar_updated_at AS added_by_avatar_at,
-        p.active AS added_by_active,
         (SELECT COUNT(*) FROM ballot b WHERE b.film_id = f.id) AS ballots,
         (SELECT COALESCE(SUM(b.points), 0) FROM ballot b WHERE b.film_id = f.id) AS raw_points
  FROM film f LEFT JOIN person p ON p.id = f.added_by`;
 
 function toManaged(row: FilmRow): ManagedFilm {
-	const { added_by_colour, added_by_avatar_at, added_by_active, ...film } = row;
+	const { added_by_colour, added_by_avatar_at, ...film } = row;
 	return {
 		...film,
 		added_by_face: {
@@ -182,8 +176,7 @@ function toManaged(row: FilmRow): ManagedFilm {
 			name: film.added_by_name,
 			colour: added_by_colour ?? '#6c7079',
 			avatar: avatarUrl(film.added_by, added_by_avatar_at)
-		},
-		attributed: added_by_active === 1
+		}
 	};
 }
 
@@ -238,61 +231,31 @@ function backersFor(db: DB, filmIds: number[]): Map<number, Face[]> {
 	return faces;
 }
 
-export type ArchiveWeek = {
-	number: number;
-	closes_at: string;
-	/** the film the room watched that night, if the record knows one */
-	winner: ManagedFilm | null;
-	/** everything else written down against that night, never watched */
-	proposed: ManagedFilm[];
+export type WatchedEvening = ManagedFilm & {
+	evening: number;
+	/** when the evening was: an outing's own date, or its round's night */
+	at: string;
 };
 
-/**
- * The record, a night at a time, newest first. Every week gets a card even with
- * nothing against it: a night nobody wrote down is exactly what the screen is
- * there to make visible.
- */
-export function archiveByWeek(db: DB): ArchiveWeek[] {
-	const weeks = db
-		.prepare('SELECT number, closes_at FROM week ORDER BY number DESC')
-		.all() as { number: number; closes_at: string }[];
-	const rows = db
-		.prepare(
-			`${FILM_SELECT}
-			 WHERE f.status = 'watched' OR f.archival = 1
-			 ORDER BY f.title COLLATE NOCASE`
+/** every film we have watched, newest evening first: the record the admin keeps */
+export function watchedRecord(db: DB): WatchedEvening[] {
+	const evenings = filmEvenings(db);
+	const nights = new Map(
+		(db.prepare('SELECT number, closes_at FROM week').all() as { number: number; closes_at: string }[]).map(
+			(week) => [week.number, week.closes_at]
 		)
-		.all() as FilmRow[];
-
-	const byNight = new Map<number, ManagedFilm[]>();
-	for (const row of rows) {
-		const film = toManaged(row);
-		const night = nightOf(film);
-		byNight.set(night, [...(byNight.get(night) ?? []), film]);
-	}
-
-	return weeks.map((week) => {
-		const films = byNight.get(week.number) ?? [];
-		return {
-			number: week.number,
-			closes_at: week.closes_at,
-			winner: films.find((film) => film.status === 'watched') ?? null,
-			proposed: films.filter((film) => film.status !== 'watched')
-		};
-	});
-}
-
-/** how much of the record is still sitting on a stand-in account */
-export function unattributedCount(db: DB): { done: number; total: number } {
-	const row = db
-		.prepare(
-			`SELECT COUNT(*) AS total,
-			        COUNT(*) FILTER (WHERE p.active = 1) AS done
-			 FROM film f LEFT JOIN person p ON p.id = f.added_by
-			 WHERE f.status = 'watched' OR f.archival = 1`
-		)
-		.get() as { total: number; done: number };
-	return row;
+	);
+	const rows = db.prepare(`${FILM_SELECT} WHERE f.status = 'watched'`).all() as FilmRow[];
+	return rows
+		.map((row) => {
+			const film = toManaged(row);
+			return {
+				...film,
+				evening: evenings.get(film.id) ?? 0,
+				at: film.watched_at ?? nights.get(film.watched_week ?? 0) ?? film.created_at
+			};
+		})
+		.sort((a, b) => b.evening - a.evening);
 }
 
 function filmOr404(db: DB, id: number): Film {
@@ -305,7 +268,7 @@ export function setFilmStatus(db: DB, rules: RuleSet, id: number, status: FilmSt
 	immediate(db, () => {
 		const film = filmOr404(db, id);
 		if (status === 'watched') {
-			throw new RuleError('use_mark_watched', 'use "mark watched" so the week is recorded');
+			throw new RuleError('use_mark_watched', 'a round decides what we watch, or it is written down as watched');
 		}
 		if (film.status === 'watched') {
 			db.prepare('UPDATE week SET winner_film_id = NULL WHERE winner_film_id = ?').run(id);
@@ -315,28 +278,6 @@ export function setFilmStatus(db: DB, rules: RuleSet, id: number, status: FilmSt
 			id
 		);
 		rescoreAll(db, rules, week);
-		rexpAll(db);
-	});
-}
-
-/** for a night that happened before the app, or one somebody forgot to close */
-export function markWatched(db: DB, rules: RuleSet, id: number, week: number, current: number): void {
-	immediate(db, () => {
-		filmOr404(db, id);
-		// without this the second film to be marked silently orphans the first, which
-		// keeps status 'watched' on a week it is no longer the winner of, and the
-		// history page and the film list stop agreeing about that night
-		assertWinnerFree(db, week, id);
-		// and this releases the night it used to hold, for the same reason
-		db.prepare('UPDATE week SET winner_film_id = NULL WHERE winner_film_id = ?').run(id);
-		// the frozen score is a permanent record, so take it from the ballots rather
-		// than trusting whatever the cache happened to hold
-		const score = scoreFor(db, rules, id, week);
-		db.prepare(
-			`UPDATE film SET status = 'watched', watched_week = ?, final_score = ? WHERE id = ?`
-		).run(week, score, id);
-		db.prepare('UPDATE week SET winner_film_id = ? WHERE number = ?').run(id, week);
-		rescoreAll(db, rules, current);
 		rexpAll(db);
 	});
 }
@@ -376,96 +317,41 @@ export function editFilm(db: DB, id: number, edit: FilmEdit): void {
 	});
 }
 
-/**
- * The night a film belongs to on the archive screen: when we watched it if we
- * did, otherwise the round it was put up for. The two are the same for every
- * backfilled row, and come apart for a film nominated in week 45 that won in 47.
- */
-export function nightOf(film: Film): number {
-	return film.watched_week ?? film.added_week;
-}
-
 function personOr404(db: DB, personId: string): void {
 	const person = db.prepare('SELECT 1 FROM person WHERE id = ?').get(personId);
 	if (!person) throw new RuleError('no_person', 'no such person');
 }
 
-function weekOr404(db: DB, week: number): { winner_film_id: number | null } {
-	const row = db.prepare('SELECT winner_film_id FROM week WHERE number = ?').get(week) as
-		| { winner_film_id: number | null }
-		| undefined;
-	if (!row) throw new RuleError('no_such_week', `there is no week ${week}`, { week });
-	return row;
-}
-
-/** a week holds one night, so its winner slot is either free or somebody else's */
-function assertWinnerFree(db: DB, week: number, filmId: number | null): void {
-	const held = weekOr404(db, week).winner_film_id;
-	if (held !== null && held !== filmId) {
-		const film = filmOr404(db, held);
-		throw new RuleError('week_has_winner', `week ${week} is already ${film.title}`, {
-			week,
-			title: film.title
-		});
-	}
-}
-
-function claimWinner(db: DB, week: number, filmId: number): void {
-	assertWinnerFree(db, week, filmId);
-	db.prepare('UPDATE week SET winner_film_id = ? WHERE number = ?').run(filmId, week);
-}
-
 /**
- * Both halves of "who suggested this, and which night was it": one call, because
- * the archive is rebuilt by correcting the two together and doing them in
- * sequence would trip the one-per-round index halfway.
- *
- * For a film we watched, the week given is the night it was shown. added_week
- * follows it only where the two already agreed, which is how every backfilled
- * row is written; a real nomination that won weeks later keeps the round it was
- * put up in.
+ * Moves a film to whoever actually suggested it, §4 fairness table included.
+ * XP is rebuilt with it: a nomination and its watching both earn, and they now
+ * earn for somebody else.
  */
-export function setFilmAttribution(db: DB, id: number, personId: string, week: number): void {
+export function reassignFilm(db: DB, id: number, personId: string): void {
 	immediate(db, () => {
 		const film = filmOr404(db, id);
 		personOr404(db, personId);
-		weekOr404(db, week);
-
-		const watched = film.status === 'watched';
-		const addedWeek = watched && film.added_week !== film.watched_week ? film.added_week : week;
 
 		// only rows the index covers can collide, so history rearranges freely
-		if (!film.archival && !watched) {
+		if (!film.archival && film.status !== 'watched' && film.special === null) {
 			const clash = db
 				.prepare(
 					`SELECT id FROM film
-					 WHERE added_by = ? AND added_week = ? AND id != ? AND archival = 0 AND status != 'watched'`
+					 WHERE added_by = ? AND added_week = ? AND id != ?
+					   AND archival = 0 AND status != 'watched' AND special IS NULL`
 				)
-				.get(personId, addedWeek, id) as { id: number } | undefined;
+				.get(personId, film.added_week, id) as { id: number } | undefined;
 			if (clash) {
-				throw new RuleError('nomination_clash', 'they already nominated something that week');
+				throw new RuleError('nomination_clash', 'they already nominated something that round');
 			}
 		}
 
-		if (watched && week !== film.watched_week) {
-			// let go of the old night before claiming the new one, or moving a film
-			// one week forward would collide with itself
-			db.prepare('UPDATE week SET winner_film_id = NULL WHERE winner_film_id = ?').run(id);
-			claimWinner(db, week, id);
-		}
-
-		db.prepare(
-			`UPDATE film SET added_by = ?, added_week = ?, watched_week = ? WHERE id = ?`
-		).run(personId, addedWeek, watched ? week : film.watched_week, id);
+		db.prepare('UPDATE film SET added_by = ? WHERE id = ?').run(personId, id);
+		rexpAll(db);
 	});
 }
 
-/** moves a nomination to whoever actually suggested it, §4 fairness table included */
-export function reassignFilm(db: DB, id: number, personId: string): void {
-	setFilmAttribution(db, id, personId, nightOf(filmOr404(db, id)));
-}
-
-export type ArchivalFilm = {
+export type RecordedFilm = {
 	title: string;
 	year: number | null;
 	director: string | null;
@@ -474,55 +360,85 @@ export type ArchivalFilm = {
 	tmdbId: number | null;
 	posterUrl: string | null;
 	overview: string | null;
+	/** who suggested it */
 	personId: string;
-	week: number;
-	/** true when the room watched it that night, false when it was only proposed */
-	watched: boolean;
+	/** when we watched it; for a film night, any moment of the round it closed is enough */
+	at: Date;
+	/** where we went instead, or null for a film night nobody wrote down at the time */
+	outing: Outing | null;
 	/** set once the admin has been shown a clash and said to go ahead anyway */
 	allowDuplicate?: boolean;
 };
 
 /**
- * Writes down something that already happened. Unlike nominate() this needs no
- * open week, spends nobody's nomination slot and cannot disturb a row that is
- * already there, which is what made filling gaps in the archive by hand so
- * dangerous before.
+ * Writes down a film we watched together that no round decided: a film night
+ * nobody logged, or an outing. Archival like a backfilled night, so it never
+ * reaches the list, attrition or a ballot, and spends nobody's nomination. Whoever
+ * types it in gives a date, never a week: the date finds the round it fell in.
  */
-export function addArchivalFilm(db: DB, film: ArchivalFilm): number {
+export function recordWatched(db: DB, film: RecordedFilm, now = new Date()): number {
 	return immediate(db, () => {
 		const title = cleanTitle(film.title);
 		personOr404(db, film.personId);
-		weekOr404(db, film.week);
+		if (Number.isNaN(film.at.getTime())) throw new RuleError('bad_date', 'give a date and a time');
+		if (film.at > now) throw new RuleError('watched_future', 'that has not happened yet');
 
-		if (!film.allowDuplicate) {
-			const key = titleKey(title);
-			const clash = db
+		const round = db
+			.prepare('SELECT number, closes_at FROM week WHERE closes_at >= ? ORDER BY number LIMIT 1')
+			.get(iso(film.at)) as { number: number; closes_at: string } | undefined;
+		if (!round) throw new RuleError('no_round_then', 'no round covers that date yet');
+
+		if (!film.outing) {
+			// what is being written down is the round's night, so it has to have been
+			if (new Date(round.closes_at) > now) {
+				throw new RuleError(
+					'night_not_yet',
+					'that round has not had its night yet; if it was an outing, say where'
+				);
+			}
+			const taken = db
 				.prepare(
-					`SELECT title, added_week, watched_week, status FROM film
-					 WHERE (title_key = ? OR (tmdb_id IS NOT NULL AND tmdb_id = ?))
-					   AND status != 'dropped' LIMIT 1`
+					`SELECT title FROM film WHERE status = 'watched' AND outing IS NULL AND watched_week = ?`
 				)
-				.get(key, film.tmdbId) as
-				| { title: string; added_week: number; watched_week: number | null; status: string }
-				| undefined;
-			if (clash) {
-				// not fatal: the same film genuinely comes up at more than one night
-				throw new RuleError('dup_archival', `${clash.title} is already written down`, {
-					title: clash.title,
-					week: clash.watched_week ?? clash.added_week
-				});
+				.get(round.number) as { title: string } | undefined;
+			if (taken) {
+				throw new RuleError(
+					'night_taken',
+					`that night we watched ${taken.title}; if this was a separate outing, say where`,
+					{ title: taken.title }
+				);
 			}
 		}
 
-		// checked before the insert so a taken night fails without leaving a row behind
-		if (film.watched) assertWinnerFree(db, film.week, null);
+		if (!film.allowDuplicate) {
+			const clash = db
+				.prepare(
+					`SELECT id, title, status FROM film
+					 WHERE (title_key = ? OR (tmdb_id IS NOT NULL AND tmdb_id = ?))
+					   AND status IN ('active', 'archived', 'watched') AND special IS NULL
+					 ORDER BY status = 'watched' DESC LIMIT 1`
+				)
+				.get(titleKey(title), film.tmdbId) as Pick<Film, 'id' | 'title' | 'status'> | undefined;
+			if (clash) {
+				// not fatal: the same film genuinely comes up at more than one evening
+				const evening = clash.status === 'watched' ? (filmEvenings(db).get(clash.id) ?? 0) : 0;
+				throw new RuleError(
+					'dup_recorded',
+					evening
+						? `we already watched ${clash.title} on night ${evening}`
+						: `${clash.title} is on the voting list`,
+					{ title: clash.title, evening }
+				);
+			}
+		}
 
+		// final_score stays NULL: nobody spent points on it
 		const result = db
 			.prepare(
 				`INSERT INTO film (title, title_key, year, director, genre, runtime, tmdb_id, poster_url,
-				                   overview, note, added_by, added_week, status, watched_week, final_score,
+				                   overview, added_by, added_week, status, watched_week, outing, watched_at,
 				                   score, created_at, archival)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL, 0, ?, 1)`
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'watched', ?, ?, ?, 0, ?, 1)`
 			)
 			.run(
 				title,
@@ -535,18 +451,14 @@ export function addArchivalFilm(db: DB, film: ArchivalFilm): number {
 				cleanPoster(film.posterUrl),
 				cleanOverview(film.overview),
 				film.personId,
-				film.week,
-				film.watched ? 'watched' : 'active',
-				film.watched ? film.week : null,
-				iso()
+				round.number,
+				round.number,
+				film.outing,
+				film.outing ? iso(film.at) : null,
+				iso(now)
 			);
-
-		const id = Number(result.lastInsertRowid);
-		// final_score stays NULL: nobody spent points on a night that predates the app
-		if (film.watched) {
-			db.prepare('UPDATE week SET winner_film_id = ? WHERE number = ?').run(id, film.week);
-		}
-		return id;
+		rexpAll(db);
+		return Number(result.lastInsertRowid);
 	});
 }
 

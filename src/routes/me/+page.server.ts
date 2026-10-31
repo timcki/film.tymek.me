@@ -28,7 +28,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const nominatedWatched = (
 		db
-			.prepare(`SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND status = 'watched'`)
+			.prepare(
+				`SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND status = 'watched' AND outing IS NULL`
+			)
 			.get(person.id) as { n: number }
 	).n;
 

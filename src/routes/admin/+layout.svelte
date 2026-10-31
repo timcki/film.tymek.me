@@ -21,7 +21,7 @@
 		{ href: '/admin/calendar', label: A.navCalendar },
 		{ href: '/admin/people', label: A.navPeople },
 		{ href: '/admin/films', label: A.navFilms },
-		{ href: '/admin/archive', label: A.navArchive },
+		{ href: '/admin/watched', label: A.navWatched },
 		{ href: '/host', label: A.navHost }
 	]);
 </script>

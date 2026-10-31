@@ -2,14 +2,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import { activeRules } from '$lib/server/config';
 import { logAdmin, requireAdmin } from '$lib/server/admin';
-import {
-	deleteFilm,
-	editFilm,
-	markWatched,
-	reassignFilm,
-	roundFilms,
-	setFilmStatus
-} from '$lib/server/manage';
+import { deleteFilm, editFilm, reassignFilm, roundFilms, setFilmStatus } from '$lib/server/manage';
 import { filmById, holdFilm, releaseFilm } from '$lib/server/films';
 import { heldIn } from '$lib/server/holds';
 import { allPeople } from '$lib/server/people';
@@ -27,7 +20,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 		// watched films and the written record live on /admin/archive
 		films: roundFilms(db),
 		people: allPeople(db).map((p) => ({ id: p.id, name: p.name })),
-		weekNumber: week?.number ?? 1,
 		closesAt: week?.closes_at ?? null,
 		held: week ? [...heldIn(db, week.number).keys()] : []
 	};
@@ -75,20 +67,6 @@ export const actions: Actions = {
 				note: String(form.get('note') ?? '')
 			});
 			logAdmin(getDb(), person.id, 'film.edit', String(id), String(form.get('title') ?? ''));
-			return { saved: true };
-		} catch (error) {
-			return ruleFail(error);
-		}
-	},
-
-	watched: async ({ request, locals }) => {
-		const person = requireAdmin(locals.person);
-		const form = await request.formData();
-		const id = Number(form.get('id'));
-		const week = Number(form.get('week'));
-		try {
-			markWatched(getDb(), activeRules(), id, week, nowWeek());
-			logAdmin(getDb(), person.id, 'film.watched', String(id), `week ${week}`);
 			return { saved: true };
 		} catch (error) {
 			return ruleFail(error);
