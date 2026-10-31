@@ -111,6 +111,16 @@
 		background: linear-gradient(90deg, #a07418, var(--accent) 70%, #fff0c4);
 		box-shadow: 0 0 22px -4px color-mix(in srgb, var(--accent) 80%, transparent);
 	}
+	/* under PRL they are printed: hatched in ink, and the one in front in solid
+	   poster red with its teal plate laid off it */
+	.lane[data-look='prl'] .fill {
+		background: repeating-linear-gradient(-45deg, var(--ink) 0 3px, color-mix(in srgb, var(--ink) 55%, var(--card)) 3px 7px);
+	}
+	.lane[data-look='prl'].leading .fill,
+	.lane[data-look='prl'].won .fill {
+		background: var(--accent);
+		box-shadow: 4px 3px 0 color-mix(in srgb, var(--warn) 70%, transparent);
+	}
 	/* the tip lights up for a moment where the points went in */
 	.flare {
 		position: absolute;

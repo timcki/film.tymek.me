@@ -76,7 +76,8 @@
 	// ballot, and the lights along the top answering each time somebody's
 	// ranking lands. Halloween also hangs a web and a spider on the way in and
 	// rolls fog about the posters' feet; Christmas lays snow along the way in
-	// and lets it fall past the posters
+	// and lets it fall past the posters; PRL tapes the way in up like a bill and
+	// prints the posters again, halftone and all
 	const look = $derived(data.look);
 	const turnout = $derived(data.runoff?.turnout ?? 0);
 	// one lit for every ballot in, and a single dark one waiting for the next
@@ -190,6 +191,9 @@
 						{:else if look === 'swieta'}
 							<!-- snow coming down past the poster, settling along its foot -->
 							<span class="flurry" aria-hidden="true"></span>
+						{:else if look === 'prl'}
+							<!-- the poster run off a tired press: halftone rising from its foot -->
+							<span class="halftone" aria-hidden="true"></span>
 						{/if}
 					</div>
 					<div class="tkbody">
@@ -564,9 +568,52 @@
 		to { background-position: -20px 140px; }
 	}
 
+	/* ---------------------------------------------------------------- prl -- */
+	/* the way in pasted up like a bill, a strip of tape over each top corner,
+	   going up a touch crooked; the code printed in ink with the red plate
+	   laid off it */
+	.joincard[data-look='prl'] {
+		position: relative;
+		rotate: -0.6deg;
+		box-shadow: 4px 4px 0 color-mix(in srgb, var(--accent) 18%, transparent), 0 10px 26px var(--shadow-soft);
+		animation: pasted 0.5s ease-out;
+	}
+	@keyframes pasted {
+		from { rotate: -3deg; translate: 0 -10px; opacity: 0; }
+	}
+	.joincard[data-look='prl']::before,
+	.joincard[data-look='prl']::after {
+		content: '';
+		position: absolute;
+		top: -9px;
+		width: 74px;
+		height: 22px;
+		background: var(--tape);
+		box-shadow: 0 1px 1px rgba(40, 30, 20, 0.12);
+		-webkit-mask-image: linear-gradient(90deg, transparent, #000 4px, #000 calc(100% - 4px), transparent);
+		mask-image: linear-gradient(90deg, transparent, #000 4px, #000 calc(100% - 4px), transparent);
+		pointer-events: none;
+	}
+	.joincard[data-look='prl']::before { left: -18px; rotate: -30deg; }
+	.joincard[data-look='prl']::after { right: -18px; rotate: 30deg; }
+	[data-look='prl'] .code {
+		color: var(--ink);
+		text-shadow: 3px 2px 0 color-mix(in srgb, var(--accent) 75%, transparent);
+	}
+	.halftone {
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		background: radial-gradient(circle, rgba(29, 26, 22, 0.55) 1.2px, transparent 1.7px) 0 0 / 7px 7px;
+		-webkit-mask-image: linear-gradient(transparent 55%, #000);
+		mask-image: linear-gradient(transparent 55%, #000);
+		mix-blend-mode: multiply;
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.hdangle, [data-look='halloween'] .code, .mist::before, .mist::after { animation: none; }
 		[data-look='swieta'] .code, .flurry::before, .flurry::after { animation: none; }
+		.joincard[data-look='prl'] { animation: none; }
 	}
 
 	/* the decided night on the projector: one film, said big. This screen is a

@@ -120,6 +120,24 @@
 		{:else if data.look === 'swieta'}
 			<!-- §3.6: a snowman keeping watch with the room, its eyes on the screen -->
 			<div class="snowwatch" aria-hidden="true"><Snowman size={50} up /></div>
+		{:else if data.look === 'prl'}
+			<!-- §3.6: the eye off a film poster, cut from paper, watching the screen -->
+			<div class="painted" aria-hidden="true">
+				<svg viewBox="0 0 60 40" width="84" height="56">
+					<circle class="painted-sun" cx="34" cy="22" r="17" />
+					<clipPath id="painted-eye"><path d="M4 20Q30-2 56 20 30 42 4 20z" /></clipPath>
+					<path class="painted-white" d="M4 20Q30-2 56 20 30 42 4 20z" />
+					<g clip-path="url(#painted-eye)">
+						<g class="painted-look">
+							<circle class="painted-iris" cx="30" cy="20" r="8.4" />
+							<circle cx="30" cy="20" r="3.8" fill="#1d1a16" />
+							<circle cx="28" cy="18" r="1.3" fill="#e6e0cf" />
+						</g>
+					</g>
+					<path class="painted-lid" d="M4 20Q30-2 56 20" />
+					<path class="painted-lash" d="M12 13.4 9 8.6M20 9 18.4 3.6M30 7.4V1.6M40 9l1.6-5.4M48 13.4 51 8.6" />
+				</svg>
+			</div>
 		{:else}
 			<div class="eyes" aria-hidden="true">👀</div>
 		{/if}
@@ -248,6 +266,15 @@
 	/* the ghost floats over its own faint shadow, and keeps glancing up at the
 	   screen and round the room, the way the eyes do on any other night */
 	.snowwatch { display: flex; justify-content: center; }
+	.painted { display: flex; justify-content: center; }
+	.painted svg { display: block; overflow: visible; }
+	.painted-sun { fill: #a8392e; opacity: 0.9; }
+	.painted-white { fill: #e6e0cf; stroke: #1d1a16; stroke-width: 1.6; }
+	.painted-iris { fill: #41686a; }
+	.painted-lid { fill: none; stroke: #1d1a16; stroke-width: 2.6; stroke-linecap: round; }
+	.painted-lash { stroke: #1d1a16; stroke-width: 1.8; stroke-linecap: round; }
+	.painted-look { animation: watch 3.2s ease-in-out infinite; }
+	@keyframes watch { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-7px); } 60% { transform: translateX(7px); } }
 	.spook { display: flex; flex-direction: column; align-items: center; }
 	.spook svg { display: block; overflow: visible; animation: hover 3.4s ease-in-out infinite; }
 	.spook .spook-sheet { fill: rgba(246, 241, 252, 0.88); filter: drop-shadow(0 0 8px rgba(230, 220, 255, 0.5)); }
@@ -280,7 +307,7 @@
 		50%, 64% { transform: translate(2px, -1.2px); }
 		74%, 88% { transform: translate(0, -2.2px); }
 	}
-	@media (prefers-reduced-motion: reduce) { .eyes, .spook svg, .spook .spook-look, .spook .spook-shade { animation: none; } }
+	@media (prefers-reduced-motion: reduce) { .eyes, .spook svg, .spook .spook-look, .spook .spook-shade, .painted-look { animation: none; } }
 	.roomstate { display: flex; justify-content: center; margin-top: 6px; }
 	.turnchip {
 		padding: 6px 14px;

@@ -2,6 +2,7 @@
 	import type { Look } from '$lib/themes';
 	import Christmas from './Christmas.svelte';
 	import Halloween from './Halloween.svelte';
+	import Prl from './Prl.svelte';
 
 	/**
 	 * §3.6: the drawn half of a look, in the four places the layout leaves for
@@ -16,4 +17,6 @@
 	<Halloween {part} />
 {:else if look === 'swieta'}
 	<Christmas {part} />
+{:else if look === 'prl'}
+	<Prl {part} />
 {/if}

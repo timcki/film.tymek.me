@@ -505,3 +505,88 @@
 		inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent),
 		inset 0 -46px 50px -40px color-mix(in srgb, var(--accent) 18%, transparent);
 }
+
+/* ------------------------------------------------------------------ prl -----
+   §3.6, the Polish School of Posters on a wall at night in the rain: concrete
+   grey going on black, ink gone the colour of old newsprint, brick red for
+   the accent and a grey teal for --warn, all of it faded. Drawn for the dark
+   only (LOOK_THEME). The page is laid against a wall of posters
+   (PosterWall.svelte), and the grain of the paper over the whole of it at
+   once (Prl.svelte), cards and all, so no bar painted in --bg ever shows as a
+   smooth patch. */
+:root[data-special='prl'] {
+	--bg: #1a1a18;
+	--wash: none;
+	--glow: radial-gradient(
+		80% calc(66px + env(safe-area-inset-bottom, 0px))
+			at 50% calc(100% - 74px - env(safe-area-inset-bottom, 0px)),
+		rgba(195, 154, 60, 0.12),
+		transparent
+	);
+	--grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .85 0 0 0 0 .82 0 0 0 0 .74 .22 0 0 0 -.08'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+	--card: #252522;
+	--card2: #2b2b28;
+	--sunk: #31312d;
+	--raise: #2f2f2b;
+	--line: #31312d;
+	--line2: #3c3c37;
+	--line3: #55544d;
+	--edge: #6a6960;
+	--ink: #e2ded3;
+	--ink2: #c4c0b5;
+	--dim: #96928a;
+	--dimmer: #706d66;
+	--sheen: rgba(255, 250, 235, 0.04);
+	--lead-tint: var(--card);
+	--lead-glow: rgba(200, 73, 59, 0.1);
+	--lead-ring: rgba(200, 73, 59, 0.15);
+	--lead-edge: rgba(200, 73, 59, 0.45);
+	--accent: #c8493b;
+	--accent-ink: #f4efe4;
+	--warn: #7ea3a3;
+	--shadow: rgba(0, 0, 0, 0.45);
+	--shadow-soft: rgba(0, 0, 0, 0.3);
+	/* a slip of newsprint, so a message still arrives as an interruption */
+	--toast-bg: #e2ded3;
+	--toast-ink: #1a1a18;
+	--toast-bad-bg: #c8493b;
+	--toast-bad-ink: #f4efe4;
+	/* a strip of brown tape, the way a poster goes up on a wall */
+	--tape: rgba(150, 130, 95, 0.6);
+}
+/* every card a print, its red plate laid a hair off the black one */
+:root[data-special='prl'] .sppick,
+:root[data-special='prl'] .budget .tip.sptip {
+	position: relative;
+	--lift: 3px 3px 0 color-mix(in srgb, var(--accent) 16%, transparent), 0 8px 22px var(--shadow-soft);
+}
+:root[data-special='prl'] .budget .tip.sptip {
+	box-shadow: var(--lift);
+}
+/* taped up: two corners of every other card, one of the rest, the tip as well */
+:root[data-special='prl'] .sppick::before,
+:root[data-special='prl'] .sppick:nth-child(2n + 1)::after,
+:root[data-special='prl'] .budget .tip.sptip::before {
+	content: '';
+	position: absolute;
+	top: -7px;
+	width: 46px;
+	height: 15px;
+	background: var(--tape);
+	box-shadow: 0 1px 1px rgba(40, 30, 20, 0.12);
+	-webkit-mask-image: linear-gradient(90deg, transparent, #000 3px, #000 calc(100% - 3px), transparent);
+	mask-image: linear-gradient(90deg, transparent, #000 3px, #000 calc(100% - 3px), transparent);
+	pointer-events: none;
+}
+:root[data-special='prl'] .sppick::before {
+	left: -12px;
+	rotate: -32deg;
+}
+:root[data-special='prl'] .sppick:nth-child(2n + 1)::after {
+	right: -12px;
+	rotate: 32deg;
+}
+:root[data-special='prl'] .budget .tip.sptip::before {
+	right: 18px;
+	rotate: 4deg;
+}
