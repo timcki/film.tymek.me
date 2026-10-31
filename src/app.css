@@ -1575,6 +1575,12 @@ button.holdchip:hover {
 .film:has(.fbase):not(.held) .pw {
 	align-self: stretch;
 }
+/* a card made taller from outside (a desktop row of cards is one height, so
+   one card's list unfolding grows its neighbours) keeps that height as space
+   at its foot, not in its poster's row, so its poster keeps its shape */
+.film:has(.fbase):not(.held) {
+	align-content: flex-start;
+}
 .film:has(.fbase):not(.held) .p {
 	height: 100%;
 	min-height: 150px;
@@ -1789,6 +1795,44 @@ button.holdchip:hover {
 .tap:disabled {
 	opacity: 0.4;
 	cursor: not-allowed;
+}
+/* a dropped film on the shelf is one line: a thumbnail, the title and year,
+   and the way back onto the list at its end */
+.shelfbox .film.shelf {
+	flex-wrap: nowrap;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 10px;
+}
+.shelfbox .film.shelf .p {
+	width: 34px;
+	flex: 0 0 34px;
+	border-radius: 6px;
+}
+.shelfbox .film.shelf .b {
+	flex-direction: row;
+	align-items: center;
+	gap: 10px;
+}
+.shelfbox .film.shelf .hd {
+	flex: 1;
+	min-width: 0;
+}
+.shelfbox .film.shelf .ttl {
+	font-size: 14px;
+}
+.shelfbox .film.shelf .ft {
+	min-height: 0;
+	padding-top: 0;
+	margin-top: 0;
+	flex: none;
+}
+.shelfbox .film.shelf .tap {
+	padding: 6px 12px;
+	font-size: 12px;
+}
+.shelfbox .list {
+	gap: 8px;
 }
 /* the shelf of films that fell off the list, folded by default: its heading is
    the fold, with a chevron that turns when it is open */
@@ -4503,8 +4547,10 @@ details[open] > .iconbtn {
 	/* folded it is nothing at all; the card's row gap is taken off cards that
 	   carry it (below), and it brings its own space when it opens */
 	margin-top: 0;
-	/* its own height, never the card's leftover stretched over it */
+	/* its own height, never the card's leftover stretched over it; and the
+	   card's full width, also on a desktop's podium, whose card is a column */
 	align-self: flex-start;
+	width: 100%;
 	display: grid;
 	grid-template-rows: 0fr;
 	transition:
