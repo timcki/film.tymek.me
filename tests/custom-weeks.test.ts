@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { currentWeek } from '../src/lib/server/weeks.js';
-import { nominateSpecial, picksAllowed, picksUsed, startSpecial, stopSpecial } from '../src/lib/server/specials.js';
+import {
+	editSpecial,
+	nominateSpecial,
+	picksAllowed,
+	picksUsed,
+	startSpecial,
+	stopSpecial
+} from '../src/lib/server/specials.js';
 import { breachOf, cleanCustom, type CustomInput } from '../src/lib/server/custom-weeks.js';
 import type { Facts } from '../src/lib/server/tmdb.js';
 import {
@@ -168,6 +175,34 @@ describe('a custom week', () => {
 
 		nominateSpecial(db, rules, 'ala', { title: 'Ida' }, ida);
 		expect(picksUsed(db, currentWeek(db)!, 'ala')).toBe(1);
+	});
+
+	it('can be put right while running, its rules only until somebody picks', () => {
+		const { db, rules } = freshDb('weekly');
+		startSpecial(db, rules, 'approval', { ...week({ countries: ['PL'] }), picks: 2 });
+		editSpecial(db, { ...week({ countries: ['PL', 'CZ'] }), picks: 2 });
+		expect(customOf(currentWeek(db)!.custom)?.rules.countries).toEqual(['PL', 'CZ']);
+
+		nominateSpecial(db, rules, 'ala', { title: 'Ida' }, ida);
+		nominateSpecial(db, rules, 'ala', { title: 'Cold War' }, ida);
+		const renamed = { ...week({ countries: ['PL', 'CZ'] }), name: 'Kino polskie', picks: 3 };
+		editSpecial(db, renamed);
+		expect(customOf(currentWeek(db)!.custom)?.name).toBe('Kino polskie');
+
+		expect(() => editSpecial(db, { ...renamed, rules: { countries: ['PL'] } })).toThrow(
+			expect.objectContaining({ code: 'custom_rules_locked' })
+		);
+		expect(() => editSpecial(db, { ...renamed, picks: 1 })).toThrow(
+			expect.objectContaining({ code: 'custom_picks_used', params: { most: 2 } })
+		);
+	});
+
+	it('gives a plain special round a setup after it started', () => {
+		const { db, rules } = freshDb('weekly');
+		startSpecial(db, rules, 'approval');
+		nominateSpecial(db, rules, 'ala', { title: 'The Thing' });
+		editSpecial(db, { name: 'Noc grozy', about: null, picks: 1, rules: {} });
+		expect(customOf(currentWeek(db)!.custom)?.name).toBe('Noc grozy');
 	});
 
 	it('forgets its setup when the round is called off', () => {

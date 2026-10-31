@@ -283,6 +283,10 @@ admin's summary all say the rules from the values the server checks.
   nothing about is refused, because there is nothing to check it against.
 - **A refusal names the rule it broke** (`off_theme`, with the rule folded into flat
   parameters), said in the reader's language at the edge (invariant 6).
+- **A running week can be put right.** Its name, its line and its picks can change while it
+  is open, the picks never below what somebody has already put up. Its rules are fixed
+  from the first pick, because changing them would leave a pick standing under rules it
+  was never checked against (`custom_rules_locked`, `custom_picks_used`).
 - **Everything else is §3.6.** Approval voting, the room, the list asleep. The look stays
   a separate choice even when it is an obvious pair with the week.
 

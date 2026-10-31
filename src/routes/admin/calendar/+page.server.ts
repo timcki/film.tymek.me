@@ -15,8 +15,9 @@ import { RuleError } from '$lib/server/types';
 import { fromLocalInput, iso, nextDeadline } from '$lib/server/time';
 import { toLocalInput } from '$lib/datetime';
 import { activeRules } from '$lib/server/config';
-import { startSpecial, stopSpecial } from '$lib/server/specials';
+import { editSpecial, startSpecial, stopSpecial } from '$lib/server/specials';
 import { cleanCustom } from '$lib/server/custom-weeks';
+import type { CustomWeek } from '$lib/custom-weeks';
 import { customOf } from '$lib/custom-weeks';
 import { lookAt, setLook } from '$lib/server/looks';
 import { NOTICE_MAX, noticeAt, setNotice } from '$lib/server/notice';
@@ -85,6 +86,26 @@ function edit(fn: (db: DB) => void): void {
 	});
 }
 
+/** §3.7: the setup form, read the same way to start a week and to put one right */
+function customFrom(form: FormData): CustomWeek {
+	const text = (key: string) => String(form.get(key) ?? '');
+	const all = (key: string) => form.getAll(key).map(String);
+	return cleanCustom({
+		name: text('name'),
+		about: text('about'),
+		picks: text('picks'),
+		countries: all('countries'),
+		languages: all('languages'),
+		genres: all('genres'),
+		yearFrom: text('yearFrom'),
+		yearTo: text('yearTo'),
+		runtimeMin: text('runtimeMin'),
+		runtimeMax: text('runtimeMax'),
+		directors: text('directors'),
+		coded: all('coded')
+	});
+}
+
 export const actions: Actions = {
 	add: async ({ request, locals }) => {
 		const person = requireAdmin(locals.person);
@@ -148,25 +169,28 @@ export const actions: Actions = {
 				return { unspecial: true };
 			}
 			if (!isSpecialId(id)) throw new RuleError('no_special', 'no such special round');
-			const text = (key: string) => String(form.get(key) ?? '');
-			const all = (key: string) => form.getAll(key).map(String);
-			const custom = cleanCustom({
-				name: text('name'),
-				about: text('about'),
-				picks: text('picks'),
-				countries: all('countries'),
-				languages: all('languages'),
-				genres: all('genres'),
-				yearFrom: text('yearFrom'),
-				yearTo: text('yearTo'),
-				runtimeMin: text('runtimeMin'),
-				runtimeMax: text('runtimeMax'),
-				directors: text('directors'),
-				coded: all('coded')
-			});
+			const custom = customFrom(form);
 			const week = startSpecial(getDb(), activeRules(), id, custom);
 			logAdmin(getDb(), person.id, 'round.special', String(week.number), custom.name ?? id);
 			return { special: id };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	// §3.7: a running week's name and numbers; its rules come along only while they are offered
+	customize: async ({ request, locals }) => {
+		const person = requireAdmin(locals.person);
+		const form = await request.formData();
+		try {
+			const db = getDb();
+			let custom = customFrom(form);
+			if (!form.has('rules')) {
+				custom = { ...custom, rules: customOf(currentWeek(db)?.custom)?.rules ?? {} };
+			}
+			const week = editSpecial(db, custom);
+			logAdmin(db, person.id, 'round.customize', String(week.number), custom.name);
+			return { customized: true };
 		} catch (error) {
 			return ruleFail(error);
 		}

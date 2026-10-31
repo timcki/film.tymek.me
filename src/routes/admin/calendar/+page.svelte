@@ -6,8 +6,19 @@
 	import { adminDict } from '$lib/i18n.admin';
 	import { dictFor } from '$lib/i18n';
 	import { say } from '$lib/toast.svelte';
-	import { ABOUT_MAX, CODED, GENRES, LANGUAGES, NAME_MAX, PICKS_MAX, REGIONS, rulesOf } from '$lib/custom-weeks';
+	import {
+		ABOUT_MAX,
+		CODED,
+		GENRES,
+		LANGUAGES,
+		NAME_MAX,
+		PICKS_MAX,
+		REGIONS,
+		rulesOf,
+		type CustomWeek
+	} from '$lib/custom-weeks';
 	import { SPECIALS } from '$lib/specials';
+	import ChoiceList from '$lib/components/ChoiceList.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -42,6 +53,7 @@
 	// §3.7: a special round is set up before it starts; going back to the list is one pick
 	let vote = $derived(data.week?.special ?? '');
 	let setup = $state(false);
+	let tuning = $state(false);
 	function pickVote(event: Event) {
 		if (vote) setup = true;
 		else if (data.week?.special) saveOnChange(event);
@@ -56,8 +68,8 @@
 	function named(codes: readonly string[], type: 'region' | 'language') {
 		const names = new Intl.DisplayNames([data.lang], { type });
 		return codes
-			.map((code) => ({ code, name: names.of(code) ?? code }))
-			.sort((a, b) => a.name.localeCompare(b.name, data.lang));
+			.map((code) => ({ value: code, label: names.of(code) ?? code }))
+			.sort((a, b) => a.label.localeCompare(b.label, data.lang));
 	}
 	const countries = $derived(named(REGIONS, 'region'));
 	const languages = $derived(named(LANGUAGES, 'language'));
@@ -125,101 +137,24 @@
 		</form>
 	</div>
 	{#if setup && !data.week.special}
-		<form class="cwform" method="POST" action="?/special" use:enhance={submit()}>
-			<input type="hidden" name="special" value={vote} />
-			<p class="ahint">{A.cwIntro}</p>
-			<div class="fedit">
-				<label>
-					<span>{A.cwName}</span>
-					<input name="name" maxlength={NAME_MAX} placeholder={T.spName(vote)} />
-				</label>
-				<label class="cwnum">
-					<span>{A.cwPicks}</span>
-					<input
-						type="number"
-						name="picks"
-						min="1"
-						max={PICKS_MAX}
-						value={SPECIALS.approval.picksPerPerson}
-						required
-					/>
-				</label>
-			</div>
-			<label class="cwwide">
-				<span>{A.cwAbout}</span>
-				<textarea name="about" rows="2" maxlength={ABOUT_MAX} placeholder={A.cwAboutPh}></textarea>
-			</label>
-
-			<div class="sec">{A.cwRulesH}</div>
-			<p class="ahint">{A.cwRulesIntro}</p>
-			<div class="fedit">
-				<label>
-					<span>{A.cwCountries}</span>
-					<select name="countries" multiple size="6">
-						{#each countries as c (c.code)}<option value={c.code}>{c.name}</option>{/each}
-					</select>
-				</label>
-				<label>
-					<span>{A.cwLanguages}</span>
-					<select name="languages" multiple size="6">
-						{#each languages as l (l.code)}<option value={l.code}>{l.name}</option>{/each}
-					</select>
-				</label>
-			</div>
-			<p class="ahint">{A.cwMulti}</p>
-
-			<fieldset class="cwticks">
-				<legend>{A.cwGenres}</legend>
-				{#each GENRES as id (id)}
-					<label><input type="checkbox" name="genres" value={id} />{T.genreName(id)}</label>
-				{/each}
-			</fieldset>
-
-			<div class="fedit">
-				<label class="cwnum">
-					<span>{A.cwYears} {A.cwFrom}</span>
-					<input type="number" name="yearFrom" min="1870" max="2100" />
-				</label>
-				<label class="cwnum">
-					<span>{A.cwTo}</span>
-					<input type="number" name="yearTo" min="1870" max="2100" />
-				</label>
-				<label class="cwnum">
-					<span>{A.cwRuntime} {A.cwFrom}</span>
-					<input type="number" name="runtimeMin" min="1" max="1000" />
-				</label>
-				<label class="cwnum">
-					<span>{A.cwTo}</span>
-					<input type="number" name="runtimeMax" min="1" max="1000" />
-				</label>
-			</div>
-			<label class="cwwide">
-				<span>{A.cwDirectors}</span>
-				<input name="directors" placeholder={A.cwDirectorsPh} />
-			</label>
-
-			<fieldset class="cwticks">
-				<legend>{A.cwCoded}</legend>
-				{#each CODED as id (id)}
-					<label><input type="checkbox" name="coded" value={id} />{T.weekRule({ kind: 'coded', id })}</label>
-				{/each}
-			</fieldset>
-
-			<div class="acts">
-				<button class="tap go">{A.cwStart}</button>
-				<button type="button" class="tap" onclick={cancelSetup}>{A.cwCancel}</button>
-			</div>
-		</form>
+		{@render setupForm('special', null, false, cancelSetup)}
 	{/if}
-	{#if running}
-		{@const rules = rulesOf(running.rules)}
-		<div class="nextcard cwrunning">
-			<b>{running.name ?? T.spName(data.week.special ?? '')}</b>
-			{#if running.about}<span>{running.about}</span>{/if}
-			<ul>
-				{#each rules as rule (rule.kind + T.weekRule(rule))}<li>{T.weekRule(rule)}</li>{:else}<li>{A.cwNoRules}</li>{/each}
-			</ul>
-		</div>
+	{#if data.week.special}
+		{#if tuning}
+			{@render setupForm('customize', running, data.specialPicks > 0, () => (tuning = false))}
+		{:else}
+			{@const rules = running ? rulesOf(running.rules) : []}
+			<div class="nextcard cwrunning">
+				<b>{running?.name ?? T.spName(data.week.special)}</b>
+				{#if running?.about}<span>{running.about}</span>{/if}
+				<ul>
+					{#each rules as rule (rule.kind + T.weekRule(rule))}<li>{T.weekRule(rule)}</li>{:else}<li>{A.cwNoRules}</li>{/each}
+				</ul>
+				{#if data.week.status === 'open'}
+					<button class="tap" onclick={() => (tuning = true)}>{A.cwEdit}</button>
+				{/if}
+			</div>
+		{/if}
 	{/if}
 	{#if data.week.special && data.specialPicks > 0}
 		<p class="ahint">{A.spcLocked} <a href="/admin/films#picks">{A.spcSeePicks}</a></p>
@@ -325,6 +260,123 @@
 	<p class="ahint">{A.calPastEmpty}</p>
 {/each}
 
+
+<!-- §3.7: one form to start a custom week and to put a running one right; once
+     somebody has picked, the rules are no longer offered -->
+{#snippet setupForm(action: 'special' | 'customize', initial: CustomWeek | null, rulesLocked: boolean, done: () => void)}
+	<form class="cwform" method="POST" action="?/{action}" use:enhance={submit(done)}>
+		{#if action === 'special'}
+			<input type="hidden" name="special" value={vote} />
+			<p class="ahint">{A.cwIntro}</p>
+		{/if}
+		<div class="fedit">
+			<label>
+				<span>{A.cwName}</span>
+				<input
+					name="name"
+					maxlength={NAME_MAX}
+					value={initial?.name ?? ''}
+					placeholder={T.spName(data.week?.special ?? vote)}
+				/>
+			</label>
+			<label class="cwnum">
+				<span>{A.cwPicks}</span>
+				<input
+					type="number"
+					name="picks"
+					min="1"
+					max={PICKS_MAX}
+					value={initial?.picks ?? SPECIALS.approval.picksPerPerson}
+					required
+				/>
+			</label>
+		</div>
+		<label class="cwwide">
+			<span>{A.cwAbout}</span>
+			<textarea name="about" rows="2" maxlength={ABOUT_MAX} placeholder={A.cwAboutPh}
+				>{initial?.about ?? ''}</textarea
+			>
+		</label>
+
+		<div class="sec">{A.cwRulesH}</div>
+		{#if rulesLocked}
+			<p class="ahint">{A.cwRulesLocked}</p>
+			<ul class="cwlocked">
+				{#each rulesOf(initial?.rules ?? {}) as rule (rule.kind + T.weekRule(rule))}
+					<li>{T.weekRule(rule)}</li>
+				{:else}
+					<li>{A.cwNoRules}</li>
+				{/each}
+			</ul>
+		{:else}
+			{@const rules = initial?.rules ?? {}}
+			<input type="hidden" name="rules" value="1" />
+			<p class="ahint">{A.cwRulesIntro}</p>
+			<div class="cwpair">
+				<fieldset class="cwchoice">
+					<legend>{A.cwCountries}</legend>
+					<ChoiceList name="countries" options={countries} selected={rules.countries} placeholder={A.cwFind} />
+				</fieldset>
+				<fieldset class="cwchoice">
+					<legend>{A.cwLanguages}</legend>
+					<ChoiceList name="languages" options={languages} selected={rules.languages} placeholder={A.cwFind} />
+				</fieldset>
+			</div>
+
+			<fieldset class="cwticks">
+				<legend>{A.cwGenres}</legend>
+				{#each GENRES as id (id)}
+					<label
+						><input type="checkbox" name="genres" value={id} checked={rules.genres?.includes(id)} />{T.genreName(
+							id
+						)}</label
+					>
+				{/each}
+			</fieldset>
+
+			<div class="fedit">
+				<label class="cwnum">
+					<span>{A.cwYears} {A.cwFrom}</span>
+					<input type="number" name="yearFrom" min="1870" max="2100" value={rules.yearFrom ?? ''} />
+				</label>
+				<label class="cwnum">
+					<span>{A.cwTo}</span>
+					<input type="number" name="yearTo" min="1870" max="2100" value={rules.yearTo ?? ''} />
+				</label>
+				<label class="cwnum">
+					<span>{A.cwRuntime} {A.cwFrom}</span>
+					<input type="number" name="runtimeMin" min="1" max="1000" value={rules.runtimeMin ?? ''} />
+				</label>
+				<label class="cwnum">
+					<span>{A.cwTo}</span>
+					<input type="number" name="runtimeMax" min="1" max="1000" value={rules.runtimeMax ?? ''} />
+				</label>
+			</div>
+			<label class="cwwide">
+				<span>{A.cwDirectors}</span>
+				<input name="directors" placeholder={A.cwDirectorsPh} value={rules.directors?.join(', ') ?? ''} />
+			</label>
+
+			<fieldset class="cwticks">
+				<legend>{A.cwCoded}</legend>
+				{#each CODED as id (id)}
+					<label
+						><input type="checkbox" name="coded" value={id} checked={rules.coded?.includes(id)} />{T.weekRule({
+							kind: 'coded',
+							id
+						})}</label
+					>
+				{/each}
+			</fieldset>
+		{/if}
+
+		<div class="acts">
+			<button class="tap go">{action === 'special' ? A.cwStart : A.cwSave}</button>
+			<button type="button" class="tap" onclick={done}>{A.cwCancel}</button>
+		</div>
+	</form>
+{/snippet}
+
 <style>
 	/* §3.7: the custom week's setup, laid out like the rest of the calendar's forms */
 	.cwform {
@@ -349,8 +401,7 @@
 		color: var(--dim);
 	}
 	.cwwide input,
-	.cwwide textarea,
-	.cwform select[multiple] {
+	.cwwide textarea {
 		background: var(--card2);
 		border: 1px solid var(--line2);
 		color: var(--ink);
@@ -360,6 +411,25 @@
 		font-size: 13px;
 		resize: vertical;
 	}
+	.cwpair {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 10px;
+		margin-top: 8px;
+	}
+	.cwchoice {
+		border: 0;
+		padding: 0;
+		margin: 0;
+		min-width: 0;
+	}
+	.cwchoice legend,
+	.cwticks legend {
+		font-size: 11px;
+		color: var(--dim);
+		padding: 0;
+		margin-bottom: 6px;
+	}
 	.cwticks {
 		display: flex;
 		flex-wrap: wrap;
@@ -368,11 +438,6 @@
 		padding: 0;
 		margin: 10px 0 0;
 		font-size: 12.5px;
-	}
-	.cwticks legend {
-		font-size: 11px;
-		color: var(--dim);
-		margin-bottom: 6px;
 	}
 	.cwticks label {
 		display: inline-flex;
@@ -386,8 +451,9 @@
 		font-size: 12.5px;
 		color: var(--ink2);
 	}
-	.cwrunning ul {
-		margin: 0;
+	.cwrunning ul,
+	.cwlocked {
+		margin: 0 0 4px;
 		padding-left: 18px;
 	}
 </style>

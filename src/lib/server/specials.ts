@@ -10,7 +10,7 @@ import { rexpAll } from './xp.js';
 import { assertNotDuplicate, filmById, insertFilm, type NominationInput } from './films.js';
 import { currentWeek, requireOpenWeek, requireSpecialWeek } from './weeks.js';
 import { SPECIALS, specialOf, type Special, type SpecialId } from '../specials.js';
-import { customOf, type CustomWeek } from '../custom-weeks.js';
+import { customOf, rulesOf, type CustomWeek } from '../custom-weeks.js';
 import { assertFits } from './custom-weeks.js';
 import type { Facts } from './tmdb.js';
 
@@ -53,6 +53,33 @@ export function stopSpecial(db: DB, rules: RuleSet, now: Date = new Date()): voi
 		if (n > 0) throw new RuleError('special_has_picks', 'somebody has already put a pick up');
 		db.prepare('UPDATE week SET special = NULL, custom = NULL WHERE number = ?').run(week.number);
 		rescoreAll(db, rules, week.number);
+	});
+}
+
+/**
+ * §3.7: a running week put right. Its name, description and how many picks each
+ * can change at any time; its rules only while nobody has picked, or a pick
+ * already up could stop fitting. Fewer picks than somebody has already put up
+ * would take one of theirs back, so that is refused as well.
+ */
+export function editSpecial(db: DB, custom: CustomWeek, now: Date = new Date()): Week {
+	return immediate(db, () => {
+		const week = requireSpecialWeek(db, now);
+		const counts = db
+			.prepare(
+				'SELECT COUNT(*) AS n FROM film WHERE special = ? AND added_week = ? GROUP BY added_by'
+			)
+			.all(week.special, week.number) as { n: number }[];
+		const most = Math.max(0, ...counts.map((c) => c.n));
+		const before = JSON.stringify(rulesOf(customOf(week.custom)?.rules ?? {}));
+		if (counts.length && JSON.stringify(rulesOf(custom.rules)) !== before) {
+			throw new RuleError('custom_rules_locked', 'somebody has already picked under these rules');
+		}
+		if (custom.picks < most) {
+			throw new RuleError('custom_picks_used', `somebody has already put up ${most}, so it cannot go lower`, { most });
+		}
+		db.prepare('UPDATE week SET custom = ? WHERE number = ?').run(JSON.stringify(custom), week.number);
+		return currentWeek(db) as Week;
 	});
 }
 

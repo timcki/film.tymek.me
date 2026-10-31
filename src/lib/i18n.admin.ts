@@ -60,7 +60,10 @@ export type AdminDict = {
 	cwRulesIntro: string;
 	cwCountries: string;
 	cwLanguages: string;
-	cwMulti: string;
+	cwFind: string;
+	cwRulesLocked: string;
+	cwEdit: string;
+	cwSave: string;
 	cwGenres: string;
 	cwYears: string;
 	cwRuntime: string;
@@ -237,7 +240,10 @@ const pl: AdminDict = {
 		'Sprawdzamy to w TMDB przy zgłoszeniu, więc z zasadami nie da się wpisać tytułu ręcznie.',
 	cwCountries: 'Kraj produkcji',
 	cwLanguages: 'Język oryginału',
-	cwMulti: 'Kilka naraz: Ctrl albo Cmd przy kliknięciu.',
+	cwFind: 'Szukaj…',
+	cwRulesLocked: 'Ktoś już zgłosił propozycję, więc zasad nie da się już zmienić.',
+	cwEdit: 'Zmień',
+	cwSave: 'Zapisz',
 	cwGenres: 'Gatunek',
 	cwYears: 'Rok premiery',
 	cwRuntime: 'Długość w minutach',
@@ -307,7 +313,7 @@ const pl: AdminDict = {
 	filHeld: 'veto',
 	filPicksH: (round) => `Propozycje: ${round}`,
 	filPicksIntro:
-		'Dopóki tu coś jest, wieczoru specjalnego nie da się odwołać ani zmienić. ' +
+		'Dopóki tu coś jest, wieczoru specjalnego nie da się odwołać ani zmienić jego zasad. ' +
 		'Usunąć można propozycję, której nikt jeszcze nie zaznaczył.',
 	filTicked: (any) => (any ? 'ktoś już zaznaczył' : 'nikt jeszcze nie zaznaczył'),
 	filTickedNote: 'Nie da się usunąć: ktoś już ją zaznaczył.',
@@ -417,6 +423,10 @@ const pl: AdminDict = {
 				return `Każdy może zgłosić od 1 do ${p.max} propozycji.`;
 			case 'custom_years':
 				return 'Lata muszą być między 1870 a 2100, a „od” nie później niż „do”.';
+			case 'custom_rules_locked':
+				return 'Ktoś już zgłosił propozycję, więc zasad nie da się już zmienić.';
+			case 'custom_picks_used':
+				return `Ktoś zgłosił już tyle propozycji: ${p.most}. Mniej się nie da.`;
 			case 'custom_runtime':
 				return 'Długość musi być między 1 a 1000 minut, a „od” nie więcej niż „do”.';
 			case 'notice_too_long':
@@ -510,7 +520,10 @@ const en: AdminDict = {
 		'TMDB is asked when the pick goes up, so a week with rules takes no typed-in titles.',
 	cwCountries: 'Production country',
 	cwLanguages: 'Original language',
-	cwMulti: 'More than one: hold Ctrl or Cmd while clicking.',
+	cwFind: 'Search…',
+	cwRulesLocked: 'Somebody has already put a pick up, so the rules can no longer change.',
+	cwEdit: 'Change',
+	cwSave: 'Save',
 	cwGenres: 'Genre',
 	cwYears: 'Release year',
 	cwRuntime: 'Runtime in minutes',
@@ -580,7 +593,7 @@ const en: AdminDict = {
 	filHeld: 'held',
 	filPicksH: (round) => `Picks: ${round}`,
 	filPicksIntro:
-		'While anything is here, the special night cannot be called off or changed. ' +
+		'While anything is here, the special night cannot be called off and its rules cannot change. ' +
 		'A pick nobody has ticked yet can be deleted.',
 	filTicked: (any) => (any ? 'somebody has ticked it' : 'nobody has ticked it yet'),
 	filTickedNote: 'Cannot be deleted: somebody has ticked it.',
