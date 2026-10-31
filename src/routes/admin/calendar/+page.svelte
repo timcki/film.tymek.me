@@ -40,12 +40,8 @@
 	}
 
 	// §3.7: a special round is set up before it starts; going back to the list is one pick
-	let vote = $state('');
+	let vote = $derived(data.week?.special ?? '');
 	let setup = $state(false);
-	$effect.pre(() => {
-		vote = data.week?.special ?? '';
-		setup = false;
-	});
 	function pickVote(event: Event) {
 		if (vote) setup = true;
 		else if (data.week?.special) saveOnChange(event);
@@ -225,7 +221,11 @@
 			</ul>
 		</div>
 	{/if}
-	<p class="ahint">{data.week.special && data.specialPicks > 0 ? A.spcLocked : A.spcIntro}</p>
+	{#if data.week.special && data.specialPicks > 0}
+		<p class="ahint">{A.spcLocked} <a href="/admin/films#picks">{A.spcSeePicks}</a></p>
+	{:else}
+		<p class="ahint">{A.spcIntro}</p>
+	{/if}
 	<p class="ahint">{A.lookIntro}</p>
 
 	<div class="sec">{A.noticeH}</div>

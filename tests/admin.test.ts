@@ -19,6 +19,7 @@ import { NOTICE_MAX, noticeAt, setNotice } from '../src/lib/server/notice.js';
 import { addComment, reactComment } from '../src/lib/server/comments.js';
 import { toggleSeen } from '../src/lib/server/seen.js';
 import { placeHold } from '../src/lib/server/holds.js';
+import { nominateSpecial, setApproval, startSpecial } from '../src/lib/server/specials.js';
 import { REACTIONS } from '../src/lib/reactions.js';
 import { addFilm, castBallot, forceAdvanceTo, freshDb } from './helpers.js';
 
@@ -232,6 +233,17 @@ describe('curating the films', () => {
 		db.prepare(`UPDATE film SET status = 'dropped' WHERE id = ?`).run(two);
 
 		expect(roundFilms(db).map((f) => f.title).sort()).toEqual(['One', 'Two']);
+	});
+
+	it('says whether a special pick has been ticked, which is what stops its deletion', () => {
+		const { db, rules } = freshDb('weekly');
+		startSpecial(db, rules, 'approval');
+		const pick = nominateSpecial(db, rules, 'ala', { title: 'The Thing' });
+		const ticks = () => roundFilms(db).find((f) => f.id === pick)!.approvals;
+		expect(ticks()).toBe(0);
+		setApproval(db, rules, 'bartek', pick, true);
+		expect(ticks()).toBe(1);
+		expect(() => deleteFilm(db, pick)).toThrow(expect.objectContaining({ code: 'film_has_ballots' }));
 	});
 });
 

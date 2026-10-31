@@ -14,6 +14,7 @@ import { filmById, holdFilm, releaseFilm } from '$lib/server/films';
 import { heldIn } from '$lib/server/holds';
 import { allPeople } from '$lib/server/people';
 import { currentWeek } from '$lib/server/weeks';
+import { customOf } from '$lib/custom-weeks';
 import { ruleFail } from '$lib/server/respond';
 import type { FilmStatus } from '$lib/server/types';
 
@@ -23,9 +24,15 @@ export const load: PageServerLoad = async ({ locals }) => {
 	requireAdmin(locals.person);
 	const db = getDb();
 	const week = currentWeek(db);
+	// §3.6: a special round's picks are its own, and they are what keeps it from being called off
+	const isPick = (film: { special: string | null; added_week: number }) =>
+		!!week?.special && film.special === week.special && film.added_week === week.number;
+	const films = roundFilms(db);
 	return {
 		// watched films live on /admin/watched
-		films: roundFilms(db),
+		films: films.filter((film) => !isPick(film)),
+		picks: films.filter(isPick),
+		special: week?.special ? { id: week.special, name: customOf(week.custom)?.name ?? null } : null,
 		people: allPeople(db).map((p) => ({ id: p.id, name: p.name })),
 		closesAt: week?.closes_at ?? null,
 		held: week ? [...heldIn(db, week.number).keys()] : []

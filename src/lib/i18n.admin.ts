@@ -49,6 +49,7 @@ export type AdminDict = {
 	spcList: string;
 	spcIntro: string;
 	spcLocked: string;
+	spcSeePicks: string;
 	/** §3.7: setting a special round up as a custom week */
 	cwIntro: string;
 	cwName: string;
@@ -129,6 +130,11 @@ export type AdminDict = {
 	filRelease: string;
 	filHeld: string;
 	filEmpty: string;
+	/** §3.6: the open special round's picks, kept apart from the list */
+	filPicksH: (round: string) => string;
+	filPicksIntro: string;
+	filTicked: (any: boolean) => string;
+	filTickedNote: string;
 
 	/* the round in play */
 	rndH: string;
@@ -219,6 +225,7 @@ const pl: AdminDict = {
 		'Lista śpi do jego końca: nikt nie wydaje punktów, nic nie traci na wartości i nic nie wypada. ' +
 		'Punkty wydane w tej rundzie wcześniej zostają. Odwołać go można, dopóki nikt nic nie zgłosił.',
 	spcLocked: 'Ktoś już zgłosił propozycję, więc runda dobiegnie końca.',
+	spcSeePicks: 'Zobacz propozycje',
 	cwIntro: 'Wszystko jest opcjonalne. Bez nazwy i zasad to zwykły wieczór specjalny.',
 	cwName: 'Nazwa',
 	cwAbout: 'Opis',
@@ -298,6 +305,12 @@ const pl: AdminDict = {
 	filHoldWhy: 'Powód (opcjonalnie)',
 	filRelease: 'Wycofaj',
 	filHeld: 'veto',
+	filPicksH: (round) => `Propozycje: ${round}`,
+	filPicksIntro:
+		'Dopóki tu coś jest, wieczoru specjalnego nie da się odwołać ani zmienić. ' +
+		'Usunąć można propozycję, której nikt jeszcze nie zaznaczył.',
+	filTicked: (any) => (any ? 'ktoś już zaznaczył' : 'nikt jeszcze nie zaznaczył'),
+	filTickedNote: 'Nie da się usunąć: ktoś już ją zaznaczył.',
 	filEmpty: 'Brak filmów.',
 
 	rndH: 'Bieżąca runda',
@@ -485,6 +498,7 @@ const en: AdminDict = {
 		'The list sleeps until it is over: nobody spends points, nothing fades and nothing drops. ' +
 		'Points already spent this round stay where they are. It can be called off until somebody puts a pick up.',
 	spcLocked: 'Somebody has already put a pick up, so the round runs its course.',
+	spcSeePicks: 'See the picks',
 	cwIntro: 'Everything is optional. With no name and no rules it is a plain special night.',
 	cwName: 'Name',
 	cwAbout: 'Description',
@@ -564,6 +578,12 @@ const en: AdminDict = {
 	filHoldWhy: 'Reason (optional)',
 	filRelease: 'Put it back',
 	filHeld: 'held',
+	filPicksH: (round) => `Picks: ${round}`,
+	filPicksIntro:
+		'While anything is here, the special night cannot be called off or changed. ' +
+		'A pick nobody has ticked yet can be deleted.',
+	filTicked: (any) => (any ? 'somebody has ticked it' : 'nobody has ticked it yet'),
+	filTickedNote: 'Cannot be deleted: somebody has ticked it.',
 	filEmpty: 'No films.',
 
 	rndH: 'Current round',

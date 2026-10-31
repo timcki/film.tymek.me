@@ -6,7 +6,7 @@
 	import FilmEditForm from '$lib/components/FilmEditForm.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import { adminDict } from '$lib/i18n.admin';
-	import { fmtScore } from '$lib/i18n';
+	import { dictFor, fmtScore } from '$lib/i18n';
 	import { say } from '$lib/toast.svelte';
 	import type { PageData } from './$types';
 
@@ -39,8 +39,12 @@
 	const statusLabel = (status: (typeof STATUSES)[number]) =>
 		status === 'active' ? A.filActivate : status === 'archived' ? A.filArchive : A.filDrop;
 
-	const shown = $derived(
-		data.films.filter((film) => film.title.toLowerCase().includes(filter.trim().toLowerCase()))
+	type Film = PageData['films'][number];
+	const matches = (film: Film) => film.title.toLowerCase().includes(filter.trim().toLowerCase());
+	const shown = $derived(data.films.filter(matches));
+	const picks = $derived(data.picks.filter(matches));
+	const roundName = $derived(
+		data.special ? (data.special.name ?? dictFor(data.lang).spName(data.special.id)) : ''
 	);
 </script>
 
@@ -49,7 +53,25 @@
 
 <input class="sinput" placeholder={A.filSearchPh} bind:value={filter} autocomplete="off" />
 
+{#if data.picks.length}
+	<div class="sec" id="picks">{A.filPicksH(roundName)}</div>
+	<p class="ahint">{A.filPicksIntro}</p>
+	{#each picks as film (film.id)}
+		{@render row(film, true)}
+	{:else}
+		<p class="ahint">{A.filEmpty}</p>
+	{/each}
+	<div class="sec">{A.rndH}</div>
+{/if}
+
 {#each shown as film (film.id)}
+	{@render row(film, false)}
+{:else}
+	<p class="ahint">{A.filEmpty}</p>
+{/each}
+
+<!-- §3.6: a pick's tick count stays hidden until the round closes, here as anywhere -->
+{#snippet row(film: Film, pick: boolean)}
 	{@const held = data.held.includes(film.id)}
 	<div class="frow" class:off={film.status !== 'active'} class:open={editing === film.id}>
 		<div class="fth"><Poster title={film.title} url={film.poster_url} /></div>
@@ -57,12 +79,13 @@
 		<div class="fbody">
 			<div class="fhead">
 				<b>{film.title}{film.year ? ` (${film.year})` : ''}</b>
-				<span class="fscore">{fmtScore(film.score)}</span>
+				{#if !pick}<span class="fscore">{fmtScore(film.score)}</span>{/if}
 			</div>
 			<div class="fmeta">
 				<span class="badge soft">{A.filStatus(film.status)}</span>
 				{#if held}<span class="badge warn">{A.filHeld}</span>{/if}
-				{A.filBy(film.added_by_name, data.evenings[film.added_week])} · {A.filBallots(film.ballots)}
+				{A.filBy(film.added_by_name, data.evenings[film.added_week])} ·
+				{pick ? A.filTicked(film.approvals > 0) : A.filBallots(film.ballots)}
 			</div>
 			{#if film.backers.length}
 				<div class="backers">
@@ -108,7 +131,7 @@
 					</div>
 
 					<!-- the group-chat ask, pressed on the absentee's behalf -->
-					{#if film.status === 'active'}
+					{#if film.status === 'active' && !pick}
 						<form class="acts" method="POST" action="?/hold" use:enhance={submit()}>
 							<input type="hidden" name="id" value={film.id} />
 							{#if held}
@@ -122,13 +145,13 @@
 					{/if}
 
 					<div class="acts">
-						{#if film.ballots === 0}
+						{#if film.ballots === 0 && film.approvals === 0}
 							<form method="POST" action="?/remove" use:enhance={submit()}>
 								<input type="hidden" name="id" value={film.id} />
 								<ConfirmButton label={A.filDelete} sure={A.sure} />
 							</form>
 						{:else}
-							<span class="ahint">{A.filDeleteNote}</span>
+							<span class="ahint">{film.ballots ? A.filDeleteNote : A.filTickedNote}</span>
 						{/if}
 					</div>
 				</div>
@@ -139,6 +162,4 @@
 			{/if}
 		</div>
 	</div>
-{:else}
-	<p class="ahint">{A.filEmpty}</p>
-{/each}
+{/snippet}

@@ -160,6 +160,8 @@ export type ManagedFilm = Film & {
 	added_by_face: Face;
 	ballots: number;
 	raw_points: number;
+	/** §3.6: ticks on a special round's pick, which also keep it from being deleted */
+	approvals: number;
 };
 
 type FilmRow = Omit<ManagedFilm, 'added_by_face'> & {
@@ -171,7 +173,8 @@ type FilmRow = Omit<ManagedFilm, 'added_by_face'> & {
 const FILM_SELECT = `SELECT f.*, COALESCE(p.name, f.added_by) AS added_by_name,
         p.colour AS added_by_colour, p.avatar_updated_at AS added_by_avatar_at,
         (SELECT COUNT(*) FROM ballot b WHERE b.film_id = f.id) AS ballots,
-        (SELECT COALESCE(SUM(b.points), 0) FROM ballot b WHERE b.film_id = f.id) AS raw_points
+        (SELECT COALESCE(SUM(b.points), 0) FROM ballot b WHERE b.film_id = f.id) AS raw_points,
+        (SELECT COUNT(*) FROM approval a WHERE a.film_id = f.id) AS approvals
  FROM film f LEFT JOIN person p ON p.id = f.added_by`;
 
 function toManaged(row: FilmRow): ManagedFilm {
