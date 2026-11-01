@@ -57,7 +57,7 @@
 	let waving = $state(false);
 	onMount(() => {
 		let timer: ReturnType<typeof setTimeout>;
-		lights.flicker = () => {
+		const flicker = () => {
 			clearTimeout(timer);
 			waving = false;
 			requestAnimationFrame(() => {
@@ -65,9 +65,11 @@
 				timer = setTimeout(() => (waving = false), 1600);
 			});
 		};
+		lights.flicker = flicker;
 		return () => {
 			clearTimeout(timer);
-			lights.flicker = () => {};
+			// whichever look comes next may have registered its own by now
+			if (lights.flicker === flicker) lights.flicker = () => {};
 		};
 	});
 </script>

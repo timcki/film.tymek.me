@@ -177,25 +177,6 @@ export function standings(
 	return orderFilms(enriched);
 }
 
-/**
- * The viewer's spent points this week, in the order the films were last
- * raised. Individual casts are not stored, so a film's points travel as one
- * block; for the usual film-by-film spending this is the true cast order.
- */
-export function castOrder(
-	db: DB,
-	personId: string,
-	weekNumber: number
-): { filmId: number; points: number }[] {
-	return db
-		.prepare(
-			`SELECT film_id AS filmId, points FROM ballot
-			 WHERE person_id = ? AND week_number = ? AND points > 0
-			 ORDER BY updated_at, film_id`
-		)
-		.all(personId, weekNumber) as { filmId: number; points: number }[];
-}
-
 export type NominationInput = {
 	title: string;
 	year?: number | null;
@@ -323,7 +304,7 @@ function assertNominationSlot(db: DB, rules: RuleSet, personId: string, week: nu
 		)
 		.get(personId, week) as { n: number };
 	if (row.n >= rules.nominationsPerWeek) {
-		throw new RuleError('already_nominated', 'you have already nominated a film this week');
+		throw new RuleError('already_nominated', 'you have already nominated a film this round');
 	}
 }
 

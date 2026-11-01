@@ -21,12 +21,14 @@
 		below: boolean;
 		/** a finger opened it, so it needs a backdrop to dismiss against */
 		tap: boolean;
+		/** the rows' values are points, drawn as the marks the app counts them in */
+		marks?: 'banana' | 'ticket';
 	};
 
-	/** width of .bkpop; the clamp needs it before the popup has been laid out */
-	export const PEEK_W = 156;
+	/** width of .fpeek; the clamp needs it before the popup has been laid out */
+	export const PEEK_W = 216;
 	/** roughly its height, only ever used to decide whether it still fits above */
-	export const PEEK_H = 190;
+	export const PEEK_H = 104;
 	/** what each row under the sub line costs it */
 	export const PEEK_ROW = 17;
 
@@ -34,7 +36,10 @@
 	export function anchorAt(el: HTMLElement, w: number, h: number) {
 		const box = el.getBoundingClientRect();
 		const half = w / 2;
-		const below = box.top < h;
+		// the sticky bar takes the top of the screen: there is only room above
+		// the face if there is room under the bar
+		const bar = document.querySelector('header.lean')?.getBoundingClientRect().bottom ?? 0;
+		const below = box.top - bar < h + 12;
 		return {
 			// clamped, or the pills at either end of the row get sliced by the viewport
 			x: Math.min(Math.max(box.left + box.width / 2, half + 8), window.innerWidth - half - 8),
@@ -53,52 +58,97 @@
 		face: PeekFace,
 		sub: string,
 		tap: boolean,
-		rows: PeekRow[] = []
+		rows: PeekRow[] = [],
+		marks?: 'banana' | 'ticket'
 	): Peek | null {
 		if (!(el instanceof HTMLElement)) return null;
-		return { face, sub, rows, tap, ...anchorAt(el, PEEK_W, PEEK_H + rows.length * PEEK_ROW) };
+		return {
+			face,
+			sub,
+			rows,
+			tap,
+			marks,
+			...anchorAt(el, PEEK_W, PEEK_H + rows.length * PEEK_ROW)
+		};
 	}
 </script>
 
 <script lang="ts">
 	import Avatar from './Avatar.svelte';
+	import Banana from './Banana.svelte';
+	import BananaBunch from './BananaBunch.svelte';
+	import Ticket from './Ticket.svelte';
+	import TicketStack from './TicketStack.svelte';
 	import { dictFor } from '$lib/i18n';
 	import type { Lang } from '$lib/i18n';
 	import { levelOf } from '$lib/levels';
+	import { grow } from '$lib/pop-grow';
+	import { untrack } from 'svelte';
 
 	let { peek, lang, onclose }: { peek: Peek; lang: Lang; onclose: () => void } = $props();
 
 	const T = $derived(dictFor(lang));
-	const level = $derived(levelOf(peek.face.xp));
+	// what it shows, held: on the way out the page has already let go of the
+	// peek, and the card still has to draw itself while it folds away
+	let shown = $state(untrack(() => peek));
+	$effect.pre(() => {
+		if (peek) shown = peek;
+	});
+	const level = $derived(levelOf(shown.face.xp));
+
 </script>
 
-{#if peek.tap}
+{#if shown.tap}
 	<!-- only a tap needs one; on a hover pointer it would swallow the pointerleave -->
 	<button class="menu-backdrop" aria-label={T.close} onclick={onclose}></button>
 {/if}
 
-<div class="bkpop" class:below={peek.below} style="left:{peek.x}px;top:{peek.y}px" role="tooltip">
-	<Avatar
-		name={peek.face.name}
-		colour={peek.face.colour}
-		avatar={peek.face.avatar}
-		size={116}
-		font={40}
-		titled={false}
-		xp={peek.face.xp}
-	/>
-	<b>{peek.face.name}</b>
-	<span class="bktitle lv{level}">{T.levels[level]}</span>
-	{#if peek.sub}<span>{peek.sub}</span>{/if}
-	<!-- the total above, and under it whatever it was actually made of -->
-	{#if peek.rows.length}
-		<div class="bkweeks">
-			{#each peek.rows as row (row.label)}
-				<div class="srow">
-					<span>{row.label}</span>
-					<b>{row.value}</b>
-				</div>
-			{/each}
+<!-- the outer box only stands at the face; the card inside it is what moves -->
+<div class="fpeek" class:below={shown.below} style="left:{shown.x}px;top:{shown.y}px" role="tooltip">
+	<div class="bkpop fpcard" in:grow={{ below: shown.below }} out:grow={{ below: shown.below, out: true }}>
+		<div class="fphead">
+			<span class="fpface">
+				<Avatar
+					name={shown.face.name}
+					colour={shown.face.colour}
+					avatar={shown.face.avatar}
+					size={56}
+					font={20}
+					titled={false}
+					xp={shown.face.xp}
+				/>
+			</span>
+			<div class="fpwho">
+				<b>{shown.face.name}</b>
+				<span class="bktitle lv{level}">{T.levels[level]}</span>
+			</div>
 		</div>
-	{/if}
+		{#if shown.sub}<span class="fpsub">{shown.sub}</span>{/if}
+		<!-- the total above, and under it whatever it was actually made of -->
+		{#if shown.rows.length}
+			<div class="bkweeks">
+				{#each shown.rows as row (row.label)}
+					<div class="srow">
+						<span>{row.label}</span>
+						{#if shown.marks}
+							{@const n = Number(row.value)}
+							<!-- the week's points as points, every five one mark -->
+							<i class="fpmarks" aria-label={row.value}>
+								{#each Array(Math.floor(n / 5)) as _, k (k)}
+									<i class="five"
+										>{#if shown.marks === 'banana'}<BananaBunch />{:else}<TicketStack />{/if}</i
+									>
+								{/each}
+								{#each Array(n % 5) as _, k (k)}
+									<i>{#if shown.marks === 'banana'}<Banana />{:else}<Ticket />{/if}</i>
+								{/each}
+							</i>
+						{:else}
+							<b>{row.value}</b>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
 </div>

@@ -10,8 +10,8 @@ import { noticeAt } from '$lib/server/notice';
 import { avatarUrl, bankBalance, spentInWeek } from '$lib/server/people';
 import { langOf } from '$lib/i18n';
 import { unseenChangelog } from '$lib/changelog';
-import { LOOK_THEME, bananaOf, themeOf } from '$lib/themes';
-import { BANANA_COOKIE, LANG_COOKIE, THEME_COOKIE } from '../hooks.server';
+import { LOOK_THEME, accentOf, bananaOf, themeOf } from '$lib/themes';
+import { ACCENT_COOKIE, BANANA_COOKIE, LANG_COOKIE, THEME_COOKIE } from '../hooks.server';
 
 export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	const db = getDb();
@@ -50,6 +50,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 		// hooks.server.ts
 		theme: look ? LOOK_THEME[look] : themeOf(cookies.get(THEME_COOKIE)),
 		banana: bananaOf(cookies.get(BANANA_COOKIE)),
+		accent: accentOf(cookies.get(ACCENT_COOKIE)),
 		look,
 		notice: person ? noticeAt(db) : null,
 		// news this person has not dismissed yet, already said in their language

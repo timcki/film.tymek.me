@@ -380,7 +380,7 @@ const pl: AdminDict = {
 			case 'hold_not_active':
 				return `${p.title} nie jest na liście.`;
 			case 'hold_taken':
-				return `Ta osoba uśpiła w tym tygodniu ${p.title}.`;
+				return `Ta osoba uśpiła w tej rundzie ${p.title}.`;
 			case 'film_has_ballots':
 				return 'Ktoś na niego głosował. Zdejmij go z listy zamiast usuwać.';
 			case 'film_watched':

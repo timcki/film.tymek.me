@@ -12,6 +12,7 @@
 	import LookToken from '$lib/components/LookToken.svelte';
 	import Spider from '$lib/components/Spider.svelte';
 	import LampToggle from '$lib/components/LampToggle.svelte';
+	import NominateModal from '$lib/components/NominateModal.svelte';
 	import { dictFor } from '$lib/i18n';
 	import { say } from '$lib/toast.svelte';
 	import { watchLive } from '$lib/live-poll';
@@ -50,84 +51,10 @@
 	const rise = (node: Element, i: number) =>
 		fly(node, { y: 6, duration: ms(200), delay: ms(50 + i * 30), easing: cubicOut });
 
-	/** focuses the search box as soon as the modal has grown into place */
-	function focusSoon(node: HTMLInputElement) {
-		const timer = setTimeout(() => node.focus({ preventScroll: true }), ms(120));
-		return { destroy: () => clearTimeout(timer) };
-	}
-
 	/* -------------------------------------------------------------- search -- */
 
-	type Result = {
-		tmdbId: number | null;
-		title: string;
-		year: number | null;
-		thumb: string | null;
-		poster: string | null;
-		overview: string;
-		// missing from a typed title and from searches cached before they were kept
-		language?: string | null;
-		genres?: number[];
-	};
-
-	let picked = $state<Result | null>(null);
-	let query = $state('');
-	let results = $state<Result[]>([]);
-	let degraded = $state(false);
-	let searching = $state(false);
-	let timer: ReturnType<typeof setTimeout>;
-
-	// opened from the + in the bar; every opening starts from an empty box
-	$effect(() => {
-		if (!nomSheet.open) return;
-		picked = null;
-		query = '';
-		results = [];
-	});
-
-	function closeSheet() {
-		nomSheet.open = false;
-		picked = null;
-	}
-
-	// §8.2: the same proxy and the same debounce as the list's nomination box
-	function onQuery() {
-		clearTimeout(timer);
-		const q = query.trim();
-		if (q.length < 2) {
-			results = [];
-			searching = false;
-			return;
-		}
-		searching = true;
-		timer = setTimeout(async () => {
-			try {
-				const response = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-				const body = await response.json();
-				// a slow answer to an older query must not land over a newer one
-				if (q !== query.trim()) return;
-				results = body.results ?? [];
-				degraded = Boolean(body.degraded);
-			} catch {
-				if (q !== query.trim()) return;
-				degraded = true;
-				results = [];
-			} finally {
-				if (q === query.trim()) searching = false;
-			}
-		}, 250);
-	}
-
+	// the modal itself is NominateModal; the page knows what is already up
 	const known = $derived(new Set(data.picks.map((pick) => pick.title.toLowerCase())));
-
-	const byHand = (): Result => ({
-		tmdbId: null,
-		title: query.trim(),
-		year: null,
-		thumb: null,
-		poster: null,
-		overview: ''
-	});
 
 	/* -------------------------------------------------------------- detail -- */
 
@@ -484,117 +411,16 @@
 
 <!-- ------------------------------------------------------------- modal -- -->
 
-{#if nomSheet.open}
-	<!-- under the bar (47) and over the page, so the + that opened the modal
-	     stays sharp above the blur and is how it closes -->
-	<button
-		class="spveil"
-		aria-label={T.close}
-		onclick={closeSheet}
-		in:fade={{ duration: ms(180) }}
-		out:fade={{ duration: ms(140) }}
-	></button>
-
-	<!-- stays where Svelte expects it, while the modal moves above the look -->
-	<div class="phost">
-	<div
-		class="spmodal"
-		role="dialog"
-		aria-modal="true"
-		use:portal
-		use:fitViewport
-		aria-label={T.spNomH(name)}
-		in:grow
-		out:grow={{ out: true }}
-	>
-		<h2 in:rise={0}>{T.spNomH(name)}</h2>
-
-		{#if picked}
-			<form
-				method="POST"
-				action="?/nominate"
-				use:enhance={submit(closeSheet)}
-				in:fly={{ x: 24, duration: ms(200), easing: cubicOut }}
-			>
-				<input type="hidden" name="title" value={picked.title} />
-				<input type="hidden" name="tmdbId" value={picked.tmdbId ?? ''} />
-				<input type="hidden" name="year" value={picked.year ?? ''} />
-				<input type="hidden" name="poster" value={picked.poster ?? ''} />
-				<input type="hidden" name="overview" value={picked.overview} />
-				<div class="crow">
-					<div class="th"><Poster title={picked.title} url={picked.thumb} /></div>
-					<div>
-						<b>{picked.title}</b>
-						<span>{picked.year ?? T.dEmpty}</span>
-					</div>
-				</div>
-				<div class="nlabel">{T.noteQ}</div>
-				<textarea class="nin" name="note" rows="3" maxlength="160" placeholder={T.notePh}></textarea>
-				<div class="cbtns">
-					<button type="button" onclick={() => (picked = null)}>{T.noteBack}</button>
-					<button class="go">{T.noteConfirm}</button>
-				</div>
-			</form>
-		{:else}
-			<div class="spsearch" in:fly={{ x: -24, duration: ms(200), easing: cubicOut }}>
-				<div class="hintline" in:rise={1}>
-					{degraded ? T.nomOffline : T.spNomHint(data.special.picksPerPerson)}
-				</div>
-				{#if weekRules.length}
-					<ul class="spweek-rules" in:rise={1}>
-						{#each weekRules as rule (rule.kind + T.weekRule(rule))}
-							<li>{T.weekRule(rule)}</li>
-						{/each}
-					</ul>
-				{/if}
-				<input
-					class="sinput"
-					bind:value={query}
-					oninput={onQuery}
-					placeholder={T.nomPh}
-					autocomplete="off"
-					spellcheck="false"
-					use:focusSoon
-					in:rise={2}
-				/>
-				<div class="sres">
-					{#if searching}
-						<div class="hintline">{T.nomSearching}</div>
-					{:else}
-						{#each results as result, i (result.tmdbId)}
-							{@const dup = known.has(result.title.toLowerCase())}
-							{@const off = !dup && !!knownBreach(data.special.custom, result)}
-							<button
-								class="r"
-								disabled={dup || off}
-								onclick={() => (picked = result)}
-								in:fly={{ y: 8, duration: ms(240), delay: ms(i * 35) }}
-							>
-								<div class="th"><Poster title={result.title} url={result.thumb} /></div>
-								<div class="m">
-									<b>{result.title}</b>
-									<span
-										>{result.year ?? T.dEmpty}{dup ? ` · ${T.nomDup}` : off ? ` · ${T.spOff}` : ''}</span
-									>
-								</div>
-							</button>
-						{/each}
-						{#if query.trim().length >= 2 && !results.length}
-							<div class="hintline">{T.nomNone(query.trim())}</div>
-						{/if}
-						<!-- a typed title has nothing for a week's rules to be checked against -->
-						{#if query.trim().length >= 2 && !weekRules.length}
-							<button class="ghostbtn" onclick={() => (picked = byHand())}>
-								{T.nomByHand(query.trim())}
-							</button>
-						{/if}
-					{/if}
-				</div>
-			</div>
-		{/if}
-	</div>
-	</div>
-{/if}
+<NominateModal
+	lang={data.lang}
+	heading={T.spNomH(name)}
+	hint={T.spNomHint(data.special.picksPerPerson)}
+	{known}
+	{submit}
+	rules={weekRules.map((rule) => T.weekRule(rule))}
+	breaks={(result) => !!knownBreach(data.special.custom, result)}
+	typed={!weekRules.length}
+/>
 
 {#if detail}
 	<!-- one film, opened from its poster: what it is, who put it up and why, and
@@ -704,7 +530,7 @@
 <svelte:window
 	onkeydown={(event) => {
 		if (event.key !== 'Escape') return;
-		closeSheet();
+		nomSheet.open = false;
 		closeDetail();
 	}}
 />
@@ -718,14 +544,8 @@
 	.spweek p + ul {
 		margin-top: 6px;
 	}
-	.spweek ul,
-	.spweek-rules {
+	.spweek ul {
 		padding-left: 18px;
-	}
-	.spweek-rules {
-		margin: 6px 0 0;
-		color: var(--dimmer);
-		font-size: 12px;
 	}
 
 	/* who is in on it: faces overlapping in a chip, the count, and your picks */
@@ -806,39 +626,6 @@
 			0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent),
 			0 0 24px color-mix(in srgb, var(--accent) 14%, transparent);
 	}
-	/* the dimmed page under the modal, softly out of focus */
-	.spveil {
-		position: fixed;
-		inset: 0;
-		z-index: 46;
-		border: 0;
-		padding: 0;
-		background: color-mix(in srgb, var(--bg) 62%, transparent);
-		-webkit-backdrop-filter: blur(4px);
-		backdrop-filter: blur(4px);
-		cursor: default;
-	}
-	/* a panel in the middle of the screen, high enough that a phone's keyboard
-	   leaves the search box and the first results in view */
-	.spmodal {
-		position: fixed;
-		z-index: 70;
-		left: 0;
-		right: 0;
-		top: max(11vh, 84px);
-		margin: 0 auto;
-		width: min(560px, calc(100vw - 24px));
-		max-height: min(78vh, 680px);
-		overflow-y: auto;
-		overscroll-behavior: contain;
-		padding: 18px 18px 14px;
-		background: var(--card);
-		border-radius: 22px;
-		box-shadow:
-			0 30px 80px -20px var(--shadow),
-			0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
-		transform-origin: 50% 50%;
-	}
 	/* the film's own modal: the list's detail blocks, stacked, with a way out */
 	.spdetail { display: grid; gap: 10px; padding-top: 12px; }
 	.spxrow { display: flex; justify-content: flex-end; margin-bottom: -2px; }
@@ -858,15 +645,6 @@
 	/* 16px is the size below which iPhone Safari zooms the page in on focus,
 	   which threw the whole modal off the screen mid-search */
 	.spdetail .nin { width: 100%; }
-	.spmodal :global(.sinput),
-	.spmodal :global(.nin) {
-		font-size: 16px;
-	}
-	.spmodal h2 {
-		margin: 0 0 2px;
-		font-size: 19px;
-		letter-spacing: -0.02em;
-	}
 	/* the empty round: a lantern in its own pool of light, a web in the corner */
 	.spempty {
 		grid-column: 1 / -1;

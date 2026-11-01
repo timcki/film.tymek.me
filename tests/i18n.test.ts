@@ -27,12 +27,13 @@ describe('language selection', () => {
 describe('Polish plurals', () => {
 	it('picks the right one of the three forms', () => {
 		const T = DICT.pl;
-		expect(T.warnFades(1)).toBe('znika za 1 tydzień');
-		expect(T.warnFades(3)).toBe('znika za 3 tygodnie');
-		expect(T.warnFades(8)).toBe('znika za 8 tygodni');
+		// after "za" one round is "rundę", not the "runda" a list of rules says
+		expect(T.warnFades(1)).toBe('znika za 1 rundę');
+		expect(T.warnFades(3)).toBe('znika za 3 rundy');
+		expect(T.warnFades(8)).toBe('znika za 8 rund');
 		// 12 to 14 take the last form despite ending in 2 to 4
-		expect(T.warnFades(12)).toBe('znika za 12 tygodni');
-		expect(T.warnFades(22)).toBe('znika za 22 tygodnie');
+		expect(T.warnFades(12)).toBe('znika za 12 rund');
+		expect(T.warnFades(22)).toBe('znika za 22 rundy');
 	});
 });
 
@@ -79,7 +80,7 @@ describe('the rules text follows the active rule set', () => {
 		const rolling = DICT.pl.rules(view('rolling')).map((r) => r.head).join(' ');
 		expect(banked).toContain('kumulują');
 		expect(rolling).not.toContain('kumulują');
-		expect(rolling).toContain('5 punktów tygodniowo');
+		expect(rolling).toContain('5 punktów na rundę');
 	});
 
 	it('switches attrition wording between archiving and dropping', () => {
@@ -115,7 +116,7 @@ describe('the spend bar on a film nobody has backed', () => {
 });
 
 describe('the budget explainer', () => {
-	it('quotes the weekly grant and the cap it is capped at', () => {
+	it("quotes the round's grant and the cap it is capped at", () => {
 		const help = DICT.pl.budgetHelp(view('banked'));
 		expect(help).toContain('2 punkty');
 		expect(help).toContain('6');

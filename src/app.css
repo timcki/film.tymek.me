@@ -4,7 +4,8 @@
 :root {
 	color-scheme: dark;
 	--bg: #0f1012;
-	/* something for a palette to wash the page with; flat by default */
+	/* something for a palette to wash the page with; flat by default, and in
+	   every palette now, so the page meets the status bar without a seam */
 	--wash: none;
 	--card: #16181c;
 	--card2: #1b1e23;
@@ -24,10 +25,18 @@
 	/* ink for whatever sits on a bright fill: faces, the send arrow, toasts */
 	--onbright: #0b0b0d;
 	--white: #fff;
-	/* complement of --warn: same hue wheel, opposite side, so "leading" and
-	   "about to drop" can never be mistaken for one another */
-	--accent: #92bbe8;
-	--accent-ink: #06203a;
+	/* a dusty rose: pastel, quiet, the colour of cinema seats, and far enough
+	   round the wheel from --warn that "leading" and "about to drop" never
+	   read alike */
+	--accent: #dba7b4;
+	--accent-ink: #2e1119;
+	/* the paper ticket a point is drawn as: on the dark a brighter sheet with
+	   no outline and a deep star, since a dark edge and a pale star on a dark
+	   page go to mud; the light palette has its own below */
+	--ticket-paper: #fff6e2;
+	--ticket-shade: #f0dfbd;
+	--ticket-edge: #fff6e2;
+	--ticket-mark: #b05a70;
 	--warn: #e0a15f;
 	/* split-complement of --accent, a third of the wheel from --warn: a passed-over
 	   film and an about-to-drop film are different states and never read alike */
@@ -157,6 +166,16 @@ header.lean {
 	background-attachment: fixed;
 	background-repeat: no-repeat;
 }
+/* iOS Safari has no fixed backgrounds, and where a child of the bar animates
+   (the countdown's colour, a pip popping) it lifts that child onto a layer of
+   its own and paints the hole behind it black. One layer for the whole bar
+   leaves it nothing to cut out. iOS only: elsewhere the wash stays fixed */
+@supports (-webkit-touch-callout: none) {
+	header.lean {
+		transform: translateZ(0);
+		isolation: isolate;
+	}
+}
 /* content does not stop dead under the header: the same surface again, faded
    out, so the wash carries through the fade rather than being flattened by it */
 header.lean::after {
@@ -188,10 +207,13 @@ header.lean::after {
 	flex: 1;
 	min-width: 0;
 }
+/* the night over what is left of the round: two lines rather than a chip, so
+   nothing is cut short on a narrow phone and the bar holds one box fewer */
 .wkbtn {
 	display: flex;
-	align-items: center;
-	gap: 8px;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 1px;
 	background: none;
 	border: 0;
 	padding: 0;
@@ -213,22 +235,28 @@ header.lean::after {
 	font-weight: 650;
 	letter-spacing: -0.01em;
 	flex: 0 1 auto;
+	line-height: 1.25;
+	white-space: nowrap;
 	min-width: 0;
+	max-width: 100%;
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
-.wkbtn b {
-	color: var(--ink2);
+.wsub {
+	font-size: 12.5px;
 	font-weight: 600;
-}
-.wkbtn.urgent b {
-	color: var(--warn);
-}
-.wlead,
-.wkbtn b,
-.wchip {
+	line-height: 1.25;
+	color: var(--dim);
+	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
+	transition: color 0.6s linear;
 }
+/* what is left of the round, worn by the words that already say it: how much
+   of it has gone, as one rung of the ramp */
+.wk.lit .wsub {
+	color: var(--heat);
+}
+
 .wk .tip {
 	position: absolute;
 	top: calc(100% + 8px);
@@ -257,33 +285,6 @@ header.lean::after {
    the chip is showing, so it answers to the rung instead */
 .wk.lit .tip b {
 	color: var(--heat);
-}
-/* what is left of the round, worn by the words that already say it. A hairline
-   had no area to hold a colour, and a colour is the only thing the text was not
-   saying; so the bar goes and the countdown takes the heat itself */
-.wchip {
-	flex: 0 0 auto;
-	border-radius: 99px;
-	padding: 4px 9px 5px;
-	font-size: 12.5px;
-	font-weight: 650;
-	line-height: 1;
-	font-variant-numeric: tabular-nums;
-	color: var(--heat);
-	/* the wash alone was too thin to hold a colour at this size, so the rung is
-	   drawn round the chip as well as under it */
-	background: color-mix(in srgb, var(--heat) 24%, transparent);
-	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--heat) 38%, transparent);
-	transition:
-		color 0.6s linear,
-		background 0.6s linear,
-		box-shadow 0.6s linear;
-}
-/* the last day stops being a tint and becomes the thing itself */
-.wchip.urgent {
-	color: var(--onbright);
-	background: var(--heat);
-	box-shadow: none;
 }
 h1 {
 	margin: 0;
@@ -318,38 +319,19 @@ header .sub b {
 	color: var(--accent);
 	font-variant-numeric: tabular-nums;
 }
-/* the budget as dots, spelled like the card docks */
+/* the budget as things you hold: a banana or a ticket for every point still
+   yours, a faint ghost of one for every point spent */
 .hpip {
-	width: 15px;
-	height: 15px;
-	border-radius: 50%;
 	display: grid;
 	place-items: center;
 	flex: none;
+	font-size: 15px;
+	line-height: 0;
+	color: var(--accent);
 }
-.hpip.spent {
-	background: var(--accent);
-	color: var(--accent-ink);
-	font-size: 8px;
-	font-weight: 800;
-	line-height: 1;
-}
-.hpip.free svg {
-	display: block;
-	width: 100%;
-	height: 100%;
-}
-/* even dashes by construction, the same way the cards draw theirs: a border is
-   four arcs whose dashes each start afresh, so they bunch where the arcs meet.
-   pathLength normalises the circumference to 12, and a 0.9/1.1 pattern divides
-   that exactly six times whatever the radius happens to be */
-.hpip.free circle {
-	fill: none;
-	stroke: color-mix(in srgb, var(--accent) 55%, transparent);
-	stroke-width: 1.2;
-	stroke-linecap: round;
-	stroke-dasharray: 0.9 1.1;
-	stroke-dashoffset: 0.45;
+.hpip.ghost {
+	filter: grayscale(1);
+	opacity: 0.28;
 }
 .tip b {
 	color: var(--accent);
@@ -481,7 +463,7 @@ header .sub b {
 /* the rules hang from the bar's right edge rather than from the chip, which the
    + now keeps off that edge: anchored to the chip, a phone-wide tip ran off the
    left of the screen */
-.hrow:has(.spchip) {
+.hrow:has(.spchip, .spadd) {
 	position: relative;
 }
 .hrow .budget:has(.spchip) {
@@ -504,44 +486,103 @@ header .sub b {
 	color: var(--ink);
 	font-variant-numeric: normal;
 }
-/* the + that opens the special round's nomination sheet: the accent's own
-   fill, the one call to action in the bar */
-.pill.spadd {
-	padding: 0;
-	width: 34px;
+/* the bar's end: what you have to spend, and the + that opens the nomination
+   modal. The pips stand on the bar itself, as the cards' dots do, rather than
+   in a box of their own; a special round's chip keeps its pill, since it is a
+   word and a chevron that open the rules */
+.barend {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex: none;
+}
+.barend .budget > .pill:not(.spchip) {
+	background: none;
+	padding: 6px 2px;
+}
+/* while the room picks, the way in stands where the + was, in its colours */
+.pill.roomgo {
 	height: 34px;
-	justify-content: center;
+	padding: 0 14px;
+	gap: 6px;
 	background: var(--accent);
 	color: var(--accent-ink);
+	font-size: 13px;
+	font-weight: 700;
+	text-decoration: none;
 	cursor: pointer;
-	margin-left: 6px;
+}
+.pill.roomgo svg {
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.7;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+/* the + keeps the accent's own fill: the one call to action in the bar */
+/* adding a film: an accent outline round "+ Film", in words, so the solid
+   accent disc with a + stays the cards' own sign for giving a point */
+.pill.spadd {
+	height: 36px;
+	min-width: 36px;
+	padding: 0 14px 0 12px;
+	gap: 5px;
+	justify-content: center;
+	background: color-mix(in srgb, var(--accent) 12%, transparent);
+	box-shadow: inset 0 0 0 1.5px var(--accent);
+	color: var(--accent);
+	font-size: 13.5px;
+	font-weight: 750;
+	cursor: pointer;
 	flex: none;
+}
+.pill.spadd.on {
+	padding: 0;
+}
+.addword:empty {
+	display: none;
+}
+.pill.spadd:has(.addword:empty) {
+	padding: 0;
+	width: 36px;
 }
 .pill.spadd svg {
 	stroke: currentColor;
-	stroke-width: 1.8;
+	stroke-width: 1.6;
 	stroke-linecap: round;
 	transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 /* a quarter and a half round, landing on the × with a small overshoot */
-.pill.spadd.on svg {
-	transform: rotate(135deg);
+.pill.spadd .addx {
+	animation: addx 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes addx {
+	from {
+		transform: rotate(-90deg) scale(0.6);
+	}
 }
 .pill.spadd {
 	transition:
 		transform 0.18s ease,
+		background-color 0.25s ease,
+		color 0.25s ease,
 		box-shadow 0.25s ease;
 }
 .pill.spadd:active {
 	transform: scale(0.9);
 }
+/* open, it is the modal's close, ringed in its own colour */
 .pill.spadd.on {
+	background: var(--accent);
+	color: var(--accent-ink);
 	box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
 }
-/* every pick put up: still there, but spent */
+/* every pick put up, or this week's film nominated: still there and still the
+   accent's, but quietened, so it reads as done rather than as broken */
 .pill.spadd:disabled {
-	background: var(--raise);
-	color: var(--dim);
+	background: none;
+	box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 35%, transparent);
+	color: color-mix(in srgb, var(--accent) 45%, transparent);
 	cursor: default;
 	transform: none;
 }
@@ -551,29 +592,12 @@ header .sub b {
 		transition: none;
 	}
 }
-.wshort {
-	display: none;
-}
-/* a phone's bar holds the special round's two chips by dropping words: the
-   pumpkin alone stands for the round, and the countdown loses its verb */
+/* a phone's bar holds the special round's chip and its + by tightening it: the
+   pumpkin alone stands for the round */
 @media (max-width: 560px) {
-	.hrow:has(.spchip) .wlong {
-		display: none;
-	}
-	.hrow:has(.spchip) .wshort {
-		display: inline;
-	}
 	.pill.spchip {
 		padding: 6px 8px 6px 7px;
 		gap: 4px;
-	}
-	.pill.spadd {
-		width: 32px;
-		height: 32px;
-		margin-left: 3px;
-	}
-	.hrow:has(.spchip) .wk .wkbtn {
-		gap: 6px;
 	}
 }
 /* the narrowest phones (an SE, a mini) are a dozen pixels short of the date,
@@ -583,14 +607,6 @@ header .sub b {
 		padding: 5px 6px 5px 5px;
 		gap: 3px;
 		font-size: 11.5px;
-	}
-	.pill.spadd {
-		width: 30px;
-		height: 30px;
-		margin-left: 2px;
-	}
-	.hrow:has(.spchip) .wk .wkbtn {
-		gap: 3px;
 	}
 }
 /* the patch the rules end on: a skull and a lantern, out of the text's way */
@@ -614,6 +630,11 @@ header .sub b {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
+	/* the reshuffle's lifted card wears a shadow on this box: rounded as the
+	   card is, or the shadow would come out square. Positioned, so the climber
+	   it lifts can pass over the cards it overtakes rather than under them */
+	border-radius: var(--r);
+	position: relative;
 }
 .film {
 	display: flex;
@@ -646,6 +667,53 @@ header .sub b {
 	box-shadow:
 		var(--lift),
 		inset 0 0 0 1px color-mix(in srgb, var(--warn) 30%, transparent);
+}
+/* about to go, and looking it: the poster fading out of the programme. A
+   vote that saves it brings the colour back, slowly enough to be seen */
+.film .p {
+	transition: filter 900ms ease;
+}
+.film.fading:not(.shelf) .p {
+	filter: saturate(0.3) brightness(0.72);
+}
+:root[data-theme='light'] .film.fading:not(.shelf) .p {
+	filter: saturate(0.3) brightness(1.06) contrast(0.82);
+}
+/* and its + says so: a warm halo breathing round it, and the words beside it */
+.pcplus.rescuing {
+	animation: rescue 2.4s ease-in-out infinite;
+}
+@keyframes rescue {
+	0%,
+	100% {
+		box-shadow:
+			0 0 0 4px color-mix(in srgb, var(--warn) 22%, transparent),
+			0 8px 22px -8px color-mix(in srgb, var(--warn) 70%, transparent);
+	}
+	50% {
+		box-shadow:
+			0 0 0 7px color-mix(in srgb, var(--warn) 12%, transparent),
+			0 8px 26px -6px color-mix(in srgb, var(--warn) 85%, transparent);
+	}
+}
+.rescue {
+	flex: none;
+	margin-right: 4px;
+	font-size: 11.5px;
+	font-weight: 650;
+	color: var(--warn);
+	white-space: nowrap;
+	cursor: help;
+	animation: pipset 420ms cubic-bezier(0.22, 1.4, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+	.film .p {
+		transition: none;
+	}
+	.pcplus.rescuing,
+	.rescue {
+		animation: none;
+	}
 }
 .film.shelf {
 	opacity: 0.62;
@@ -901,6 +969,200 @@ header .sub b {
 	.bkpop {
 		animation: none;
 	}
+}
+/* ---- a face, opened: who it is, their rank, and what they stood for here.
+   The menu's language: one sheet, the face beside the name rather than over
+   it, the fine print ruled off underneath. The outer box stands at the face
+   (above it, or below when there is no room); the card inside grows out of it
+   (FacePeek.svelte's transition), from the edge nearest the face */
+.fpeek {
+	position: fixed;
+	z-index: 50;
+	width: var(--pw, 216px);
+	transform: translate(-50%, calc(-100% - 10px));
+	pointer-events: none;
+}
+.fpeek.below {
+	transform: translate(-50%, 10px);
+}
+.bkpop.fpcard {
+	position: static;
+	width: auto;
+	transform: none;
+	animation: none;
+	align-items: stretch;
+	gap: 8px;
+	padding: 10px 12px 11px 10px;
+	background: var(--card2);
+	border-radius: 18px;
+	transform-origin: 50% 100%;
+}
+.fpeek.below .fpcard {
+	transform-origin: 50% 0;
+}
+.fphead {
+	display: flex;
+	align-items: center;
+	gap: 11px;
+	min-width: 0;
+}
+.fpface {
+	flex: none;
+	display: grid;
+	animation: fpface 340ms cubic-bezier(0.3, 1.5, 0.5, 1) backwards;
+}
+/* the face lands a beat after the card, a little larger than it settles */
+@keyframes fpface {
+	from {
+		transform: scale(0.6);
+		opacity: 0;
+	}
+}
+.fpwho {
+	display: grid;
+	gap: 3px;
+	min-width: 0;
+}
+.bkpop.fpcard .fpwho b {
+	font-size: 14px;
+	text-align: left;
+	overflow-wrap: normal;
+	line-height: 1.2;
+}
+.bkpop.fpcard .bktitle {
+	font-size: 11.5px;
+	text-shadow: none;
+}
+.bkpop.fpcard .fpsub {
+	padding-top: 8px;
+	border-top: 1px solid var(--line);
+	font-size: 11.5px;
+	color: var(--ink2);
+}
+/* the weeks ruled off from the face, or follow on from the sub line under the
+   same rule */
+.bkpop.fpcard .bkweeks {
+	margin-top: 0;
+	padding-top: 8px;
+	border-top: 1px solid var(--line);
+	gap: 6px;
+}
+.bkpop.fpcard .fpsub + .bkweeks {
+	margin-top: -2px;
+	padding-top: 0;
+	border-top: 0;
+}
+.bkpop.fpcard .bkweeks .srow {
+	align-items: center;
+}
+/* a week's points, drawn: the same marks as the list the face was opened from */
+.fpmarks {
+	display: flex;
+	align-items: center;
+	gap: 1px;
+	font-size: 12px;
+	font-style: normal;
+	line-height: 0;
+	color: var(--accent);
+}
+.fpmarks i {
+	display: grid;
+	place-items: center;
+	font-style: normal;
+}
+.fpmarks .five {
+	margin-right: 1px;
+}
+@media (prefers-reduced-motion: reduce) {
+	.fpface {
+		animation: none;
+	}
+}
+/* ---- a film's score, opened: the number now and where it is headed, then
+   the weeks it is made of, each a row of when, the points as points, what
+   they are still worth and what that adds */
+.scard {
+	gap: 10px;
+	padding: 12px 14px 11px;
+}
+.schead {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 10px;
+}
+.bkpop.scard .schead b {
+	font-size: 24px;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+}
+.schead small {
+	margin-left: 3px;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--dim);
+	letter-spacing: 0;
+}
+.bkpop.scard .snext {
+	font-size: 12px;
+	font-weight: 650;
+	color: var(--ink2);
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+.snext i {
+	font-style: normal;
+	font-weight: 500;
+	color: var(--dim);
+}
+.sweeks {
+	display: grid;
+	/* when | the points, taking what is left | what they are worth | what they add */
+	grid-template-columns: auto minmax(0, 1fr) auto auto;
+	align-items: center;
+	gap: 7px 8px;
+	padding-top: 10px;
+	border-top: 1px solid var(--line);
+}
+.sweek {
+	display: contents;
+}
+.bkpop.scard .swhen {
+	font-size: 12px;
+	color: var(--ink2);
+	white-space: nowrap;
+}
+.bkpop.scard .sworth {
+	min-width: 2.6em;
+	font-size: 11px;
+	color: var(--dim);
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+.scard .fpmarks {
+	overflow: hidden;
+}
+.bkpop.scard .sadds {
+	min-width: 2.4em;
+	font-size: 12.5px;
+	font-weight: 700;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+.sweek.older .swhen,
+.sweek.older .sadds {
+	color: var(--dim);
+	font-weight: 500;
+}
+.sweek.older .swhen {
+	grid-column: 1 / 3;
+}
+.bkpop.scard .snote {
+	font-size: 10.5px;
+	color: var(--dimmer);
+	line-height: 1.35;
 }
 .nobk {
 	font-size: 11px;
@@ -1409,82 +1671,129 @@ button.holdchip:hover {
 	border-radius: var(--r);
 }
 /* §3.5: a sleeper cannot win this week, so it stops spending a candidate's
-   worth of screen. The whole row collapses into the height of a thumbnail:
-   what survives is what can still be acted on (the poster that opens the
-   sheet, the score, the dock that backs it for next week, the chip that wakes
-   it) and what goes is everything only ever read while choosing. The shelf
-   renders through the same snippet and has none of this to hide */
-.film.held:not(.shelf) {
-	padding: 8px 12px;
-	gap: 12px;
+   worth of screen. On a phone the whole row collapses into the height of a
+   thumbnail: what survives is what can still be acted on (the poster that
+   opens the sheet, the score, the dock that backs it for next week, the line
+   that says why) and what goes is everything only ever read while choosing. The shelf
+   renders through the same snippet and has none of this to hide. On a
+   desktop it keeps a card's shape, the same size as the cards beside it in
+   the grid, and says it is asleep in its own line instead */
+@media (max-width: 959px) {
+	.film.held:not(.shelf) {
+		padding: 8px 12px;
+		gap: 12px;
+		align-items: center;
+		/* one line: the fine print no longer claims a row of its own */
+		flex-wrap: nowrap;
+	}
+	/* .p carries its own width, so shrinking the wrapper alone leaves the poster
+	   painting at full size and driving the card's height from inside a small box */
+	.film.held:not(.shelf) .pw,
+	.film.held:not(.shelf) .p {
+		flex: 0 0 36px;
+		width: 36px;
+		align-self: center;
+	}
+	.film.held:not(.shelf) .p {
+		border-radius: 6px;
+	}
+	.film.held:not(.shelf) .mm,
+	.film.held:not(.shelf) .note,
+	.film.held:not(.shelf) .nomface,
+	.film.held:not(.shelf) .backers,
+	.film.held:not(.shelf) .cardfoot,
+	.film.held:not(.shelf) .crowdfold {
+		display: none;
+	}
+	/* the title line and the dock stop stacking and share the thumbnail's height */
+	.film.held:not(.shelf) .b {
+		flex-direction: row;
+		align-items: center;
+		gap: 8px;
+	}
+	.film.held:not(.shelf) .hd {
+		flex: 1;
+		min-width: 0;
+		align-items: center;
+		gap: 8px;
+	}
+	/* the reserved dot height is what keeps a vote from reflowing the list; on one
+	   row the thumbnail is taller than the dock, so the card is steady without it.
+	   The auto margin has to go too: in a row it drops the dock off centre */
+	.film.held:not(.shelf) .ft {
+		padding-top: 0;
+		margin-top: 0;
+		min-height: 0;
+		flex: none;
+	}
+	.film.held:not(.shelf) .coin {
+		flex: none;
+	}
+	/* the poster rules for a card with the faces would stretch it again */
+	.film.held:not(.shelf) .p {
+		height: auto;
+		min-height: 0;
+		aspect-ratio: 2 / 3;
+	}
+}
+/* on a desktop a sleeper is a whole card with nobody's faces in its base:
+   only its +, at the end where every other card has it */
+@media (min-width: 960px) {
+	.film.held:not(.shelf) .fbase {
+		flex: 1;
+		justify-content: flex-end;
+	}
+	.film.held:not(.shelf):has(.fbase) .p {
+		height: 100%;
+		min-height: 150px;
+		aspect-ratio: auto;
+	}
+}
+/* what it is doing, as a line rather than a chip: a moon, "sitting this round
+   out", and whose call it was. Opens the reason, where one was given */
+.sleeps {
+	display: flex;
 	align-items: center;
-	/* one line: the fine print no longer claims a row of its own */
-	flex-wrap: nowrap;
-}
-/* .p carries its own width, so shrinking the wrapper alone leaves the poster
-   painting at full size and driving the card's height from inside a small box */
-.film.held:not(.shelf) .pw,
-.film.held:not(.shelf) .p {
-	flex: 0 0 36px;
-	width: 36px;
-	align-self: center;
-}
-.film.held:not(.shelf) .p {
-	border-radius: 6px;
-}
-.film.held:not(.shelf) .mm,
-.film.held:not(.shelf) .note,
-.film.held:not(.shelf) .nomface,
-.film.held:not(.shelf) .backers,
-.film.held:not(.shelf) .cardfoot {
-	display: none;
-}
-/* the title line and the dock stop stacking and share the thumbnail's height */
-.film.held:not(.shelf) .b {
-	flex-direction: row;
-	align-items: center;
-	gap: 8px;
-}
-.film.held:not(.shelf) .hd {
-	flex: 1;
+	gap: 5px;
 	min-width: 0;
-	align-items: center;
-	gap: 8px;
-}
-/* the reserved dot height is what keeps a vote from reflowing the list; on one
-   row the thumbnail is taller than the dock, so the card is steady without it.
-   The auto margin has to go too: in a row it drops the dock off centre */
-.film.held:not(.shelf) .ft {
-	padding-top: 0;
-	margin-top: 0;
-	min-height: 0;
-	flex: none;
-}
-.film.held:not(.shelf) .coin {
-	flex: none;
-}
-/* the chip sits under the title, at every width. Beside it, it either crushed
-   the title on a phone or left the row lopsided on a desktop; under it, it costs
-   nothing, because the thumbnail is taller than the two lines of text it makes
-   and the row's height is the thumbnail's either way. It is also the widest
-   thing on the row and misses by a couple of pixels on an ordinary name, so it
-   buys those back from its own padding rather than spending a surname on them */
-.film.held:not(.shelf) .holdchip {
-	align-self: flex-start;
-	flex: none;
-	margin-top: 3px;
 	max-width: 100%;
-	padding-left: 8px;
-	padding-right: 8px;
+	margin-top: 4px;
+	padding: 0;
+	background: none;
+	border: 0;
+	font: inherit;
+	font-size: 12px;
+	color: var(--dim);
+	text-align: left;
+	white-space: nowrap;
 }
-/* the chip's box is bounded, but its text is nowrap and would paint straight
-   through the dashed border rather than stop at it; a long nominator's name
-   gives way here instead */
-.holdchip .holdwho {
+.sleeps .moon {
+	flex: none;
+	width: 12px;
+	height: 12px;
+	fill: var(--ink2);
+}
+.sleeps .sleepwhat {
+	color: var(--ink2);
+	font-weight: 600;
+}
+.sleeps .holdwho::before {
+	content: '·';
+	margin-right: 5px;
+	color: var(--dimmer);
+}
+.sleeps .holdwho {
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	white-space: nowrap;
+}
+/* a reason behind it: the line can be opened, and says so with a dotted rule */
+.sleeps.why {
+	cursor: pointer;
+}
+.sleeps.why .sleepwhat {
+	text-decoration: underline dotted color-mix(in srgb, var(--ink2) 50%, transparent);
+	text-underline-offset: 3px;
 }
 /* the whole mechanic on the one screen that belongs to a single film, set in
    a panel of its own rather than under a rule. The one card here that is a
@@ -1539,11 +1848,81 @@ button.holdchip:hover {
 	padding-top: 4px;
 }
 /* the comments pill leads the right-edge pair, the eye closes it */
-.cardfoot .cmtbtn {
+.cardfoot .cmtbtn,
+.ft .cmtbtn {
 	margin-left: auto;
 }
-.cardfoot .eyeform {
+.cardfoot .eyeform,
+.ft .eyeform {
 	line-height: 0;
+}
+/* beside the faces, the thread and the eye are a size smaller: fine print */
+.fchips {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	margin-top: 8px;
+	min-width: 0;
+}
+/* a nominator's sit-out chip, the counts' size when it shares their row */
+.fchips form {
+	display: flex;
+	min-width: 0;
+}
+.fchips .holdchip {
+	padding: 2px 8px;
+	font-size: 11.5px;
+	white-space: nowrap;
+}
+/* a sleeper's one-line card keeps only its +, at the end of the line */
+.film.held .fbase {
+	flex: none;
+}
+.fchips .eyebtn {
+	padding: 3px 7px;
+	gap: 4px;
+	font-size: 11.5px;
+}
+.fchips .eyebtn svg {
+	width: 12px;
+	height: 12px;
+}
+/* the poster, a size bigger, sets the card's height; a desktop's podium
+   stands its own on a stage instead (below, in the wide layout) */
+.film:has(.fbase) .pw,
+.film:has(.fbase) .p {
+	flex-basis: 100px;
+	width: 100px;
+}
+/* and it runs the card's whole height, so the column beside it never leaves
+   a gap under it; a taller card crops the poster a touch at its sides */
+.film:has(.fbase):not(.held) .pw,
+.film.held:not(.shelf):has(.fbase) .pw {
+	align-self: stretch;
+}
+/* a card made taller from outside (a desktop row of cards is one height, so
+   one card's list unfolding grows its neighbours) keeps that height as space
+   at its foot, not in its poster's row, so its poster keeps its shape */
+.film:has(.fbase):not(.held) {
+	align-content: flex-start;
+}
+.film:has(.fbase):not(.held) .p {
+	height: 100%;
+	min-height: 150px;
+	aspect-ratio: auto;
+}
+/* a desktop's podium keeps its poster on its stage, at the poster's own shape */
+@media (min-width: 960px) {
+	.wrap.home .film.lead:has(.fbase) .pw {
+		width: auto;
+		align-self: stretch;
+	}
+	.wrap.home .film.lead:has(.fbase) .p {
+		width: 136px;
+		height: auto;
+		min-height: 0;
+		aspect-ratio: 2/3;
+	}
 }
 /* seen-it in one glance: the count of everyone, the accent for the viewer */
 .eyebtn {
@@ -1742,24 +2121,73 @@ button.holdchip:hover {
 	opacity: 0.4;
 	cursor: not-allowed;
 }
-.addcard {
-	border: 1px dashed color-mix(in srgb, var(--dim) 38%, transparent);
-	border-radius: var(--r);
-	color: var(--dim);
-	font-size: 13.5px;
-	text-align: center;
-	padding: 18px;
-	background: none;
-	width: 100%;
+/* a dropped film on the shelf is one line: a thumbnail, the title and year,
+   and the way back onto the list at its end */
+.shelfbox .film.shelf {
+	flex-wrap: nowrap;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 10px;
+}
+.shelfbox .film.shelf .p {
+	width: 34px;
+	flex: 0 0 34px;
+	border-radius: 6px;
+}
+.shelfbox .film.shelf .b {
+	flex-direction: row;
+	align-items: center;
+	gap: 10px;
+}
+.shelfbox .film.shelf .hd {
+	flex: 1;
+	min-width: 0;
+}
+.shelfbox .film.shelf .ttl {
+	font-size: 14px;
+}
+.shelfbox .film.shelf .ft {
+	min-height: 0;
+	padding-top: 0;
+	margin-top: 0;
+	flex: none;
+}
+.shelfbox .film.shelf .tap {
+	padding: 6px 12px;
+	font-size: 12px;
+}
+.shelfbox .list {
+	gap: 8px;
+}
+/* the shelf of films that fell off the list, folded by default: its heading is
+   the fold, with a chevron that turns when it is open */
+.shelfbox > summary {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	width: fit-content;
+	list-style: none;
 	cursor: pointer;
-	margin-top: 10px;
+	user-select: none;
 }
-.addcard b {
-	color: var(--dim);
-	font-weight: 650;
+.shelfbox > summary::-webkit-details-marker {
+	display: none;
 }
-.addcard:disabled {
-	cursor: default;
+.shelfchev {
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.5;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	transition: transform 0.2s ease;
+}
+.shelfbox[open] .shelfchev {
+	transform: rotate(180deg);
+}
+@media (prefers-reduced-motion: reduce) {
+	.shelfchev {
+		transition: none;
+	}
 }
 .empty {
 	color: var(--dim);
@@ -1857,6 +2285,7 @@ button.holdchip:hover {
 		gap: 14px;
 	}
 	.wrap.home .film.lead .pw {
+		width: auto;
 		flex: none;
 		align-self: stretch;
 		height: 236px;
@@ -1903,6 +2332,12 @@ button.holdchip:hover {
 	.wrap.home .film.lead .cardfoot {
 		margin-top: -6px;
 		padding-top: 0;
+	}
+	/* the card is a column here, so the fold's full-width basis would be a
+	   full height instead, shrunk to whatever the card has spare: shut, it
+	   would still push the base up by more on a card with less to say */
+	.wrap.home .film.lead .crowdfold {
+		flex-basis: auto;
 	}
 }
 /* and where a third of the page is as wide as a phone, the rest go three
@@ -2041,12 +2476,14 @@ button.holdchip:hover {
 .iconbtn::-webkit-details-marker {
 	display: none;
 }
-/* outside the ring rather than under it: at this size the rank ring lands
-   exactly where a 2px shadow would have, and painted over it */
-details[open] > .iconbtn {
-	outline: 2px solid var(--accent);
-	outline-offset: 5px;
-	border-radius: 99px;
+/* open, the face gives a little, as pressed; no ring of its own, which would
+   sit round the rank ring as a second one */
+.iconbtn {
+	transition: transform 180ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.iconbtn:active,
+details[open]:not(.closing) > .iconbtn {
+	transform: scale(0.92);
 }
 .menu-backdrop {
 	position: fixed;
@@ -2149,72 +2586,105 @@ details[open] > .iconbtn {
 }
 .menu {
 	position: absolute;
-	top: calc(100% + 8px);
+	top: calc(100% + 10px);
 	right: 0;
 	/* the face sits at the left end of the sticky bar, so its menu drops from
 	   the same corner rather than reaching back off the edge of the screen */
 	--menu-side: auto;
 	left: var(--menu-side);
 	z-index: 46;
-	min-width: 178px;
+	width: 252px;
 	background: var(--card2);
 	border: 0;
-	border-radius: 16px;
+	border-radius: 18px;
 	padding: 6px;
 	box-shadow: var(--lift-hi);
+	/* it grows out of the face that opened it, and folds back into it. On a
+	   layer of its own: the bar it hangs from is one flat layer on iOS (see
+	   header.lean), and without one every frame would repaint the bar, the
+	   menu and its shadow whole, which a phone does not keep up with */
+	transform-origin: top right;
+	will-change: transform, opacity;
+	backface-visibility: hidden;
+	animation: menuin 220ms cubic-bezier(0.2, 0.9, 0.3, 1.12);
 }
-.menu .who {
-	display: flex;
-	align-items: center;
-	gap: 9px;
-	padding: 8px 10px 10px;
-	margin-bottom: 4px;
+.hrow .menu {
+	transform-origin: top left;
 }
-.menu .who b {
-	font-size: 13.5px;
-	font-weight: 650;
-	display: block;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+.menuwrap.closing .menu {
+	animation: menuout 150ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+@keyframes menuin {
+	from {
+		opacity: 0;
+		transform: translateY(-6px) scale(0.9);
+	}
+}
+@keyframes menuout {
+	to {
+		opacity: 0;
+		transform: translateY(-4px) scale(0.94);
+	}
+}
+/* and what is in it follows a beat behind, one row after another: only
+   with a mouse, where there is the headroom. On a phone the menu moves as one
+   piece, so there is a single layer to animate rather than a dozen */
+@media (hover: hover) and (pointer: fine) {
+	.menu > * {
+		animation: menurow 260ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+	}
+	.menu > :nth-child(2) {
+		animation-delay: 25ms;
+	}
+	.menu > :nth-child(3) {
+		animation-delay: 50ms;
+	}
+	.menu > :nth-child(4) {
+		animation-delay: 75ms;
+	}
+	.menu > :nth-child(5) {
+		animation-delay: 100ms;
+	}
+	.menu > :nth-child(n + 6) {
+		animation-delay: 125ms;
+	}
+}
+@keyframes menurow {
+	from {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
 }
 .menu a {
 	display: flex;
 	align-items: center;
-	gap: 10px;
-	padding: 9px 10px;
-	border-radius: 8px;
+	gap: 12px;
+	padding: 10px 12px;
+	border-radius: 12px;
 	color: var(--ink);
 	text-decoration: none;
-	font-size: 13.5px;
+	font-size: 14px;
+	transition: background 120ms;
 }
 .menu a:hover {
-	background: var(--card2);
+	background: var(--raise);
+}
+.menu a:active {
+	background: var(--raise);
+	transform: scale(0.98);
 }
 .menu a.on {
 	color: var(--accent);
 }
-/* the settings live at the foot of the menu, on one line: the same pill switch
-   twice, words on the left and the sky on the right */
-.menufoot {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin: 9px 4px 3px;
-}
-.menu .lang {
-	margin: 0;
-	width: fit-content;
-}
-.menu .lang.themes button {
-	display: grid;
-	place-items: center;
-	padding: 5px 9px;
-	line-height: 0;
+/* whose link this is, quietly, at the end of the You row */
+.menu .mname {
+	margin-left: auto;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	font-size: 12px;
 	color: var(--dim);
-}
-.menu .lang.themes button.on {
-	color: var(--ink);
 }
 .menu a .ic {
 	line-height: 0;
@@ -2223,52 +2693,88 @@ details[open] > .iconbtn {
 .menu a.on .ic {
 	color: var(--accent);
 }
+/* the settings at the foot: three full-width rows, each a groove with the
+   live choice raised out of it, every one a thumb's width to hit */
+.menufoot {
+	display: grid;
+	gap: 6px;
+	margin-top: 6px;
+	padding: 8px 2px 2px;
+	border-top: 1px solid var(--line);
+}
+.menu .lang {
+	width: 100%;
+	margin: 0;
+	padding: 3px;
+	gap: 3px;
+	border-radius: 13px;
+}
+.menu .lang > form {
+	flex: 1;
+	display: flex;
+}
+.menu .lang button {
+	flex: 1;
+	height: 34px;
+	display: grid;
+	place-items: center;
+	padding: 0;
+	border-radius: 10px;
+	font-size: 12px;
+	line-height: 0;
+	color: var(--dim);
+	transition:
+		background 160ms,
+		color 160ms,
+		box-shadow 160ms,
+		transform 120ms;
+}
+.menu .lang button:active {
+	transform: scale(0.94);
+}
+.menu .lang button.on {
+	color: var(--ink);
+	/* raised out of the groove: a lighter sheet on the dark, the page's own
+	   paper on the light */
+	background: color-mix(in srgb, var(--ink) 13%, var(--card2));
+}
+:root[data-theme='light'] .menu .lang button.on {
+	background: var(--card);
+}
+/* the accents: a dot each, the live one ringed rather than raised */
+.menu .lang.accents button.on {
+	background: none;
+	box-shadow: none;
+}
+.lang.accents i {
+	display: block;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: linear-gradient(135deg, var(--d) 50%, var(--l) 50%);
+	transition: box-shadow 180ms, transform 180ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+:root[data-theme='light'] .lang.accents i {
+	background: linear-gradient(135deg, var(--l) 50%, var(--d) 50%);
+}
+.lang.accents button.on i {
+	transform: scale(1.08);
+	box-shadow:
+		0 0 0 2px var(--raise),
+		0 0 0 4px var(--ink);
+}
+.menu .lang.accents .nana button {
+	font-size: 19px;
+}
+@media (prefers-reduced-motion: reduce) {
+	.menu,
+	.menu > *,
+	.menuwrap.closing .menu {
+		animation: none;
+	}
+}
 
 /* ---------- sheets ---------- */
-.scrim {
-	position: fixed;
-	inset: 0;
-	background: var(--scrim);
-	backdrop-filter: blur(3px);
-	z-index: 60;
-	opacity: 0;
-	pointer-events: none;
-	transition: opacity 0.2s;
-	border: 0;
-	padding: 0;
-}
-.scrim.on {
-	opacity: 1;
-	pointer-events: auto;
-}
-.sheet {
-	position: fixed;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	z-index: 70;
-	background: var(--card);
-	border-top: 0;
-	border-radius: 24px 24px 0 0;
-	max-height: 92vh;
-	overflow-y: auto;
-	transform: translateY(102%);
-	transition: transform 0.26s cubic-bezier(0.22, 0.9, 0.3, 1);
-	padding-bottom: calc(20px + env(safe-area-inset-bottom));
-}
-/* the shadow belongs to the open sheet alone. A closed one is parked just below
-   the fold, but a transform does not stop it painting: two sheets sit there at
-   all times, and on a phone their shadows rose into the page as a dark haze
-   along the bottom edge, clipped hard where the fixed layer ends */
-.sheet.on {
-	transform: translateY(0);
-	box-shadow: 0 -12px 40px var(--shadow);
-}
-.sheet .inner {
-	max-width: 620px;
-	margin: 0 auto;
-	padding: 0 16px;
-}
 /* a film has enough to say to fill a panel; the list stays one column because a
    ranking is a column, but this is not a ranking */
 .dsheet .inner {
@@ -2351,21 +2857,6 @@ details[open] > .iconbtn {
 .drow form {
 	margin-left: auto;
 }
-.handle {
-	display: block;
-	width: 44px;
-	height: 5px;
-	border-radius: 99px;
-	background: var(--line3);
-	margin: 11px auto 4px;
-	border: 0;
-	padding: 0;
-	cursor: pointer;
-}
-.handle:hover {
-	background: var(--edge);
-}
-
 /* the hero and the chips under it are one card, so the coin sits against an
    edge of its own instead of the far side of the window */
 .dtop {
@@ -2522,6 +3013,52 @@ details[open] > .iconbtn {
 /* the film's modal: in the middle of the screen over a softly blurred page,
    scrolling in itself, with the dock pinned to its foot */
 /* the place a portalled modal is rendered from: no box of its own */
+/* the modal films are put up in (NominateModal.svelte), and a special round's
+   film modal, which is dressed the same */
+/* the dimmed page under the modal, softly out of focus */
+.spveil {
+	position: fixed;
+	inset: 0;
+	z-index: 46;
+	border: 0;
+	padding: 0;
+	background: color-mix(in srgb, var(--bg) 62%, transparent);
+	-webkit-backdrop-filter: blur(4px);
+	backdrop-filter: blur(4px);
+	cursor: default;
+}
+/* a panel in the middle of the screen, high enough that a phone's keyboard
+   leaves the search box and the first results in view */
+.spmodal {
+	position: fixed;
+	z-index: 70;
+	left: 0;
+	right: 0;
+	top: max(11vh, 84px);
+	margin: 0 auto;
+	width: min(560px, calc(100vw - 24px));
+	max-height: min(78vh, 680px);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 18px 18px 14px;
+	background: var(--card);
+	border-radius: 22px;
+	box-shadow:
+		0 30px 80px -20px var(--shadow),
+		0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
+	transform-origin: 50% 50%;
+}
+/* 16px is the size below which iPhone Safari zooms the page in on focus,
+   which threw the whole modal off the screen mid-search */
+.spmodal .sinput,
+.spmodal .nin {
+	font-size: 16px;
+}
+.spmodal h2 {
+	margin: 0 0 2px;
+	font-size: 19px;
+	letter-spacing: -0.02em;
+}
 .phost {
 	display: contents;
 }
@@ -2694,7 +3231,8 @@ details[open] > .iconbtn {
 	position: absolute;
 	inset: 0;
 }
-/* even dashes by construction, as .hpip.free explains. Thirty path-units to the
+/* even dashes by construction: a border is four arcs whose dashes start afresh,
+   so pathLength evens them out. Thirty path-units to the
    small dock's twelve, so a circle near three times the size keeps the same dash
    rhythm rather than six long strokes */
 .pip.empty circle {
@@ -2725,138 +3263,46 @@ details[open] > .iconbtn {
 	opacity: 0.35;
 	cursor: default;
 }
-/* the vote pill: one tap target, the whole weekly budget as three small
-   dots. A check is yours on this film, a dim dot is busy elsewhere, a
-   dashed one is free; the grace ring drains around the freshest check */
-.vd {
-	position: relative;
-	flex: none;
+/* a point in flight (vote-fx.ts), and the ripple and sparks where it lands:
+   loose on the body, above everything, gone once played */
+.vfx-dot,
+.vfx-ring,
+.vfx-spark {
+	position: fixed;
+	left: 0;
+	top: 0;
+	z-index: 90;
+	pointer-events: none;
+	will-change: transform, opacity;
 }
-.tri {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	height: 36px;
-	padding: 0 12px;
-	border: 0;
-	border-radius: 99px;
-	/* a shade above the card and softly shadowed: the one chip in the row
-	   that reads as pressable, where the backer chips lie flat */
-	background: var(--chip);
-	box-shadow:
-		0 1px 2px var(--shadow-soft),
-		0 6px 14px -10px var(--shadow),
-		inset 0 1px 0 var(--sheen);
-	cursor: pointer;
-	transition:
-		box-shadow 140ms,
-		transform 140ms;
-}
-.tri:not(:disabled):hover {
-	box-shadow:
-		0 0 0 1.5px var(--accent),
-		0 1px 2px var(--shadow-soft),
-		inset 0 1px 0 var(--sheen);
-}
-.tri:not(:disabled):active {
-	transform: scale(0.94);
-}
-.tri:disabled {
-	opacity: 0.35;
-	cursor: default;
-	/* a closed week lies flat again */
-	box-shadow: none;
-}
-.tdot {
-	position: relative;
-	width: 12px;
-	height: 12px;
+.vfx-dot {
+	width: 14px;
+	height: 14px;
 	border-radius: 50%;
-	flex: none;
-	display: grid;
-	place-items: center;
-}
-.tdot.set {
 	background: var(--accent);
-	color: var(--accent-ink);
-}
-.tdot.set i {
-	/* a box of its own, centred in the dot: inline, the drawn check sat on the
-	   text line's baseline and missed the middle of a 12px dot */
-	display: grid;
-	place-items: center;
-	font-style: normal;
-	font-size: 7px;
-	font-weight: 800;
-	line-height: 1;
-}
-.tdot.busy {
-	/* clearly there, clearly not yours to tap: well above the pill's own
-	   shade, well below the set dot's accent */
-	background: color-mix(in srgb, var(--dimmer) 60%, var(--card2));
-}
-.tdot.free {
-	color: color-mix(in srgb, var(--accent) 70%, transparent);
-}
-.tdot.free svg {
-	position: absolute;
-	inset: 0;
-}
-/* even dashes by construction; a border's idea of dashed is neither even
-   nor centred at this size */
-.tdot.free circle {
-	fill: none;
-	/* an unspent point is yours to give, so it is drawn in the colour votes are
-	   drawn in. A hairline in a border colour, on a chip a shade above the card,
-	   was a slot nobody could see they were allowed to fill */
-	stroke: color-mix(in srgb, var(--accent) 62%, transparent);
-	stroke-width: 1.4;
-	stroke-linecap: round;
-	stroke-dasharray: 0.9 1.1;
-	stroke-dashoffset: 0.45;
-}
-/* the plus is the slot's whole manual, the same word the sheet's big pips use */
-.tdot.free path {
-	fill: none;
-	stroke: currentColor;
-	stroke-width: 1.3;
-	stroke-linecap: round;
-}
-.tri:not(:disabled):hover .tdot.free {
-	color: var(--accent);
-}
-.tri:not(:disabled):hover .tdot.free circle {
-	stroke: var(--accent);
-}
-/* the bowstring drawn: one more tap makes it count */
-.tdot.free.armed {
-	border: 1.5px solid var(--accent);
-	animation: armpulse 0.9s ease-in-out infinite;
-}
-.tdot.free.armed svg {
-	display: none;
-}
-.tri.armed {
 	box-shadow:
-		0 0 0 1.5px var(--accent),
-		0 1px 2px var(--shadow-soft),
-		inset 0 1px 0 var(--sheen);
+		0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent),
+		0 0 16px color-mix(in srgb, var(--accent) 75%, transparent);
 }
-@keyframes armpulse {
-	0%,
-	100% {
-		transform: scale(1);
-		box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent);
-	}
-	50% {
-		transform: scale(1.18);
-		box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
-	}
+.vfx-dot.nana {
+	width: auto;
+	height: auto;
+	background: none;
+	box-shadow: none;
+	font-size: 20px;
+	line-height: 0;
+	filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 70%, transparent));
 }
-@media (prefers-reduced-motion: reduce) {
-	.tdot.free.armed {
-		animation: none;
-	}
+.vfx-ring {
+	border-radius: 50%;
+	border: 2px solid var(--accent);
+}
+.vfx-spark {
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: var(--accent);
+	box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 80%, transparent);
 }
 @keyframes ringdrain {
 	to {
@@ -2917,9 +3363,9 @@ details[open] > .iconbtn {
 	border-radius: 12px;
 	cursor: pointer;
 	background: none;
-	border-left: 0;
-	border-right: 0;
-	border-top: 0;
+	/* all four: left with its bottom edge, a button keeps the browser's own
+	   bevel there, a bright lip under every row */
+	border: 0;
 	width: 100%;
 	text-align: left;
 	color: inherit;
@@ -4549,4 +4995,589 @@ button.wcard:focus-visible img {
 .demopill:hover,
 .demohome:hover {
 	border-color: var(--edge);
+}
+
+/* ------------------------------------------------------------- the base -----
+   The card's base: who is behind the film as a row of faces, and the + that
+   adds you. The score stands up by the title, in one column down the list */
+.fbase {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+}
+.bfaces {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+.fface {
+	position: relative;
+	display: grid;
+	flex: none;
+	border-radius: 50%;
+	box-shadow: 0 0 0 2.5px var(--card);
+}
+.fface + .fface {
+	margin-left: -8px;
+}
+/* the faces string on one centre line, the +'s own, big and small alike, so
+   the row and the + read as one level line across the card */
+.bfaces:not(.fan) {
+	align-items: center;
+}
+.bfaces {
+	position: relative;
+	align-self: center;
+	cursor: pointer;
+}
+/* a press gives a little, and an open stack stands up a touch */
+.bfaces:active .fface {
+	transform: scale(0.94);
+}
+.fface {
+	transition:
+		transform 140ms ease,
+		filter 300ms ease,
+		box-shadow 300ms ease;
+}
+/* a face that is given more, or less, grows or shrinks into its new size
+   rather than snapping to it; its place in the row glides with it (flip) */
+.fface > .av {
+	transition:
+		width 380ms cubic-bezier(0.22, 1, 0.36, 1),
+		height 380ms cubic-bezier(0.22, 1, 0.36, 1),
+		flex-basis 380ms cubic-bezier(0.22, 1, 0.36, 1),
+		font-size 380ms cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 300ms ease;
+}
+.ftop {
+	transition:
+		background 300ms ease,
+		color 300ms ease;
+}
+.bfaces.open .fface:not(.lit) {
+	filter: none;
+}
+/* the biggest giver's count, on the corner of the face that leads the stack */
+.ftop {
+	position: absolute;
+	right: -4px;
+	bottom: -3px;
+	min-width: 17px;
+	height: 17px;
+	padding: 0 4px;
+	border-radius: 99px;
+	display: grid;
+	place-items: center;
+	background: var(--ink);
+	color: var(--bg);
+	font-size: 10.5px;
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+	box-shadow: 0 0 0 2px var(--card);
+}
+.fface.me .ftop {
+	background: var(--accent);
+	color: var(--accent-ink);
+}
+/* who gave what, opened in the card itself: no sheet and no backdrop, just
+   the people, two to a line where there is room, biggest first */
+/* the list folds by its row's height, 0fr to 1fr, which the browser animates
+   in one go rather than a frame at a time from script; the rows inside rise
+   and fade in a beat behind it */
+.crowdfold {
+	flex-basis: 100%;
+	/* folded it is nothing at all; the card's row gap is taken off cards that
+	   carry it (below), and it brings its own space when it opens */
+	margin-top: 0;
+	/* its own height, never the card's leftover stretched over it; and the
+	   card's full width, also on a desktop's podium, whose card is a column */
+	align-self: flex-start;
+	width: 100%;
+	display: grid;
+	grid-template-rows: 0fr;
+	transition:
+		grid-template-rows 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+		margin-top 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.crowdfold.open {
+	grid-template-rows: 1fr;
+}
+.crowdfold > .crowdclip {
+	min-height: 0;
+	overflow: hidden;
+	/* room inside the clip for the rank rings and their glow, so a face at
+	   the edge is never shaved */
+	padding: 0 8px;
+	margin: 0 -8px;
+}
+.crowdfold.open {
+	margin-top: 12px;
+}
+/* a card with the faces ends at the foot of its poster: no gap waiting for
+   a row that is shut, and the fine print under it keeps its own space */
+.film:has(.crowdfold) {
+	row-gap: 0;
+}
+.film:has(.crowdfold) .cardfoot {
+	margin-top: 10px;
+}
+.crowd {
+	display: grid;
+	/* a face over its points, as many to a line as fit: a little scoreboard */
+	grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+	gap: 12px 4px;
+	padding: 10px 0 6px;
+}
+.crowdrow {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 5px;
+	min-width: 0;
+	/* the cell's box takes in its face's ring and glow: an animating cell is
+	   painted on its own, and iOS cuts what lies outside the box square */
+	padding: 4px 0;
+	margin: -4px 0;
+	background: none;
+	border: 0;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+	-webkit-tap-highlight-color: transparent;
+}
+.crowdrow:active .cface {
+	transform: scale(0.92);
+}
+.cface {
+	display: grid;
+	border-radius: 50%;
+	transition:
+		opacity 160ms ease,
+		transform 160ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+/* yours: the accent ring, as in the stack */
+.crowdrow.me .cface {
+	box-shadow:
+		0 0 0 2px var(--card),
+		0 0 0 4px var(--accent);
+}
+/* a face that was not in the stack has nowhere to fly from: it fades in at
+   its seat, and the points under every face follow a beat behind */
+.crowdfold:not(.open) .cface,
+.crowdfold:not(.open) .crowdpts {
+	opacity: 0;
+}
+.crowdpts {
+	transition: opacity 200ms ease;
+}
+.crowdfold.open .cface {
+	transition-delay: calc(80ms + var(--r, 0) * 22ms);
+}
+.crowdfold.open .crowdpts {
+	transition-delay: calc(220ms + var(--r, 0) * 22ms);
+}
+.crowdpts {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	gap: 1px;
+	max-width: 100%;
+	/* one size for every mark, so a bunch is five of the same bananas (a
+	   stack five of the same tickets), not a bigger fruit */
+	font-size: 11px;
+	line-height: 0;
+	color: var(--accent);
+}
+.crowdpts i {
+	display: grid;
+	place-items: center;
+	font-style: normal;
+}
+.crowdpts i.five {
+	margin-right: 1px;
+}
+/* a face in flight between the stack and the list: a copy over the page */
+.faceflight {
+	position: fixed;
+	z-index: 60;
+	margin: 0 !important;
+	pointer-events: none;
+	transform-origin: 50% 50%;
+	will-change: transform;
+	/* moved frame by frame from script: a face's own transition on transform
+	   would smooth every step and leave the copy trailing behind its seat */
+	transition: none !important;
+	animation: none !important;
+}
+/* open, the stack's faces are down in the list; a chevron is left to fold it */
+.bfaces.open .fface,
+.bfaces.open .fmore {
+	visibility: hidden;
+}
+.fshut {
+	position: absolute;
+	left: 6px;
+	top: 50%;
+	width: 14px;
+	height: 14px;
+	margin-top: -7px;
+	fill: none;
+	stroke: var(--dim);
+	stroke-width: 1.6;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	opacity: 0;
+	transform: translateY(4px);
+	transition:
+		opacity 200ms ease,
+		transform 260ms cubic-bezier(0.3, 1.6, 0.5, 1);
+	pointer-events: none;
+}
+.bfaces.open .fshut {
+	opacity: 1;
+	transform: none;
+	transition-delay: 180ms;
+}
+/* the pictures in the stack must not offer to be saved, dragged or selected,
+   which iOS does on a long press; a tap goes straight through to the stack */
+.fbase img {
+	-webkit-touch-callout: none;
+	-webkit-user-drag: none;
+	-webkit-user-select: none;
+	user-select: none;
+	pointer-events: none;
+}
+.fbase {
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+/* behind the film from earlier weeks: still there, but resting */
+.fface:not(.lit) {
+	/* quietened rather than see-through, so overlapping faces stay solid and
+	   still recognisable */
+	filter: saturate(0.35) brightness(0.82);
+}
+:root[data-theme='light'] .fface:not(.lit) {
+	filter: saturate(0.35) brightness(1.05) contrast(0.8);
+}
+/* put points in this week: lit, with a soft halo of their own */
+.fface.lit {
+	box-shadow:
+		0 0 0 2.5px var(--card),
+		0 0 10px color-mix(in srgb, var(--ink) 18%, transparent);
+}
+/* yours, given a point this week: in the stack like everyone's, first and in
+   front, told apart by the accent ring alone */
+.fface.me {
+	box-shadow:
+		0 0 0 2px var(--card),
+		0 0 0 4px var(--accent);
+	animation: ringin 520ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+/* your ring arrives: thrown wide and pulled in tight */
+@keyframes ringin {
+	0% {
+		box-shadow:
+			0 0 0 2px var(--card),
+			0 0 0 12px color-mix(in srgb, var(--accent) 0%, transparent);
+	}
+	60% {
+		box-shadow:
+			0 0 0 2px var(--card),
+			0 0 0 3px var(--accent),
+			0 0 18px var(--accent);
+	}
+}
+.fmore {
+	margin-left: 6px;
+	font-size: 12.5px;
+	font-weight: 700;
+	color: var(--dim);
+}
+.fvote {
+	flex: none;
+	align-self: center;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.fvote form {
+	display: flex;
+}
+/* the way back, for the grace window: a small ↶ in its draining ring, quiet
+   beside the + so the two never compete */
+.fundo {
+	position: relative;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	display: grid;
+	place-items: center;
+	background: none;
+	color: var(--dim);
+	cursor: pointer;
+	animation: pipset 420ms cubic-bezier(0.22, 1.4, 0.36, 1);
+}
+.fundo svg:not(.fback) {
+	position: absolute;
+	inset: 0;
+	transform: rotate(-90deg);
+}
+.fundo .ringtrack {
+	fill: none;
+	stroke: var(--line2);
+	stroke-width: 2;
+}
+.fundo .ring {
+	fill: none;
+	stroke: var(--dim);
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-dasharray: 100.5;
+	stroke-dashoffset: 0;
+}
+.fundo.urgent .ring {
+	stroke: var(--warn);
+}
+.fback {
+	width: 11px;
+	height: 11px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.6;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.pcnum {
+	flex: none;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--ink);
+	font: inherit;
+	line-height: 1;
+	cursor: help;
+}
+/* up on the title line where the coin was, plain, no circle */
+.pcnum {
+	min-width: 40px;
+	display: grid;
+	justify-items: end;
+	align-self: flex-start;
+	text-align: right;
+}
+.pcnum b {
+	font-size: 22px;
+	letter-spacing: -0.02em;
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+}
+.pcnum i {
+	font-style: normal;
+	font-size: 10px;
+	font-weight: 600;
+	color: var(--dim);
+	margin-top: 2px;
+}
+.pcplus {
+	position: relative;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	display: grid;
+	place-items: center;
+	background: var(--accent);
+	color: var(--accent-ink);
+	cursor: pointer;
+	transition:
+		transform 160ms cubic-bezier(0.3, 1.6, 0.5, 1),
+		box-shadow 200ms;
+}
+.pcplus svg {
+	width: 13px;
+	height: 13px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+}
+.pcplus:not(:disabled):active {
+	transform: scale(0.86);
+	transition-duration: 70ms;
+}
+.pcplus:not(:disabled):hover {
+	box-shadow:
+		0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent),
+		0 8px 18px -6px var(--accent);
+}
+/* nothing left to give, and none of it went here: a ghost of the +, the same
+   way a spent point is a ghost of itself in the bar, so the two read as one
+   thing: still there, just used up for the week */
+.pcplus:disabled {
+	box-shadow: none;
+	filter: grayscale(1);
+	opacity: 0.28;
+	cursor: default;
+}
+/* the + is the card's one call to action: big, lit, and it gives under a thumb */
+.pcplus {
+	width: 42px;
+	height: 42px;
+}
+.pcplus svg {
+	width: 15px;
+	height: 15px;
+}
+.pcplus:not(:disabled) {
+	box-shadow:
+		0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent),
+		0 8px 22px -8px color-mix(in srgb, var(--accent) 85%, transparent);
+}
+/* your count this week rides on the + as a badge */
+.bpcount {
+	position: absolute;
+	top: -5px;
+	right: -5px;
+	min-width: 20px;
+	height: 20px;
+	padding: 0 5px;
+	border-radius: 99px;
+	display: grid;
+	place-items: center;
+	background: var(--ink);
+	color: var(--bg);
+	font-size: 11px;
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+	box-shadow: 0 0 0 2px var(--card);
+	animation: pipset 420ms cubic-bezier(0.22, 1.4, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+	.fface,
+	.fface > .av,
+	.fface.me,
+	.crowdfold,
+	.crowdrow,
+	.cface,
+	.crowdpts,
+	.fshut,
+	.fundo,
+	.pcplus,
+	.bpcount {
+		transition: none;
+		animation: none;
+	}
+}
+/* your last point just went here and can still come back: the + stays as it
+   was, lit, with its count, only no longer pressable */
+.pcplus.mine:disabled {
+	filter: none;
+	opacity: 1;
+	box-shadow: 0 8px 22px -10px color-mix(in srgb, var(--accent) 85%, transparent);
+}
+/* spent out, with points here: what you gave, lit in the accent */
+.pcdone {
+	width: 42px;
+	height: 42px;
+	flex: none;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+	background: var(--accent);
+	color: var(--accent-ink);
+	box-shadow: 0 8px 22px -10px color-mix(in srgb, var(--accent) 85%, transparent);
+	line-height: 1;
+}
+/* the mark and the number share one centre line: the mark in a box of the
+   number's cap height, so a banana's own baseline cannot lift it */
+.pcdone i {
+	display: grid;
+	place-items: center;
+	width: 13px;
+	height: 13px;
+	font-style: normal;
+	font-size: 12px;
+	line-height: 1;
+}
+.pcdone i > * {
+	display: block;
+	max-width: 100%;
+	max-height: 100%;
+}
+.pcdone b {
+	font-size: 15px;
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+	animation: pipset 420ms cubic-bezier(0.22, 1.4, 0.36, 1);
+}
+
+/* the accent as a colour the browser can blend: picking another one eases
+   every button, ring and star over to it rather than snapping (see pick() in
+   +layout.svelte). Registered, since a plain custom property cannot animate */
+@property --accent {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: transparent;
+}
+@property --accent-ink {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: transparent;
+}
+@property --ticket-mark {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: transparent;
+}
+:root {
+	transition:
+		--accent 320ms ease,
+		--accent-ink 320ms ease,
+		--ticket-mark 320ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		transition: none;
+	}
+}
+
+/* the same on a phone, where the page-wide fade flashes: for the moment of
+   the switch every colour eases over in place, then the page's own
+   transitions come back */
+.look-easing *,
+.look-easing *::before,
+.look-easing *::after {
+	transition:
+		background-color 380ms ease,
+		color 380ms ease,
+		border-color 380ms ease,
+		fill 380ms ease,
+		stroke 380ms ease,
+		box-shadow 380ms ease !important;
+}
+
+/* switching palette or bananas: the old look fades into the new one in place
+   (see pick() in +layout.svelte) rather than the page going blank and coming back */
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: 0.42s;
+	animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }

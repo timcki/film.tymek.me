@@ -1,8 +1,8 @@
 import { redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { backTo } from '$lib/server/respond';
-import { bananaOf, themeOf } from '$lib/themes';
-import { BANANA_COOKIE, THEME_COOKIE, COOKIE_MAX_AGE } from '../../hooks.server';
+import { accentOf, bananaOf, themeOf } from '$lib/themes';
+import { ACCENT_COOKIE, BANANA_COOKIE, THEME_COOKIE, COOKIE_MAX_AGE } from '../../hooks.server';
 
 export const load: PageServerLoad = async () => {
 	redirect(303, '/');
@@ -30,6 +30,20 @@ export const actions: Actions = {
 			path: '/',
 			maxAge: COOKIE_MAX_AGE
 		});
+		redirect(303, backTo(form.get('to'), url));
+	},
+	accent: async ({ request, cookies, url }) => {
+		const form = await request.formData();
+		const keep = {
+			httpOnly: true,
+			secure: url.protocol === 'https:',
+			sameSite: 'lax' as const,
+			path: '/',
+			maxAge: COOKIE_MAX_AGE
+		};
+		cookies.set(ACCENT_COOKIE, accentOf(String(form.get('accent') ?? '')), keep);
+		// bananas are the switch's last dot, so a colour picked puts them away
+		cookies.set(BANANA_COOKIE, '0', keep);
 		redirect(303, backTo(form.get('to'), url));
 	}
 };

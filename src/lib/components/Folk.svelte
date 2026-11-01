@@ -17,7 +17,7 @@
 	onMount(() => {
 		if (part !== 'sky') return;
 		let timer: ReturnType<typeof setTimeout>;
-		lights.flicker = () => {
+		const flicker = () => {
 			clearTimeout(timer);
 			glinting = false;
 			requestAnimationFrame(() => {
@@ -25,9 +25,11 @@
 				timer = setTimeout(() => (glinting = false), 1600);
 			});
 		};
+		lights.flicker = flicker;
 		return () => {
 			clearTimeout(timer);
-			lights.flicker = () => {};
+			// whichever look comes next may have registered its own by now
+			if (lights.flicker === flicker) lights.flicker = () => {};
 		};
 	});
 </script>

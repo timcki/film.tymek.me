@@ -2,17 +2,34 @@
 	import '../app.css';
 	import '../themes.css';
 	import { page } from '$app/state';
+	import { scale } from 'svelte/transition';
+	import { backOut } from 'svelte/easing';
 	import Avatar from '$lib/components/Avatar.svelte';
-	import { formatNight, formatNightDay } from '$lib/datetime';
+	import { formatNight } from '$lib/datetime';
 	import { dictFor, isVotes, LANGS } from '$lib/i18n';
-	import { THEMES } from '$lib/themes';
+	import {
+		ACCENTS,
+		ACCENT_SWATCH,
+		BANANA_BG,
+		LOOK_BG,
+		THEME_BG,
+		THEMES,
+		type Accent,
+		type Theme
+	} from '$lib/themes';
+	import { enhance } from '$app/forms';
+	import { flushSync } from 'svelte';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import Banana from '$lib/components/Banana.svelte';
-	import Check from '$lib/components/Check.svelte';
+	import Ticket from '$lib/components/Ticket.svelte';
 	import LookToken from '$lib/components/LookToken.svelte';
 	import Scenery from '$lib/components/Scenery.svelte';
+	import Cinema from '$lib/components/Cinema.svelte';
 	import { specialOf } from '$lib/specials';
 	import { customOf } from '$lib/custom-weeks';
 	import { nomSheet } from '$lib/special-sheet.svelte';
+	import { inFlight } from '$lib/points-in-flight.svelte';
+	import { picked } from '$lib/look-picked.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import type { LayoutServerData } from './$types';
 
@@ -41,19 +58,6 @@
 			Math.floor(left / 1000) % 60
 		);
 	});
-	// §3.6: a phone's bar with the special round's chips in it has no room for the verb
-	const countdownShort = $derived.by(() => {
-		if (!data.week) return '';
-		const left = new Date(data.week.closesAt).getTime() - now;
-		if (left <= 0) return null;
-		return T.timeLeftShort(
-			Math.floor(left / 86400000),
-			Math.floor(left / 3600000) % 24,
-			Math.floor(left / 60000) % 60,
-			Math.floor(left / 1000) % 60
-		);
-	});
-
 	const title = $derived.by(() => {
 		if (path.startsWith('/history')) return T.watchedH;
 		if (path.startsWith('/stats')) return T.statsH;
@@ -122,6 +126,14 @@
 	const picksLeft = $derived(
 		special ? Math.max(0, special.picksPerPerson - Number(page.data.used ?? 0)) : 0
 	);
+	// the list's +: on the list itself, while the week is open to nominations
+	const addable = $derived(
+		path === '/' && Boolean(data.person) && data.week?.status === 'open' && !data.week.special
+	);
+	// this week's own film, read off the list's page data
+	const nominatedTitle = $derived(
+		(page.data.nominatedThisWeek as { title: string } | null | undefined)?.title ?? null
+	);
 
 	// every page gets the compact bar, so the app has one header rather than two.
 	// The list has no name worth printing, so the night takes that slot, because
@@ -129,7 +141,7 @@
 	// round's number is nobody's reason for opening this, so it waits in the tip
 	const lean = $derived(!bare && Boolean(data.week));
 	const leanLabel = $derived(
-		home && data.week ? formatNightDay(data.week.closesAt, data.lang) : title
+		home && data.week ? formatNight(data.week.closesAt, data.lang) : title
 	);
 
 	// how much of the round is spent
@@ -163,8 +175,47 @@
 		kind === 'admin' ? T.demoAdmin : kind === 'fresh' ? T.demoFresh : T.demoMember;
 
 	let tipOpen = $state(false);
+	// the bar answers a tap on a card's + at once, before the server does
+	const spentNow = $derived(
+		Math.min(
+			(data.person?.spent ?? 0) + (data.person?.left ?? 0),
+			inFlight.spent ?? data.person?.spent ?? 0
+		)
+	);
+	const leftNow = $derived(
+		Math.max(0, (data.person?.spent ?? 0) + (data.person?.left ?? 0) - spentNow)
+	);
+	// once the page says what the bar was already showing, the guess has done
+	// its job and goes, without the bar moving
+	$effect(() => {
+		if (inFlight.spent !== null && data.person?.spent === inFlight.spent) inFlight.spent = null;
+	});
+	// a point spent on a card leaves the bar with a pop, and comes back with one
+	const pipPop = {
+		duration:
+			typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
+				? 0
+				: 340,
+		start: 0.2,
+		easing: backOut
+	};
 	let weekTip = $state(false);
 	let menuOpen = $state(false);
+	// the menu folds back up before it goes: shut a beat after asking, so the
+	// way out can play. Opening is the details element's own, animated in CSS
+	let menuClosing = $state(false);
+	function closeMenu() {
+		if (!menuOpen || menuClosing) return;
+		if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+			menuOpen = false;
+			return;
+		}
+		menuClosing = true;
+		setTimeout(() => {
+			menuOpen = false;
+			menuClosing = false;
+		}, 150);
+	}
 
 	// a menu that survived navigation would hang over the page you just opened
 	$effect(() => {
@@ -183,17 +234,92 @@
 		else delete root.dataset.special;
 	});
 
-	// on auto the phone can change its mind while the page is open, and the
-	// inline boot script has already run by then
+	// the palette, the bananas and the accent, as picked on this page or as the
+	// server said when it loaded. A pick shows at once and is only then sent to
+	// be kept, so the page never reloads to change colour
+	const theme = $derived(picked.theme ?? data.theme);
+	const banana = $derived(picked.banana ?? data.banana);
+	const accent = $derived(picked.accent ?? data.accent);
+
+	// what hooks.server.ts dresses <html> in on a full load, kept true after
+	// it: the palette (auto resolved, and followed, since the phone can change
+	// its mind while the page is open), the bananas, and the two meta tags the
+	// browser reads its own chrome off
 	$effect(() => {
-		if (data.theme !== 'auto') return;
+		const root = document.documentElement;
 		const query = matchMedia('(prefers-color-scheme: light)');
 		const apply = () =>
-			(document.documentElement.dataset.theme = query.matches ? 'light' : 'dark');
+			(root.dataset.theme = theme === 'auto' ? (query.matches ? 'light' : 'dark') : theme);
 		apply();
+		root.toggleAttribute('data-banana', banana);
+		if (accent === 'rose') delete root.dataset.accent;
+		else root.dataset.accent = accent;
+		document
+			.querySelector('meta[name="color-scheme"]')
+			?.setAttribute('content', theme === 'auto' ? 'light dark' : theme);
+		const bg = data.look ? LOOK_BG[data.look] : banana ? BANANA_BG : THEME_BG;
+		const old = document.querySelectorAll('meta[name="theme-color"]');
+		const tint = (content: string, media?: 'dark' | 'light') => {
+			const meta = document.createElement('meta');
+			meta.name = 'theme-color';
+			meta.content = content;
+			if (media) meta.media = `(prefers-color-scheme: ${media})`;
+			return meta;
+		};
+		const tints =
+			theme === 'auto' ? [tint(bg.dark, 'dark'), tint(bg.light, 'light')] : [tint(bg[theme])];
+		if (old[0]) old[0].before(...tints);
+		else document.head.append(...tints);
+		old.forEach((m) => m.remove());
+		if (theme !== 'auto') return;
 		query.addEventListener('change', apply);
 		return () => query.removeEventListener('change', apply);
 	});
+
+	// the switch itself: the new look fades in over the old one (a view
+	// transition, where there is one, and a plain swap where there is not or
+	// motion is unwanted), and the cookie is set behind it. The forms still
+	// post and redirect without scripting, as they always did
+	const pick =
+		(next: { theme?: Theme; banana?: boolean; accent?: Accent }): SubmitFunction =>
+		() => {
+			const before = { ...picked };
+			const swap = () => {
+				Object.assign(picked, next);
+				flushSync();
+			};
+			// a palette or bananas repaint the whole page, so the old page fades
+			// into the new one. An accent alone is a few buttons and rings: it
+			// blends there in place (the registered --accent in app.css), and is
+			// kept out of the page-wide fade, which iOS plays as a flash and a
+			// jump down a long, scrolled list
+			// On a phone there is no page-wide fade at all (it flashes there too):
+			// for a moment every colour on the page eases over in place instead
+			const whole = next.theme !== undefined || (next.banana ?? banana) !== banana;
+			const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+			const mouse = matchMedia('(hover: hover) and (pointer: fine)').matches;
+			if (whole && !still && mouse && document.startViewTransition)
+				document.startViewTransition(swap);
+			else if (whole && !still) {
+				const root = document.documentElement;
+				root.classList.add('look-easing');
+				swap();
+				setTimeout(() => root.classList.remove('look-easing'), 420);
+			} else swap();
+			// the pick is already on screen and the cookie only keeps it for the
+			// next load, so nothing is fetched back: reloading the page's data
+			// would redraw the list under it, which a phone shows as a flash and a
+			// jump. The pick stands in for the data until then. Only if it was
+			// not kept does the page go back to how it was
+			return async ({ result }) => {
+				if (result.type === 'error' || result.type === 'failure') {
+					delete picked.theme;
+					delete picked.banana;
+					delete picked.accent;
+					Object.assign(picked, before);
+				}
+			};
+		};
 
 	// toasts fade themselves out; keyed on seq so the same text twice still shows
 	let visible = $state(false);
@@ -236,8 +362,16 @@
 {#snippet identity()}
 	{#if data.person}
 		<!-- details, not a button, so the only navigation still works without JS -->
-		<details class="menuwrap" bind:open={menuOpen}>
-			<summary class="iconbtn" aria-label={T.menu}>
+		<details class="menuwrap" class:closing={menuClosing} bind:open={menuOpen}>
+			<summary
+				class="iconbtn"
+				aria-label={T.menu}
+				onclick={(event) => {
+					if (!menuOpen) return;
+					event.preventDefault();
+					closeMenu();
+				}}
+			>
 				<Avatar
 					name={data.person.name}
 					colour={data.person.colour}
@@ -249,17 +383,6 @@
 			</summary>
 
 			<div class="menu">
-				<div class="who">
-					<Avatar
-						name={data.person.name}
-						colour={data.person.colour}
-						avatar={data.person.avatar}
-						size={26}
-						font={11}
-						xp={data.person.xp}
-					/>
-					<b>{data.person.name}</b>
-				</div>
 				<a href={listPath} class:on={home}>
 					<span class="ic">
 						<svg
@@ -320,6 +443,9 @@
 						>
 					</span>
 					{T.tabYou}
+					<!-- who this link is: the face is the button that opened the menu,
+					     so the name rides here rather than a second picture of it -->
+					<span class="mname">{data.person.name}</span>
 				</a>
 				{#if data.person.isAdmin}
 					<a href="/admin" class:on={path.startsWith('/admin')}>
@@ -344,8 +470,12 @@
 				<!-- the settings nobody touches twice a year, kept out of the bar -->
 				<div class="menufoot">
 					{@render langswitch()}
-					<!-- §3.6: a special look is dark only, so there is nothing to switch -->
-					{#if !data.look}{@render themeswitch()}{/if}
+					<!-- §3.6: a special look is dark only and brings its own accent, so
+					     there is nothing to switch -->
+					{#if !data.look}
+						{@render themeswitch()}
+						{@render accentswitch()}
+					{/if}
 				</div>
 			</div>
 		</details>
@@ -364,15 +494,57 @@
 	</div>
 {/snippet}
 
+<!-- the accent: a dot of each, half its dark shade and half its light, so it
+     says what it will be on either palette. Bananas are the last dot: they bring
+     an accent of their own, so they are one more way to be coloured, and
+     picking a colour puts them away -->
+{#snippet accentswitch()}
+	<div class="lang accents">
+		{#each ACCENTS as name (name)}
+			<form
+				method="POST"
+				action="/theme?/accent"
+				use:enhance={pick({ accent: name, banana: false })}
+			>
+				<input type="hidden" name="accent" value={name} />
+				<input type="hidden" name="to" value={path} />
+				<button
+					class:on={!banana && accent === name}
+					style:--d={ACCENT_SWATCH[name].dark}
+					style:--l={ACCENT_SWATCH[name].light}
+					title={T.accentNames[name]}
+					aria-label={T.accentNames[name]}
+					aria-pressed={!banana && accent === name}
+				><i></i></button>
+			</form>
+		{/each}
+		<form
+			method="POST"
+			action="/theme?/banana"
+			class="nana"
+			use:enhance={pick({ banana: !banana })}
+		>
+			<input type="hidden" name="banana" value={banana ? '0' : '1'} />
+			<input type="hidden" name="to" value={path} />
+			<button
+				class:on={banana}
+				title={T.themeBanana}
+				aria-label={T.themeBanana}
+				aria-pressed={banana}><Banana /></button
+			>
+		</form>
+	</div>
+{/snippet}
+
 {#snippet themeswitch()}
 	<div class="lang themes">
 		{#each THEMES as name (name)}
 			{@const label =
 				name === 'auto' ? T.themeAuto : name === 'dark' ? T.themeDark : T.themeLight}
-			<form method="POST" action="/theme?/set">
+			<form method="POST" action="/theme?/set" use:enhance={pick({ theme: name })}>
 				<input type="hidden" name="theme" value={name} />
 				<input type="hidden" name="to" value={path} />
-				<button class:on={data.theme === name} title={label} aria-label={label}>
+				<button class:on={theme === name} title={label} aria-label={label}>
 					<svg
 						width="15"
 						height="15"
@@ -400,18 +572,6 @@
 			</form>
 		{/each}
 	</div>
-	<!-- bananas lie over whichever palette is showing, so they are a toggle of
-	     their own rather than a fourth way to be lit -->
-	<form method="POST" action="/theme?/banana" class="lang themes nana">
-		<input type="hidden" name="banana" value={data.banana ? '0' : '1'} />
-		<input type="hidden" name="to" value={path} />
-		<button
-			class:on={data.banana}
-			title={T.themeBanana}
-			aria-label={T.themeBanana}
-			aria-pressed={data.banana}><Banana /></button
-		>
-	</form>
 {/snippet}
 
 {#snippet budget()}
@@ -426,17 +586,18 @@
 				onclick={() => (tipOpen = !tipOpen)}
 				onblur={() => (tipOpen = false)}
 			>
-				{#each Array(Math.max(0, data.person.spent)) as _, i (i)}
-					<span class="hpip spent">{#if data.banana}<Banana />{:else}<Check />{/if}</span>
+				<!-- the points are things you hold: a banana each with bananas on, a
+				     cinema ticket each without, and a faint ghost of one where a
+				     point has been spent, so the week starts full and ends on ghosts -->
+				{#each Array(Math.max(0, spentNow)) as _, i (i)}
+					<span class="hpip spent ghost" in:scale={pipPop}
+						>{#if banana}<Banana />{:else}<Ticket />{/if}</span
+					>
 				{/each}
-				{#each Array(Math.max(0, data.person.left)) as _, i (i)}
-					<!-- the ring is drawn rather than bordered, exactly as the cards
-					     draw theirs: even dashes at this size -->
-					<span class="hpip free">
-						<svg viewBox="0 0 12 12" aria-hidden="true"
-							><circle cx="6" cy="6" r="5.25" pathLength="12" /></svg
-						>
-					</span>
+				{#each Array(Math.max(0, leftNow)) as _, i (i)}
+					<span class="hpip free held" in:scale={pipPop}
+						>{#if banana}<Banana />{:else}<Ticket />{/if}</span
+					>
 				{/each}
 			</button>
 			<div class="tip" style:display={tipOpen ? 'block' : 'none'}>
@@ -444,6 +605,43 @@
 				· {T.budgetHelp(data.rules)}
 			</div>
 		</div>
+	{/if}
+{/snippet}
+
+{#snippet addGlyph()}
+	<!-- said in a word, "+ Film", so it is never taken for the cards' round +,
+	     which gives a point. Open, it is the modal's × -->
+	{#if nomSheet.open}
+		<svg class="addx" viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"
+			><path d="M2.8 2.8l6.4 6.4M9.2 2.8l-6.4 6.4" /></svg
+		>
+	{:else}
+		<svg class="addplus" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"
+			><path d="M6 1.8v8.4M1.8 6h8.4" /></svg
+		><span class="addword">{special ? '' : T.btnAddFilm}</span>
+	{/if}
+{/snippet}
+
+{#snippet addFilm()}
+	{#if addable}
+		<!-- the list's own +, the one call to action in the bar, the way a special
+		     round's is: it opens the sheet films are put up in, and turns into its
+		     close while that is open. Once this week's film is in it stays, greyed,
+		     with the film's name in its title, so the bar does not jump about -->
+		<button
+			class="pill spadd"
+			class:on={nomSheet.open}
+			disabled={Boolean(nominatedTitle) && !nomSheet.open}
+			aria-label={nomSheet.open ? T.close : nominatedTitle ? T.nomDone(nominatedTitle) : T.nomH}
+			aria-expanded={nomSheet.open}
+			title={nomSheet.open ? T.close : nominatedTitle ? T.nomDone(nominatedTitle) : T.nomH}
+			onclick={() => {
+				nomSheet.from = null;
+				nomSheet.open = !nomSheet.open;
+			}}
+		>
+			{@render addGlyph()}
+		</button>
 	{/if}
 {/snippet}
 
@@ -493,16 +691,15 @@
 					nomSheet.open = !nomSheet.open;
 				}}
 			>
-				<svg viewBox="0 0 12 12" width="13" height="13" aria-hidden="true"
-					><path d="M6 1.5v9M1.5 6h9" /></svg
-				>
+				{@render addGlyph()}
 			</button>
 		{/if}
 	{/if}
 {/snippet}
 
 {#if bare}
-	<div class="wrap">{@render children()}</div>
+	<!-- bare: no back row for the room's phones and the admin's tables -->
+	<div class="wrap bare">{@render children()}</div>
 {:else}
 	<!-- the host view is a projector or a laptop, never a phone; let it breathe -->
 	<div class="wrap" class:wide={path.startsWith('/host')} class:home
@@ -516,9 +713,10 @@
 				<div class="hrow">
 					{@render identity()}
 
-					<!-- the rung lives on the pair, not the chip, so the tip the chip
-					     opens can wear it too. Only while voting is open: a round that is
-					     over has no heat left to report -->
+					<!-- when, in two lines: the night, and under it what is left of the
+					     round, in the rung's colour. The rung lives on the pair, so the tip
+					     it opens can wear it too. Only while voting is open: a round that
+					     is over has no heat left to report -->
 					<div
 						class="wk"
 						class:lit={data.week.status === 'open' && Boolean(countdown)}
@@ -526,26 +724,23 @@
 					>
 						<button
 							class="wkbtn"
-							class:urgent
 							aria-expanded={weekTip}
 							onclick={() => (weekTip = !weekTip)}
 							onblur={() => (weekTip = false)}
 						>
 							<span class="wlead">{leanLabel}</span>
-							{#if data.week.status === 'open' && countdown}
-								<!-- the words are the countdown already, down to the second, so
-								     colour is all that is left to say: how much of the round has
-								     gone. A bar said it worse and got read as a rank -->
-								<span class="wchip" class:urgent
-									><span class="wlong">{countdown}</span><span class="wshort"
-										>{countdownShort}</span
-									></span
-								>
-							{:else if data.week.status === 'runoff'}
-								<b>{T.roomPicking(data.runoffCode ?? '')}</b>
-							{:else}
-								<b>{T.votingClosed}</b>
-							{/if}
+							<!-- the words are the countdown already, so colour is all that is
+							     left to say: how much of the round has gone. A chip round it
+							     was one box too many in a bar that should be quiet -->
+							<span class="wsub">
+								{#if data.week.status === 'open' && countdown}
+									{countdown}
+								{:else if data.week.status === 'runoff'}
+									{T.roomPicking(data.runoffCode ?? '')}
+								{:else}
+									{T.votingClosed}
+								{/if}
+							</span>
 						</button>
 						<!-- the round in full, one tap away: which evening it is heading for,
 						     and the night down to the hour, which is no longer always Thursday at eight -->
@@ -555,8 +750,26 @@
 						</div>
 					</div>
 
-					{@render budget()}
-					{@render specialChip()}
+					<!-- what you have to spend, and the one thing to add -->
+					<div class="barend">
+						{#if data.week.status === 'runoff' && data.runoffCode}
+							<!-- the room is picking: nothing left to spend or add, so the
+							     bar's one lit thing is the way in. Not on the projector,
+							     which is the room -->
+							{#if !path.startsWith('/host')}
+								<a class="pill roomgo" href="/f/{data.runoffCode}" title={T.openRoom}
+									>{T.roomGo}
+									<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"
+										><path d="M2 6h8M6.5 2.5 10 6l-3.5 3.5" /></svg
+									></a
+								>
+							{/if}
+						{:else}
+							{@render budget()}
+							{@render addFilm()}
+							{@render specialChip()}
+						{/if}
+					</div>
 				</div>
 			</header>
 		{:else}
@@ -597,13 +810,7 @@
 			<!-- a tap anywhere else dismisses the menu. It lives in the page's column,
 			     under the bar and its menu: §3.6's look lifts the column into a layer
 			     of its own, and a backdrop outside it would cover the menu too -->
-			<button class="menu-backdrop" aria-label={T.close} onclick={() => (menuOpen = false)}></button>
-		{/if}
-
-		{#if data.week?.status === 'runoff' && data.runoffCode && !path.startsWith('/host')}
-			<p class="banner accent">
-				<a href="/f/{data.runoffCode}">{T.openRoom}</a>
-			</p>
+			<button class="menu-backdrop" aria-label={T.close} onclick={closeMenu}></button>
 		{/if}
 
 		{#if data.notice && !noticeClosed && !path.startsWith('/host')}
@@ -625,6 +832,8 @@
 	</div>
 	{#if data.look}
 		<Scenery look={data.look} part="land" />
+	{:else}
+		<Cinema />
 	{/if}
 
 {/if}
@@ -653,6 +862,6 @@
 	</div>
 {/if}
 
-<svelte:window onkeydown={(event) => event.key === 'Escape' && (menuOpen = false)} />
+<svelte:window onkeydown={(event) => event.key === 'Escape' && closeMenu()} />
 
 <div class="toast" class:on={visible} class:bad={toast.bad}>{toast.text}</div>

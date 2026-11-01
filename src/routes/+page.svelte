@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { flip } from 'svelte/animate';
+	import { reshuffle } from '$lib/reshuffle';
 	import { fade, scale } from 'svelte/transition';
 	import { portal } from '$lib/portal';
 	import { fitViewport } from '$lib/fit-viewport';
@@ -15,14 +17,24 @@
 		type Peek,
 		type PeekFace
 	} from '$lib/components/FacePeek.svelte';
+	import ScorePeek, { SCORE_W, type ScorePop } from '$lib/components/ScorePeek.svelte';
 	import Poster from '$lib/components/Poster.svelte';
+	import NominateModal from '$lib/components/NominateModal.svelte';
 	import { dictFor, fmtScore, isVotes } from '$lib/i18n';
 	import { levelOf } from '$lib/levels';
 	import Banana from '$lib/components/Banana.svelte';
+	import BananaBunch from '$lib/components/BananaBunch.svelte';
+	import Ticket from '$lib/components/Ticket.svelte';
+	import TicketStack from '$lib/components/TicketStack.svelte';
 	import Check from '$lib/components/Check.svelte';
 	import { say } from '$lib/toast.svelte';
 	import { watchLive } from '$lib/live-poll';
+	import { nomSheet } from '$lib/special-sheet.svelte';
 	import { votePulse } from '$lib/vote-pulse';
+	import { haptic } from '$lib/haptics';
+	import { inFlight } from '$lib/points-in-flight.svelte';
+	import { picked } from '$lib/look-picked.svelte';
+	import { barPip, burst, fly, thump } from '$lib/vote-fx';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -30,6 +42,8 @@
 	const T = $derived(dictFor(data.lang));
 	/** a round said as the evening it ends in */
 	const nominatedFor = (week: number) => T.nomPop(data.evenings[week]);
+	// a banana switch flipped a moment ago, before the server has said so
+	const banana = $derived(picked.banana ?? data.banana);
 	const rules = $derived(data.rules);
 	const votes = $derived(isVotes(rules));
 	const left = $derived(data.person?.left ?? 0);
@@ -40,9 +54,11 @@
 
 	// a run of votes holds the list still: every tap moves scores, and a card
 	// that slid away between the first point and the second had to be hunted
-	// for. The order and the band are kept as they were when the run began;
-	// numbers, dots and faces still change in place, and once the viewer has
-	// been quiet for SETTLE_MS everything glides to where it now belongs
+	// for, or its way back with it. The order and the band are kept as they were
+	// when the run began; numbers, dots and faces still change in place, and
+	// once nothing the viewer gave can still be taken back (or SETTLE_MS after
+	// the last landing, when nothing could) everything glides to where it now
+	// belongs
 	const SETTLE_MS = 2500;
 	let still = $state<{ order: number[]; shortlist: number[] } | null>(null);
 	let settleTimer: ReturnType<typeof setTimeout> | undefined;
@@ -106,35 +122,191 @@
 
 	const undoSeconds = (film: Graceful) => Math.ceil(graceLeftMs(film) / 1000);
 
-	/* ---------------------------------------------------- arming a vote -- */
+	/* ------------------------------------------------------- the base -- */
 
-	// the card votes in two taps: the first arms a dot, the second casts for
-	// real. An armed dot not confirmed in time relaxes and earns the hint
-	let armed = $state<{ filmId: number } | null>(null);
-	let armTimer: ReturnType<typeof setTimeout>;
+	const canCast = (film: Film) => open && left > 0 && Boolean(data.person);
+	// which cards wear the faces and the + as their base: a member's, on the
+	// live list, under points
+	const based = (film: Film, shelf: boolean) => Boolean(data.person) && !votes && !shelf;
+	// faces shown before the rest fold into a count
+	// faces in the stack until the row's width is spent; a fold of one is
+	// never worth its "+1", so the last face shows instead
+	const FACE_ROOM = 210;
+	// what is happening to a film about to go, said in full: the hover on the
+	// words beside the card's +, and the sleeper's line
+	function riskSays(film: Film) {
+		if (!data.week) return '';
+		return rules.attrition.kind === 'archive'
+			? T.warnFades(
+					Math.max(1, rules.attrition.afterWeeksAtZero - (data.week.number - film.added_week))
+				)
+			: T.warnDrops;
+	}
+	// at risk, and you could still put a point on it: the + says so
+	const rescuable = (film: Film) => film.atRisk && !film.held && !!data.week && canCast(film);
 
-	function arm(filmId: number) {
-		clearTimeout(armTimer);
-		armed = { filmId };
-		armTimer = setTimeout(() => {
-			armed = null;
-			say(T.armHint);
-		}, 4000);
+	function stackFit(points: number[], room = FACE_ROOM): number {
+		let width = 0;
+		let fit = 0;
+		for (const p of points) {
+			const next = width + faceSize(p) - (fit ? 8 : 0);
+			if (next > room - (fit < points.length - 1 ? 30 : 0)) break;
+			width = next;
+			fit++;
+		}
+		return fit >= points.length - 1 ? points.length : Math.max(1, fit);
+	}
+	// a face in the stack grows with what its owner gave the film: its area in
+	// proportion to the points, so eleven against two looks it, and five
+	// against three looks close. Capped, so one big giver cannot crowd the row
+	const faceSize = (points: number) => Math.round(Math.min(44, 16 * Math.sqrt(Math.max(1, points))));
+
+	// who gave what: a tap on the stack opens the card itself downwards into a
+	// list, right there under the poster, and a second tap folds it again. No
+	// sheet, no backdrop, nothing to learn
+	let crowdOpen = $state<number | null>(null);
+	// opening it, the faces in the stack fly down to their seats in the list,
+	// and closing it they fly back, so nobody is on the card twice. Each flies
+	// as a copy over the page (the list unfolds inside a clip, which would cut
+	// a face off on its way in), the face at either end hidden until it lands
+	async function toggleCrowd(filmId: number, from: Element) {
+		unpeek();
+		const opening = crowdOpen !== filmId;
+		const card = from.closest('.film');
+		const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+		if (!card || still) {
+			crowdOpen = opening ? filmId : null;
+			return;
+		}
+		const faces = (where: string) =>
+			new Map(
+				[...card.querySelectorAll<HTMLElement>(`${where} [data-pid]`)].map((el) => [
+					el.dataset.pid!,
+					el
+				])
+			);
+		const starts = faces(opening ? '.bfaces' : '.crowd');
+		const rects = new Map([...starts].map(([pid, el]) => [pid, el.getBoundingClientRect()]));
+		crowdOpen = opening ? filmId : null;
+		await tick();
+		const ends = faces(opening ? '.crowd' : '.bfaces');
+		let k = 0;
+		for (const [pid, end] of ends) {
+			const start = starts.get(pid);
+			const a = rects.get(pid);
+			if (!start || !a || !a.width) continue;
+			flyFace(start, a, end, k++);
+		}
+	}
+	function flyFace(start: HTMLElement, a: DOMRect, end: HTMLElement, k: number) {
+		const copy = start.cloneNode(true) as HTMLElement;
+		copy.classList.add('faceflight');
+		copy.removeAttribute('data-pid');
+		Object.assign(copy.style, {
+			left: `${a.left}px`,
+			top: `${a.top}px`,
+			width: `${a.width}px`,
+			height: `${a.height}px`
+		});
+		document.body.append(copy);
+		start.style.visibility = 'hidden';
+		end.style.visibility = 'hidden';
+		copy.querySelector('.ftop')?.animate([{ opacity: 1 }, { opacity: 0 }], {
+			duration: 200,
+			delay: k * 28,
+			fill: 'forwards'
+		});
+		// the seat is looked up again every frame rather than once at take-off:
+		// the list is still unfolding (and on a phone the page may scroll under
+		// it), so a seat measured at the start has moved by the time it lands
+		const begin = performance.now() + k * 28;
+		const duration = 420;
+		const ease = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
+		const frame = (now: number) => {
+			const t = Math.min(1, Math.max(0, (now - begin) / duration));
+			const e = ease(t);
+			const b = end.getBoundingClientRect();
+			const dx = b.left + b.width / 2 - (a.left + a.width / 2);
+			const dy = b.top + b.height / 2 - (a.top + a.height / 2);
+			const scale = b.width / a.width;
+			// a little lift on the way, as if picked up and set down
+			const arc = Math.sin(Math.PI * e);
+			copy.style.transform = `translate(${dx * e}px, ${dy * e - 14 * arc}px) scale(${1 + (scale - 1) * e + 0.08 * arc})`;
+			if (t < 1) requestAnimationFrame(frame);
+			else land();
+		};
+		// both ends given back: the stack keeps its faces hidden by class while
+		// it is open, and a closed list is folded out of sight anyway
+		const land = () => {
+			end.style.visibility = '';
+			start.style.visibility = '';
+			copy.remove();
+		};
+		requestAnimationFrame(frame);
 	}
 
-	function disarm() {
-		clearTimeout(armTimer);
-		armed = null;
+	/** a number that runs to its new value rather than jumping there */
+	function tween(node: HTMLElement, value: number) {
+		let shown = value;
+		let frame = 0;
+		const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+		const paint = (n: number) => (node.textContent = fmtScore(Math.round(n * 10) / 10));
+		return {
+			update(next: number) {
+				cancelAnimationFrame(frame);
+				if (reduced.matches || next === shown) {
+					shown = next;
+					paint(next);
+					return;
+				}
+				const from = shown;
+				let start = -1;
+				const step = (now: number) => {
+					// timed from the first frame it paints, and held inside 0..1: a
+					// frame's stamp can come before the call that asked for it
+					if (start < 0) start = now;
+					const t = Math.min(1, Math.max(0, (now - start) / 520));
+					const eased = 1 - (1 - t) ** 3;
+					shown = from + (next - from) * eased;
+					paint(shown);
+					if (t < 1) frame = requestAnimationFrame(step);
+					else shown = next;
+				};
+				frame = requestAnimationFrame(step);
+			},
+			destroy: () => cancelAnimationFrame(frame)
+		};
 	}
 
-	// a tap anywhere that is not the armed pill quietly relaxes the bowstring
-	function disarmElsewhere(event: PointerEvent) {
-		if (!armed) return;
-		const pill = event.target instanceof Element ? event.target.closest('.tri') : null;
-		if (!(pill instanceof HTMLElement) || pill.dataset.film !== String(armed.filmId)) disarm();
+	/* ------------------------------------------------- feeling a vote -- */
+
+	// a point is the one thing everybody spends here every week, so spending one
+	// should feel like something: a tick under the thumb, the point flying out of
+	// the bar into the film, and a knock as it lands. Taking it back flies it home
+	function castFx(button: Element, filmId?: number) {
+		haptic();
+		// measured before the bar redraws, so the point leaves from where it was
+		const flight = fly(barPip('free'), button);
+		inFlight.spent = (inFlight.spent ?? data.person?.spent ?? 0) + 1;
+		flight.then(() => {
+			// the card may have redrawn its button, or moved, while the point flew
+			const target =
+				(filmId !== undefined && document.querySelector(`[data-vote="${filmId}"]`)) || button;
+			burst(target);
+			thump(target);
+			haptic('knock');
+		});
 	}
 
-	// the reorder glide after a confirmed vote; instant for reduced motion
+	function undoFx(button: Element) {
+		haptic();
+		const home = barPip('spent');
+		inFlight.spent = Math.max(0, (inFlight.spent ?? data.person?.spent ?? 0) - 1);
+		fly(button, home);
+	}
+
+	// the reorder after a run of votes (lib/reshuffle.ts) and the faces' own
+	// glides; instant for reduced motion
 	const flipMs =
 		typeof matchMedia === 'undefined' || matchMedia('(prefers-reduced-motion: reduce)').matches
 			? 0
@@ -158,15 +330,6 @@
 		const leftMs = Math.max(0, new Date(opts.until).getTime() - Date.now());
 		node.style.animation = `ringdrain ${opts.total}s linear -${opts.total - leftMs / 1000}s forwards`;
 	}
-
-	type Result = {
-		tmdbId: number | null;
-		title: string;
-		year: number | null;
-		thumb: string | null;
-		poster: string | null;
-		overview: string;
-	};
 
 	type Film = PageData['films'][number];
 
@@ -192,16 +355,7 @@
 		below: boolean;
 		tap: boolean;
 	} | null>(null);
-	type ScoreRow = { week: number; points: number; mult: number; contrib: number };
-	let scorePop = $state<{
-		rows: ScoreRow[];
-		/** the same sum one week older, which is what it will be if nobody votes */
-		next: number;
-		x: number;
-		y: number;
-		below: boolean;
-		tap: boolean;
-	} | null>(null);
+	let scorePop = $state<ScorePop | null>(null);
 	// hover preview of the thread; a click or tap opens the real modal instead
 	let cmtPop = $state<{ film: Film; x: number; y: number; below: boolean } | null>(null);
 	// a mouse hovers it and a finger taps it open; on a tap the mark itself moves
@@ -223,15 +377,23 @@
 		face: PeekFace,
 		sub: string,
 		tap: boolean,
-		rows: WeekPoints[] = []
+		rows: WeekPoints[] = [],
+		// opened from the card's own list: the weeks counted back from now and
+		// the points drawn as points, the way the list beside it draws them
+		crowd = false
 	) {
 		clearTimeout(closing);
+		const now = data.week?.number;
 		const next = peekFor(
 			pill,
 			face,
 			sub,
 			tap,
-			rows.map((row) => ({ label: T.evening(data.evenings[row.week]), value: String(row.points) }))
+			rows.map((row) => ({
+				label: crowd && now ? T.weeksAgo(now - row.week) : T.evening(data.evenings[row.week]),
+				value: String(row.points)
+			})),
+			crowd ? (banana ? 'banana' : 'ticket') : undefined
 		);
 		if (!next) return;
 		shutPops();
@@ -302,10 +464,31 @@
 		shutPops();
 		const rows = film.weeklyPoints.map((row) => {
 			const mult = rules.decayFactor ** (weekNow - row.week);
-			return { ...row, mult, contrib: row.points * mult };
+			return { ...row, ago: weekNow - row.week, mult, contrib: row.points * mult };
 		});
 		const total = rows.reduce((sum, row) => sum + row.contrib, 0);
-		scorePop = { rows, next: total * rules.decayFactor, tap, ...anchorAt(el, NPOP_W, NPOP_H) };
+		// the weeks that still add something worth a digit are spelled out; the
+		// long tail too old to matter is one line at the end
+		const kept = rows.filter((row, i) => i === 0 || row.contrib >= 0.05);
+		const rest = rows.filter((row) => !kept.includes(row));
+		const pct = (m: number) => (m >= 0.995 ? '100%' : m >= 0.01 ? `${Math.round(m * 100)}%` : '<1%');
+		scorePop = {
+			score: fmtScore(film.score),
+			unit: T.unit(film.score, votes),
+			next: fmtScore(total * rules.decayFactor),
+			rows: kept.map((row) => ({
+				label: T.weeksAgo(row.ago),
+				points: row.points,
+				worth: pct(row.mult),
+				adds: `+${fmtScore(row.contrib)}`
+			})),
+			older: rest.length
+				? `+${fmtScore(rest.reduce((sum, row) => sum + row.contrib, 0))}`
+				: null,
+			note: T.fadeNote(rules),
+			tap,
+			...anchorAt(el, SCORE_W, 150 + kept.length * 22)
+		};
 	}
 
 	/** the comment thread under the badge, read-only; the modal is for writing */
@@ -352,9 +535,12 @@
 
 	let detailId = $state<number | null>(null);
 	let noteEdit = $state(false);
-	let searchOpen = $state(false);
+	// the modal films are put up in opens from the + in the bar, which the
+	// layout draws, so whether it is open lives with the bar's. Leaving the list
+	// shuts it, so it is not found open on the way back
+	const searchOpen = $derived(nomSheet.open);
+	$effect(() => () => (nomSheet.open = false));
 	// the +N fold opens every backer pill in a small modal; face popups stack on top
-	let backersOpenId = $state<number | null>(null);
 	// the badge on the poster opens the thread in a modal, for reading and writing
 	let commentsOpenId = $state<number | null>(null);
 
@@ -362,11 +548,6 @@
 		detailId === null
 			? null
 			: ([...data.films, ...data.archived].find((f) => f.id === detailId) ?? null)
-	);
-	const backersFilm = $derived(
-		backersOpenId === null
-			? null
-			: ([...data.films, ...data.archived].find((f) => f.id === backersOpenId) ?? null)
 	);
 	const commentsFilm = $derived(
 		commentsOpenId === null
@@ -379,60 +560,15 @@
 		unpeek();
 		detailId = null;
 		noteEdit = false;
-		searchOpen = false;
-		picked = null;
+		nomSheet.open = false;
 	}
 
 	/* ------------------------------------------------------------- search -- */
 
-	let query = $state('');
-	let results = $state<Result[]>([]);
-	let degraded = $state(false);
-	let searching = $state(false);
-	let picked = $state<Result | null>(null);
-	let timer: ReturnType<typeof setTimeout>;
-
-	function onQuery() {
-		clearTimeout(timer);
-		const q = query.trim();
-		if (q.length < 2) {
-			results = [];
-			searching = false;
-			return;
-		}
-		searching = true;
-		timer = setTimeout(async () => {
-			try {
-				const response = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-				const body = await response.json();
-				// a slow answer to an older query must not land over a newer one
-				if (q !== query.trim()) return;
-				results = body.results ?? [];
-				degraded = Boolean(body.degraded);
-			} catch {
-				if (q !== query.trim()) return;
-				degraded = true;
-				results = [];
-			} finally {
-				if (q === query.trim()) searching = false;
-			}
-		}, 250);
-	}
-
+	// the modal itself is NominateModal; the list knows what is already up
 	const known = $derived(
 		new Set([...data.films, ...data.archived].map((f) => f.title.toLowerCase()))
 	);
-
-	function byHand(): Result {
-		return {
-			tmdbId: null,
-			title: query.trim(),
-			year: null,
-			thumb: null,
-			poster: null,
-			overview: ''
-		};
-	}
 
 	/* -------------------------------------------------------------- forms -- */
 
@@ -449,11 +585,7 @@
 			}
 			return async ({ result, update }) => {
 				sending -= 1;
-				if (vote) {
-					// restarted by every landing, so the quiet is measured from the last one
-					clearTimeout(settleTimer);
-					settleTimer = setTimeout(() => (still = null), SETTLE_MS);
-				}
+				if (vote) clearTimeout(settleTimer);
 				if (result.type === 'failure') {
 					const body = result.data as
 						| { code?: string; params?: Record<string, string | number>; message?: string }
@@ -462,6 +594,19 @@
 				}
 				if (result.type === 'success') onOk?.();
 				await update({ reset: false });
+				// a vote refused leaves the bar to say what the server says
+				if (vote && result.type !== 'success') inFlight.spent = null;
+				if (vote) {
+					// restarted by every landing, and measured from the page as it now
+					// is: the list moves when the last of the viewer's undos runs out
+					clearTimeout(settleTimer);
+					nowMs = Date.now();
+					const undoable = data.films.filter(canUndo).map(graceLeftMs);
+					settleTimer = setTimeout(
+						() => (still = null),
+						undoable.length ? Math.max(...undoable) + 200 : SETTLE_MS
+					);
+				}
 			};
 		};
 	}
@@ -477,10 +622,9 @@
 			refresh: () => invalidateAll(),
 			busy: () =>
 				sending > 0 ||
-				armed !== null ||
 				detailId !== null ||
 				searchOpen ||
-				backersOpenId !== null ||
+				crowdOpen !== null ||
 				commentsOpenId !== null ||
 				peek !== null ||
 				notePop !== null ||
@@ -589,10 +733,19 @@
      leaves the coin and the dock where every other card puts them -->
 {#snippet heldChip(film: Film)}
 	{#if film.held}
-		{@const mine = film.held.personId === data.person?.id}
+		{@const who = film.held.personId === data.person?.id ? T.holdMine : film.held.name}
+		<!-- a line, not a chip: a moon, that it sits this round out, and whose
+		     call it was. With a reason given, the line opens it -->
+		{#snippet says()}
+			<svg class="moon" viewBox="0 0 12 12" aria-hidden="true"
+				><path d="M9.8 7.6A4.4 4.4 0 0 1 4.4 2.2 4.4 4.4 0 1 0 9.8 7.6z" /></svg
+			>
+			<span class="sleepwhat">{T.holdWhat}</span>
+			<span class="holdwho">{who}</span>
+		{/snippet}
 		{#if film.held.reason}
 			<button
-				class="holdchip"
+				class="sleeps why"
 				type="button"
 				onpointerenter={(event) => {
 					mousing = event.pointerType === 'mouse';
@@ -602,12 +755,10 @@
 				onclick={(event) => !mousing && holdAt(event.currentTarget, film, true)}
 				onblur={unpeek}
 			>
-				💤 <span class="holdwho">{mine ? T.holdMine : T.holdBy(film.held.name)}</span>
+				{@render says()}
 			</button>
 		{:else}
-			<span class="holdchip"
-				>💤 <span class="holdwho">{mine ? T.holdMine : T.holdBy(film.held.name)}</span></span
-			>
+			<span class="sleeps">{@render says()}</span>
 		{/if}
 	{/if}
 {/snippet}
@@ -628,10 +779,7 @@
 						.slice(7)
 						.map((b) => b.name)
 						.join(', ')}
-					onclick={() => {
-						unpeek();
-						backersOpenId = film.id;
-					}}
+					onclick={(event) => toggleCrowd(film.id, event.currentTarget)}
 				>
 					+{film.backers.length - 7}
 				</button>
@@ -659,6 +807,7 @@
 						name="points"
 						value={film.myPoints - 1}
 						aria-label={T.btnUndo(undoSeconds(film))}
+						onclick={(event) => undoFx(event.currentTarget)}
 						in:scale={{ duration: 260, start: 0.3, easing: backOut }}
 					>
 						{@render graceRing(film)}
@@ -666,7 +815,7 @@
 					</button>
 				</form>
 			{:else}
-				<span class="pip set"><i>{#if data.banana}<Banana />{:else}<Check />{/if}</i></span>
+				<span class="pip set"><i>{#if banana}<Banana />{:else}<Ticket />{/if}</i></span>
 			{/if}
 		{/each}
 		{#each Array(Math.max(0, left)) as _, i (i)}
@@ -678,6 +827,7 @@
 					value={film.myPoints + 1}
 					disabled={!open}
 					aria-label={T.btnAddPoint}
+					onclick={(event) => castFx(event.currentTarget)}
 				>
 					<!-- drawn, not bordered: the same even ring the small docks use -->
 					<svg viewBox="0 0 36 36" aria-hidden="true"
@@ -705,76 +855,253 @@
 	{/key}
 {/snippet}
 
-{#snippet triDots(film: Film)}
-	<!-- the spent slots in the order the week's points were cast, so every
-	     card tells the same story: a check where a point landed here, a busy
-	     dot where it went to another film, free slots at the end. The first
-	     free dot wears the plus that says tap me; armed, it trades the plus
-	     for the bowstring drawn: one more tap makes it count -->
-	{#each data.myCastOrder as entry (entry.filmId)}
-		{#each Array(entry.points) as _, i (i)}
-			{#if entry.filmId === film.id}
-				<span class="tdot set" in:scale={{ duration: 260, start: 0.3, easing: backOut }}
-					><i>{#if data.banana}<Banana />{:else}<Check />{/if}</i></span
-				>
-			{:else}
-				<span class="tdot busy"></span>
-			{/if}
-		{/each}
-	{/each}
-	{#each Array(Math.max(0, left)) as _, i (i)}
-		<span class="tdot free" class:armed={i === 0 && armed?.filmId === film.id}>
-			<!-- ring and plus are drawn, not borrowed from a border or a font:
-			     even dashes, a dead-centre cross -->
-			<svg viewBox="0 0 12 12" aria-hidden="true">
-				<circle cx="6" cy="6" r="5.25" pathLength="12" />
-				{#if i === 0 && open}<path d="M6 3.9v4.2M3.9 6h4.2" />{/if}
-			</svg>
-		</span>
-	{/each}
+{#snippet scoreNum(film: Film)}
+	<!-- the score, at one width wherever it stands, so down the list the numbers
+	     line up and the order reads at a glance; a tap or a hover explains it -->
+	<button
+		class="pcnum"
+		type="button"
+		onpointerenter={(event) => {
+			mousing = event.pointerType === 'mouse';
+			if (mousing) scoreAt(event.currentTarget, film, false);
+		}}
+		onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+		onclick={(event) => !mousing && scoreAt(event.currentTarget, film, true)}
+		onblur={unpeek}
+		><b use:votePulse={film.score} use:tween={film.score}>{fmtScore(film.score)}</b><i
+			>{T.unit(film.score, votes)}</i
+		></button
+	>
 {/snippet}
 
-{#snippet voteTri(film: Film)}
-	<!-- the card's vote control: one pill, the whole weekly budget as three
-	     dots, and a two-tap cast: the first tap arms, the second is the vote,
-	     final on the spot. Spent out, the pill opens the sheet. -->
-	<div class="vd">
-		{#if left > 0}
-			<form method="POST" action="?/setPoints" use:enhance={submit(disarm)}>
-				<input type="hidden" name="filmId" value={film.id} />
-				<button
-					class="tri"
-					class:armed={armed?.filmId === film.id}
-					data-film={film.id}
-					type={armed?.filmId === film.id ? 'submit' : 'button'}
-					name="points"
-					value={film.myPoints + 1}
-					disabled={!open}
-					aria-label={T.btnAddPoint}
-					onclick={(event) => {
-						if (armed?.filmId !== film.id) {
-							event.preventDefault();
-							arm(film.id);
-						}
-					}}
+{#snippet base(film: Film)}
+	<!-- the card's base: who is behind the film, as faces big enough to know,
+	     and the + that adds you. More people is a longer row, which is the
+	     sign of a film the group wants rather than one somebody does. Whoever
+	     put points in this week is lit; the rest rest quietened. Yours, given a
+	     point this week, wears an accent ring -->
+	{@const fresh = (b: Film['backers'][number]) => b.weekly.some((w) => w.week === data.week?.number)}
+	<!-- the stack is in order of what each gave, and each face is sized by it,
+	     so the row reads at a glance as one person carrying a film or many
+	     chipping in; the fan gives the exact count -->
+	{@const mineFirst = [...film.backers].sort((x, y) => y.points - x.points)}
+	<!-- a film about to go says so beside its +, which takes some of the
+	     faces' room -->
+	{@const fit = stackFit(
+		mineFirst.map((b) => b.points),
+		rescuable(film) ? FACE_ROOM - 120 : FACE_ROOM
+	)}
+	<div class="fbase">
+		{#if !film.held}
+		<button
+			class="bfaces"
+			class:open={crowdOpen === film.id}
+			type="button"
+			aria-expanded={crowdOpen === film.id}
+			aria-label={film.backers.map((b) => `${b.name} ${b.points}`).join(', ') || T.noBackers}
+			onclick={(event) => film.backers.length && toggleCrowd(film.id, event.currentTarget)}
+		>
+			{#each mineFirst.slice(0, fit) as backer, i (backer.person_id)}
+				<!-- the row leads with whoever matters most here, so each face lies
+				     over the one after it, never under -->
+				<span
+					class="fface"
+					data-pid={backer.person_id}
+					style:z-index={film.backers.length - i}
+					class:lit={fresh(backer)}
+					class:me={backer.person_id === data.person?.id && film.myPoints > 0}
+					animate:flip={{ duration: flipMs ? 380 : 0, easing: cubicOut }}
+					in:scale={{ duration: flipMs ? 360 : 0, start: 0.5, easing: cubicOut }}
 				>
-					{@render triDots(film)}
-				</button>
-			</form>
-		{:else}
-			<button
-				class="tri"
-				type="button"
-				aria-label={T.dYours(film.myPoints, votes)}
-				onclick={() => {
-					unpeek();
-					detailId = film.id;
-				}}
-			>
-				{@render triDots(film)}
-			</button>
+					<Avatar
+						name={backer.name}
+						colour={backer.colour}
+						avatar={backer.avatar}
+						size={faceSize(backer.points)}
+						font={Math.round(faceSize(backer.points) * 0.4)}
+						titled={false}
+					/>
+					{#if i === 0 && backer.points > 1}
+						<!-- the biggest giver's count, the one number worth a glance -->
+						<b class="ftop">{backer.points}</b>
+					{/if}
+				</span>
+			{:else}
+				<span class="nobk">{T.noBackers}</span>
+			{/each}
+			{#if film.backers.length > fit}
+				<span class="fmore">+{film.backers.length - fit}</span>
+			{/if}
+			<!-- open, the faces are down in the list: what is left here is the
+			     way to fold it back up -->
+			<svg class="fshut" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.8 6 4.3l3.5 3.5" /></svg>
+		</button>
 		{/if}
+		<div class="fvote" data-vote={film.id}>
+			{#if canUndo(film)}
+				<!-- for the grace window the + is the way back: ↶ in a draining ring -->
+				<form method="POST" action="?/setPoints" use:enhance={submit()}>
+					<input type="hidden" name="filmId" value={film.id} />
+					<button
+						class="fundo"
+						class:urgent={graceLeftMs(film) < 6000}
+						name="points"
+						value={film.myPoints - 1}
+						aria-label={T.btnUndo(undoSeconds(film))}
+						title={T.btnUndo(undoSeconds(film))}
+						onclick={(event) => undoFx(event.currentTarget)}
+					>
+						{@render graceRing(film)}
+						<svg class="fback" viewBox="0 0 12 12" aria-hidden="true"
+							><path d="M4.2 3.2 2 5.4l2.2 2.2M2.3 5.4h5a2.7 2.7 0 0 1 0 5.4H6" /></svg
+						>
+					</button>
+				</form>
+			{/if}
+			{#if film.held}
+				<!-- §3.5: asleep, it cannot be a candidate tonight and a point put on it
+				     only fades, so it is offered no + at all; a point put on it just
+				     before it fell asleep can still be taken back above -->
+			{:else if !canCast(film) && film.myPoints > 0 && !canUndo(film)}
+				<!-- nothing left to give, some of it went here, and the way back has
+				     closed: only then does the + settle into what you gave, still lit,
+				     so the card reads as yours. Until then it stays the + it was -->
+				<span
+					class="pcdone"
+					aria-label={T.dYours(film.myPoints, votes)}
+					in:scale={{ duration: 380, start: 0.5, easing: backOut }}
+				>
+					<i>{#if banana}<Banana />{:else}<Ticket />{/if}</i>
+					{#key film.myPoints}<b>{film.myPoints}</b>{/key}
+				</span>
+			{:else}
+				{#if rescuable(film)}
+					<!-- about to go: no line of warning on the card (which would grow
+					     and shrink with every vote that saves it and every undo), but
+					     its poster fading and the + saying so, right where the answer is -->
+					<span class="rescue" title={riskSays(film)}>{T.rescue}</span>
+				{/if}
+				<form method="POST" action="?/setPoints" use:enhance={submit()}>
+					<input type="hidden" name="filmId" value={film.id} />
+					<button
+						class="pcplus"
+						class:mine={film.myPoints > 0}
+						class:rescuing={rescuable(film)}
+						name="points"
+						value={film.myPoints + 1}
+						disabled={!canCast(film)}
+						aria-label={T.btnAddPoint}
+						onclick={(event) => castFx(event.currentTarget, film.id)}
+					>
+						<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2v8M2 6h8" /></svg>
+						{#if film.myPoints > 0}
+							{#key film.myPoints}<span class="bpcount">{film.myPoints}</span>{/key}
+						{/if}
+					</button>
+				</form>
+			{/if}
+		</div>
 	</div>
+{/snippet}
+
+<!-- the card's fine print: the attrition warning on the left, and on the right
+     edge the thread's pill and an eye that both counts who has seen the film
+     and toggles the viewer's own mark. Where the faces and the + are the card's
+     base it sits in the text column; on the rest, along the base -->
+{#snippet fineprint(film: Film, lead: boolean)}
+	{@render status(film, lead)}
+	{@render chips(film)}
+{/snippet}
+
+<!-- what is happening to the film: about to drop, or the nominator's chance to
+     let it sleep a round -->
+{#snippet status(film: Film, lead: boolean)}
+	{#if film.atRisk && data.week}
+		<span class="warnchip">{riskSays(film)}</span>
+	{/if}
+	<!-- §3.5. A film stepping aside is public the instant it happens, which
+	     is half the point: there is still time to put votes elsewhere. On
+	     your own candidate the chip is the one tap that does it; the reason
+	     goes on afterwards, in the sheet -->
+	{#if lead && canHold(film)}
+		<form method="POST" action="?/hold" use:enhance={submit()}>
+			<input type="hidden" name="filmId" value={film.id} />
+			<input type="hidden" name="title" value={film.title} />
+			<button class="holdchip act">💤 {T.holdCta}</button>
+		</form>
+	{/if}
+{/snippet}
+
+<!-- the thread and the eye, the card's two small counts -->
+{#snippet chips(film: Film)}
+	<!-- the thread's pill: a hover peeks at it, a click or tap opens the
+	     modal where it can be read and joined -->
+	<button
+		class="eyebtn cmtbtn"
+		type="button"
+		aria-label={film.comments.length ? T.commentsH(film.comments.length) : T.commentNone}
+		onpointerenter={(event) => {
+			mousing = event.pointerType === 'mouse';
+			if (mousing) cmtsAt(event.currentTarget, film);
+		}}
+		onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+		onclick={() => {
+			unpeek();
+			commentsOpenId = film.id;
+		}}
+	>
+		<svg
+			viewBox="0 0 24 24"
+			width="13"
+			height="13"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+		>
+			<path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+		</svg>
+		<b>{film.comments.length}</b>
+	</button>
+	<!-- the popup holds the faces it opened with, so the toggle shuts it
+	     rather than leaving a list one name out of date under the cursor -->
+	<form class="eyeform" method="POST" action="?/seen" use:enhance={submit(unpeek)}>
+		<input type="hidden" name="filmId" value={film.id} />
+		<button
+			class="eyebtn"
+			class:on={film.seenMine}
+			title={T.seenBtn}
+			aria-label={T.seenBtn}
+			onpointerenter={(event) => {
+				mousing = event.pointerType === 'mouse';
+				if (mousing) seenAt(event.currentTarget, film, false);
+			}}
+			onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+			onclick={(event) => {
+				// a finger opens the list instead of submitting; the mark is a
+				// button inside it. A mouse keeps the click it always had
+				if (mousing) return;
+				event.preventDefault();
+				seenAt(event.currentTarget, film, true);
+			}}
+		>
+			<svg
+				viewBox="0 0 24 24"
+				width="14"
+				height="14"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+				<circle cx="12" cy="12" r="3" />
+			</svg>
+			<b>{film.seen.length}</b>
+		</button>
+	</form>
 {/snippet}
 
 {#snippet row(film: Film, lead: boolean, shelf: boolean)}
@@ -888,7 +1215,15 @@
 							{[film.director, film.genre].filter(Boolean).join(' · ')}
 						</div>
 					{/if}
+					{#if based(film, shelf) && !film.held}
+						<!-- the two small counts, in the room under the pitch, so the
+						     row below has the width for the faces -->
+						<div class="fchips">{@render chips(film)}</div>
+					{/if}
 				</div>
+				{#if data.person && !votes && !shelf}
+					{@render scoreNum(film)}
+				{:else}
 				<!-- tapping the coin explains the fade arithmetic behind the number -->
 				<button
 					class="coin"
@@ -903,9 +1238,17 @@
 				>
 					<b use:votePulse={film.score}>{fmtScore(film.score)}</b><i>{T.unit(film.score, votes)}</i>
 				</button>
+				{/if}
 			</div>
 			<div class="ft">
-				{@render backerRow(film)}
+				{#if based(film, shelf)}
+					<!-- the faces, the counts and the + sit at the foot of the text
+					     column, level with the foot of the poster, so the card is
+					     the poster's height and no taller -->
+					{@render base(film)}
+				{:else}
+					{@render backerRow(film)}
+				{/if}
 				{#if votes}
 					<form method="POST" action="?/setPoints" use:enhance={submit()}>
 						<input type="hidden" name="filmId" value={film.id} />
@@ -914,6 +1257,8 @@
 							class:on={film.myPoints > 0}
 							name="points"
 							value={film.myPoints > 0 ? 0 : 1}
+							onclick={(event) =>
+								film.myPoints > 0 ? undoFx(event.currentTarget) : castFx(event.currentTarget)}
 							disabled={!open ||
 								(film.myPoints === 0 && left < 1) ||
 								(film.myPoints > 0 && !canUndo(film))}
@@ -921,109 +1266,85 @@
 							{film.myPoints > 0 ? T.btnVoted : T.btnVote}
 						</button>
 					</form>
-				{:else if data.person}
-					<!-- always present: even spent-out it shows where the week went -->
-					{@render voteTri(film)}
 				{/if}
 			</div>
 		</div>
-		<!-- the card's fine print, always present and spanning the full card:
-		     the attrition warning on the left, and on the right edge an eye
-		     that both counts who has seen the film and toggles the viewer's
-		     own mark. Indented to the text column on desktop, flush on phones -->
-		<div class="cardfoot">
-			{#if film.atRisk && data.week}
-				<span class="warnchip">
-					{rules.attrition.kind === 'archive'
-						? T.warnFades(
-								Math.max(
-									1,
-									rules.attrition.afterWeeksAtZero - (data.week.number - film.added_week)
-								)
-							)
-						: T.warnDrops}
-				</span>
-			{/if}
-			<!-- §3.5. A film stepping aside is public the instant it happens, which
-			     is half the point: there is still time to put votes elsewhere. On
-			     your own candidate the chip is the one tap that does it; the reason
-			     goes on afterwards, in the sheet -->
-			{#if lead && canHold(film)}
-				<form method="POST" action="?/hold" use:enhance={submit()}>
-					<input type="hidden" name="filmId" value={film.id} />
-					<input type="hidden" name="title" value={film.title} />
-					<button class="holdchip act">💤 {T.holdCta}</button>
-				</form>
-			{/if}
-			<!-- the thread's pill: a hover peeks at it, a click or tap opens the
-			     modal where it can be read and joined -->
-			<button
-				class="eyebtn cmtbtn"
-				type="button"
-				aria-label={film.comments.length ? T.commentsH(film.comments.length) : T.commentNone}
-				onpointerenter={(event) => {
-					mousing = event.pointerType === 'mouse';
-					if (mousing) cmtsAt(event.currentTarget, film);
-				}}
-				onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
-				onclick={() => {
-					unpeek();
-					commentsOpenId = film.id;
-				}}
-			>
-				<svg
-					viewBox="0 0 24 24"
-					width="13"
-					height="13"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				>
-					<path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-				</svg>
-				<b>{film.comments.length}</b>
-			</button>
-			<!-- the popup holds the faces it opened with, so the toggle shuts it
-			     rather than leaving a list one name out of date under the cursor -->
-			<form class="eyeform" method="POST" action="?/seen" use:enhance={submit(unpeek)}>
-				<input type="hidden" name="filmId" value={film.id} />
-				<button
-					class="eyebtn"
-					class:on={film.seenMine}
-					title={T.seenBtn}
-					aria-label={T.seenBtn}
-					onpointerenter={(event) => {
-						mousing = event.pointerType === 'mouse';
-						if (mousing) seenAt(event.currentTarget, film, false);
-					}}
-					onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
-					onclick={(event) => {
-						// a finger opens the list instead of submitting; the mark is a
-						// button inside it. A mouse keeps the click it always had
-						if (mousing) return;
-						event.preventDefault();
-						seenAt(event.currentTarget, film, true);
-					}}
-				>
-					<svg
-						viewBox="0 0 24 24"
-						width="14"
-						height="14"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
+		<!-- the card's fine print along its base: all of it on a card without
+		     the faces and the +, and on a sleeper's one-line card what is
+		     happening to it; on a card with the faces it is in the counts' row -->
+		{#if !based(film, shelf)}
+			<div class="cardfoot">{@render fineprint(film, lead)}</div>
+		{:else if film.held && ((film.atRisk && data.week) || (lead && canHold(film)))}
+			<div class="cardfoot">{@render status(film, lead)}</div>
+		{/if}
+		{#if (based(film, shelf) && !film.held) || film.backers.length > 7}
+			<!-- who gave what, opened in the card itself: biggest first, a face,
+			     a name, and the points drawn as points. Always in the card and
+			     folded to nothing, so opening it is one smooth unfold -->
+			<div class="crowdfold" class:open={crowdOpen === film.id} inert={crowdOpen !== film.id}>
+			<div class="crowdclip">
+			<div class="crowd">
+				{#each [...film.backers].sort((x, y) => y.points - x.points) as backer, r (backer.person_id)}
+					<!-- a face over its points; the name, the rank and the weeks are
+					     a tap away, in the face's own popup -->
+					<button
+						class="crowdrow"
+						class:me={backer.person_id === data.person?.id}
+						style:--r={r}
+						type="button"
+						aria-label="{backer.name}, {backer.points} {T.unit(backer.points, votes)}"
+						onpointerenter={(event) => {
+							mousing = event.pointerType === 'mouse';
+							if (mousing)
+								peekAt(
+									event.currentTarget,
+									backer,
+									'',
+									false,
+									backer.weekly,
+									true
+								);
+						}}
+						onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+						onclick={(event) =>
+							!mousing &&
+							peekAt(
+								event.currentTarget,
+								backer,
+								'',
+								true,
+								backer.weekly,
+								true
+							)}
 					>
-						<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-						<circle cx="12" cy="12" r="3" />
-					</svg>
-					<b>{film.seen.length}</b>
-				</button>
-			</form>
-		</div>
+						<span class="cface" data-pid={backer.person_id}>
+							<Avatar
+								name={backer.name}
+								colour={backer.colour}
+								avatar={backer.avatar}
+								size={30}
+								font={12}
+								titled={false}
+								xp={backer.xp}
+								slim
+							/>
+						</span>
+						<!-- the points drawn as points, every five gathered into one mark:
+						     a bunch of bananas, or a hand of tickets -->
+						<span class="crowdpts">
+							{#each Array(Math.floor(backer.points / 5)) as _, k (k)}
+								<i class="five">{#if banana}<BananaBunch />{:else}<TicketStack />{/if}</i>
+							{/each}
+							{#each Array(backer.points % 5) as _, k (k)}
+								<i>{#if banana}<Banana />{:else}<Ticket />{/if}</i>
+							{/each}
+						</span>
+					</button>
+				{/each}
+			</div>
+			</div>
+			</div>
+		{/if}
 	</div>
 {/snippet}
 
@@ -1036,7 +1357,7 @@
 			class="fwrap"
 			class:podium={film !== null && shortlist.has(film.id)}
 			class:headrow={film === null}
-			animate:flip={{ duration: flipMs }}
+			animate:reshuffle={{ still: !flipMs, flat: film === null }}
 		>
 			{#if film}
 				{@render row(film, shortlist.has(film.id), false)}
@@ -1049,66 +1370,48 @@
 	{/each}
 </div>
 
-<button
-	class="addcard"
-	disabled={Boolean(nominated) || !open}
-	onclick={() => {
-		searchOpen = true;
-		query = '';
-		results = [];
-		picked = null;
-	}}
->
-	{#if nominated}
-		{T.nomDone(nominated.title)}
-	{:else}
-		<b>{T.nomCta}</b><br /><span style="font-size:11.5px">{T.nomCtaSub}</span>
-	{/if}
-</button>
-
 {#if data.archived.length || data.dropped.length}
-	<div class="sec">
-		{rules.attrition.kind === 'archive'
-			? T.shelfArchive(data.archived.length)
-			: T.shelfDropped(data.dropped.length)}
-	</div>
-	<div class="list">
-		{#each data.archived as film (film.id)}
-			{@render row(film, false, true)}
-		{/each}
-		{#each data.dropped as film (film.id)}
-			<div class="film shelf">
-				<div class="p"><Poster title={film.title} url={film.poster_url} /></div>
-				<div class="b">
-					<div class="hd">
-						<div class="ttl">
-							<span class="tname">{film.title}</span>
-							{#if film.year}<span class="mm">{film.year}</span>{/if}
+	<!-- what fell off the list is history, not the vote: folded away until asked
+	     for, the count on the fold saying how much is in there -->
+	<details class="shelfbox">
+		<summary class="sec">
+			{rules.attrition.kind === 'archive'
+				? T.shelfArchive(data.archived.length)
+				: T.shelfDropped(data.dropped.length)}
+			<svg class="shelfchev" viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"
+				><path d="M2 3.6 5 6.6 8 3.6" /></svg
+			>
+		</summary>
+		<div class="list">
+			{#each data.archived as film (film.id)}
+				{@render row(film, false, true)}
+			{/each}
+			{#each data.dropped as film (film.id)}
+				<div class="film shelf">
+					<div class="p"><Poster title={film.title} url={film.poster_url} /></div>
+					<div class="b">
+						<div class="hd">
+							<div class="ttl">
+								<span class="tname">{film.title}</span>
+								{#if film.year}<span class="mm">{film.year}</span>{/if}
+							</div>
+						</div>
+						<div class="ft">
+							<span class="backers"></span>
+							<form method="POST" action="?/renominate" use:enhance={submit()}>
+								<input type="hidden" name="filmId" value={film.id} />
+								<input type="hidden" name="title" value={film.title} />
+								<button class="tap" disabled={Boolean(nominated) || !open}>{T.btnRenominate}</button>
+							</form>
 						</div>
 					</div>
-					<div class="ft">
-						<span class="backers"></span>
-						<form method="POST" action="?/renominate" use:enhance={submit()}>
-							<input type="hidden" name="filmId" value={film.id} />
-							<input type="hidden" name="title" value={film.title} />
-							<button class="tap" disabled={Boolean(nominated) || !open}>{T.btnRenominate}</button>
-						</form>
-					</div>
 				</div>
-			</div>
-		{/each}
-	</div>
+			{/each}
+		</div>
+	</details>
 {/if}
 
 <!-- ------------------------------------------------------------ sheets -- -->
-
-<button
-	class="scrim"
-	class:on={searchOpen}
-	aria-label="close"
-	tabindex={searchOpen ? 0 : -1}
-	onclick={closeSheets}
-></button>
 
 <!-- the film's own page, in a modal in the middle of the screen like the one
      films are put up in: a bottom sheet slid up from under the screen was the
@@ -1350,74 +1653,7 @@
 </div>
 {/if}
 
-<div class="sheet" class:on={searchOpen}>
-	<button class="handle" aria-label="close" onclick={closeSheets}></button>
-	<div class="inner">
-		<h2 style="margin:8px 0 2px;font-size:19px;letter-spacing:-.02em">{T.nomH}</h2>
-
-		{#if picked}
-			<form
-				method="POST"
-				action="?/nominate"
-				use:enhance={submit(() => closeSheets())}
-				style="padding-bottom:8px"
-			>
-				<input type="hidden" name="title" value={picked.title} />
-				<input type="hidden" name="tmdbId" value={picked.tmdbId ?? ''} />
-				<input type="hidden" name="year" value={picked.year ?? ''} />
-				<input type="hidden" name="poster" value={picked.poster ?? ''} />
-				<input type="hidden" name="overview" value={picked.overview} />
-				<div class="crow">
-					<div class="th"><Poster title={picked.title} url={picked.thumb} /></div>
-					<div>
-						<b>{picked.title}</b>
-						<span>{picked.year ?? T.dEmpty}</span>
-					</div>
-				</div>
-				<div class="nlabel">{T.noteQ}</div>
-				<textarea class="nin" name="note" rows="3" maxlength="160" placeholder={T.notePh}></textarea>
-				<div class="cbtns">
-					<button type="button" onclick={() => (picked = null)}>{T.noteBack}</button>
-					<button class="go">{T.noteConfirm}</button>
-				</div>
-			</form>
-		{:else}
-			<div class="hintline">{degraded ? T.nomOffline : T.nomHint}</div>
-			<input
-				class="sinput"
-				bind:value={query}
-				oninput={onQuery}
-				placeholder={T.nomPh}
-				autocomplete="off"
-				spellcheck="false"
-			/>
-			<div class="sres">
-				{#if searching}
-					<div class="hintline">{T.nomSearching}</div>
-				{:else}
-					{#each results as result (result.tmdbId)}
-						{@const dup = known.has(result.title.toLowerCase())}
-						<button class="r" disabled={dup} onclick={() => (picked = result)}>
-							<div class="th"><Poster title={result.title} url={result.thumb} /></div>
-							<div class="m">
-								<b>{result.title}</b>
-								<span>{result.year ?? T.dEmpty}{dup ? ` · ${T.nomDup}` : ''}</span>
-							</div>
-						</button>
-					{/each}
-					{#if query.trim().length >= 2 && !results.length}
-						<div class="hintline">{T.nomNone(query.trim())}</div>
-					{/if}
-					{#if query.trim().length >= 2}
-						<button class="ghostbtn" onclick={() => (picked = byHand())}>
-							{T.nomByHand(query.trim())}
-						</button>
-					{/if}
-				{/if}
-			</div>
-		{/if}
-	</div>
-</div>
+<NominateModal lang={data.lang} heading={T.nomH} hint={T.nomHint} {known} {submit} />
 
 <!-- ----------------------------------------------------------- backers -- -->
 
@@ -1527,48 +1763,9 @@
 	</div>
 {/if}
 
-{#if backersFilm}
-	<!-- everyone with points on the film; each pill opens the usual face popup
-	     above this modal (the popup layers sit higher on purpose) -->
-	<button class="bkm-backdrop" aria-label={T.close} onclick={() => (backersOpenId = null)}
-	></button>
-	<div class="bkmodal" role="dialog" aria-label={T.dBacked}>
-		<h3>{backersFilm.title}</h3>
-		<div class="bkmgrid">
-			{#each backersFilm.backers as backer (backer.person_id)}
-				{@render bkPill(backer)}
-			{/each}
-		</div>
-	</div>
-{/if}
 
 {#if scorePop}
-	{#if scorePop.tap}
-		<button class="menu-backdrop" aria-label={T.close} onclick={unpeek}></button>
-	{/if}
-	<div
-		class="bkpop scpop"
-		class:below={scorePop.below}
-		style="left:{scorePop.x}px;top:{scorePop.y}px"
-		role="tooltip"
-	>
-		{#each scorePop.rows as row (row.week)}
-			<div class="srow">
-				<span>{T.evening(data.evenings[row.week])}</span>
-				<b>
-					{row.points} × {row.mult.toFixed(2)}
-					{row.mult === 1 ? '=' : '≈'}
-					{fmtScore(row.contrib)}
-				</b>
-			</div>
-		{/each}
-		<!-- where the number lands next week if nothing more is spent on it -->
-		<div class="srow next">
-			<span>{T.scoreNext}</span>
-			<b>≈ {fmtScore(scorePop.next)}</b>
-		</div>
-		<span class="sig">{T.fadeNote(rules)}</span>
-	</div>
+	<ScorePeek pop={scorePop} lang={data.lang} marks={banana ? 'banana' : 'ticket'} onclose={unpeek} />
 {/if}
 
 <!-- it is placed from a rect, so anything that moves the pill has to close it -->
@@ -1578,11 +1775,10 @@
 	onkeydown={(event) => {
 		if (event.key !== 'Escape') return;
 		// one press closes one thing: whatever is on top first, the film's modal last
-		if (backersOpenId !== null || commentsOpenId !== null) {
-			backersOpenId = null;
+		if (crowdOpen !== null || commentsOpenId !== null) {
+			crowdOpen = null;
 			commentsOpenId = null;
 		} else if (detailId !== null || searchOpen) closeSheets();
 		unpeek();
 	}}
-	onpointerdown={disarmElsewhere}
 />

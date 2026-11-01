@@ -19,13 +19,40 @@ export function themeOf(value: string | undefined | null): Theme {
 }
 
 /**
- * What iOS paints its status bar with. This is not --bg but --bg with the
- * palette's wash already over it, sampled at the top of the page, because that
- * is the colour the strip has to sit flush against. Re-sample if either changes.
+ * The accent: the one colour everything pressable wears, a choice of its own
+ * beside the palette, kept the same way (a cookie, put on <html> as
+ * data-accent by the server so the first paint is right). Each works on both
+ * palettes; their values live in themes.css. Rose is the app's own and needs
+ * no attribute. Bananas and a special round bring their own accents and win.
+ */
+export const ACCENTS = ['rose', 'lavender', 'periwinkle', 'sky', 'seafoam', 'sage'] as const;
+
+export type Accent = (typeof ACCENTS)[number];
+
+export const DEFAULT_ACCENT: Accent = 'rose';
+
+export function accentOf(value: string | undefined | null): Accent {
+	return ACCENTS.includes(value as Accent) ? (value as Accent) : DEFAULT_ACCENT;
+}
+
+/** each accent's dark and light shade, for the switch's own dots */
+export const ACCENT_SWATCH: Record<Accent, Record<'dark' | 'light', string>> = {
+	rose: { dark: '#dba7b4', light: '#9c5869' },
+	lavender: { dark: '#b5abd4', light: '#706793' },
+	periwinkle: { dark: '#a9b0dc', light: '#5d64a3' },
+	sky: { dark: '#a7c2d8', light: '#4f7593' },
+	seafoam: { dark: '#9ccbc2', light: '#3e7c73' },
+	sage: { dark: '#b0c79f', light: '#5b7a4c' }
+};
+
+/**
+ * What iOS paints its status bar with: each palette's --bg exactly. The page
+ * is one flat colour from the status bar down, so the strip and the bar under
+ * it meet without a seam. Change these with --bg, or they part.
  */
 export const THEME_BG: Record<'dark' | 'light', string> = {
 	dark: '#0f1012',
-	light: '#f3e2d4'
+	light: '#f7f0e7'
 };
 
 /**
@@ -38,10 +65,10 @@ export function bananaOf(value: string | undefined | null): boolean {
 	return value === '1';
 }
 
-/** THEME_BG under the banana wash, sampled the same way */
+/** the banana palettes' --bg, the same way */
 export const BANANA_BG: Record<'dark' | 'light', string> = {
-	dark: '#16130e',
-	light: '#f0f0dc'
+	dark: '#0e0c09',
+	light: '#eef1e6'
 };
 
 /**

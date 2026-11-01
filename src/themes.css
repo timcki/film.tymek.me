@@ -14,7 +14,6 @@
 :root[data-theme='light'] {
 	color-scheme: light;
 	--bg: #f7f0e7;
-	--wash: radial-gradient(1000px 480px at 50% -14%, rgba(226, 172, 140, 0.34), transparent 70%);
 	--card: #fffaf3;
 	--card2: #f3e9dd;
 	--sunk: #e8dccf;
@@ -28,7 +27,12 @@
 	--dim: #857470;
 	--dimmer: #a08e87;
 	--onbright: #2a2220;
-	--accent: #4a7fa5;
+	--accent: #9c5869;
+	/* on paper the ticket takes a dark edge and the accent's own star */
+	--ticket-paper: #fbeccd;
+	--ticket-shade: #efdcb4;
+	--ticket-edge: #5a4046;
+	--ticket-mark: var(--accent);
 	--accent-ink: #fffaf3;
 	--warn: #b5762f;
 	--cut: #bd6076;
@@ -92,7 +96,6 @@
    between them stay where app.css put them */
 :root[data-banana] {
 	--bg: #0e0c09;
-	--wash: radial-gradient(1000px 480px at 50% -14%, rgba(244, 220, 138, 0.07), transparent 70%);
 	/* a card has to stand clear of the page on its own: on near-black a drop
 	   shadow is nothing, so the step up is in the surface and the lit edge */
 	--card: #201c16;
@@ -128,7 +131,6 @@
    coral are the only warm things on the page, which is what makes them carry */
 :root[data-theme='light'][data-banana] {
 	--bg: #eef1e6;
-	--wash: radial-gradient(1000px 480px at 50% -14%, rgba(240, 215, 110, 0.22), transparent 70%);
 	--card: #fbfcf7;
 	--card2: #f0f3e8;
 	--sunk: #e3e8d8;
@@ -164,25 +166,105 @@
 	width: auto;
 	height: auto;
 }
-:root[data-banana] .tdot.set {
-	background: none;
-}
-:root[data-banana] .tdot.set i {
-	font-size: 13px;
-}
-:root[data-banana] .hpip.spent {
-	background: none;
-	font-size: 14px;
-}
 /* the switch shows what it would turn on: a grey banana until it is lit */
-.menu .lang.nana button {
-	font-size: 15px;
+.menu .lang .nana button {
 	filter: grayscale(1);
 	opacity: 0.55;
 }
-.menu .lang.nana button.on {
+.menu .lang .nana button.on {
 	filter: none;
 	opacity: 1;
+}
+
+/* --------------------------------------------------------------- living -----
+   The everyday look's scenery (Cinema.svelte), worn whenever no special round
+   has put on its own: a living room at the foot of the page, a blue sofa and a
+   red beanbag among plants, lamplit at night and sunlit on paper. Under either
+   palette, under bananas too */
+:root:not([data-special]) {
+	--sofa: #2f5683;
+	--sofa-lit: #3a679b;
+	--beanbag: #b13a2e;
+	--beanbag-fold: #8a2a21;
+	--blanket: #9c2a2a;
+	--blanket-fold: #741d1d;
+	--figure: #3d332c;
+	--leaf1: #3f7a48;
+	--leaf2: #53935a;
+	--leaf3: #2c5c38;
+	--leafline: rgba(10, 20, 10, 0.35);
+	--pot: #a85a38;
+	--wood: #5a4030;
+	--basket: #9a7b4f;
+	--basket-weave: #6e5432;
+	--shade: #e8b468;
+	--rug: rgba(150, 110, 70, 0.25);
+	--lamplight: rgba(255, 176, 90, 0.26);
+	--sunlight: transparent;
+	--zzz: rgba(240, 225, 200, 0.75);
+	--projection: 0.92;
+	--wall: #2b2520;
+	--orb: #ffd9a0;
+	--orb-foot: #8a6a4a;
+	--window-sky: #1b2440;
+	--window-glass: rgba(180, 205, 255, 0.55);
+	--window-frame: #4a3a2e;
+	--window-light: rgba(150, 175, 255, 0.12);
+	--spill: rgba(240, 150, 100, 0.16);
+	--film-sky: #e9895a;
+	--film-sun: #ffd98a;
+	--film-hill: #7a3e4a;
+	--film-hill2: #3b2236;
+	/* a white projector, in the half-dark of the room */
+	--projector: #d9d6d0;
+	--projector-dark: #6f6a65;
+	--beam-near: rgba(255, 236, 190, 0.32);
+	--beam-far: rgba(255, 236, 190, 0.06);
+}
+/* on paper it is daytime: the lamp is off, the sun slants in, the greens are
+   brighter and the people a soft ink rather than black */
+:root[data-theme='light']:not([data-special]) {
+	--sofa: #4f7fb4;
+	--sofa-lit: #6592c4;
+	--beanbag: #c94a3c;
+	--beanbag-fold: #a63a2e;
+	--blanket: #b8383a;
+	--blanket-fold: #8f2a2c;
+	--figure: #6b5a52;
+	--leaf1: #4f8f52;
+	--leaf2: #6aab62;
+	--leaf3: #3d7244;
+	--pot: #c06a44;
+	--wood: #7a5a42;
+	--basket: #d2ad72;
+	--basket-weave: #a07a42;
+	--shade: #d9b98c;
+	--rug: rgba(170, 120, 80, 0.22);
+	--sunlight: rgba(255, 214, 140, 0.22);
+	--zzz: rgba(90, 70, 60, 0.7);
+	--projection: 0.62;
+	--wall: #e2d3c0;
+	--orb: #f5b867;
+	--orb-foot: #7a5a42;
+	--window-sky: #cfe8f6;
+	--window-glass: rgba(255, 255, 255, 0.9);
+	--window-frame: #c9b394;
+	--window-light: rgba(255, 214, 140, 0.4);
+	--spill: rgba(240, 150, 100, 0.12);
+	--projector: #fdfcf9;
+	--projector-dark: #9d968f;
+	--beam-near: rgba(255, 230, 170, 0.45);
+	--beam-far: rgba(255, 230, 170, 0.08);
+}
+/* the back row is laid out against the body */
+:root:not([data-special]) body {
+	position: relative;
+}
+/* the back row stands at the foot of the window on a short page */
+:root:not([data-special]) .wrap:not(.bare) {
+	min-height: calc(100vh - 32px - env(safe-area-inset-bottom, 0px));
+	min-height: calc(100svh - 32px - env(safe-area-inset-bottom, 0px));
+	padding-bottom: 150px;
 }
 
 /* ------------------------------------------------------------ halloween -----
@@ -656,4 +738,57 @@
 	-webkit-mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
 	mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
 	pointer-events: none;
+}
+
+/* ---------------------------------------------------------- accents -----
+   The accent someone picked, over either palette (rose, the app's own, is the
+   one in app.css and the light block above, and has no attribute). Each gives
+   the dark its pastel, ink to sit on it and a deeper shade for the ticket's
+   star, and the paper its deeper shade. Never over bananas or a special
+   round, which bring accents of their own; ACCENT_SWATCH in themes.ts holds
+   the same two shades for the switch's dots, so change them together */
+:root[data-accent='lavender']:not([data-banana], [data-special]) {
+	--accent: #b5abd4;
+	--accent-ink: #1d1833;
+	--ticket-mark: #6f63a3;
+}
+:root[data-theme='light'][data-accent='lavender']:not([data-banana], [data-special]) {
+	--accent: #706793;
+	--ticket-mark: var(--accent);
+}
+:root[data-accent='periwinkle']:not([data-banana], [data-special]) {
+	--accent: #a9b0dc;
+	--accent-ink: #141a3a;
+	--ticket-mark: #5a62b0;
+}
+:root[data-theme='light'][data-accent='periwinkle']:not([data-banana], [data-special]) {
+	--accent: #5d64a3;
+	--ticket-mark: var(--accent);
+}
+:root[data-accent='sky']:not([data-banana], [data-special]) {
+	--accent: #a7c2d8;
+	--accent-ink: #0d2030;
+	--ticket-mark: #4a7598;
+}
+:root[data-theme='light'][data-accent='sky']:not([data-banana], [data-special]) {
+	--accent: #4f7593;
+	--ticket-mark: var(--accent);
+}
+:root[data-accent='seafoam']:not([data-banana], [data-special]) {
+	--accent: #9ccbc2;
+	--accent-ink: #0c2622;
+	--ticket-mark: #3b8076;
+}
+:root[data-theme='light'][data-accent='seafoam']:not([data-banana], [data-special]) {
+	--accent: #3e7c73;
+	--ticket-mark: var(--accent);
+}
+:root[data-accent='sage']:not([data-banana], [data-special]) {
+	--accent: #b0c79f;
+	--accent-ink: #16220f;
+	--ticket-mark: #5c7d4b;
+}
+:root[data-theme='light'][data-accent='sage']:not([data-banana], [data-special]) {
+	--accent: #5b7a4c;
+	--ticket-mark: var(--accent);
 }
