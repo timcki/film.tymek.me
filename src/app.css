@@ -973,7 +973,7 @@ header .sub b {
 .fpeek {
 	position: fixed;
 	z-index: 50;
-	width: 216px;
+	width: var(--pw, 216px);
 	transform: translate(-50%, calc(-100% - 10px));
 	pointer-events: none;
 }
@@ -1072,6 +1072,92 @@ header .sub b {
 	.fpface {
 		animation: none;
 	}
+}
+/* ---- a film's score, opened: the number now and where it is headed, then
+   the weeks it is made of, each a row of when, the points as points, what
+   they are still worth and what that adds */
+.scard {
+	gap: 10px;
+	padding: 12px 14px 11px;
+}
+.schead {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 10px;
+}
+.bkpop.scard .schead b {
+	font-size: 24px;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+}
+.schead small {
+	margin-left: 3px;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--dim);
+	letter-spacing: 0;
+}
+.bkpop.scard .snext {
+	font-size: 12px;
+	font-weight: 650;
+	color: var(--ink2);
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+.snext i {
+	font-style: normal;
+	font-weight: 500;
+	color: var(--dim);
+}
+.sweeks {
+	display: grid;
+	/* when | the points, taking what is left | what they are worth | what they add */
+	grid-template-columns: auto minmax(0, 1fr) auto auto;
+	align-items: center;
+	gap: 7px 8px;
+	padding-top: 10px;
+	border-top: 1px solid var(--line);
+}
+.sweek {
+	display: contents;
+}
+.bkpop.scard .swhen {
+	font-size: 12px;
+	color: var(--ink2);
+	white-space: nowrap;
+}
+.bkpop.scard .sworth {
+	min-width: 2.6em;
+	font-size: 11px;
+	color: var(--dim);
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+.scard .fpmarks {
+	overflow: hidden;
+}
+.bkpop.scard .sadds {
+	min-width: 2.4em;
+	font-size: 12.5px;
+	font-weight: 700;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+.sweek.older .swhen,
+.sweek.older .sadds {
+	color: var(--dim);
+	font-weight: 500;
+}
+.sweek.older .swhen {
+	grid-column: 1 / 3;
+}
+.bkpop.scard .snote {
+	font-size: 10.5px;
+	color: var(--dimmer);
+	line-height: 1.35;
 }
 .nobk {
 	font-size: 11px;

@@ -16,6 +16,7 @@
 		type Peek,
 		type PeekFace
 	} from '$lib/components/FacePeek.svelte';
+	import ScorePeek, { SCORE_W, type ScorePop } from '$lib/components/ScorePeek.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import NominateModal from '$lib/components/NominateModal.svelte';
 	import { dictFor, fmtScore, isVotes } from '$lib/i18n';
@@ -348,16 +349,7 @@
 		below: boolean;
 		tap: boolean;
 	} | null>(null);
-	type ScoreRow = { week: number; points: number; mult: number; contrib: number };
-	let scorePop = $state<{
-		rows: ScoreRow[];
-		/** the same sum one week older, which is what it will be if nobody votes */
-		next: number;
-		x: number;
-		y: number;
-		below: boolean;
-		tap: boolean;
-	} | null>(null);
+	let scorePop = $state<ScorePop | null>(null);
 	// hover preview of the thread; a click or tap opens the real modal instead
 	let cmtPop = $state<{ film: Film; x: number; y: number; below: boolean } | null>(null);
 	// a mouse hovers it and a finger taps it open; on a tap the mark itself moves
@@ -466,10 +458,31 @@
 		shutPops();
 		const rows = film.weeklyPoints.map((row) => {
 			const mult = rules.decayFactor ** (weekNow - row.week);
-			return { ...row, mult, contrib: row.points * mult };
+			return { ...row, ago: weekNow - row.week, mult, contrib: row.points * mult };
 		});
 		const total = rows.reduce((sum, row) => sum + row.contrib, 0);
-		scorePop = { rows, next: total * rules.decayFactor, tap, ...anchorAt(el, NPOP_W, NPOP_H) };
+		// the weeks that still add something worth a digit are spelled out; the
+		// long tail too old to matter is one line at the end
+		const kept = rows.filter((row, i) => i === 0 || row.contrib >= 0.05);
+		const rest = rows.filter((row) => !kept.includes(row));
+		const pct = (m: number) => (m >= 0.995 ? '100%' : m >= 0.01 ? `${Math.round(m * 100)}%` : '<1%');
+		scorePop = {
+			score: fmtScore(film.score),
+			unit: T.unit(film.score, votes),
+			next: fmtScore(total * rules.decayFactor),
+			rows: kept.map((row) => ({
+				label: T.weeksAgo(row.ago),
+				points: row.points,
+				worth: pct(row.mult),
+				adds: `+${fmtScore(row.contrib)}`
+			})),
+			older: rest.length
+				? `+${fmtScore(rest.reduce((sum, row) => sum + row.contrib, 0))}`
+				: null,
+			note: T.fadeNote(rules),
+			tap,
+			...anchorAt(el, SCORE_W, 150 + kept.length * 22)
+		};
 	}
 
 	/** the comment thread under the badge, read-only; the modal is for writing */
@@ -1728,32 +1741,7 @@
 
 
 {#if scorePop}
-	{#if scorePop.tap}
-		<button class="menu-backdrop" aria-label={T.close} onclick={unpeek}></button>
-	{/if}
-	<div
-		class="bkpop scpop"
-		class:below={scorePop.below}
-		style="left:{scorePop.x}px;top:{scorePop.y}px"
-		role="tooltip"
-	>
-		{#each scorePop.rows as row (row.week)}
-			<div class="srow">
-				<span>{T.week(row.week)}</span>
-				<b>
-					{row.points} × {row.mult.toFixed(2)}
-					{row.mult === 1 ? '=' : '≈'}
-					{fmtScore(row.contrib)}
-				</b>
-			</div>
-		{/each}
-		<!-- where the number lands next week if nothing more is spent on it -->
-		<div class="srow next">
-			<span>{T.scoreNext}</span>
-			<b>≈ {fmtScore(scorePop.next)}</b>
-		</div>
-		<span class="sig">{T.fadeNote(rules)}</span>
-	</div>
+	<ScorePeek pop={scorePop} lang={data.lang} marks={banana ? 'banana' : 'ticket'} onclose={unpeek} />
 {/if}
 
 <!-- it is placed from a rect, so anything that moves the pill has to close it -->

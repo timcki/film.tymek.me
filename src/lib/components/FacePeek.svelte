@@ -82,7 +82,7 @@
 	import { dictFor } from '$lib/i18n';
 	import type { Lang } from '$lib/i18n';
 	import { levelOf } from '$lib/levels';
-	import { cubicIn } from 'svelte/easing';
+	import { grow } from '$lib/pop-grow';
 	import { untrack } from 'svelte';
 
 	let { peek, lang, onclose }: { peek: Peek; lang: Lang; onclose: () => void } = $props();
@@ -96,28 +96,6 @@
 	});
 	const level = $derived(levelOf(shown.face.xp));
 
-	// the card grows out of the face it was opened from, with a little give at
-	// the end, and folds back into it on the way out. A transition rather than
-	// a keyframe so the way out can play before it is gone
-	const still = () =>
-		typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-	function grow(_: Element, { out = false }: { out?: boolean } = {}) {
-		if (still()) return { duration: 0 };
-		return out
-			? {
-					duration: 130,
-					easing: cubicIn,
-					css: (t: number) =>
-						`opacity:${t};transform:translateY(${(1 - t) * (shown.below ? -4 : 4)}px) scale(${0.92 + 0.08 * t})`
-				}
-			: {
-					duration: 240,
-					// overshoots a touch, then settles
-					easing: (t: number) => 1 + 2.2 * (t - 1) ** 3 + 1.2 * (t - 1) ** 2,
-					css: (t: number) =>
-						`opacity:${Math.min(1, t * 1.6)};transform:translateY(${(1 - t) * (shown.below ? -8 : 8)}px) scale(${0.82 + 0.18 * t})`
-				};
-	}
 </script>
 
 {#if shown.tap}
@@ -127,7 +105,7 @@
 
 <!-- the outer box only stands at the face; the card inside it is what moves -->
 <div class="fpeek" class:below={shown.below} style="left:{shown.x}px;top:{shown.y}px" role="tooltip">
-	<div class="bkpop fpcard" in:grow out:grow={{ out: true }}>
+	<div class="bkpop fpcard" in:grow={{ below: shown.below }} out:grow={{ below: shown.below, out: true }}>
 		<div class="fphead">
 			<span class="fpface">
 				<Avatar

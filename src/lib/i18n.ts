@@ -175,6 +175,8 @@ export type Dict = {
 	fadeNote: (rules: RulesView) => string;
 	/** what the score fades to next week if nobody spends anything more on it */
 	scoreNext: string;
+	/** the score's weeks too old to still add a digit, as one line */
+	scoreOlder: string;
 
 	noteQ: string;
 	notePh: string;
@@ -611,6 +613,7 @@ const pl: Dict = {
 	minutes: (n) => `${n} min`,
 	fadeNote: (r) => `Punkty tracą ${fadePercent(r)}% wartości co tydzień`,
 	scoreNext: 'Za tydzień',
+	scoreOlder: 'wcześniej',
 
 	noteQ: 'Dlaczego ten film? (opcjonalnie)',
 	notePh: 'Krótka notka dla reszty…',
@@ -1152,6 +1155,7 @@ const en: Dict = {
 	minutes: (n) => `${n} min`,
 	fadeNote: (r) => `Points lose ${fadePercent(r)}% of their value each week`,
 	scoreNext: 'Next week',
+	scoreOlder: 'earlier',
 
 	noteQ: 'Why this one? (optional)',
 	notePh: 'A short note for the others…',
