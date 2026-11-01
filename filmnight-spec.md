@@ -277,7 +277,7 @@ admin's summary all say the rules from the values the server checks.
 
 - **Every rule set has to hold, any value of each will do.** A rule is a list of
   production countries, original languages or genres, a range of release years or of
-  runtimes, a list of directors (matched by name, case and diacritics aside), or one of
+  runtimes, a list of directors (matched by whole names in any order, case and diacritics aside), or one of
   the rules written by hand (`CODED`, so far "directed by a woman", read off TMDB's
   gender field). A country that has since split counts as its successor, as in `/stats`.
   "Polish week" is the production-country rule or the original-language rule, whichever
