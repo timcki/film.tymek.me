@@ -133,6 +133,20 @@ describe('a custom week', () => {
 		it('folds diacritics and case out of director names', () => {
 			const dekalog = { ...ida, directors: [{ name: 'Krzysztof Kieślowski', gender: 2 }] };
 			expect(breachOf(week({ directors: ['KIESLOWSKI'] }), dekalog)).toBeNull();
+			const ida2 = { ...ida, directors: [{ name: 'Paweł Pawlikowski', gender: 2 }] };
+			expect(breachOf(week({ directors: ['Pawel'] }), ida2)).toBeNull();
+		});
+
+		it('matches whole names, in any order, not letters inside one', () => {
+			const europa = { ...ida, directors: [{ name: 'Agnieszka Holland', gender: 1 }] };
+			expect(breachOf(week({ directors: ['Holland, Agnieszka'] }), europa)).toBeNull();
+			expect(breachOf(week({ directors: ['Holl'] }), europa)).toEqual(
+				expect.objectContaining({ kind: 'directors' })
+			);
+			const kathleen = { ...ida, directors: [{ name: 'Kathleen Collins', gender: 1 }] };
+			expect(breachOf(week({ directors: ['Lee'] }), kathleen)).toEqual(
+				expect.objectContaining({ kind: 'directors' })
+			);
 		});
 
 		it('knows a woman directed it from TMDB', () => {

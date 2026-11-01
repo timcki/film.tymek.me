@@ -98,7 +98,24 @@ const CODED_CHECKS: Record<CodedId, (facts: Facts) => boolean> = {
 };
 
 /** Kieślowski, kieslowski and Krzysztof Kieślowski are the same director */
-const fold = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
+const fold = (text: string) =>
+	text
+		.normalize('NFD')
+		.replace(/\p{M}/gu, '')
+		.toLowerCase()
+		// the one Polish letter that is not a letter and a mark, so NFD leaves it be
+		.replace(/ł/g, 'l')
+		.trim();
+
+/** the words of a name, so a rule names whole ones: "Lee" is not in Kathleen */
+const words = (name: string) => fold(name).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+
+/** every word the rule gives is one of the director's, in any order: "Holland, Agnieszka" */
+function sameDirector(director: string, rule: string): boolean {
+	const theirs = new Set(words(director));
+	const wanted = words(rule);
+	return wanted.length > 0 && wanted.every((word) => theirs.has(word));
+}
 
 /** a fact TMDB did not give is a rule not met */
 function meets(rule: WeekRule, facts: Facts): boolean {
@@ -111,7 +128,7 @@ function meets(rule: WeekRule, facts: Facts): boolean {
 		case 'runtime':
 			return meetsKnown(rule, facts) === true;
 		case 'directors':
-			return facts.directors.some((d) => rule.names.some((name) => fold(d.name).includes(fold(name))));
+			return facts.directors.some((d) => rule.names.some((name) => sameDirector(d.name, name)));
 		case 'coded':
 			return CODED_CHECKS[rule.id](facts);
 		case 'tmdb':
