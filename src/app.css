@@ -630,6 +630,11 @@ header .sub b {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
+	/* the reshuffle's lifted card wears a shadow on this box: rounded as the
+	   card is, or the shadow would come out square. Positioned, so the climber
+	   it lifts can pass over the cards it overtakes rather than under them */
+	border-radius: var(--r);
+	position: relative;
 }
 .film {
 	display: flex;
@@ -1650,83 +1655,129 @@ button.holdchip:hover {
 	border-radius: var(--r);
 }
 /* §3.5: a sleeper cannot win this week, so it stops spending a candidate's
-   worth of screen. The whole row collapses into the height of a thumbnail:
-   what survives is what can still be acted on (the poster that opens the
-   sheet, the score, the dock that backs it for next week, the chip that wakes
-   it) and what goes is everything only ever read while choosing. The shelf
-   renders through the same snippet and has none of this to hide */
-.film.held:not(.shelf) {
-	padding: 8px 12px;
-	gap: 12px;
+   worth of screen. On a phone the whole row collapses into the height of a
+   thumbnail: what survives is what can still be acted on (the poster that
+   opens the sheet, the score, the dock that backs it for next week, the line
+   that says why) and what goes is everything only ever read while choosing. The shelf
+   renders through the same snippet and has none of this to hide. On a
+   desktop it keeps a card's shape, the same size as the cards beside it in
+   the grid, and says it is asleep in its own line instead */
+@media (max-width: 959px) {
+	.film.held:not(.shelf) {
+		padding: 8px 12px;
+		gap: 12px;
+		align-items: center;
+		/* one line: the fine print no longer claims a row of its own */
+		flex-wrap: nowrap;
+	}
+	/* .p carries its own width, so shrinking the wrapper alone leaves the poster
+	   painting at full size and driving the card's height from inside a small box */
+	.film.held:not(.shelf) .pw,
+	.film.held:not(.shelf) .p {
+		flex: 0 0 36px;
+		width: 36px;
+		align-self: center;
+	}
+	.film.held:not(.shelf) .p {
+		border-radius: 6px;
+	}
+	.film.held:not(.shelf) .mm,
+	.film.held:not(.shelf) .note,
+	.film.held:not(.shelf) .nomface,
+	.film.held:not(.shelf) .backers,
+	.film.held:not(.shelf) .cardfoot,
+	.film.held:not(.shelf) .crowdfold {
+		display: none;
+	}
+	/* the title line and the dock stop stacking and share the thumbnail's height */
+	.film.held:not(.shelf) .b {
+		flex-direction: row;
+		align-items: center;
+		gap: 8px;
+	}
+	.film.held:not(.shelf) .hd {
+		flex: 1;
+		min-width: 0;
+		align-items: center;
+		gap: 8px;
+	}
+	/* the reserved dot height is what keeps a vote from reflowing the list; on one
+	   row the thumbnail is taller than the dock, so the card is steady without it.
+	   The auto margin has to go too: in a row it drops the dock off centre */
+	.film.held:not(.shelf) .ft {
+		padding-top: 0;
+		margin-top: 0;
+		min-height: 0;
+		flex: none;
+	}
+	.film.held:not(.shelf) .coin {
+		flex: none;
+	}
+	/* the poster rules for a card with the faces would stretch it again */
+	.film.held:not(.shelf) .p {
+		height: auto;
+		min-height: 0;
+		aspect-ratio: 2 / 3;
+	}
+}
+/* on a desktop a sleeper is a whole card with nobody's faces in its base:
+   only its +, at the end where every other card has it */
+@media (min-width: 960px) {
+	.film.held:not(.shelf) .fbase {
+		flex: 1;
+		justify-content: flex-end;
+	}
+	.film.held:not(.shelf):has(.fbase) .p {
+		height: 100%;
+		min-height: 150px;
+		aspect-ratio: auto;
+	}
+}
+/* what it is doing, as a line rather than a chip: a moon, "sitting this round
+   out", and whose call it was. Opens the reason, where one was given */
+.sleeps {
+	display: flex;
 	align-items: center;
-	/* one line: the fine print no longer claims a row of its own */
-	flex-wrap: nowrap;
-}
-/* .p carries its own width, so shrinking the wrapper alone leaves the poster
-   painting at full size and driving the card's height from inside a small box */
-.film.held:not(.shelf) .pw,
-.film.held:not(.shelf) .p {
-	flex: 0 0 36px;
-	width: 36px;
-	align-self: center;
-}
-.film.held:not(.shelf) .p {
-	border-radius: 6px;
-}
-.film.held:not(.shelf) .mm,
-.film.held:not(.shelf) .note,
-.film.held:not(.shelf) .nomface,
-.film.held:not(.shelf) .backers,
-.film.held:not(.shelf) .cardfoot,
-.film.held:not(.shelf) .crowdfold {
-	display: none;
-}
-/* the title line and the dock stop stacking and share the thumbnail's height */
-.film.held:not(.shelf) .b {
-	flex-direction: row;
-	align-items: center;
-	gap: 8px;
-}
-.film.held:not(.shelf) .hd {
-	flex: 1;
+	gap: 5px;
 	min-width: 0;
-	align-items: center;
-	gap: 8px;
-}
-/* the reserved dot height is what keeps a vote from reflowing the list; on one
-   row the thumbnail is taller than the dock, so the card is steady without it.
-   The auto margin has to go too: in a row it drops the dock off centre */
-.film.held:not(.shelf) .ft {
-	padding-top: 0;
-	margin-top: 0;
-	min-height: 0;
-	flex: none;
-}
-.film.held:not(.shelf) .coin {
-	flex: none;
-}
-/* the chip sits under the title, at every width. Beside it, it either crushed
-   the title on a phone or left the row lopsided on a desktop; under it, it costs
-   nothing, because the thumbnail is taller than the two lines of text it makes
-   and the row's height is the thumbnail's either way. It is also the widest
-   thing on the row and misses by a couple of pixels on an ordinary name, so it
-   buys those back from its own padding rather than spending a surname on them */
-.film.held:not(.shelf) .holdchip {
-	align-self: flex-start;
-	flex: none;
-	margin-top: 3px;
 	max-width: 100%;
-	padding-left: 8px;
-	padding-right: 8px;
+	margin-top: 4px;
+	padding: 0;
+	background: none;
+	border: 0;
+	font: inherit;
+	font-size: 12px;
+	color: var(--dim);
+	text-align: left;
+	white-space: nowrap;
 }
-/* the chip's box is bounded, but its text is nowrap and would paint straight
-   through the dashed border rather than stop at it; a long nominator's name
-   gives way here instead */
-.holdchip .holdwho {
+.sleeps .moon {
+	flex: none;
+	width: 12px;
+	height: 12px;
+	fill: var(--ink2);
+}
+.sleeps .sleepwhat {
+	color: var(--ink2);
+	font-weight: 600;
+}
+.sleeps .holdwho::before {
+	content: '·';
+	margin-right: 5px;
+	color: var(--dimmer);
+}
+.sleeps .holdwho {
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	white-space: nowrap;
+}
+/* a reason behind it: the line can be opened, and says so with a dotted rule */
+.sleeps.why {
+	cursor: pointer;
+}
+.sleeps.why .sleepwhat {
+	text-decoration: underline dotted color-mix(in srgb, var(--ink2) 50%, transparent);
+	text-underline-offset: 3px;
 }
 /* the whole mechanic on the one screen that belongs to a single film, set in
    a panel of its own rather than under a rule. The one card here that is a
@@ -1829,7 +1880,8 @@ button.holdchip:hover {
 }
 /* and it runs the card's whole height, so the column beside it never leaves
    a gap under it; a taller card crops the poster a touch at its sides */
-.film:has(.fbase):not(.held) .pw {
+.film:has(.fbase):not(.held) .pw,
+.film.held:not(.shelf):has(.fbase) .pw {
 	align-self: stretch;
 }
 /* a card made taller from outside (a desktop row of cards is one height, so

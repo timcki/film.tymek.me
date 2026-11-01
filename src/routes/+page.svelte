@@ -3,6 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { flip } from 'svelte/animate';
+	import { reshuffle } from '$lib/reshuffle';
 	import { fade, scale } from 'svelte/transition';
 	import { portal } from '$lib/portal';
 	import { fitViewport } from '$lib/fit-viewport';
@@ -51,9 +52,11 @@
 
 	// a run of votes holds the list still: every tap moves scores, and a card
 	// that slid away between the first point and the second had to be hunted
-	// for. The order and the band are kept as they were when the run began;
-	// numbers, dots and faces still change in place, and once the viewer has
-	// been quiet for SETTLE_MS everything glides to where it now belongs
+	// for, or its way back with it. The order and the band are kept as they were
+	// when the run began; numbers, dots and faces still change in place, and
+	// once nothing the viewer gave can still be taken back (or SETTLE_MS after
+	// the last landing, when nothing could) everything glides to where it now
+	// belongs
 	const SETTLE_MS = 2500;
 	let still = $state<{ order: number[]; shortlist: number[] } | null>(null);
 	let settleTimer: ReturnType<typeof setTimeout> | undefined;
@@ -138,7 +141,7 @@
 			: T.warnDrops;
 	}
 	// at risk, and you could still put a point on it: the + says so
-	const rescuable = (film: Film) => film.atRisk && !!data.week && canCast(film);
+	const rescuable = (film: Film) => film.atRisk && !film.held && !!data.week && canCast(film);
 
 	function stackFit(points: number[], room = FACE_ROOM): number {
 		let width = 0;
@@ -300,7 +303,8 @@
 		fly(button, home);
 	}
 
-	// the reorder glide after a confirmed vote; instant for reduced motion
+	// the reorder after a run of votes (lib/reshuffle.ts) and the faces' own
+	// glides; instant for reduced motion
 	const flipMs =
 		typeof matchMedia === 'undefined' || matchMedia('(prefers-reduced-motion: reduce)').matches
 			? 0
@@ -579,11 +583,7 @@
 			}
 			return async ({ result, update }) => {
 				sending -= 1;
-				if (vote) {
-					// restarted by every landing, so the quiet is measured from the last one
-					clearTimeout(settleTimer);
-					settleTimer = setTimeout(() => (still = null), SETTLE_MS);
-				}
+				if (vote) clearTimeout(settleTimer);
 				if (result.type === 'failure') {
 					const body = result.data as
 						| { code?: string; params?: Record<string, string | number>; message?: string }
@@ -594,6 +594,17 @@
 				await update({ reset: false });
 				// a vote refused leaves the bar to say what the server says
 				if (vote && result.type !== 'success') inFlight.spent = null;
+				if (vote) {
+					// restarted by every landing, and measured from the page as it now
+					// is: the list moves when the last of the viewer's undos runs out
+					clearTimeout(settleTimer);
+					nowMs = Date.now();
+					const undoable = data.films.filter(canUndo).map(graceLeftMs);
+					settleTimer = setTimeout(
+						() => (still = null),
+						undoable.length ? Math.max(...undoable) + 200 : SETTLE_MS
+					);
+				}
 			};
 		};
 	}
@@ -720,10 +731,19 @@
      leaves the coin and the dock where every other card puts them -->
 {#snippet heldChip(film: Film)}
 	{#if film.held}
-		{@const mine = film.held.personId === data.person?.id}
+		{@const who = film.held.personId === data.person?.id ? T.holdMine : film.held.name}
+		<!-- a line, not a chip: a moon, that it sits this round out, and whose
+		     call it was. With a reason given, the line opens it -->
+		{#snippet says()}
+			<svg class="moon" viewBox="0 0 12 12" aria-hidden="true"
+				><path d="M9.8 7.6A4.4 4.4 0 0 1 4.4 2.2 4.4 4.4 0 1 0 9.8 7.6z" /></svg
+			>
+			<span class="sleepwhat">{T.holdWhat}</span>
+			<span class="holdwho">{who}</span>
+		{/snippet}
 		{#if film.held.reason}
 			<button
-				class="holdchip"
+				class="sleeps why"
 				type="button"
 				onpointerenter={(event) => {
 					mousing = event.pointerType === 'mouse';
@@ -733,12 +753,10 @@
 				onclick={(event) => !mousing && holdAt(event.currentTarget, film, true)}
 				onblur={unpeek}
 			>
-				💤 <span class="holdwho">{mine ? T.holdMine : T.holdBy(film.held.name)}</span>
+				{@render says()}
 			</button>
 		{:else}
-			<span class="holdchip"
-				>💤 <span class="holdwho">{mine ? T.holdMine : T.holdBy(film.held.name)}</span></span
-			>
+			<span class="sleeps">{@render says()}</span>
 		{/if}
 	{/if}
 {/snippet}
@@ -938,7 +956,11 @@
 					</button>
 				</form>
 			{/if}
-			{#if !canCast(film) && film.myPoints > 0 && !canUndo(film)}
+			{#if film.held}
+				<!-- §3.5: asleep, it cannot be a candidate tonight and a point put on it
+				     only fades, so it is offered no + at all; a point put on it just
+				     before it fell asleep can still be taken back above -->
+			{:else if !canCast(film) && film.myPoints > 0 && !canUndo(film)}
 				<!-- nothing left to give, some of it went here, and the way back has
 				     closed: only then does the + settle into what you gave, still lit,
 				     so the card reads as yours. Until then it stays the + it was -->
@@ -1333,7 +1355,7 @@
 			class="fwrap"
 			class:podium={film !== null && shortlist.has(film.id)}
 			class:headrow={film === null}
-			animate:flip={{ duration: flipMs }}
+			animate:reshuffle={{ still: !flipMs, flat: film === null }}
 		>
 			{#if film}
 				{@render row(film, shortlist.has(film.id), false)}

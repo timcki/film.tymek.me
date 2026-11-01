@@ -143,7 +143,8 @@ export type Dict = {
 	/* §3.5: a film sitting one round out at its nominator's request */
 	holdCta: string;
 	holdMine: string;
-	holdBy: (name: string) => string;
+	/** a sleeper's card, before whose call it was: what is happening to it */
+	holdWhat: string;
 	holdH: string;
 	holdHint: (shortlistSize: number) => string;
 	holdWhyPh: string;
@@ -569,9 +570,9 @@ const pl: Dict = {
 	campaign: (n) => `${n}. tydzień kampanii`,
 
 	holdCta: 'Liberum veto',
-	holdMine: 'Uśpiony przez ciebie',
+	holdMine: 'twoja decyzja',
+	holdWhat: 'śpi tę rundę',
 	// nie „uśpiony przez Tymka”: imiona się odmieniają, a kropka nie
-	holdBy: (name) => `Uśpiony · ${name}`,
 	holdH: 'Nie będzie cię w tym tygodniu?',
 	holdHint: (n) =>
 		`Uśpiony film nie pójdzie pod głosowanie w sali, a jego miejsce zajmie kolejny z listy ` +
@@ -1114,8 +1115,8 @@ const en: Dict = {
 	campaign: (n) => `week ${n} of this campaign`,
 
 	holdCta: 'Liberum veto',
-	holdMine: 'Asleep, yours',
-	holdBy: (name) => `Asleep · ${name}`,
+	holdMine: 'your call',
+	holdWhat: 'sitting this round out',
 	holdH: 'Not going to make it this week?',
 	holdHint: (n) =>
 		`Your film then stays out of the room's vote and the next one on the list takes its place ` +
