@@ -713,9 +713,11 @@
 	/* the picture on the wall: light, not a thing, so its edges fade into the
 	   wall and it glows a little onto it. On a phone it is over the sofa, the
 	   heads in front of it */
+	/* on a phone the picture is behind the sofa, but pulled in towards the
+	   middle of the screen rather than centred on the sofa, which sits right */
 	.screen {
 		position: absolute;
-		left: calc(var(--sofa-x) - 86px);
+		left: calc(var(--sofa-x) - 118px);
 		bottom: 30px;
 		width: 172px;
 		opacity: var(--projection);
@@ -732,7 +734,7 @@
 	/* the light the picture spills onto the wall round it */
 	.spill {
 		position: absolute;
-		left: calc(var(--sofa-x) - 116px);
+		left: calc(var(--sofa-x) - 148px);
 		bottom: 10px;
 		width: 232px;
 		height: 136px;
