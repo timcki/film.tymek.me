@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { flip } from 'svelte/animate';
@@ -158,9 +159,84 @@
 	// list, right there under the poster, and a second tap folds it again. No
 	// sheet, no backdrop, nothing to learn
 	let crowdOpen = $state<number | null>(null);
-	function toggleCrowd(filmId: number) {
+	// opening it, the faces in the stack fly down to their seats in the list,
+	// and closing it they fly back, so nobody is on the card twice. Each flies
+	// as a copy over the page (the list unfolds inside a clip, which would cut
+	// a face off on its way in), the face at either end hidden until it lands
+	async function toggleCrowd(filmId: number, from: Element) {
 		unpeek();
-		crowdOpen = crowdOpen === filmId ? null : filmId;
+		const opening = crowdOpen !== filmId;
+		const card = from.closest('.film');
+		const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+		if (!card || still) {
+			crowdOpen = opening ? filmId : null;
+			return;
+		}
+		const faces = (where: string) =>
+			new Map(
+				[...card.querySelectorAll<HTMLElement>(`${where} [data-pid]`)].map((el) => [
+					el.dataset.pid!,
+					el
+				])
+			);
+		const starts = faces(opening ? '.bfaces' : '.crowd');
+		const rects = new Map([...starts].map(([pid, el]) => [pid, el.getBoundingClientRect()]));
+		crowdOpen = opening ? filmId : null;
+		await tick();
+		const ends = faces(opening ? '.crowd' : '.bfaces');
+		let k = 0;
+		for (const [pid, end] of ends) {
+			const start = starts.get(pid);
+			const a = rects.get(pid);
+			if (!start || !a || !a.width) continue;
+			flyFace(start, a, end, k++);
+		}
+	}
+	function flyFace(start: HTMLElement, a: DOMRect, end: HTMLElement, k: number) {
+		const copy = start.cloneNode(true) as HTMLElement;
+		copy.classList.add('faceflight');
+		copy.removeAttribute('data-pid');
+		Object.assign(copy.style, {
+			left: `${a.left}px`,
+			top: `${a.top}px`,
+			width: `${a.width}px`,
+			height: `${a.height}px`
+		});
+		document.body.append(copy);
+		start.style.visibility = 'hidden';
+		end.style.visibility = 'hidden';
+		copy.querySelector('.ftop')?.animate([{ opacity: 1 }, { opacity: 0 }], {
+			duration: 200,
+			delay: k * 28,
+			fill: 'forwards'
+		});
+		// the seat is looked up again every frame rather than once at take-off:
+		// the list is still unfolding (and on a phone the page may scroll under
+		// it), so a seat measured at the start has moved by the time it lands
+		const begin = performance.now() + k * 28;
+		const duration = 420;
+		const ease = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
+		const frame = (now: number) => {
+			const t = Math.min(1, Math.max(0, (now - begin) / duration));
+			const e = ease(t);
+			const b = end.getBoundingClientRect();
+			const dx = b.left + b.width / 2 - (a.left + a.width / 2);
+			const dy = b.top + b.height / 2 - (a.top + a.height / 2);
+			const scale = b.width / a.width;
+			// a little lift on the way, as if picked up and set down
+			const arc = Math.sin(Math.PI * e);
+			copy.style.transform = `translate(${dx * e}px, ${dy * e - 14 * arc}px) scale(${1 + (scale - 1) * e + 0.08 * arc})`;
+			if (t < 1) requestAnimationFrame(frame);
+			else land();
+		};
+		// both ends given back: the stack keeps its faces hidden by class while
+		// it is open, and a closed list is folded out of sight anyway
+		const land = () => {
+			end.style.visibility = '';
+			start.style.visibility = '';
+			copy.remove();
+		};
+		requestAnimationFrame(frame);
 	}
 
 	/** a number that runs to its new value rather than jumping there */
@@ -303,15 +379,23 @@
 		face: PeekFace,
 		sub: string,
 		tap: boolean,
-		rows: WeekPoints[] = []
+		rows: WeekPoints[] = [],
+		// opened from the card's own list: the weeks counted back from now and
+		// the points drawn as points, the way the list beside it draws them
+		crowd = false
 	) {
 		clearTimeout(closing);
+		const now = data.week?.number;
 		const next = peekFor(
 			pill,
 			face,
 			sub,
 			tap,
-			rows.map((row) => ({ label: T.week(row.week), value: String(row.points) }))
+			rows.map((row) => ({
+				label: crowd && now ? T.weeksAgo(now - row.week) : T.week(row.week),
+				value: String(row.points)
+			})),
+			crowd ? (banana ? 'banana' : 'ticket') : undefined
 		);
 		if (!next) return;
 		shutPops();
@@ -662,7 +746,7 @@
 						.slice(7)
 						.map((b) => b.name)
 						.join(', ')}
-					onclick={() => toggleCrowd(film.id)}
+					onclick={(event) => toggleCrowd(film.id, event.currentTarget)}
 				>
 					+{film.backers.length - 7}
 				</button>
@@ -782,13 +866,14 @@
 			type="button"
 			aria-expanded={crowdOpen === film.id}
 			aria-label={film.backers.map((b) => `${b.name} ${b.points}`).join(', ') || T.noBackers}
-			onclick={() => film.backers.length && toggleCrowd(film.id)}
+			onclick={(event) => film.backers.length && toggleCrowd(film.id, event.currentTarget)}
 		>
 			{#each mineFirst.slice(0, fit) as backer, i (backer.person_id)}
 				<!-- the row leads with whoever matters most here, so each face lies
 				     over the one after it, never under -->
 				<span
 					class="fface"
+					data-pid={backer.person_id}
 					style:z-index={film.backers.length - i}
 					class:lit={fresh(backer)}
 					class:me={backer.person_id === data.person?.id && film.myPoints > 0}
@@ -814,6 +899,9 @@
 			{#if film.backers.length > fit}
 				<span class="fmore">+{film.backers.length - fit}</span>
 			{/if}
+			<!-- open, the faces are down in the list: what is left here is the
+			     way to fold it back up -->
+			<svg class="fshut" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.8 6 4.3l3.5 3.5" /></svg>
 		</button>
 		{/if}
 		<div class="fvote" data-vote={film.id}>
@@ -1160,21 +1248,53 @@
 			<div class="crowdclip">
 			<div class="crowd">
 				{#each [...film.backers].sort((x, y) => y.points - x.points) as backer, r (backer.person_id)}
-					<div class="crowdrow" class:me={backer.person_id === data.person?.id} style:--r={r}>
-						<Avatar
-							name={backer.name}
-							colour={backer.colour}
-							avatar={backer.avatar}
-							size={24}
-							font={10}
-							titled={false}
-							xp={backer.xp}
-							slim
-						/>
-						<span class="crowdname">{backer.name}</span>
+					<!-- a face over its points; the name, the rank and the weeks are
+					     a tap away, in the face's own popup -->
+					<button
+						class="crowdrow"
+						class:me={backer.person_id === data.person?.id}
+						style:--r={r}
+						type="button"
+						aria-label="{backer.name}, {backer.points} {T.unit(backer.points, votes)}"
+						onpointerenter={(event) => {
+							mousing = event.pointerType === 'mouse';
+							if (mousing)
+								peekAt(
+									event.currentTarget,
+									backer,
+									'',
+									false,
+									backer.weekly,
+									true
+								);
+						}}
+						onpointerleave={(event) => event.pointerType === 'mouse' && unpeekSoon()}
+						onclick={(event) =>
+							!mousing &&
+							peekAt(
+								event.currentTarget,
+								backer,
+								'',
+								true,
+								backer.weekly,
+								true
+							)}
+					>
+						<span class="cface" data-pid={backer.person_id}>
+							<Avatar
+								name={backer.name}
+								colour={backer.colour}
+								avatar={backer.avatar}
+								size={30}
+								font={12}
+								titled={false}
+								xp={backer.xp}
+								slim
+							/>
+						</span>
 						<!-- the points drawn as points, every five gathered into one mark:
-						     a bunch of bananas, or a die showing five -->
-						<span class="crowdpts" aria-label={T.unit(backer.points, votes)}>
+						     a bunch of bananas, or a hand of tickets -->
+						<span class="crowdpts">
 							{#each Array(Math.floor(backer.points / 5)) as _, k (k)}
 								<i class="five">{#if banana}<BananaBunch />{:else}<TicketStack />{/if}</i>
 							{/each}
@@ -1182,7 +1302,7 @@
 								<i>{#if banana}<Banana />{:else}<Ticket />{/if}</i>
 							{/each}
 						</span>
-					</div>
+					</button>
 				{/each}
 			</div>
 			</div>

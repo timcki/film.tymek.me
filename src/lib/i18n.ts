@@ -126,6 +126,8 @@ export type Dict = {
 	shortlistHead: (n: number) => string;
 	restHead: string;
 	unit: (n: number, votes: boolean) => string;
+	/** when, counted back from the open week: "this week", "last week", "3 weeks ago" */
+	weeksAgo: (n: number) => string;
 	noBackers: string;
 	btnAddPoint: string;
 	btnVote: string;
@@ -552,6 +554,7 @@ const pl: Dict = {
 	shortlistHead: (n) => (n === 3 ? 'Trójka na dziś' : `Czołowe ${n} na dziś`),
 	restHead: 'Reszta listy',
 	unit: (n, votes) => (votes ? plVotes(n) : 'pkt'),
+	weeksAgo: (n) => (n <= 0 ? 'w tym tygodniu' : n === 1 ? 'tydzień temu' : `${n} ${plWeeks(n)} temu`),
 	noBackers: '0 głosów',
 	btnAddPoint: '+1 pkt',
 	btnVote: 'Głosuj',
@@ -1095,6 +1098,7 @@ const en: Dict = {
 	shortlistHead: (n) => (n === 3 ? "Tonight's three" : `Tonight's top ${n}`),
 	restHead: 'The rest',
 	unit: (n, votes) => (votes ? en2(n, 'vote', 'votes') : 'pts'),
+	weeksAgo: (n) => (n <= 0 ? 'this week' : n === 1 ? 'last week' : `${n} weeks ago`),
 	noBackers: '0 votes',
 	btnAddPoint: '+1 point',
 	btnVote: 'Vote',

@@ -1034,10 +1034,39 @@ header .sub b {
 	font-size: 11.5px;
 	color: var(--ink2);
 }
+/* the weeks ruled off from the face, or follow on from the sub line under the
+   same rule */
 .bkpop.fpcard .bkweeks {
+	margin-top: 0;
+	padding-top: 8px;
+	border-top: 1px solid var(--line);
+	gap: 6px;
+}
+.bkpop.fpcard .fpsub + .bkweeks {
 	margin-top: -2px;
 	padding-top: 0;
 	border-top: 0;
+}
+.bkpop.fpcard .bkweeks .srow {
+	align-items: center;
+}
+/* a week's points, drawn: the same marks as the list the face was opened from */
+.fpmarks {
+	display: flex;
+	align-items: center;
+	gap: 1px;
+	font-size: 12px;
+	font-style: normal;
+	line-height: 0;
+	color: var(--accent);
+}
+.fpmarks i {
+	display: grid;
+	place-items: center;
+	font-style: normal;
+}
+.fpmarks .five {
+	margin-right: 1px;
 }
 @media (prefers-reduced-motion: reduce) {
 	.fpface {
@@ -4845,55 +4874,70 @@ details[open]:not(.closing) > .iconbtn {
 }
 .crowd {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-	gap: 12px 14px;
+	/* a face over its points, as many to a line as fit: a little scoreboard */
+	grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+	gap: 12px 4px;
 	padding: 10px 0 6px;
 }
 .crowdrow {
-	/* the row's box takes in its face's ring and glow: an animating row is
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 5px;
+	min-width: 0;
+	/* the cell's box takes in its face's ring and glow: an animating cell is
 	   painted on its own, and iOS cuts what lies outside the box square */
-	padding: 4px;
-	margin: -4px;
-	opacity: 0;
-	transform: translateY(-6px);
+	padding: 4px 0;
+	margin: -4px 0;
+	background: none;
+	border: 0;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+	-webkit-tap-highlight-color: transparent;
+}
+.crowdrow:active .cface {
+	transform: scale(0.92);
+}
+.cface {
+	display: grid;
+	border-radius: 50%;
 	transition:
 		opacity 160ms ease,
-		transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+		transform 160ms cubic-bezier(0.3, 1.6, 0.5, 1);
 }
-.crowdfold.open .crowdrow {
-	opacity: 1;
-	transform: none;
-	transition-delay: calc(60ms + var(--r, 0) * 22ms);
+/* yours: the accent ring, as in the stack */
+.crowdrow.me .cface {
+	box-shadow:
+		0 0 0 2px var(--card),
+		0 0 0 4px var(--accent);
 }
-.crowdrow {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	min-width: 0;
+/* a face that was not in the stack has nowhere to fly from: it fades in at
+   its seat, and the points under every face follow a beat behind */
+.crowdfold:not(.open) .cface,
+.crowdfold:not(.open) .crowdpts {
+	opacity: 0;
 }
-.crowdname {
-	flex: 0 1 auto;
-	min-width: 0;
-	font-size: 12.5px;
-	font-weight: 650;
-	color: var(--ink2);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-.crowdrow.me .crowdname {
-	color: var(--accent);
-}
-
 .crowdpts {
-	flex: none;
+	transition: opacity 200ms ease;
+}
+.crowdfold.open .cface {
+	transition-delay: calc(80ms + var(--r, 0) * 22ms);
+}
+.crowdfold.open .crowdpts {
+	transition-delay: calc(220ms + var(--r, 0) * 22ms);
+}
+.crowdpts {
 	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
 	align-items: center;
 	gap: 1px;
-	margin-left: auto;
+	max-width: 100%;
 	/* one size for every mark, so a bunch is five of the same bananas (a
 	   stack five of the same tickets), not a bigger fruit */
-	font-size: 13px;
+	font-size: 11px;
+	line-height: 0;
 	color: var(--accent);
 }
 .crowdpts i {
@@ -4902,13 +4946,49 @@ details[open]:not(.closing) > .iconbtn {
 	font-style: normal;
 }
 .crowdpts i.five {
-	margin-right: 2px;
+	margin-right: 1px;
 }
-.crowdpts b {
-	margin-left: 3px;
-	font-size: 11px;
-	font-weight: 800;
-	color: var(--dim);
+/* a face in flight between the stack and the list: a copy over the page */
+.faceflight {
+	position: fixed;
+	z-index: 60;
+	margin: 0 !important;
+	pointer-events: none;
+	transform-origin: 50% 50%;
+	will-change: transform;
+	/* moved frame by frame from script: a face's own transition on transform
+	   would smooth every step and leave the copy trailing behind its seat */
+	transition: none !important;
+	animation: none !important;
+}
+/* open, the stack's faces are down in the list; a chevron is left to fold it */
+.bfaces.open .fface,
+.bfaces.open .fmore {
+	visibility: hidden;
+}
+.fshut {
+	position: absolute;
+	left: 6px;
+	top: 50%;
+	width: 14px;
+	height: 14px;
+	margin-top: -7px;
+	fill: none;
+	stroke: var(--dim);
+	stroke-width: 1.6;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	opacity: 0;
+	transform: translateY(4px);
+	transition:
+		opacity 200ms ease,
+		transform 260ms cubic-bezier(0.3, 1.6, 0.5, 1);
+	pointer-events: none;
+}
+.bfaces.open .fshut {
+	opacity: 1;
+	transform: none;
+	transition-delay: 180ms;
 }
 /* the pictures in the stack must not offer to be saved, dragged or selected,
    which iOS does on a long press; a tap goes straight through to the stack */
@@ -5133,6 +5213,9 @@ details[open]:not(.closing) > .iconbtn {
 	.fface.me,
 	.crowdfold,
 	.crowdrow,
+	.cface,
+	.crowdpts,
+	.fshut,
 	.fundo,
 	.pcplus,
 	.bpcount {

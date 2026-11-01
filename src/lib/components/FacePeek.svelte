@@ -21,6 +21,8 @@
 		below: boolean;
 		/** a finger opened it, so it needs a backdrop to dismiss against */
 		tap: boolean;
+		/** the rows' values are points, drawn as the marks the app counts them in */
+		marks?: 'banana' | 'ticket';
 	};
 
 	/** width of .fpeek; the clamp needs it before the popup has been laid out */
@@ -34,7 +36,10 @@
 	export function anchorAt(el: HTMLElement, w: number, h: number) {
 		const box = el.getBoundingClientRect();
 		const half = w / 2;
-		const below = box.top < h;
+		// the sticky bar takes the top of the screen: there is only room above
+		// the face if there is room under the bar
+		const bar = document.querySelector('header.lean')?.getBoundingClientRect().bottom ?? 0;
+		const below = box.top - bar < h + 12;
 		return {
 			// clamped, or the pills at either end of the row get sliced by the viewport
 			x: Math.min(Math.max(box.left + box.width / 2, half + 8), window.innerWidth - half - 8),
@@ -53,15 +58,27 @@
 		face: PeekFace,
 		sub: string,
 		tap: boolean,
-		rows: PeekRow[] = []
+		rows: PeekRow[] = [],
+		marks?: 'banana' | 'ticket'
 	): Peek | null {
 		if (!(el instanceof HTMLElement)) return null;
-		return { face, sub, rows, tap, ...anchorAt(el, PEEK_W, PEEK_H + rows.length * PEEK_ROW) };
+		return {
+			face,
+			sub,
+			rows,
+			tap,
+			marks,
+			...anchorAt(el, PEEK_W, PEEK_H + rows.length * PEEK_ROW)
+		};
 	}
 </script>
 
 <script lang="ts">
 	import Avatar from './Avatar.svelte';
+	import Banana from './Banana.svelte';
+	import BananaBunch from './BananaBunch.svelte';
+	import Ticket from './Ticket.svelte';
+	import TicketStack from './TicketStack.svelte';
 	import { dictFor } from '$lib/i18n';
 	import type { Lang } from '$lib/i18n';
 	import { levelOf } from '$lib/levels';
@@ -135,7 +152,22 @@
 				{#each shown.rows as row (row.label)}
 					<div class="srow">
 						<span>{row.label}</span>
-						<b>{row.value}</b>
+						{#if shown.marks}
+							{@const n = Number(row.value)}
+							<!-- the week's points as points, every five one mark -->
+							<i class="fpmarks" aria-label={row.value}>
+								{#each Array(Math.floor(n / 5)) as _, k (k)}
+									<i class="five"
+										>{#if shown.marks === 'banana'}<BananaBunch />{:else}<TicketStack />{/if}</i
+									>
+								{/each}
+								{#each Array(n % 5) as _, k (k)}
+									<i>{#if shown.marks === 'banana'}<Banana />{:else}<Ticket />{/if}</i>
+								{/each}
+							</i>
+						{:else}
+							<b>{row.value}</b>
+						{/if}
 					</div>
 				{/each}
 			</div>
