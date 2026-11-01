@@ -458,13 +458,16 @@
 	/** the fade arithmetic behind a score, one row per week with points */
 	function scoreAt(el: EventTarget | null, film: Film, tap: boolean) {
 		clearTimeout(closing);
-		const weekNow = data.week?.number;
-		if (!(el instanceof HTMLElement) || rules.scoring !== 'fade' || !weekNow) return;
+		if (!(el instanceof HTMLElement) || rules.scoring !== 'fade' || !data.week) return;
 		if (!film.weeklyPoints.length) return;
 		shutPops();
-		const rows = film.weeklyPoints.map((row) => {
-			const mult = rules.decayFactor ** (weekNow - row.week);
-			return { ...row, ago: weekNow - row.week, mult, contrib: row.points * mult };
+		// age is on the list's clock, which a special round does not move, so two
+		// rounds can be the same age; their points count together, as in the score
+		const byAge = new Map<number, number>();
+		for (const row of film.weeklyPoints) byAge.set(row.age, (byAge.get(row.age) ?? 0) + row.points);
+		const rows = [...byAge].map(([ago, points]) => {
+			const mult = rules.decayFactor ** ago;
+			return { points, ago, mult, contrib: points * mult };
 		});
 		const total = rows.reduce((sum, row) => sum + row.contrib, 0);
 		// the weeks that still add something worth a digit are spelled out; the

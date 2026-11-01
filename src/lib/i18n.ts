@@ -1068,7 +1068,7 @@ const pl: Dict = {
 			case 'no_person':
 				return 'Nie ma takiej osoby na liście.';
 			case 'list_asleep':
-				return 'Zwykła lista śpi do końca spooky rundy.';
+				return 'Zwykła lista śpi do końca rundy specjalnej.';
 			case 'no_special':
 				return 'Ta runda nie jest specjalna.';
 			case 'picks_spent':
@@ -1224,7 +1224,7 @@ const en: Dict = {
 
 	shortlistHead: (n) => (n === 3 ? "Tonight's three" : `Tonight's top ${n}`),
 	restHead: 'The rest',
-	unit: (n, votes) => (votes ? en2(n, 'vote', 'votes') : 'pts'),
+	unit: (n, votes) => (votes ? en2(n, 'vote', 'votes') : en2(n, 'pt', 'pts')),
 	weeksAgo: (n) => (n <= 0 ? 'this round' : n === 1 ? 'last round' : `${n} rounds ago`),
 	noBackers: '0 votes',
 	btnAddPoint: '+1 point',
