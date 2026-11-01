@@ -88,7 +88,9 @@ function en2(n: number, one: string, many: string): string {
 const plLeft = (n: number, one: string, few: string, many: string, fem = false) =>
 	`${pl3(n, fem ? 'została' : 'został', 'zostały', 'zostało')} ${n} ${pl3(n, one, few, many)}`;
 
-const plWeeks = (n: number) => pl3(n, 'tydzień', 'tygodnie', 'tygodni');
+const plRounds = (n: number) => pl3(n, 'runda', 'rundy', 'rund');
+/** the same after "za", "temu" and the like, where one round is "rundę" */
+const plRoundsAcc = (n: number) => pl3(n, 'rundę', 'rundy', 'rund');
 const plPoints = (n: number) => pl3(n, 'punkt', 'punkty', 'punktów');
 const plVotes = (n: number) => pl3(n, 'głos', 'głosy', 'głosów');
 const plFilms = (n: number) => pl3(n, 'film', 'filmy', 'filmów');
@@ -425,25 +427,25 @@ const plRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 
 	if (r.attrition.kind === 'drop') {
 		const n = r.attrition.afterWeeksWithoutPoints;
-		out.push({ head: `${n} ${plWeeks(n)} bez punktów i film wypada.`, body: '' });
+		out.push({ head: `${n} ${plRounds(n)} bez punktów i film wypada.`, body: '' });
 	} else {
 		const n = r.attrition.afterWeeksAtZero;
-		out.push({ head: `${n} ${plWeeks(n)} bez głosu i film trafia do archiwum.`, body: '' });
+		out.push({ head: `${n} ${plRounds(n)} bez głosu i film trafia do archiwum.`, body: '' });
 	}
 
 	if (r.banking) {
 		out.push({
-			head: `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} tygodniowo i kumulują się, jeśli nie wydasz ich w danym tygodniu.`,
+			head: `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} na rundę i kumulują się, jeśli nie wydasz ich w danej rundzie.`,
 			body: `Maksymalnie możesz mieć ${r.bankCap} (jeśli masz ${r.bankCap} i nie zagłosujesz, te ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} przepadają).`
 		});
 	} else if (votes) {
 		out.push({
-			head: 'Masz jeden głos tygodniowo.',
-			body: 'Wykorzystaj go w danym tygodniu albo przepada.'
+			head: 'Masz jeden głos na rundę.',
+			body: 'Wykorzystaj go w danej rundzie albo przepada.'
 		});
 	} else {
 		out.push({
-			head: `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} tygodniowo.`,
+			head: `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} na rundę.`,
 			body: 'Niewykorzystane przepadają po wieczorku, nic się nie kumuluje.'
 		});
 	}
@@ -454,35 +456,35 @@ const plRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 			: 'Gdy głosujesz na film, możesz zużyć tyle punktów, ile masz dostępnych.',
 		body: votes
 			? 'Wybieraj uważnie, bo raz oddany zostaje.'
-			: 'Po jednym co tydzień, żeby film nie odpadł z listy, albo wszystko naraz, żeby go przepchnąć.'
+			: 'Po jednym co rundę, żeby film nie odpadł z listy, albo wszystko naraz, żeby go przepchnąć.'
 	});
 
 	out.push({
 		head: 'Punktów wydanych na film nie można cofać.',
 		body:
 			`Masz ${r.voteGraceSeconds} sekund na poprawienie pomyłki. ` +
-			'Dotyczy to punktów wydawanych w ciągu tygodnia: głos w sali można przenosić ' +
+			'Dotyczy to punktów wydawanych w ciągu rundy: głos w sali można przenosić ' +
 			'do samego rozstrzygnięcia.'
 	});
 
 	if (r.scoring === 'fade') {
 		out.push({
-			head: `${votes ? 'Głosy' : 'Punkty'} na filmie tracą co tydzień ${fadePercent(r)}% wartości.`,
-			body: 'Świeże głosy liczą się najbardziej, te z poprzednich tygodni powoli wygasają. Film utrzymuje się wysoko tylko wtedy, gdy dostaje świeże głosy co tydzień.'
+			head: `${votes ? 'Głosy' : 'Punkty'} na filmie tracą co rundę ${fadePercent(r)}% wartości.`,
+			body: 'Świeże głosy liczą się najbardziej, te z poprzednich rund powoli wygasają. Film utrzymuje się wysoko tylko wtedy, gdy dostaje świeże głosy co rundę.'
 		});
 	} else {
 		out.push({
 			head:
 				r.scoring === 'total'
-					? `${votes ? 'Głosy' : 'Punkty'} kumulują się na filmie co tydzień.`
-					: `Wynik to ten tydzień plus ${r.decayFactor} poprzedniego.`,
+					? `${votes ? 'Głosy' : 'Punkty'} kumulują się na filmie z rundy na rundę.`
+					: `Wynik to ta runda plus ${r.decayFactor} poprzedniej.`,
 			body: r.scoring === 'total' ? '' : 'Nic nie kumuluje się na długo.'
 		});
 	}
 
 	out.push({
-		head: `${r.nominationsPerWeek === 1 ? 'Jedno' : r.nominationsPerWeek} zgłoszenie tygodniowo.`,
-		body: 'Wykorzystaj w danym tygodniu albo przepada.'
+		head: `${r.nominationsPerWeek === 1 ? 'Jedno' : r.nominationsPerWeek} zgłoszenie na rundę.`,
+		body: 'Wykorzystaj w danej rundzie albo przepada.'
 	});
 
 	out.push({
@@ -499,9 +501,9 @@ const plRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 	});
 
 	out.push({
-		head: 'Nie będzie cię na wieczorku? Liberum veto usypia twój film na tydzień.',
+		head: 'Nie będzie cię na wieczorku? Liberum veto usypia twój film na jedną rundę.',
 		body:
-			'Jeden film na tydzień i tylko taki, który sam zgłosiłeś. Nie idzie wtedy pod głosowanie ' +
+			'Jeden film na rundę i tylko taki, który sam zgłosiłeś. Nie idzie wtedy pod głosowanie ' +
 			'w sali, a jego miejsce zajmuje kolejny z listy. Punkty tracą na wartości normalnie, ' +
 			'więc uśpienie kosztuje. Widzą to wszyscy, żeby zdążyli przerzucić głosy gdzie indziej.'
 	});
@@ -532,7 +534,7 @@ const pl: Dict = {
 		sage: 'Szałwia'
 	},
 
-	week: (n) => `Tydzień ${n}`,
+	week: (n) => `Runda ${n}`,
 	// tiered: only the unit that matters now, down to seconds in the last minute
 	timeLeft: (d, h, m, s) => {
 		if (d) return plLeft(d, 'dzień', 'dni', 'dni');
@@ -548,32 +550,32 @@ const pl: Dict = {
 		votes ? `${left}/${budget} ${plVotes(budget)}` : `${left}/${budget} pkt`,
 	budgetHelp: (r) => {
 		if (r.banking) {
-			return `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} co tydzień. Niewydane punkty akumulują się co tydzień, maksymalnie do ${r.bankCap}.`;
+			return `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} co rundę. Niewydane punkty akumulują się z rundy na rundę, maksymalnie do ${r.bankCap}.`;
 		}
-		if (isVotes(r)) return 'Masz jeden głos tygodniowo. Wykorzystaj go albo przepada.';
-		return `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} na tydzień. Niewykorzystane przepadają po wieczorku.`;
+		if (isVotes(r)) return 'Masz jeden głos na rundę. Wykorzystaj go albo przepada.';
+		return `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} na rundę. Niewykorzystane przepadają po wieczorku.`;
 	},
 
 	shortlistHead: (n) => (n === 3 ? 'Trójka na dziś' : `Czołowe ${n} na dziś`),
 	restHead: 'Reszta listy',
 	unit: (n, votes) => (votes ? plVotes(n) : 'pkt'),
-	weeksAgo: (n) => (n <= 0 ? 'w tym tygodniu' : n === 1 ? 'tydzień temu' : `${n} ${plWeeks(n)} temu`),
+	weeksAgo: (n) => (n <= 0 ? 'w tej rundzie' : n === 1 ? 'rundę temu' : `${n} ${plRoundsAcc(n)} temu`),
 	noBackers: '0 głosów',
 	btnAddPoint: '+1 pkt',
 	btnVote: 'Głosuj',
 	btnVoted: '✓ twój głos',
 	btnUndo: (s) => `Cofnij · ${s} s`,
 	btnRenominate: 'Zgłoś ponownie',
-	warnDrops: 'odpada w tym tyg, jeśli nie dostanie głosów',
+	warnDrops: 'odpada w tej rundzie, jeśli nie dostanie głosów',
 	rescue: 'odpada bez głosów',
-	warnFades: (n) => `znika za ${n} ${plWeeks(n)}`,
-	campaign: (n) => `${n}. tydzień kampanii`,
+	warnFades: (n) => `znika za ${n} ${plRoundsAcc(n)}`,
+	campaign: (n) => `${n}. runda kampanii`,
 
 	holdCta: 'Liberum veto',
 	holdMine: 'twoja decyzja',
 	holdWhat: 'śpi tę rundę',
 	// nie „uśpiony przez Tymka”: imiona się odmieniają, a kropka nie
-	holdH: 'Nie będzie cię w tym tygodniu?',
+	holdH: 'Nie będzie cię w tej rundzie?',
 	holdHint: (n) =>
 		`Uśpiony film nie pójdzie pod głosowanie w sali, a jego miejsce zajmie kolejny z listy ` +
 		`(do sali idzie ${n} ${plFilms(n)}). Punkty tracą na wartości normalnie, więc uśpienie kosztuje. ` +
@@ -582,12 +584,12 @@ const pl: Dict = {
 	holdBtn: 'Liberum veto',
 	holdSave: 'Zapisz powód',
 	holdRelease: 'Wycofaj',
-	holdSpent: (title) => `W tym tygodniu uśpiony jest już ${title}.`,
+	holdSpent: (title) => `W tej rundzie uśpiony jest już ${title}.`,
 	holdSig: (name) => name,
 
-	addedBy: (name, week) => `${name}, tydzień ${week}`,
-	nomPop: (week) => `Zgłoszenie z tygodnia ${week}`,
-	nomDone: (title) => `Twoje zgłoszenie w tym tygodniu: ${title}`,
+	addedBy: (name, week) => `${name}, runda ${week}`,
+	nomPop: (week) => `Zgłoszenie z rundy ${week}`,
+	nomDone: (title) => `Twoje zgłoszenie w tej rundzie: ${title}`,
 	listEmpty: 'Lista jest pusta. Zgłoś coś.',
 	shelfArchive: (n) => `Archiwum · ${n} ${plFilms(n)} bez głosów`,
 	shelfDropped: (n) => `Wypadły · ${n} ${plFilms(n)} bez wsparcia`,
@@ -605,15 +607,15 @@ const pl: Dict = {
 	dYours: (n, votes) =>
 		votes ? `${n} ${plVotes(n)} od ciebie` : `${n} ${plPoints(n)} od ciebie`,
 	dBankLeft: (n) => `${n} ${plPoints(n)} w banku`,
-	dWeekLeft: (n, budget) => `${n} z ${budget} w tym tygodniu`,
+	dWeekLeft: (n, budget) => `${n} z ${budget} w tej rundzie`,
 	sortLabel: (r) => {
-		if (r.scoring === 'fade') return `punkty tracą ${fadePercent(r)}% co tydzień`;
-		if (r.scoring === 'decay') return `ten tydzień + ${r.decayFactor} poprzedniego`;
+		if (r.scoring === 'fade') return `punkty tracą ${fadePercent(r)}% co rundę`;
+		if (r.scoring === 'decay') return `ta runda + ${r.decayFactor} poprzedniej`;
 		return isVotes(r) ? 'wszystkie głosy od początku' : 'suma wszystkich wydanych punktów';
 	},
 	minutes: (n) => `${n} min`,
-	fadeNote: (r) => `Punkty tracą ${fadePercent(r)}% wartości co tydzień`,
-	scoreNext: 'Za tydzień',
+	fadeNote: (r) => `Punkty tracą ${fadePercent(r)}% wartości co rundę`,
+	scoreNext: 'Za rundę',
 	scoreOlder: 'wcześniej',
 
 	noteQ: 'Dlaczego ten film? (opcjonalnie)',
@@ -628,7 +630,7 @@ const pl: Dict = {
 
 	nomH: 'Zgłoś film',
 	btnAddFilm: 'Film',
-	nomHint: 'Jedno zgłoszenie na osobę w tygodniu.',
+	nomHint: 'Jedno zgłoszenie na osobę w rundzie.',
 	nomPh: 'Szukaj po tytule…',
 	nomSearching: 'szukam…',
 	nomNone: (q) => `Nic nie znaleziono dla „${q}”.`,
@@ -642,7 +644,7 @@ const pl: Dict = {
 	thPerson: 'Osoba',
 	thNominated: 'Zgłoszone',
 	thWatched: 'Obejrzane',
-	noWinners: (n) => `${n} ${plWeeks(n)} zamknięto bez głosów, więc nic nie oglądaliśmy.`,
+	noWinners: (n) => `${n} ${plRoundsAcc(n)} zamknięto bez głosów, więc nic nie oglądaliśmy.`,
 
 	tabStats: 'Statystyki',
 	statsH: 'Statystyki',
@@ -675,7 +677,7 @@ const pl: Dict = {
 
 
 	timingH: 'Kiedy padają głosy',
-	timingSub: 'Kropka: kiedy w tygodniu padł głos. Kreska: kiedy pada średnio.',
+	timingSub: 'Kropka: kiedy w rundzie padł głos. Kreska: kiedy pada średnio.',
 	tickOpens: 'otwarcie',
 	tickHalf: 'połowa',
 	tickCloses: 'deadline',
@@ -684,7 +686,7 @@ const pl: Dict = {
 	engageX: 'rundy z głosem',
 	engageY: 'wieczory na miejscu',
 
-	weeksShort: (n) => `${n} tyg`,
+	weeksShort: (n) => `${n} ${plRounds(n)}`,
 	factsH: 'W liczbach',
 	factLongest: 'Najdłuższy',
 	factShortest: 'Najkrótszy',
@@ -712,7 +714,7 @@ const pl: Dict = {
 	statPoints: 'Punkty wydane od początku',
 	statWatched: 'Twoje filmy, które obejrzeliśmy',
 	statCampaign: 'Najdłuższa kampania',
-	statNom: 'Zgłoszenie w tym tygodniu',
+	statNom: 'Zgłoszenie w tej rundzie',
 	statBank: 'Bank',
 	statRules: 'Zasady',
 	vUsed: 'wykorzystane',
@@ -743,7 +745,7 @@ const pl: Dict = {
 	xpNext: (n) => `${n} XP do następnego poziomu`,
 	xpTop: 'najwyższy poziom',
 	xpRowAttend: 'Wieczorki',
-	xpRowVote: 'Tygodnie z głosem',
+	xpRowVote: 'Rundy z głosem',
 	xpRowNominate: 'Zgłoszenia',
 	xpRowWatched: 'Twoje filmy obejrzane',
 	xpRowBacked: 'Trafieni zwycięzcy',
@@ -754,7 +756,7 @@ const pl: Dict = {
 
 	hostH: 'Prowadzący',
 	hostIdle: 'Sala jeszcze nie głosuje',
-	hostClose: 'Zamknij tydzień teraz',
+	hostClose: 'Zamknij rundę teraz',
 	hostQrH: 'Kod dla sali (można wyświetlić)',
 	hostJoinH: 'Zeskanuj, żeby głosować',
 	hostCastH: 'Zagłosuj za kogoś, komu padł telefon',
@@ -762,7 +764,7 @@ const pl: Dict = {
 	hostLock: 'Zatwierdź i puszczaj film',
 	hostWinnerH: 'Dzisiaj oglądamy',
 	hostWhy: 'Dlaczego ten film?',
-	hostNoVotes: 'Nikt nie zagłosował. Wybraliśmy film według wyniku tygodniowego, a przy remisie według starszeństwa zgłoszenia.',
+	hostNoVotes: 'Nikt nie zagłosował. Wybraliśmy film według wyniku z tej rundy, a przy remisie według starszeństwa zgłoszenia.',
 	hostOnlyFilm: 'W finale był tylko jeden film, więc sala go potwierdziła.',
 	hostRankingGuest: (n) => `Gość ${n}`,
 	hostComparison: (winner, other) => `${winner} czy ${other}?`,
@@ -772,7 +774,7 @@ const pl: Dict = {
 	hostPairLoss: 'Przegrywa',
 	hostReplay: 'Policz jeszcze raz',
 	racePts: () => 'pkt',
-	raceTie: 'Remis w punktach rozstrzyga wynik z tygodnia, a potem starsze zgłoszenie.',
+	raceTie: 'Remis w punktach rozstrzyga wynik z rundy, a potem starsze zgłoszenie.',
 	raceShowAll: 'Pokaż wszystkie głosy',
 	raceHideAll: 'Ukryj głosy',
 	hostRevealClosed: 'Głosowanie zamknięte',
@@ -854,7 +856,7 @@ const pl: Dict = {
 				`${s.shortlistSize} ${plFilms(s.shortlistSize)} z największą liczbą zaznaczeń wybieramy jak zawsze.`
 		},
 		{
-			head: 'Zwykła lista jest uśpiona w tym tygodniu.',
+			head: 'Zwykła lista jest uśpiona w tej rundzie.',
 			body: 'Nic nie traci na wartości i nic nie odpada. Wracamy do stanu z poprzedniego czwartku po spooky wieczorku.'
 		}
 	],
@@ -874,19 +876,19 @@ const pl: Dict = {
 	error: (code, p, fallback) => {
 		switch (code) {
 			case 'no_week':
-				return 'Żaden tydzień nie jest jeszcze otwarty.';
+				return 'Żadna runda nie jest jeszcze otwarta.';
 			case 'room_picking':
 				return 'Głosowanie zamknięte, sala właśnie wybiera film.';
 			case 'week_closed':
-				return 'Głosowanie w tym tygodniu jest zamknięte.';
+				return 'Głosowanie w tej rundzie jest zamknięte.';
 			case 'deadline_passed':
 				return 'Głosowanie zamknęło się o 20:00, film się zaczyna.';
 			case 'already_nominated':
-				return 'Masz już zgłoszenie w tym tygodniu.';
+				return 'Masz już zgłoszenie w tej rundzie.';
 			case 'no_title':
 				return 'Podaj tytuł filmu.';
 			case 'dup_watched':
-				return `${p.title} oglądaliśmy w tygodniu ${p.week}.`;
+				return `${p.title} oglądaliśmy w rundzie ${p.week}.`;
 			case 'dup_archived':
 				return `${p.title} jest w archiwum; jeden głos go przywraca.`;
 			case 'dup_active':
@@ -920,7 +922,7 @@ const pl: Dict = {
 			case 'hold_not_active':
 				return `${p.title} nie jest na liście.`;
 			case 'hold_taken':
-				return `W tym tygodniu uśpiony jest już ${p.title}.`;
+				return `W tej rundzie uśpiony jest już ${p.title}.`;
 			case 'empty_file':
 				return 'Pusty plik.';
 			case 'avatar_too_big':
@@ -971,25 +973,25 @@ const enRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 
 	if (r.attrition.kind === 'drop') {
 		const n = r.attrition.afterWeeksWithoutPoints;
-		out.push({ head: `${n} silent ${en2(n, 'week', 'weeks')} and a film drops.`, body: '' });
+		out.push({ head: `${n} silent ${en2(n, 'round', 'rounds')} and a film drops.`, body: '' });
 	} else {
 		const n = r.attrition.afterWeeksAtZero;
-		out.push({ head: `${n} silent ${en2(n, 'week', 'weeks')} and a film is archived.`, body: '' });
+		out.push({ head: `${n} silent ${en2(n, 'round', 'rounds')} and a film is archived.`, body: '' });
 	}
 
 	if (r.banking) {
 		out.push({
-			head: `You get ${r.pointsPerWeek} points a week, and they carry over if you do not spend them.`,
-			body: `You can hold ${r.bankCap} at most (on ${r.bankCap} already, a week without voting loses that week's ${r.pointsPerWeek}).`
+			head: `You get ${r.pointsPerWeek} points a round, and they carry over if you do not spend them.`,
+			body: `You can hold ${r.bankCap} at most (on ${r.bankCap} already, a round without voting loses that round's ${r.pointsPerWeek}).`
 		});
 	} else if (votes) {
 		out.push({
-			head: 'One vote a week.',
-			body: 'Use it that week or lose it.'
+			head: 'One vote a round.',
+			body: 'Use it that round or lose it.'
 		});
 	} else {
 		out.push({
-			head: `You get ${r.pointsPerWeek} points a week.`,
+			head: `You get ${r.pointsPerWeek} points a round.`,
 			body: 'Anything unspent is gone after the night; nothing carries over.'
 		});
 	}
@@ -998,34 +1000,34 @@ const enRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 		head: votes ? 'Your vote goes on one film.' : 'You can spend as many points on a film as you have.',
 		body: votes
 			? 'Pick carefully; once cast it stays.'
-			: 'One a week to keep a film on the list, or the lot at once to force it through.'
+			: 'One a round to keep a film on the list, or the lot at once to force it through.'
 	});
 
 	out.push({
 		head: 'A cast vote cannot be taken back.',
 		body:
 			`You get ${r.voteGraceSeconds} seconds to fix a slip, then it stands and points can only ` +
-			'be added. That is the weekly points; a vote in the room moves freely until the night is decided.'
+			'be added. That is the points for the round; a vote in the room moves freely until the night is decided.'
 	});
 
 	if (r.scoring === 'fade') {
 		out.push({
-			head: `${votes ? 'Votes' : 'Points'} on a film lose ${fadePercent(r)}% of their value each week.`,
+			head: `${votes ? 'Votes' : 'Points'} on a film lose ${fadePercent(r)}% of their value each round.`,
 			body: 'Fresh votes weigh the most and old ones slowly fade, so a film stays high only while somebody still wants it.'
 		});
 	} else {
 		out.push({
 			head:
 				r.scoring === 'total'
-					? `${votes ? 'Votes' : 'Points'} accumulate on a film week after week.`
-					: `A score is this week plus ${r.decayFactor} of last week.`,
+					? `${votes ? 'Votes' : 'Points'} accumulate on a film round after round.`
+					: `A score is this round plus ${r.decayFactor} of the last.`,
 			body: r.scoring === 'total' ? '' : 'Nothing accumulates for long.'
 		});
 	}
 
 	out.push({
-		head: `${r.nominationsPerWeek === 1 ? 'One' : r.nominationsPerWeek} nomination a week.`,
-		body: 'Use it that week or lose it.'
+		head: `${r.nominationsPerWeek === 1 ? 'One' : r.nominationsPerWeek} nomination a round.`,
+		body: 'Use it that round or lose it.'
 	});
 
 	out.push({
@@ -1042,9 +1044,9 @@ const enRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 	});
 
 	out.push({
-		head: 'Not coming on the night? Liberum veto puts your film to sleep for a week.',
+		head: 'Not coming on the night? Liberum veto puts your film to sleep for a round.',
 		body:
-			'One film a week, and only one you nominated yourself. It stays out of the room vote and ' +
+			'One film a round, and only one you nominated yourself. It stays out of the room vote and ' +
 			'the next film on the list takes its place. Its points fade as usual, so waiting costs ' +
 			'something. Everyone sees it, so there is time to put votes somewhere else.'
 	});
@@ -1075,7 +1077,7 @@ const en: Dict = {
 		sage: 'Sage'
 	},
 
-	week: (n) => `Week ${n}`,
+	week: (n) => `Round ${n}`,
 	// tiered: only the unit that matters now, down to seconds in the last minute
 	timeLeft: (d, h, m, s) =>
 		d
@@ -1093,31 +1095,31 @@ const en: Dict = {
 		votes ? `${left}/${budget} ${en2(budget, 'vote', 'votes')}` : `${left}/${budget} pts`,
 	budgetHelp: (r) => {
 		if (r.banking) {
-			return `You get ${r.pointsPerWeek} points every week. Unspent points accumulate week to week, up to ${r.bankCap}.`;
+			return `You get ${r.pointsPerWeek} points every round. Unspent points accumulate round to round, up to ${r.bankCap}.`;
 		}
-		if (isVotes(r)) return 'One vote a week. Use it or lose it.';
-		return `You get ${r.pointsPerWeek} points a week. Anything unspent is gone after the night.`;
+		if (isVotes(r)) return 'One vote a round. Use it or lose it.';
+		return `You get ${r.pointsPerWeek} points a round. Anything unspent is gone after the night.`;
 	},
 
 	shortlistHead: (n) => (n === 3 ? "Tonight's three" : `Tonight's top ${n}`),
 	restHead: 'The rest',
 	unit: (n, votes) => (votes ? en2(n, 'vote', 'votes') : 'pts'),
-	weeksAgo: (n) => (n <= 0 ? 'this week' : n === 1 ? 'last week' : `${n} weeks ago`),
+	weeksAgo: (n) => (n <= 0 ? 'this round' : n === 1 ? 'last round' : `${n} rounds ago`),
 	noBackers: '0 votes',
 	btnAddPoint: '+1 point',
 	btnVote: 'Vote',
 	btnVoted: '✓ your vote',
 	btnUndo: (s) => `Undo · ${s} s`,
 	btnRenominate: 'Re-nominate',
-	warnDrops: 'drops this week unless it gets votes',
+	warnDrops: 'drops this round unless it gets votes',
 	rescue: 'drops without votes',
-	warnFades: (n) => `fades in ${n} ${en2(n, 'week', 'weeks')}`,
-	campaign: (n) => `week ${n} of this campaign`,
+	warnFades: (n) => `fades in ${n} ${en2(n, 'round', 'rounds')}`,
+	campaign: (n) => `round ${n} of this campaign`,
 
 	holdCta: 'Liberum veto',
 	holdMine: 'your call',
 	holdWhat: 'sitting this round out',
-	holdH: 'Not going to make it this week?',
+	holdH: 'Not going to make it this round?',
 	holdHint: (n) =>
 		`Your film then stays out of the room's vote and the next one on the list takes its place ` +
 		`(${n} ${en2(n, 'film goes', 'films go')} to the room). Its points fade as usual, so waiting costs ` +
@@ -1126,12 +1128,12 @@ const en: Dict = {
 	holdBtn: 'Liberum veto',
 	holdSave: 'Save the reason',
 	holdRelease: 'Put it back',
-	holdSpent: (title) => `${title} is already asleep this week.`,
+	holdSpent: (title) => `${title} is already asleep this round.`,
 	holdSig: (name) => name,
 
-	addedBy: (name, week) => `${name}, week ${week}`,
-	nomPop: (week) => `Nominated in week ${week}`,
-	nomDone: (title) => `You nominated ${title} this week`,
+	addedBy: (name, week) => `${name}, round ${week}`,
+	nomPop: (week) => `Nominated in round ${week}`,
+	nomDone: (title) => `You nominated ${title} this round`,
 	listEmpty: 'Nothing on the list. Nominate something.',
 	shelfArchive: (n) => `Archive · ${n} ${en2(n, 'film', 'films')} nobody has voted for`,
 	shelfDropped: (n) => `Dropped · ${n} ${en2(n, 'film', 'films')} that ran out of support`,
@@ -1147,15 +1149,15 @@ const en: Dict = {
 	dYours: (n, votes) =>
 		`${n} ${votes ? en2(n, 'vote', 'votes') : en2(n, 'point', 'points')} from you`,
 	dBankLeft: (n) => `${n} left in your bank`,
-	dWeekLeft: (n, budget) => `${n} of ${budget} left this week`,
+	dWeekLeft: (n, budget) => `${n} of ${budget} left this round`,
 	sortLabel: (r) => {
-		if (r.scoring === 'fade') return `points fade ${fadePercent(r)}% a week`;
-		if (r.scoring === 'decay') return `this week plus ${r.decayFactor} of last week`;
+		if (r.scoring === 'fade') return `points fade ${fadePercent(r)}% a round`;
+		if (r.scoring === 'decay') return `this round plus ${r.decayFactor} of the last`;
 		return isVotes(r) ? 'all-time votes' : 'total points ever spent';
 	},
 	minutes: (n) => `${n} min`,
-	fadeNote: (r) => `Points lose ${fadePercent(r)}% of their value each week`,
-	scoreNext: 'Next week',
+	fadeNote: (r) => `Points lose ${fadePercent(r)}% of their value each round`,
+	scoreNext: 'Next round',
 	scoreOlder: 'earlier',
 
 	noteQ: 'Why this one? (optional)',
@@ -1170,7 +1172,7 @@ const en: Dict = {
 
 	nomH: 'Nominate a film',
 	btnAddFilm: 'Film',
-	nomHint: 'One nomination per person per week.',
+	nomHint: 'One nomination per person per round.',
 	nomPh: 'Search by title…',
 	nomSearching: 'searching…',
 	nomNone: (q) => `Nothing found for “${q}”.`,
@@ -1185,7 +1187,7 @@ const en: Dict = {
 	thNominated: 'Nominated',
 	thWatched: 'Watched',
 	noWinners: (n) =>
-		`${n} ${en2(n, 'week', 'weeks')} closed with nobody voting, so nothing was watched.`,
+		`${n} ${en2(n, 'round', 'rounds')} closed with nobody voting, so nothing was watched.`,
 
 	tabStats: 'Stats',
 	statsH: 'Statistics',
@@ -1218,7 +1220,7 @@ const en: Dict = {
 
 
 	timingH: 'When the votes land',
-	timingSub: 'A dot: when in the week a vote was cast. The pip: when one usually is.',
+	timingSub: 'A dot: when in the round a vote was cast. The pip: when one usually is.',
 	tickOpens: 'opens',
 	tickHalf: 'halfway',
 	tickCloses: 'deadline',
@@ -1227,7 +1229,7 @@ const en: Dict = {
 	engageX: 'rounds voted in',
 	engageY: 'nights in the room',
 
-	weeksShort: (n) => `${n} ${en2(n, 'wk', 'wks')}`,
+	weeksShort: (n) => `${n} ${en2(n, 'round', 'rounds')}`,
 	factsH: 'In numbers',
 	factLongest: 'Longest',
 	factShortest: 'Shortest',
@@ -1255,7 +1257,7 @@ const en: Dict = {
 	statPoints: 'Points spent, all time',
 	statWatched: 'Your nominations we watched',
 	statCampaign: 'Longest campaign',
-	statNom: 'Nomination this week',
+	statNom: 'Nomination this round',
 	statBank: 'Bank',
 	statRules: 'Rule set',
 	vUsed: 'used',
@@ -1286,7 +1288,7 @@ const en: Dict = {
 	xpNext: (n) => `${n} XP to the next level`,
 	xpTop: 'top level',
 	xpRowAttend: 'Nights attended',
-	xpRowVote: 'Weeks voted',
+	xpRowVote: 'Rounds voted',
 	xpRowNominate: 'Nominations',
 	xpRowWatched: 'Your films watched',
 	xpRowBacked: 'Winners backed',
@@ -1297,7 +1299,7 @@ const en: Dict = {
 
 	hostH: 'Host',
 	hostIdle: 'The room is not voting yet',
-	hostClose: 'Close the week now',
+	hostClose: 'Close the round now',
 	hostQrH: 'Room QR (safe to project)',
 	hostJoinH: 'Scan to vote',
 	hostCastH: 'Cast for someone whose phone is dead',
@@ -1305,7 +1307,7 @@ const en: Dict = {
 	hostLock: 'Lock it in and start the film',
 	hostWinnerH: 'Tonight we are watching',
 	hostWhy: 'Why this film won',
-	hostNoVotes: 'Nobody voted. The weekly score decided, with older nominations breaking a tie.',
+	hostNoVotes: 'Nobody voted. The score this round decided, with older nominations breaking a tie.',
 	hostOnlyFilm: 'There was only one shortlisted film, so the room confirmed it.',
 	hostRankingGuest: (n) => `Guest ${n}`,
 	hostComparison: (winner, other) => `${winner} or ${other}?`,
@@ -1315,7 +1317,7 @@ const en: Dict = {
 	hostPairLoss: 'Loses',
 	hostReplay: 'Count again',
 	racePts: (n) => (n === 1 ? 'pt' : 'pts'),
-	raceTie: 'A tie on points goes to the higher weekly score, then the older nomination.',
+	raceTie: 'A tie on points goes to the higher score this round, then the older nomination.',
 	raceShowAll: 'Show every vote',
 	raceHideAll: 'Hide the votes',
 	hostRevealClosed: 'Voting is closed',

@@ -301,7 +301,7 @@ function assertNominationSlot(db: DB, rules: RuleSet, personId: string, week: nu
 		)
 		.get(personId, week) as { n: number };
 	if (row.n >= rules.nominationsPerWeek) {
-		throw new RuleError('already_nominated', 'you have already nominated a film this week');
+		throw new RuleError('already_nominated', 'you have already nominated a film this round');
 	}
 }
 

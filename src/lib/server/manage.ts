@@ -443,7 +443,7 @@ export function setFilmAttribution(db: DB, id: number, personId: string, week: n
 				)
 				.get(personId, addedWeek, id) as { id: number } | undefined;
 			if (clash) {
-				throw new RuleError('nomination_clash', 'they already nominated something that week');
+				throw new RuleError('nomination_clash', 'they already nominated something that round');
 			}
 		}
 

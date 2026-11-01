@@ -219,7 +219,7 @@ const pl: AdminDict = {
 
 	filH: 'Filmy',
 	filStatus: (status) => STATUS_PL[status] ?? status,
-	filBy: (name, week) => `${name}, tydzień ${week}`,
+	filBy: (name, week) => `${name}, runda ${week}`,
 	filBallots: (n) => `${n} głosów w bazie`,
 	filEdit: 'Edytuj',
 	filSave: 'Zapisz',
@@ -237,7 +237,7 @@ const pl: AdminDict = {
 	filDelete: 'Usuń na zawsze',
 	filDeleteNote: 'Tylko dla filmów bez ani jednego głosu.',
 	filWatchedH: 'Oznacz jako obejrzany',
-	filWeek: 'Tydzień',
+	filWeek: 'Runda',
 	filMarkWatched: 'Zapisz jako obejrzany',
 	filReassignH: 'Zgłaszający',
 	filReassign: 'Przepisz',
@@ -259,7 +259,7 @@ const pl: AdminDict = {
 	arcNothing: 'Nic nie zapisano.',
 	arcWho: 'Kto zaproponował',
 	arcAddOpen: '+ Dopisz film',
-	arcAddH: (week) => `Dopisz film do tygodnia ${week}`,
+	arcAddH: (week) => `Dopisz film do rundy ${week}`,
 	arcSearchPh: 'Szukaj w TMDB…',
 	arcNoResults: 'Nic nie znaleziono.',
 	arcByHand: 'Wpisz ręcznie',
@@ -307,25 +307,25 @@ const pl: AdminDict = {
 			case 'hold_not_active':
 				return `${p.title} nie jest na liście.`;
 			case 'hold_taken':
-				return `Ta osoba uśpiła w tym tygodniu ${p.title}.`;
+				return `Ta osoba uśpiła w tej rundzie ${p.title}.`;
 			case 'film_has_ballots':
 				return 'Ktoś na niego głosował. Przenieś do archiwum zamiast usuwać.';
 			case 'film_watched':
 				return 'Ten film już oglądaliśmy.';
 			case 'nomination_clash':
-				return 'Ta osoba ma już zgłoszenie z tego tygodnia.';
+				return 'Ta osoba ma już zgłoszenie z tej rundy.';
 			case 'no_such_week':
-				return `Nie ma tygodnia ${p.week}.`;
+				return `Nie ma rundy ${p.week}.`;
 			case 'use_mark_watched':
-				return 'Użyj „oznacz jako obejrzany”, żeby zapisać tydzień.';
+				return 'Użyj „oznacz jako obejrzany”, żeby zapisać rundę.';
 			case 'no_title':
 				return 'Podaj tytuł.';
 			case 'dup_active':
 				return `${p.title} jest już na liście.`;
 			case 'week_has_winner':
-				return `W tygodniu ${p.week} oglądaliśmy już ${p.title}.`;
+				return `W rundzie ${p.week} oglądaliśmy już ${p.title}.`;
 			case 'dup_archival':
-				return `${p.title} jest już zapisany (tydzień ${p.week}).`;
+				return `${p.title} jest już zapisany (runda ${p.week}).`;
 			case 'film_archival':
 				return `${p.title} to zapis dawnego wieczoru, nie można na niego głosować.`;
 			case 'special_on':
@@ -424,7 +424,7 @@ const en: AdminDict = {
 
 	filH: 'Films',
 	filStatus: (status) => STATUS_EN[status] ?? status,
-	filBy: (name, week) => `${name}, week ${week}`,
+	filBy: (name, week) => `${name}, round ${week}`,
 	filBallots: (n) => `${n} ballots on record`,
 	filEdit: 'Edit',
 	filSave: 'Save',
@@ -442,7 +442,7 @@ const en: AdminDict = {
 	filDelete: 'Delete for good',
 	filDeleteNote: 'Only for films nobody has voted for.',
 	filWatchedH: 'Mark as watched',
-	filWeek: 'Week',
+	filWeek: 'Round',
 	filMarkWatched: 'Record as watched',
 	filReassignH: 'Nominated by',
 	filReassign: 'Reassign',
@@ -464,7 +464,7 @@ const en: AdminDict = {
 	arcNothing: 'Nothing written down.',
 	arcWho: 'Suggested by',
 	arcAddOpen: '+ Add a film',
-	arcAddH: (week) => `Add a film to week ${week}`,
+	arcAddH: (week) => `Add a film to round ${week}`,
 	arcSearchPh: 'Search TMDB…',
 	arcNoResults: 'Nothing found.',
 	arcByHand: 'Type it by hand',

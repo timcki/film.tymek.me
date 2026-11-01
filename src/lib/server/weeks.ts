@@ -28,7 +28,7 @@ export function requireOpenWeek(db: DB, now: Date = new Date()): Week {
 	const week = currentWeek(db);
 	if (!week) throw new RuleError('no_week', 'no week is open yet');
 	if (week.status === 'runoff') throw new RuleError('room_picking', 'voting is closed; the room is picking');
-	if (week.status !== 'open') throw new RuleError('week_closed', 'voting for this week is closed');
+	if (week.status !== 'open') throw new RuleError('week_closed', 'voting for this round is closed');
 	if (now.getTime() >= new Date(week.closes_at).getTime()) {
 		throw new RuleError('deadline_passed', 'voting closed at 20:00, the film is starting');
 	}
