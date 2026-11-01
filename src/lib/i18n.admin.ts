@@ -28,6 +28,8 @@ export type AdminDict = {
 	calNote: string;
 	calNotePh: string;
 	calAdd: string;
+	/** the trap: a date before the round's own closes the list there */
+	calAddHint: (night: string) => string;
 	calUpcomingH: string;
 	calPastH: string;
 	calEmpty: string;
@@ -73,6 +75,9 @@ export type AdminDict = {
 	cwDirectorsPh: string;
 	cwCoded: string;
 	cwStart: string;
+	/** §3.6: a special round on a date of its own, before the round's night */
+	cwExtra: string;
+	cwExtraHint: (night: string) => string;
 	cwCancel: string;
 	cwNoRules: string;
 	lookLabel: string;
@@ -205,6 +210,8 @@ const pl: AdminDict = {
 	calNote: 'Notka',
 	calNotePh: 'np. u Piotra',
 	calAdd: 'Dodaj',
+	calAddHint: (night) =>
+		`Termin przed ${night} zamknie zwykłą listę wcześniej. Wieczór, który listy nie rusza, ustawisz wyżej: wybierz specjalne głosowanie i podaj mu własną datę.`,
 	calUpcomingH: 'Nadchodzące',
 	calPastH: 'Minione',
 	calEmpty: 'Nic nie zaplanowane.',
@@ -226,7 +233,7 @@ const pl: AdminDict = {
 	spcIntro:
 		'Wieczór specjalny ma własne propozycje i własne głosowanie. ' +
 		'Lista śpi do jego końca: nikt nie wydaje punktów, nic nie traci na wartości i nic nie wypada. ' +
-		'Punkty wydane w tej rundzie wcześniej zostają. Odwołać go można, dopóki nikt nic nie zgłosił.',
+		'Potem lista budzi się tam, gdzie była: wydane punkty, zgłoszenia i wstrzymania zostają. Odwołać go można, dopóki nikt nic nie zgłosił.',
 	spcLocked: 'Ktoś już zgłosił propozycję, więc runda dobiegnie końca.',
 	spcSeePicks: 'Zobacz propozycje',
 	cwIntro: 'Wszystko jest opcjonalne. Bez nazwy i zasad to zwykły wieczór specjalny.',
@@ -253,6 +260,9 @@ const pl: AdminDict = {
 	cwDirectorsPh: 'np. Kieślowski, Holland',
 	cwCoded: 'Inne',
 	cwStart: 'Zacznij',
+	cwExtra: 'Dodatkowy wieczór',
+	cwExtraHint: (night) =>
+		`Zostaw puste, a wieczorem specjalnym będzie ${night}. Podaj wcześniejszy termin, a to będzie wieczór dodatkowy: lista poczeka i potem pobiegnie dalej do ${night}, jakby nic się nie stało.`,
 	cwCancel: 'Anuluj',
 	cwNoRules: 'Bez zasad: pasuje każdy film.',
 	lookLabel: 'Wygląd strony',
@@ -409,6 +419,8 @@ const pl: AdminDict = {
 				return `${p.title} to zapis dawnego wieczoru, nie można na niego głosować.`;
 			case 'special_on':
 				return 'Ta runda już jest specjalna.';
+			case 'extra_not_before':
+				return 'Dodatkowy wieczór musi wypaść przed końcem bieżącej rundy.';
 			case 'special_has_picks':
 				return 'Ktoś już zgłosił propozycję, więc runda dobiegnie końca.';
 			case 'no_special':
@@ -485,6 +497,8 @@ const en: AdminDict = {
 	calNote: 'Note',
 	calNotePh: "e.g. at Piotr's",
 	calAdd: 'Add',
+	calAddHint: (night) =>
+		`A date before ${night} closes the regular list early. For a night that leaves the list alone, pick a special vote above and give it a date of its own.`,
 	calUpcomingH: 'Coming up',
 	calPastH: 'Past',
 	calEmpty: 'Nothing planned.',
@@ -506,7 +520,7 @@ const en: AdminDict = {
 	spcIntro:
 		'A special night has its own picks and its own vote. ' +
 		'The list sleeps until it is over: nobody spends points, nothing fades and nothing drops. ' +
-		'Points already spent this round stay where they are. It can be called off until somebody puts a pick up.',
+		'Then the list wakes where it was: points spent, nominations and holds all stay. It can be called off until somebody puts a pick up.',
 	spcLocked: 'Somebody has already put a pick up, so the round runs its course.',
 	spcSeePicks: 'See the picks',
 	cwIntro: 'Everything is optional. With no name and no rules it is a plain special night.',
@@ -533,6 +547,9 @@ const en: AdminDict = {
 	cwDirectorsPh: 'e.g. Kieślowski, Holland',
 	cwCoded: 'Other',
 	cwStart: 'Start',
+	cwExtra: 'Extra night',
+	cwExtraHint: (night) =>
+		`Leave it empty and the special night is ${night}. Give it an earlier date for an extra night instead: the list waits, then carries on to ${night} as if nothing had happened.`,
 	cwCancel: 'Cancel',
 	cwNoRules: 'No rules: any film fits.',
 	lookLabel: 'Site look',

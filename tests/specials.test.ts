@@ -9,6 +9,7 @@ import {
 	setApproval,
 	specialPicks,
 	specialTurnout,
+	startExtraNight,
 	startSpecial,
 	stopSpecial
 } from '../src/lib/server/specials.js';
@@ -268,6 +269,29 @@ describe('a special round', () => {
 		expect(filmById(db, film)!.status).toBe('watched');
 		expect(bankBalance(db, 'bartek')).toBe(2);
 		expect(bankBalance(db, 'ala')).toBe(4);
+	});
+
+	it('runs an extra night on a date of its own, then gives the list back its night', () => {
+		const { db, rules } = freshDb('weekly');
+		const thursday = currentWeek(db)!.closes_at;
+		const film = addFilm(db, 'Paddington', 'ala', 1);
+		setPoints(db, rules, 'bartek', film, 2);
+		expect(() =>
+			startExtraNight(db, rules, 'approval', null, new Date(Date.parse(thursday) + 3600_000))
+		).toThrow(expect.objectContaining({ code: 'extra_not_before' }));
+
+		const sunday = new Date('2026-08-04T18:00:00Z');
+		const week = startExtraNight(db, rules, 'approval', null, sunday);
+		expect(week.special).toBe('approval');
+		expect(week.closes_at).toBe(sunday.toISOString());
+		setApproval(db, rules, 'darek', nominateSpecial(db, rules, 'darek', { title: 'The Thing' }), true);
+		closeWeek(db, rules);
+		closeRunoff(db, rules, openRunoff(db)!.id);
+
+		const next = currentWeek(db)!;
+		expect(next.special).toBeNull();
+		expect(next.closes_at).toBe(thursday);
+		expect(spentInRound(db, 'bartek', next.number)).toBe(2);
 	});
 
 	it('changes its mind only while nobody has put a pick up', () => {

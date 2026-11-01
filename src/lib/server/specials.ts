@@ -8,7 +8,8 @@ import { avatarUrl } from './people.js';
 import { rescoreAll } from './scoring.js';
 import { rexpAll } from './xp.js';
 import { assertNotDuplicate, filmById, insertFilm, type NominationInput } from './films.js';
-import { currentWeek, requireOpenWeek, requireSpecialWeek } from './weeks.js';
+import { currentWeek, requireOpenWeek, requireSpecialWeek, syncOpenWeek } from './weeks.js';
+import { addNight } from './schedule.js';
 import { SPECIALS, specialOf, type Special, type SpecialId } from '../specials.js';
 import { customOf, rulesOf, type CustomWeek } from '../custom-weeks.js';
 import { assertFits } from './custom-weeks.js';
@@ -36,6 +37,32 @@ export function startSpecial(
 		);
 		rescoreAll(db, rules, week.number);
 		return currentWeek(db) as Week;
+	});
+}
+
+/**
+ * §3.6: an extra night. A date of its own goes into the calendar ahead of the
+ * round's night, and the round becomes a special one closing there, all in one
+ * step: a date added on its own would close the list early instead. Once it
+ * is over the list wakes where it was and runs on to the night it had.
+ */
+export function startExtraNight(
+	db: DB,
+	rules: RuleSet,
+	id: SpecialId,
+	custom: CustomWeek | null,
+	at: Date,
+	now: Date = new Date()
+): Week {
+	return immediate(db, () => {
+		const week = requireOpenWeek(db, now);
+		if (week.special) throw new RuleError('special_on', 'this round is already a special one');
+		if (at.getTime() >= new Date(week.closes_at).getTime()) {
+			throw new RuleError('extra_not_before', 'an extra night has to come before the round closes');
+		}
+		addNight(db, at, custom?.name ?? null, now);
+		syncOpenWeek(db);
+		return startSpecial(db, rules, id, custom, now);
 	});
 }
 

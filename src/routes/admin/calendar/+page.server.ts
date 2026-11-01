@@ -15,7 +15,7 @@ import { RuleError } from '$lib/server/types';
 import { fromLocalInput, iso, nextDeadline } from '$lib/server/time';
 import { toLocalInput } from '$lib/datetime';
 import { activeRules } from '$lib/server/config';
-import { editSpecial, startSpecial, stopSpecial } from '$lib/server/specials';
+import { editSpecial, startExtraNight, startSpecial, stopSpecial } from '$lib/server/specials';
 import { cleanCustom } from '$lib/server/custom-weeks';
 import type { CustomWeek } from '$lib/custom-weeks';
 import { customOf } from '$lib/custom-weeks';
@@ -69,9 +69,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 	};
 };
 
-function whenFrom(form: FormData): Date {
+function whenFrom(form: FormData, key = 'at'): Date {
 	try {
-		return fromLocalInput(String(form.get('at') ?? ''));
+		return fromLocalInput(String(form.get(key) ?? ''));
 	} catch {
 		throw new RuleError('bad_date', 'give a date and a time');
 	}
@@ -170,7 +170,11 @@ export const actions: Actions = {
 			}
 			if (!isSpecialId(id)) throw new RuleError('no_special', 'no such special round');
 			const custom = customFrom(form);
-			const week = startSpecial(getDb(), activeRules(), id, custom);
+			const extra = form.get('extra') ? whenFrom(form, 'extra') : null;
+			const week = extra
+				? startExtraNight(getDb(), activeRules(), id, custom, extra)
+				: startSpecial(getDb(), activeRules(), id, custom);
+			if (extra) logAdmin(getDb(), person.id, 'night.add', iso(extra), custom.name ?? null);
 			logAdmin(getDb(), person.id, 'round.special', String(week.number), custom.name ?? id);
 			return { special: id };
 		} catch (error) {

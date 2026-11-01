@@ -189,6 +189,7 @@
 	</label>
 	<button class="tap go">{A.calAdd}</button>
 </form>
+{#if data.week && !data.week.special}<p class="ahint">{A.calAddHint(when(data.week.closesAt))}</p>{/if}
 
 <div class="sec">{A.calUpcomingH}</div>
 {#each upcoming as night (night.id)}
@@ -268,6 +269,11 @@
 		{#if action === 'special'}
 			<input type="hidden" name="special" value={vote} />
 			<p class="ahint">{A.cwIntro}</p>
+			<label class="cwwide">
+				<span>{A.cwExtra}</span>
+				<input type="datetime-local" name="extra" />
+			</label>
+			{#if data.week}<p class="ahint">{A.cwExtraHint(when(data.week.closesAt))}</p>{/if}
 		{/if}
 		<div class="fedit">
 			<label>
