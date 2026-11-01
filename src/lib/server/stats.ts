@@ -13,6 +13,8 @@ import type { DB } from './db.js';
 import { SUCCESSOR } from './tmdb.js';
 import { avatarUrl } from './people.js';
 import { filmEvenings } from './evenings.js';
+import { listClock } from './scoring.js';
+import { ROUNDS_VOTED } from './xp.js';
 
 /** 'app' starts at the first round anybody voted in; 'all' starts at week 1 */
 export type Era = 'app' | 'all';
@@ -140,8 +142,10 @@ export type RoundRow = {
 export function roundRows(db: DB, window: Window): RoundRow[] {
 	return db
 		.prepare(
+			// §3.6: a special round's ticks are its votes, as they are for XP
 			`SELECT w.number AS week,
-			        (SELECT COUNT(DISTINCT person_id) FROM ballot b WHERE b.week_number = w.number) AS voters,
+			        (SELECT COUNT(DISTINCT person_id) FROM (${ROUNDS_VOTED}) v
+			           WHERE v.week_number = w.number) AS voters,
 			        (SELECT COUNT(*) FROM attendance a WHERE a.week_number = w.number) AS attended,
 			        (SELECT f.title FROM film f
 			           WHERE f.status = 'watched' AND f.outing IS NULL AND f.watched_week = w.number
@@ -282,15 +286,26 @@ export function engagement(db: DB, window: Window): EngagementRow[] {
 	const cards = people(db);
 	const { from, to } = window;
 
+	const spent = new Map(
+		(
+			db
+				.prepare(
+					`SELECT person_id, SUM(points) AS points
+					 FROM ballot WHERE week_number BETWEEN ? AND ? GROUP BY person_id`
+				)
+				.all(from, to) as { person_id: string; points: number }[]
+		).map((row) => [row.person_id, row.points])
+	);
+	// §3.6: a special round's ticks are its votes, as they are for XP
 	const voted = new Map(
 		(
 			db
 				.prepare(
-					`SELECT person_id, COUNT(DISTINCT week_number) AS rounds, SUM(points) AS points
-					 FROM ballot WHERE week_number BETWEEN ? AND ? GROUP BY person_id`
+					`SELECT person_id, COUNT(*) AS rounds FROM (${ROUNDS_VOTED})
+					 WHERE week_number BETWEEN ? AND ? GROUP BY person_id`
 				)
-				.all(from, to) as { person_id: string; rounds: number; points: number }[]
-		).map((row) => [row.person_id, row])
+				.all(from, to) as { person_id: string; rounds: number }[]
+		).map((row) => [row.person_id, row.rounds])
 	);
 	const attended = new Map(
 		(
@@ -301,25 +316,31 @@ export function engagement(db: DB, window: Window): EngagementRow[] {
 				.all(from, to) as { person_id: string; n: number }[]
 		).map((row) => [row.person_id, row.n])
 	);
-	const backed = new Map(
-		(
-			db
-				.prepare(
-					`SELECT b.person_id, COUNT(DISTINCT f.id) AS n
-					 FROM film f JOIN ballot b ON b.film_id = f.id AND b.week_number = f.watched_week
-					 WHERE f.status = 'watched' AND f.watched_week BETWEEN ? AND ? GROUP BY b.person_id`
-				)
-				.all(from, to) as { person_id: string; n: number }[]
-		).map((row) => [row.person_id, row.n])
-	);
+	// points on the winner in the list round it won, which a special round
+	// before the night (§3.6) can have split across two weeks
+	const clock = listClock(db);
+	const backing = db
+		.prepare(
+			`SELECT DISTINCT b.person_id, f.id, f.watched_week, b.week_number
+			 FROM film f JOIN ballot b ON b.film_id = f.id AND b.week_number <= f.watched_week
+			 WHERE f.status = 'watched' AND f.watched_week BETWEEN ? AND ?`
+		)
+		.all(from, to) as { person_id: string; id: number; watched_week: number; week_number: number }[];
+	const backedFilms = new Map<string, Set<number>>();
+	for (const row of backing) {
+		if (clock(row.week_number) !== clock(row.watched_week)) continue;
+		let films = backedFilms.get(row.person_id);
+		if (!films) backedFilms.set(row.person_id, (films = new Set()));
+		films.add(row.id);
+	}
 
 	return [...cards.values()]
 		.map((person) => ({
 			person,
-			roundsVoted: voted.get(person.id)?.rounds ?? 0,
-			points: voted.get(person.id)?.points ?? 0,
+			roundsVoted: voted.get(person.id) ?? 0,
+			points: spent.get(person.id) ?? 0,
 			nightsAttended: attended.get(person.id) ?? 0,
-			winnersBacked: backed.get(person.id) ?? 0
+			winnersBacked: backedFilms.get(person.id)?.size ?? 0
 		}))
 		.sort(
 			(a, b) =>

@@ -29,7 +29,7 @@ const IN_PLAY = 'outing IS NULL';
  * (§3.6) are its votes, so turning up to one is no worse for your XP than a
  * round of points; a round with both still counts once.
  */
-const ROUNDS_VOTED = `
+export const ROUNDS_VOTED = `
 	SELECT person_id, week_number FROM ballot
 	UNION
 	SELECT a.person_id, f.added_week AS week_number

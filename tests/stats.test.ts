@@ -289,6 +289,30 @@ describe('turning up', () => {
 		expect(rows.find((row) => row.person.id === 'bartek')!.winnersBacked).toBe(1);
 	});
 
+	it('counts an extra night’s ticks as votes, and points from before it as backing', () => {
+		const { db } = freshDb();
+		const winner = addFilm(db, 'Winner', 'ala', 1);
+		castBallot(db, 1, 'bartek', winner, 2);
+		db.prepare("UPDATE week SET special = 'approval' WHERE number = 1").run();
+		const pick = db
+			.prepare(
+				`INSERT INTO film (title, title_key, added_by, added_week, status, score, created_at, special)
+				 VALUES ('Pick', 'pick', 'celina', 1, 'dropped', 0, '2026-08-03T10:00:00Z', 'approval')`
+			)
+			.run().lastInsertRowid;
+		db.prepare(`INSERT INTO approval (film_id, person_id, created_at) VALUES (?, 'darek', '2026-08-03T10:00:00Z')`).run(
+			pick
+		);
+		watch(db, winner, 2);
+
+		const rows = engagement(db, ALL);
+		const of = (id: string) => rows.find((row) => row.person.id === id)!;
+		// bartek's points went on before the extra night, in the round the film won
+		expect(of('bartek').winnersBacked).toBe(1);
+		expect(of('darek').roundsVoted).toBe(1);
+		expect(roundRows(db, ALL)[0].voters).toBe(2);
+	});
+
 	it('lists everybody on the roster, including the ones who have done nothing', () => {
 		const { db } = freshDb();
 		const rows = engagement(db, ALL);
