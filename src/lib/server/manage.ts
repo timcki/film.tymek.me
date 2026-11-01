@@ -12,6 +12,7 @@ import { avatarUrl } from './people.js';
 import { cleanNote, cleanOverview, cleanPoster, cleanTitle } from './films.js';
 import { filmEvenings } from './evenings.js';
 import type { Outing } from '../outings.js';
+import { detailsOf } from './tmdb.js';
 
 /**
  * Everything the admin screens can change. Kept apart from films.ts and
@@ -308,6 +309,13 @@ export type FilmEdit = {
 	runtime: number | null;
 	posterUrl: string | null;
 	note: string | null;
+	/**
+	 * Another film picked from TMDB in its place. What the row keeps out of
+	 * sight comes with it, so the edit really is the other film: the id later
+	 * duplicates are caught by, the description and the countries the map reads.
+	 * Votes, comments and the nominator stay, which is the point of editing
+	 */
+	replacement?: { tmdbId: number; overview: string | null; countries: string | null };
 };
 
 /** the admin film editor's fields, read the way editFilm takes them */
@@ -327,6 +335,24 @@ export function filmEditFrom(form: FormData): FilmEdit {
 	};
 }
 
+/**
+ * The same, with a film picked from TMDB in this one's place looked up once,
+ * on save (§8.2): what TMDB says about it wins over the fields it replaces.
+ */
+export async function filmEditLookedUp(form: FormData): Promise<FilmEdit> {
+	const edit = filmEditFrom(form);
+	const tmdbId = Number(form.get('tmdbId')) || null;
+	if (!tmdbId) return edit;
+	const details = await detailsOf(tmdbId);
+	return {
+		...edit,
+		director: details.director,
+		genre: details.genre,
+		runtime: details.runtime,
+		replacement: { tmdbId, overview: String(form.get('overview') ?? ''), countries: details.countries }
+	};
+}
+
 export function editFilm(db: DB, id: number, edit: FilmEdit): void {
 	immediate(db, () => {
 		const film = filmOr404(db, id);
@@ -339,6 +365,21 @@ export function editFilm(db: DB, id: number, edit: FilmEdit): void {
 				.prepare(`SELECT id FROM film WHERE title_key = ? AND id != ? AND status != 'dropped'`)
 				.get(titleKey(title), id) as { id: number } | undefined);
 		if (clash) throw new RuleError('dup_active', `${title} is already on the list`, { title });
+		const next = edit.replacement;
+		if (next && next.tmdbId !== film.tmdb_id) {
+			const same = db
+				.prepare(`SELECT title FROM film WHERE tmdb_id = ? AND id != ? AND status != 'dropped'`)
+				.get(next.tmdbId, id) as { title: string } | undefined;
+			if (same) throw new RuleError('dup_active', `${same.title} is already on the list`, { title: same.title });
+		}
+		if (next) {
+			db.prepare('UPDATE film SET tmdb_id = ?, overview = ?, countries = ? WHERE id = ?').run(
+				next.tmdbId,
+				cleanOverview(next.overview),
+				next.countries,
+				id
+			);
+		}
 		db.prepare(
 			`UPDATE film SET title = ?, title_key = ?, year = ?, director = ?, genre = ?, runtime = ?,
 			                 poster_url = ?, note = ? WHERE id = ?`

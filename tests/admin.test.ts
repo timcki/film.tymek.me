@@ -188,6 +188,36 @@ describe('curating the films', () => {
 		expect(fixed.year).toBe(1972);
 	});
 
+	it('swaps a film for another from TMDB, underneath too, and keeps its votes', () => {
+		const { db } = freshDb('banked');
+		const film = addFilm(db, 'Solaris', 'ala', 1, { tmdbId: 593, overview: 'A space station.' });
+		addFilm(db, 'Mirror', 'bartek', 1, { tmdbId: 1396 });
+		castBallot(db, 1, 'celina', film, 2);
+		const edit = {
+			title: 'Stalker',
+			year: 1979,
+			director: 'Andrei Tarkovsky',
+			genre: 'Drama',
+			runtime: 162,
+			posterUrl: null,
+			note: null,
+			replacement: { tmdbId: 1398, overview: 'A guide leads two men into the Zone.', countries: 'SU' }
+		};
+		expect(() => editFilm(db, film, { ...edit, title: 'Mirror 2', replacement: { ...edit.replacement, tmdbId: 1396 } })).toThrow(
+			expect.objectContaining({ code: 'dup_active' })
+		);
+
+		editFilm(db, film, edit);
+		const swapped = filmById(db, film)!;
+		expect([swapped.title, swapped.tmdb_id, swapped.overview, swapped.countries]).toEqual([
+			'Stalker',
+			1398,
+			'A guide leads two men into the Zone.',
+			'SU'
+		]);
+		expect(db.prepare('SELECT points FROM ballot WHERE film_id = ?').get(film)).toEqual({ points: 2 });
+	});
+
 	it('still edits a film that shares its title with a rewatch', () => {
 		const { db } = freshDb('banked');
 		const first = addFilm(db, 'Stalker', 'ala', 1);

@@ -23,7 +23,8 @@
 		onpick
 	}: {
 		placeholder: string;
-		byHandLabel: string;
+		/** left out where only a TMDB film will do */
+		byHandLabel?: string;
 		noResultsLabel: string;
 		onpick: (film: Picked) => void;
 	} = $props();
@@ -92,7 +93,9 @@
 {:else if query.trim().length >= 2 && !searching}
 	<p class="ahint">
 		{noResultsLabel}
-		<button type="button" class="linky" onclick={() => take(byHand())}>{byHandLabel}</button>
+		{#if byHandLabel}
+			<button type="button" class="linky" onclick={() => take(byHand())}>{byHandLabel}</button>
+		{/if}
 	</p>
 {/if}
 

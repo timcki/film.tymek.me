@@ -5,7 +5,7 @@ import { logAdmin, requireAdmin } from '$lib/server/admin';
 import {
 	deleteFilm,
 	editFilm,
-	filmEditFrom,
+	filmEditLookedUp,
 	reassignFilm,
 	roundFilms,
 	setFilmStatus
@@ -67,7 +67,7 @@ export const actions: Actions = {
 		const form = await request.formData();
 		const id = Number(form.get('id'));
 		try {
-			editFilm(getDb(), id, filmEditFrom(form));
+			editFilm(getDb(), id, await filmEditLookedUp(form));
 			logAdmin(getDb(), person.id, 'film.edit', String(id), String(form.get('title') ?? ''));
 			return { saved: true };
 		} catch (error) {

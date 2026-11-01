@@ -120,6 +120,9 @@ export type AdminDict = {
 	filSave: string;
 	filCancel: string;
 	filTitle: string;
+	/** another film from TMDB in this one's place, votes kept */
+	filReplace: string;
+	filReplaced: (title: string) => string;
 	filYear: string;
 	filDirector: string;
 	filGenre: string;
@@ -305,6 +308,9 @@ const pl: AdminDict = {
 	filSave: 'Zapisz',
 	filCancel: 'Anuluj',
 	filTitle: 'Tytuł',
+	filReplace: 'Zamień na inny film z TMDB…',
+	filReplaced: (title) =>
+		`Po zapisaniu to będzie ${title}, także pod spodem: opis, kraje, reżyseria i dane z TMDB. Głosy, komentarze i zgłaszający zostają.`,
 	filYear: 'Rok',
 	filDirector: 'Reżyseria',
 	filGenre: 'Gatunek',
@@ -592,6 +598,9 @@ const en: AdminDict = {
 	filSave: 'Save',
 	filCancel: 'Cancel',
 	filTitle: 'Title',
+	filReplace: 'Swap for another film from TMDB…',
+	filReplaced: (title) =>
+		`Once saved this is ${title}, underneath too: description, countries, director and its TMDB record. Votes, comments and the nominator stay.`,
 	filYear: 'Year',
 	filDirector: 'Director',
 	filGenre: 'Genre',
