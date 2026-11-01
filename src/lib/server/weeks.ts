@@ -11,6 +11,7 @@ import { listClock, pointsInWindow, rescoreAll, totalPoints } from './scoring.js
 import { specialOf } from '../specials.js';
 import { rexpAll } from './xp.js';
 import { newCode } from './tokens.js';
+import { spentInRound } from './people.js';
 
 export function currentWeek(db: DB): Week | undefined {
 	return db.prepare('SELECT * FROM week ORDER BY number DESC LIMIT 1').get() as Week | undefined;
@@ -149,15 +150,13 @@ export function applyAttrition(db: DB, rules: RuleSet, week: number): void {
 export function accrueBanks(db: DB, rules: RuleSet, week: number): void {
 	if (!rules.banking) return;
 	const people = db.prepare('SELECT id FROM person WHERE active = 1').all() as { id: string }[];
-	const spentStmt = db.prepare(
-		'SELECT COALESCE(SUM(points), 0) AS total FROM ballot WHERE person_id = ? AND week_number = ?'
-	);
 	for (const person of people) {
 		const row = db.prepare('SELECT balance FROM bank WHERE person_id = ?').get(person.id) as
 			| { balance: number }
 			| undefined;
 		const balance = row?.balance ?? rules.pointsPerWeek;
-		const spent = (spentStmt.get(person.id, week) as { total: number }).total;
+		// §3.6: what was spent before a special round slept counts here, once
+		const spent = spentInRound(db, person.id, week);
 		const next = Math.max(0, accrue(rules, balance, spent));
 		db.prepare(
 			`INSERT INTO bank (person_id, balance, updated_at) VALUES (?, ?, ?)

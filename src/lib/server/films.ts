@@ -5,10 +5,11 @@ import { RuleError } from './types.js';
 import type { RuleSet } from './rules.js';
 import { orderFilms, titleKey } from './rules.js';
 import { iso } from './time.js';
-import { avatarUrl, bankBalance, spentInWeek } from './people.js';
+import { avatarUrl, bankBalance, spentInRound } from './people.js';
 import {
 	campaignWeeks,
 	listClock,
+	listRound,
 	pointsInWindow,
 	rescoreAll,
 	totalPoints,
@@ -114,14 +115,19 @@ export function standings(
 				'SELECT film_id, points, prev_points, updated_at FROM ballot WHERE person_id = ? AND week_number = ?'
 			)
 			.all(viewerId, currentWeek) as (BallotRow & { film_id: number })[];
+		const carried = carriedOver(db, viewerId, currentWeek);
+		for (const [filmId, points] of carried) {
+			mine.set(filmId, { points, floor: points, graceUntil: null });
+		}
 		for (const row of rows) {
-			const floor = pointsFloor(rules, row, now);
+			const before = carried.get(row.film_id) ?? 0;
+			const floor = before + pointsFloor(rules, row, now);
 			const until = new Date(row.updated_at).getTime() + rules.voteGraceSeconds * 1000;
 			mine.set(row.film_id, {
-				points: row.points,
+				points: before + row.points,
 				floor,
 				// when the undo affordance should dissolve; null once the vote has set
-				graceUntil: floor < row.points && until > now.getTime() ? iso(new Date(until)) : null
+				graceUntil: floor < before + row.points && until > now.getTime() ? iso(new Date(until)) : null
 			});
 		}
 	}
@@ -297,12 +303,15 @@ export function assertNotDuplicate(db: DB, input: NominationInput): void {
 function assertNominationSlot(db: DB, rules: RuleSet, personId: string, week: number): void {
 	// archival rows are a record of a past night, not a claim on this week's slot.
 	// Deliberately stricter than the index, which also lets watched films go: a
-	// film marked watched mid-round should not hand its nominator a second turn
+	// film marked watched mid-round should not hand its nominator a second turn,
+	// and nor should a special round the list slept through (§3.6)
+	const weeks = listRound(db, week);
 	const row = db
 		.prepare(
-			'SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND added_week = ? AND archival = 0 AND special IS NULL'
+			`SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND archival = 0 AND special IS NULL
+			   AND added_week IN (${weeks.map(() => '?').join(',')})`
 		)
-		.get(personId, week) as { n: number };
+		.get(personId, ...weeks) as { n: number };
 	if (row.n >= rules.nominationsPerWeek) {
 		throw new RuleError('already_nominated', 'you have already nominated a film this round');
 	}
@@ -459,6 +468,24 @@ function ballotRow(db: DB, personId: string, filmId: number, week: number): Ball
 }
 
 /**
+ * §3.6: what this person put on each film in the earlier weeks of this list
+ * round, before a special round put the list to sleep. Still theirs, and final:
+ * no grace window (§8.3) outlasts a night.
+ */
+function carriedOver(db: DB, personId: string, week: number): Map<number, number> {
+	const earlier = listRound(db, week).filter((number) => number !== week);
+	if (!earlier.length) return new Map();
+	const rows = db
+		.prepare(
+			`SELECT film_id, SUM(points) AS points FROM ballot
+			 WHERE person_id = ? AND week_number IN (${earlier.map(() => '?').join(',')})
+			 GROUP BY film_id`
+		)
+		.all(personId, ...earlier) as { film_id: number; points: number }[];
+	return new Map(rows.map((row) => [row.film_id, row.points]));
+}
+
+/**
  * §8.3: the lowest value this vote may be set to right now. Inside the grace
  * window that is whatever it was before the last raise; outside it, the vote
  * itself. A row's absence means nothing is committed yet.
@@ -511,9 +538,12 @@ export function setPoints(
 			});
 		}
 
+		// this week's row holds only what goes on top of the points carried into it
+		const carried = carriedOver(db, personId, week.number).get(filmId) ?? 0;
 		const row = ballotRow(db, personId, filmId, week.number);
-		const current = row?.points ?? 0;
-		const floor = pointsFloor(rules, row, now);
+		const kept = row?.points ?? 0;
+		const current = carried + kept;
+		const floor = carried + pointsFloor(rules, row, now);
 		if (points < floor) {
 			throw new RuleError(
 				'votes_final',
@@ -522,7 +552,7 @@ export function setPoints(
 			);
 		}
 
-		const spentElsewhere = spentInWeek(db, personId, week.number) - current;
+		const spentElsewhere = spentInRound(db, personId, week.number) - current;
 		const allowance = rules.banking ? bankBalance(db, personId) : rules.pointsPerWeek;
 		if (spentElsewhere + points > allowance) {
 			const left = allowance - spentElsewhere;
@@ -533,7 +563,8 @@ export function setPoints(
 			);
 		}
 
-		if (points > current) {
+		const own = points - carried;
+		if (own > kept) {
 			// a raise commits at the floor and opens a fresh grace window; raises
 			// inside one window collapse so the undo goes back to before them all
 			db.prepare(
@@ -542,18 +573,18 @@ export function setPoints(
 				 ON CONFLICT(week_number, person_id, film_id)
 				 DO UPDATE SET points = excluded.points, prev_points = excluded.prev_points,
 				               updated_at = excluded.updated_at`
-			).run(week.number, personId, filmId, points, floor, iso(now));
-		} else if (points < current && points === 0) {
+			).run(week.number, personId, filmId, own, floor - carried, iso(now));
+		} else if (own < kept && own === 0) {
 			db.prepare('DELETE FROM ballot WHERE week_number = ? AND person_id = ? AND film_id = ?').run(
 				week.number,
 				personId,
 				filmId
 			);
-		} else if (points < current) {
+		} else if (own < kept) {
 			// an undo keeps the original raise time, so it cannot stretch the window
 			db.prepare(
 				'UPDATE ballot SET points = ? WHERE week_number = ? AND person_id = ? AND film_id = ?'
-			).run(points, week.number, personId, filmId);
+			).run(own, week.number, personId, filmId);
 		}
 
 		// §8.1: a single vote revives an archived film

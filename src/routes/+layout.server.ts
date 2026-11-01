@@ -7,7 +7,7 @@ import { roundEvenings } from '$lib/server/evenings';
 import { openRunoff } from '$lib/server/runoffs';
 import { lookAt } from '$lib/server/looks';
 import { noticeAt } from '$lib/server/notice';
-import { avatarUrl, bankBalance, spentInWeek } from '$lib/server/people';
+import { avatarUrl, bankBalance, spentInRound } from '$lib/server/people';
 import { langOf } from '$lib/i18n';
 import { unseenChangelog } from '$lib/changelog';
 import { LOOK_THEME, accentOf, bananaOf, themeOf } from '$lib/themes';
@@ -21,7 +21,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	const person = locals.person;
 
 	const balance = person ? bankBalance(db, person.id) : 0;
-	const spent = person && week ? spentInWeek(db, person.id, week.number) : 0;
+	const spent = person && week ? spentInRound(db, person.id, week.number) : 0;
 	const budget = rules.banking ? balance : rules.pointsPerWeek;
 
 	const lang = langOf(cookies.get(LANG_COOKIE), isDemo() ? 'en' : 'pl');

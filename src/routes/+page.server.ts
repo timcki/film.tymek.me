@@ -20,6 +20,7 @@ import { seenOf, toggleSeen } from '$lib/server/seen';
 import { ruleFail } from '$lib/server/respond';
 import { detailsOf, NO_DETAILS } from '$lib/server/tmdb';
 import { generation } from '$lib/server/live';
+import { listRound } from '$lib/server/scoring';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const db = getDb();
@@ -43,9 +44,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 		};
 	}
 
+	// §3.6: a nomination made before a special round slept is still this round's
+	const round = listRound(db, week.number);
 	const nominatedThisWeek = db
-		.prepare('SELECT id, title FROM film WHERE added_by = ? AND added_week = ? AND special IS NULL')
-		.get(person.id, week.number) as { id: number; title: string } | undefined;
+		.prepare(
+			`SELECT id, title FROM film WHERE added_by = ? AND special IS NULL
+			   AND added_week IN (${round.map(() => '?').join(',')})`
+		)
+		.get(person.id, ...round) as { id: number; title: string } | undefined;
 
 	const films = standings(db, rules, week.number, person.id);
 

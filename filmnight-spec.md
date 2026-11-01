@@ -250,8 +250,11 @@ was stored as `'halloween'`; it runs by the same rules as `'approval'`.
 - **The list sleeps.** While the round is on, nobody spends points or nominates, and the
   round neither fades nor ages anything. The list keeps its own clock: a special round's
   week shares its ordinal with the week after it (`listClock`), so fade, attrition and the
-  archive's ages all read as though the night had not happened. Picks nobody watched are
-  dropped afterwards rather than joining the list.
+  archive's ages all read as though the night had not happened. The same goes for what
+  anyone had spent or nominated that week before the round was given over: when the list
+  wakes it is still theirs, against the same budget and the same slot (`listRound`), and
+  the bank settles once for the two. Picks nobody watched are dropped afterwards rather
+  than joining the list.
 An admin can call a special round off only while nobody has put a pick up.
 
 **The look is a separate choice.** By default everyone picks their own palette (dark,

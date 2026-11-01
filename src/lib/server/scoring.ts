@@ -37,6 +37,23 @@ export function listClock(db: DB): ListClock {
 	return (week) => week - specials.filter((number) => number < week).length;
 }
 
+/**
+ * §3.6: the weeks that are one round of the list's, up to `week`: it and the
+ * special rounds just before it, whose week a list round was put to sleep in.
+ * What anyone spent or nominated in those still counts against this round's
+ * budget and slot, as though the night had not happened.
+ */
+export function listRound(db: DB, week: number): number[] {
+	const clock = listClock(db);
+	return (
+		db.prepare('SELECT number FROM week WHERE number <= ? ORDER BY number').all(week) as {
+			number: number;
+		}[]
+	)
+		.map((row) => row.number)
+		.filter((number) => clock(number) === clock(week));
+}
+
 /** a film's points re-keyed from round numbers to the list's clock */
 function onClock(clock: ListClock, points: Map<number, number>): Map<number, number> {
 	const out = new Map<number, number>();

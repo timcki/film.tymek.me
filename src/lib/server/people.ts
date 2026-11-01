@@ -6,6 +6,7 @@ import { iso } from './time.js';
 import { newToken } from './tokens.js';
 import type { RuleSet } from './rules.js';
 import { budget as budgetFor } from './rules.js';
+import { listRound } from './scoring.js';
 
 export function personByToken(db: DB, token: string): Person | undefined {
 	return db.prepare('SELECT * FROM person WHERE token = ? AND active = 1').get(token) as
@@ -43,12 +44,15 @@ export function setBankBalance(db: DB, personId: string, balance: number): void 
 	).run(personId, balance, iso());
 }
 
-export function spentInWeek(db: DB, personId: string, week: number): number {
+/** what this person has spent in the list's round `week` belongs to (§3.6) */
+export function spentInRound(db: DB, personId: string, week: number): number {
+	const weeks = listRound(db, week);
 	const row = db
 		.prepare(
-			'SELECT COALESCE(SUM(points), 0) AS total FROM ballot WHERE person_id = ? AND week_number = ?'
+			`SELECT COALESCE(SUM(points), 0) AS total FROM ballot
+			 WHERE person_id = ? AND week_number IN (${weeks.map(() => '?').join(',')})`
 		)
-		.get(personId, week) as { total: number };
+		.get(personId, ...weeks) as { total: number };
 	return row.total;
 }
 

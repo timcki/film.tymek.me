@@ -371,7 +371,7 @@
 							<b>{pick.seen.length}</b>
 						</button>
 					</form>
-					<form method="POST" action="?/approve" use:enhance={approve(pick.id, !lit(pick))}>
+					<form method="POST" action="?/approve" use:enhance={(input) => approve(pick.id, !lit(pick))(input)}>
 						<input type="hidden" name="filmId" value={pick.id} />
 						<input type="hidden" name="title" value={pick.title} />
 						<input type="hidden" name="on" value={lit(pick) ? '0' : '1'} />

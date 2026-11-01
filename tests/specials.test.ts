@@ -15,6 +15,7 @@ import {
 import { lookAt, setLook } from '../src/lib/server/looks.js';
 import { screenStats } from '../src/lib/server/stats.js';
 import { xpBreakdown } from '../src/lib/server/xp.js';
+import { bankBalance, spentInRound } from '../src/lib/server/people.js';
 import { addFilm, castBallot, forceAdvanceTo, freshDb } from './helpers.js';
 
 /**
@@ -185,6 +186,56 @@ describe('a special round', () => {
 		// and week 2's, cast before the list fell asleep, still count as this round's
 		expect(scores.get('Heat')).toBe(2);
 		expect(pointsInWindow(db, film, 3, 2)).toBe(2);
+	});
+
+	it('wakes the list where it was left: what was spent and nominated is still this round’s', () => {
+		const { db, rules } = freshDb('weekly');
+		const film = addFilm(db, 'Paddington', 'ala', 1);
+		const other = addFilm(db, 'Heat', 'bartek', 1);
+		setPoints(db, rules, 'bartek', film, 2);
+		nominate(db, rules, 'celina', { title: 'Alien' });
+		startSpecial(db, rules, 'approval');
+		const pick = nominateSpecial(db, rules, 'darek', { title: 'The Thing' });
+		setApproval(db, rules, 'darek', pick, true);
+		closeWeek(db, rules);
+		closeRunoff(db, rules, openRunoff(db)!.id);
+		expect(currentWeek(db)!.number).toBe(2);
+
+		// the two points are still bartek's, against the same three
+		expect(spentInRound(db, 'bartek', 2)).toBe(2);
+		const mine = standings(db, rules, 2, 'bartek').find((f) => f.id === film)!;
+		expect(mine.myPoints).toBe(2);
+		expect(mine.myFloor).toBe(2);
+		expect(() => setPoints(db, rules, 'bartek', other, 2)).toThrow(
+			expect.objectContaining({ code: 'not_enough_points' })
+		);
+		expect(() => setPoints(db, rules, 'bartek', film, 1)).toThrow(
+			expect.objectContaining({ code: 'votes_final' })
+		);
+		// adding goes on top of them rather than counting them twice
+		setPoints(db, rules, 'bartek', film, 3);
+		expect(filmById(db, film)!.score).toBe(3);
+		expect(spentInRound(db, 'bartek', 2)).toBe(3);
+		// and the round's nomination is spent
+		expect(() => nominate(db, rules, 'celina', { title: 'Heat 2' })).toThrow(
+			expect.objectContaining({ code: 'already_nominated' })
+		);
+	});
+
+	it('banks once for the list round it slept through, counting what was spent before', () => {
+		const { db, rules } = freshDb('banked');
+		const film = addFilm(db, 'Paddington', 'ala', 1);
+		setPoints(db, rules, 'bartek', film, 2);
+		startSpecial(db, rules, 'approval');
+		setApproval(db, rules, 'darek', nominateSpecial(db, rules, 'darek', { title: 'The Thing' }), true);
+		closeWeek(db, rules);
+		closeRunoff(db, rules, openRunoff(db)!.id);
+		closeWeek(db, rules);
+		closeRunoff(db, rules, openRunoff(db)!.id);
+
+		expect(filmById(db, film)!.status).toBe('watched');
+		expect(bankBalance(db, 'bartek')).toBe(2);
+		expect(bankBalance(db, 'ala')).toBe(4);
 	});
 
 	it('changes its mind only while nobody has put a pick up', () => {

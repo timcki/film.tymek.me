@@ -522,7 +522,7 @@
 			method="POST"
 			action="/theme?/banana"
 			class="nana"
-			use:enhance={pick({ banana: !banana })}
+			use:enhance={(input) => pick({ banana: !banana })(input)}
 		>
 			<input type="hidden" name="banana" value={banana ? '0' : '1'} />
 			<input type="hidden" name="to" value={path} />
