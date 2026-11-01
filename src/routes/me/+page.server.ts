@@ -3,7 +3,7 @@ import { getDb } from '$lib/server/db';
 import { activeRules, isDemo, origin } from '$lib/server/config';
 import { bankBalance, clearAvatar, rotateToken, setAvatar } from '$lib/server/people';
 import { currentWeek } from '$lib/server/weeks';
-import { listClock } from '$lib/server/scoring';
+import { listClock, listRound } from '$lib/server/scoring';
 import { XP, xpBreakdown } from '$lib/server/xp';
 import { qrSvg } from '$lib/server/qr';
 import { ruleFail } from '$lib/server/respond';
@@ -34,11 +34,16 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.get(person.id) as { n: number }
 	).n;
 
+	// the slot the list page offers, over the whole list round (§3.6)
+	const round = week ? listRound(db, week.number) : [];
 	const nominatedThisWeek = week
 		? Boolean(
 				db
-					.prepare('SELECT 1 FROM film WHERE added_by = ? AND added_week = ? AND special IS NULL')
-					.get(person.id, week.number)
+					.prepare(
+						`SELECT 1 FROM film WHERE added_by = ? AND special IS NULL AND archival = 0
+						   AND added_week IN (${round.map(() => '?').join(',')})`
+					)
+					.get(person.id, ...round)
 			)
 		: false;
 

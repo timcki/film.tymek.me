@@ -1,6 +1,7 @@
 import type { DB } from './db.js';
 import type { Person } from './types.js';
 import { currentWeek } from './weeks.js';
+import { listRound } from './scoring.js';
 
 /**
  * Who a visitor to the demo gets to be. Everything past this point is the
@@ -32,14 +33,16 @@ export function personas(db: DB): Record<PersonaKind, Person | undefined> {
 
 	const week = currentWeek(db);
 	const spoken = [member?.id ?? '', admin?.id ?? ''];
+	const round = week ? listRound(db, week.number) : [];
 	const fresh = week
 		? (db
 				.prepare(
 					`SELECT * FROM person WHERE active = 1 AND id NOT IN (?, ?)
-					   AND id NOT IN (SELECT person_id FROM ballot WHERE week_number = ?)
+					   AND id NOT IN (SELECT person_id FROM ballot
+					                  WHERE week_number IN (${round.map(() => '?').join(',')}))
 					 ORDER BY id LIMIT 1`
 				)
-				.get(spoken[0], spoken[1], week.number) as Person | undefined)
+				.get(spoken[0], spoken[1], ...round) as Person | undefined)
 		: undefined;
 
 	return {

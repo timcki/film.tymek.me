@@ -83,11 +83,13 @@ export function editSpecial(db: DB, custom: CustomWeek, now: Date = new Date()):
 	});
 }
 
+/** a pick an admin took down gives its owner the pick back */
 function picksOf(db: DB, week: Week, personId: string): number {
 	return (
 		db
 			.prepare(
-				'SELECT COUNT(*) AS n FROM film WHERE added_by = ? AND added_week = ? AND special = ?'
+				`SELECT COUNT(*) AS n FROM film
+				 WHERE added_by = ? AND added_week = ? AND special = ? AND status = 'active'`
 			)
 			.get(personId, week.number, week.special) as { n: number }
 	).n;

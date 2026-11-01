@@ -38,15 +38,16 @@ export function listClock(db: DB): ListClock {
 }
 
 /**
- * §3.6: the weeks that are one round of the list's, up to `week`: it and the
- * special rounds just before it, whose week a list round was put to sleep in.
- * What anyone spent or nominated in those still counts against this round's
- * budget and slot, as though the night had not happened.
+ * §3.6: the weeks that are one round of the list's: `week` and any special
+ * round that shares its place on the list's clock, whose week a list round was
+ * put to sleep in. What anyone spent, nominated or held back in those still
+ * counts against the round's budget, slot and hold, as though the night had
+ * not happened.
  */
 export function listRound(db: DB, week: number): number[] {
 	const clock = listClock(db);
 	return (
-		db.prepare('SELECT number FROM week WHERE number <= ? ORDER BY number').all(week) as {
+		db.prepare('SELECT number FROM week ORDER BY number').all() as {
 			number: number;
 		}[]
 	)

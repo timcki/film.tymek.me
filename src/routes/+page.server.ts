@@ -48,7 +48,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const round = listRound(db, week.number);
 	const nominatedThisWeek = db
 		.prepare(
-			`SELECT id, title FROM film WHERE added_by = ? AND special IS NULL
+			`SELECT id, title FROM film WHERE added_by = ? AND special IS NULL AND archival = 0
 			   AND added_week IN (${round.map(() => '?').join(',')})`
 		)
 		.get(person.id, ...round) as { id: number; title: string } | undefined;

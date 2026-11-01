@@ -68,8 +68,9 @@ export const load: PageServerLoad = async ({ depends }) => {
 	const rows = runoff ? publicTally(db, runoff) : [];
 
 	// §3.5: before the close it tells the host what will not be on the screen,
-	// after it, why the obvious leader is missing from the shortlist
-	const held = week
+	// after it, why the obvious leader is missing from the shortlist. A special
+	// round's room is its picks, which nobody can hold (§3.6)
+	const held = week && !week.special
 		? [...heldIn(db, week.number).values()].flatMap((hold) => {
 				const film = filmById(db, hold.film_id);
 				const who = personById(db, hold.person_id);

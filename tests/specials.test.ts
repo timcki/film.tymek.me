@@ -16,6 +16,7 @@ import { lookAt, setLook } from '../src/lib/server/looks.js';
 import { screenStats } from '../src/lib/server/stats.js';
 import { xpBreakdown } from '../src/lib/server/xp.js';
 import { bankBalance, spentInRound } from '../src/lib/server/people.js';
+import { setFilmStatus } from '../src/lib/server/manage.js';
 import { addFilm, castBallot, forceAdvanceTo, freshDb } from './helpers.js';
 
 /**
@@ -44,6 +45,14 @@ describe('a special round', () => {
 			'The Thing',
 			'Suspiria'
 		]);
+	});
+
+	it('gives a pick back when an admin takes it down', () => {
+		const { db, rules, pick } = special();
+		const thing = pick('ala', 'The Thing');
+		setFilmStatus(db, rules, thing, 'dropped', 1);
+		expect(picksUsed(db, currentWeek(db)!, 'ala')).toBe(0);
+		pick('ala', 'Suspiria');
 	});
 
 	it('holds a pick to the duplicate rules, the list included', () => {

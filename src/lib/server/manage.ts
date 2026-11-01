@@ -6,7 +6,7 @@ import type { RuleSet } from './rules.js';
 import { titleKey } from './rules.js';
 import { iso } from './time.js';
 import { newToken, slugify } from './tokens.js';
-import { rescoreAll } from './scoring.js';
+import { listRound, rescoreAll } from './scoring.js';
 import { rexpAll } from './xp.js';
 import { avatarUrl } from './people.js';
 import { cleanNote, cleanOverview, cleanPoster, cleanTitle } from './films.js';
@@ -372,14 +372,16 @@ export function reassignFilm(db: DB, id: number, personId: string): void {
 		personOr404(db, personId);
 
 		// only rows the index covers can collide, so history rearranges freely
+		// over the list's round (§3.6), which a special round can split into two weeks
 		if (!film.archival && film.status !== 'watched' && film.special === null) {
+			const round = listRound(db, film.added_week);
 			const clash = db
 				.prepare(
 					`SELECT id FROM film
-					 WHERE added_by = ? AND added_week = ? AND id != ?
+					 WHERE added_by = ? AND id != ? AND added_week IN (${round.map(() => '?').join(',')})
 					   AND archival = 0 AND status != 'watched' AND special IS NULL`
 				)
-				.get(personId, film.added_week, id) as { id: number } | undefined;
+				.get(personId, id, ...round) as { id: number } | undefined;
 			if (clash) {
 				throw new RuleError('nomination_clash', 'they already nominated something that round');
 			}
