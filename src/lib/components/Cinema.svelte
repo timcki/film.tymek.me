@@ -75,6 +75,53 @@
 		})
 	);
 
+	// the ivy on the projector: a mound of small leaves over its basket, and
+	// strands trailing off it, each a curve (start, bend, end) with leaves set
+	// along it, turned this way and that, in three greens
+	const ivyMound = [
+		[0.95, 9],
+		[0.65, 7],
+		[0.32, 4],
+		[0, 1]
+	].flatMap(([ring, n], c) =>
+		Array.from({ length: n }, (_, k) => {
+			const a = n === 1 ? Math.PI / 2 : (k / (n - 1)) * Math.PI;
+			return {
+				x: +(28 - Math.cos(a) * 13 * ring).toFixed(1),
+				y: +(47.5 - Math.sin(a) * 10 * ring - (ring ? 0 : 9)).toFixed(1),
+				r: ((k * 53 + c * 31) % 120) - 60,
+				l: ['l1', 'l2', 'l3'][(k + c) % 3]
+			};
+		})
+	);
+	// off the basket's sides, clear of the box's back, two a side
+	const ivyStrands = [
+		[17, 48, 6, 56, 6, 82],
+		[19, 50, 11, 60, 11, 71],
+		[39, 48, 52, 58, 51, 102],
+		[37, 50, 46, 62, 46.5, 88]
+	].map(([x0, y0, cx, cy, x1, y1], s) => ({
+		d: `M${x0} ${y0}Q${cx} ${cy} ${x1} ${y1}`,
+		leaves: (y1 - y0 > 45
+			? [0.22, 0.36, 0.5, 0.63, 0.75, 0.86, 0.95, 1]
+			: y1 - y0 > 30
+				? [0.25, 0.42, 0.58, 0.74, 0.88, 1]
+				: y1 - y0 > 26
+					? [0.3, 0.5, 0.7, 0.88, 1]
+					: [0.4, 0.7, 1]
+		).map((t, k) => {
+			const u = 1 - t;
+			return {
+				x: +(u * u * x0 + 2 * u * t * cx + t * t * x1 + (k % 2 ? 1.4 : -1.4)).toFixed(1),
+				y: +(u * u * y0 + 2 * u * t * cy + t * t * y1).toFixed(1),
+				r: (k % 2 ? 50 : -50) + 180,
+				l: ['l1', 'l2', 'l3'][(k + s) % 3]
+			};
+		})
+	}));
+	// one ivy leaf, three-lobed, drawn about its own stem
+	const ivy = 'M0 0c-1.7-.3-2.8-1.4-2.5-2.6.6.1 1.1.5 1.3.9-.2-1 .3-2 1.2-2.5.9.5 1.4 1.5 1.2 2.5.2-.4.7-.8 1.3-.9.3 1.2-.8 2.3-2.5 2.6z';
+
 	const place = (p: Plant) =>
 		p.by === 'left'
 			? `left:${p.at}px`
@@ -231,14 +278,45 @@
 			</g>
 			<rect class="flicker" width="128" height="72" />
 		</svg>
-		<!-- a digital projector, a slim box on a side table, lens to the screen -->
-		<svg class="projector wide" viewBox="0 0 44 72">
-			<path class="stool" d="M8 72 10 44h24l2 28M10 58h24" />
-			<rect class="box" x="4" y="28" width="38" height="14" rx="4" />
-			<path class="vents" d="M28 32v6M31 32v6M34 32v6M37 32v6" />
-			<circle class="lensring" cx="10" cy="35" r="5" />
-			<circle class="lens" cx="10" cy="35" r="3" />
-			<circle class="led" cx="22" cy="31" r="0.9" />
+		<!-- a digital projector up by the ceiling, seen from behind: its back
+		     panel to us and its lens to the screen, so the beam comes out from
+		     behind it. Nothing holds it up that we can see: it is mounted on the
+		     wall we are looking through. On top, a woven basket of ivy, trailing -->
+		<svg class="projector wide" viewBox="0 0 56 104">
+			<rect class="foot" x="13" y="71.5" width="4" height="2" rx="0.6" />
+			<rect class="foot" x="39" y="71.5" width="4" height="2" rx="0.6" />
+			<rect class="box" x="8" y="58" width="40" height="14" rx="4" />
+			<rect class="panel" x="11" y="60.5" width="34" height="9" rx="2" />
+			<rect class="port" x="14" y="64" width="4" height="2.6" rx="0.5" />
+			<rect class="port" x="20" y="64" width="2.6" height="2.6" rx="0.5" />
+			<circle class="led" cx="15.2" cy="62" r="0.8" />
+			<path class="vents" d="M29 62.5v5M31.6 62.5v5M34.2 62.5v5M36.8 62.5v5M39.4 62.5v5M42 62.5v5" />
+			<!-- the strands go down behind the basket and over the box -->
+			{#each ivyStrands as strand, i (i)}
+				<g class="trail" style:animation-delay="{-i * 1.7}s">
+					<path class="vine" d={strand.d} />
+					{#each strand.leaves as leaf, k (k)}
+						<path
+							class="leaf {leaf.l}"
+							d={ivy}
+							transform="translate({leaf.x} {leaf.y}) rotate({leaf.r}) scale(1.1)"
+						/>
+					{/each}
+				</g>
+			{/each}
+			{#each ivyMound as leaf, k (k)}
+				<path
+					class="leaf {leaf.l}"
+					d={ivy}
+					transform="translate({leaf.x} {leaf.y + 2.5}) rotate({leaf.r}) scale(1.5)"
+				/>
+			{/each}
+			<path class="basket" d="M16.5 47.5h23l-2.2 9c-.3 1-1 1.5-2 1.5H20.7c-1 0-1.7-.5-2-1.5z" />
+			<path
+				class="weave"
+				d="M17.6 51h20.8M18.6 54.4h18.8M21 48.6l.7 9M25 48.6l.3 9.4M29 48.6v9.4M33 48.6l-.3 9.4M37 48.6l-.7 9"
+			/>
+			<rect class="basket rim" x="16" y="46.4" width="24" height="2.4" rx="1.2" />
 		</svg>
 	</div>
 
@@ -614,6 +692,9 @@
 		.room {
 			--sofa-x: 78%;
 			--bag-x: 21%;
+			/* a head taller, for the ivy on the projector to clear the fade at
+			   the top; everything stands on the floor, so nothing else moves */
+			height: 172px;
 		}
 		.wide {
 			display: block;
@@ -723,21 +804,60 @@
 			transform: translateX(80px);
 		}
 	}
+	/* its middle 105px up, over the heads, level with the top of the picture,
+	   and 119px left of the sofa's middle, where the beam starts from */
 	.projector {
 		position: absolute;
-		left: calc(var(--sofa-x) - 142px);
-		bottom: 8px;
-		width: 44px;
+		left: calc(var(--sofa-x) - 147px);
+		bottom: 66px;
+		width: 56px;
 		overflow: visible;
 	}
-	.stool {
+	.panel {
+		fill: var(--projector-dark);
+		opacity: 0.16;
+	}
+	.port,
+	.foot {
+		fill: var(--projector-dark);
+	}
+	.basket {
+		fill: var(--basket);
+	}
+	.rim {
+		fill: var(--basket-weave);
+	}
+	.weave {
 		fill: none;
-		stroke: var(--wood);
-		stroke-width: 2.2;
+		stroke: var(--basket-weave);
+		stroke-width: 0.6;
 		stroke-linecap: round;
 	}
+	.vine {
+		fill: none;
+		stroke: var(--leaf3);
+		stroke-width: 0.7;
+		stroke-linecap: round;
+	}
+	/* the strands hang from the basket's lip and stir a little */
+	.trail {
+		transform-box: view-box;
+		transform-origin: 28px 48px;
+		animation: trail 8s ease-in-out infinite alternate;
+	}
+	@keyframes trail {
+		from {
+			transform: rotate(-1.6deg);
+		}
+		to {
+			transform: rotate(1.6deg);
+		}
+	}
+	/* white, so it is given an edge to keep it off a pale wall */
 	.box {
 		fill: var(--projector);
+		stroke: var(--projector-dark);
+		stroke-width: 0.8;
 	}
 	.vents {
 		fill: none;
@@ -745,25 +865,19 @@
 		stroke-width: 1.2;
 		stroke-linecap: round;
 	}
-	.lensring {
-		fill: var(--projector-dark);
-	}
-	.lens {
-		fill: var(--film-sun);
-	}
 	.led {
 		fill: #7cf08a;
 	}
-	/* the beam: from the lens to the screen, widening, a little haze in it */
-	/* the beam, from the lens (its right end, low) out to the screen's face */
+	/* the beam, from behind the projector (its right end, up high, hidden by
+	   the box) out to the screen's face, widening, a little haze in it */
 	.beam {
 		position: absolute;
 		left: calc(43% + 88px);
-		right: calc(100% - var(--sofa-x) + 132px);
+		right: calc(100% - var(--sofa-x) + 119px);
 		bottom: 34px;
 		height: 107px;
 		background: linear-gradient(90deg, var(--beam-far), var(--beam-near));
-		clip-path: polygon(0 6%, 100% 86%, 100% 92%, 0 94%);
+		clip-path: polygon(0 6%, 100% 30%, 100% 36%, 0 94%);
 		filter: blur(1.5px);
 		animation: beam 3.2s steps(1) infinite;
 	}
@@ -791,6 +905,7 @@
 	@media (prefers-reduced-motion: reduce) {
 		.glow,
 		.sway,
+		.trail,
 		.flicker,
 		.rider,
 		.beam,

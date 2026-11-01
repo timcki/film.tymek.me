@@ -25,10 +25,18 @@
 	/* ink for whatever sits on a bright fill: faces, the send arrow, toasts */
 	--onbright: #0b0b0d;
 	--white: #fff;
-	/* complement of --warn: same hue wheel, opposite side, so "leading" and
-	   "about to drop" can never be mistaken for one another */
-	--accent: #92bbe8;
-	--accent-ink: #06203a;
+	/* a dusty rose: pastel, quiet, the colour of cinema seats, and far enough
+	   round the wheel from --warn that "leading" and "about to drop" never
+	   read alike */
+	--accent: #dba7b4;
+	--accent-ink: #2e1119;
+	/* the paper ticket a point is drawn as: on the dark a brighter sheet with
+	   no outline and a deep star, since a dark edge and a pale star on a dark
+	   page go to mud; the light palette has its own below */
+	--ticket-paper: #fff6e2;
+	--ticket-shade: #f0dfbd;
+	--ticket-edge: #fff6e2;
+	--ticket-mark: #b05a70;
 	--warn: #e0a15f;
 	/* split-complement of --accent, a third of the wheel from --warn: a passed-over
 	   film and an about-to-drop film are different states and never read alike */
@@ -324,9 +332,6 @@ header .sub b {
 .hpip.ghost {
 	filter: grayscale(1);
 	opacity: 0.28;
-}
-:root:not([data-banana]) .hpip {
-	font-size: 13px;
 }
 .tip b {
 	color: var(--accent);
@@ -658,6 +663,53 @@ header .sub b {
 		var(--lift),
 		inset 0 0 0 1px color-mix(in srgb, var(--warn) 30%, transparent);
 }
+/* about to go, and looking it: the poster fading out of the programme. A
+   vote that saves it brings the colour back, slowly enough to be seen */
+.film .p {
+	transition: filter 900ms ease;
+}
+.film.fading:not(.shelf) .p {
+	filter: saturate(0.3) brightness(0.72);
+}
+:root[data-theme='light'] .film.fading:not(.shelf) .p {
+	filter: saturate(0.3) brightness(1.06) contrast(0.82);
+}
+/* and its + says so: a warm halo breathing round it, and the words beside it */
+.pcplus.rescuing {
+	animation: rescue 2.4s ease-in-out infinite;
+}
+@keyframes rescue {
+	0%,
+	100% {
+		box-shadow:
+			0 0 0 4px color-mix(in srgb, var(--warn) 22%, transparent),
+			0 8px 22px -8px color-mix(in srgb, var(--warn) 70%, transparent);
+	}
+	50% {
+		box-shadow:
+			0 0 0 7px color-mix(in srgb, var(--warn) 12%, transparent),
+			0 8px 26px -6px color-mix(in srgb, var(--warn) 85%, transparent);
+	}
+}
+.rescue {
+	flex: none;
+	margin-right: 4px;
+	font-size: 11.5px;
+	font-weight: 650;
+	color: var(--warn);
+	white-space: nowrap;
+	cursor: help;
+	animation: pipset 420ms cubic-bezier(0.22, 1.4, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+	.film .p {
+		transition: none;
+	}
+	.pcplus.rescuing,
+	.rescue {
+		animation: none;
+	}
+}
 .film.shelf {
 	opacity: 0.62;
 }
@@ -910,6 +962,85 @@ header .sub b {
 }
 @media (prefers-reduced-motion: reduce) {
 	.bkpop {
+		animation: none;
+	}
+}
+/* ---- a face, opened: who it is, their rank, and what they stood for here.
+   The menu's language: one sheet, the face beside the name rather than over
+   it, the fine print ruled off underneath. The outer box stands at the face
+   (above it, or below when there is no room); the card inside grows out of it
+   (FacePeek.svelte's transition), from the edge nearest the face */
+.fpeek {
+	position: fixed;
+	z-index: 50;
+	width: 216px;
+	transform: translate(-50%, calc(-100% - 10px));
+	pointer-events: none;
+}
+.fpeek.below {
+	transform: translate(-50%, 10px);
+}
+.bkpop.fpcard {
+	position: static;
+	width: auto;
+	transform: none;
+	animation: none;
+	align-items: stretch;
+	gap: 8px;
+	padding: 10px 12px 11px 10px;
+	background: var(--card2);
+	border-radius: 18px;
+	transform-origin: 50% 100%;
+}
+.fpeek.below .fpcard {
+	transform-origin: 50% 0;
+}
+.fphead {
+	display: flex;
+	align-items: center;
+	gap: 11px;
+	min-width: 0;
+}
+.fpface {
+	flex: none;
+	display: grid;
+	animation: fpface 340ms cubic-bezier(0.3, 1.5, 0.5, 1) backwards;
+}
+/* the face lands a beat after the card, a little larger than it settles */
+@keyframes fpface {
+	from {
+		transform: scale(0.6);
+		opacity: 0;
+	}
+}
+.fpwho {
+	display: grid;
+	gap: 3px;
+	min-width: 0;
+}
+.bkpop.fpcard .fpwho b {
+	font-size: 14px;
+	text-align: left;
+	overflow-wrap: normal;
+	line-height: 1.2;
+}
+.bkpop.fpcard .bktitle {
+	font-size: 11.5px;
+	text-shadow: none;
+}
+.bkpop.fpcard .fpsub {
+	padding-top: 8px;
+	border-top: 1px solid var(--line);
+	font-size: 11.5px;
+	color: var(--ink2);
+}
+.bkpop.fpcard .bkweeks {
+	margin-top: -2px;
+	padding-top: 0;
+	border-top: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+	.fpface {
 		animation: none;
 	}
 }
@@ -1549,6 +1680,17 @@ button.holdchip:hover {
 	align-items: center;
 	gap: 5px;
 	margin-top: 8px;
+	min-width: 0;
+}
+/* a nominator's sit-out chip, the counts' size when it shares their row */
+.fchips form {
+	display: flex;
+	min-width: 0;
+}
+.fchips .holdchip {
+	padding: 2px 8px;
+	font-size: 11.5px;
+	white-space: nowrap;
 }
 /* a sleeper's one-line card keeps only its +, at the end of the line */
 .film.held .fbase {
@@ -2008,6 +2150,12 @@ button.holdchip:hover {
 		margin-top: -6px;
 		padding-top: 0;
 	}
+	/* the card is a column here, so the fold's full-width basis would be a
+	   full height instead, shrunk to whatever the card has spare: shut, it
+	   would still push the base up by more on a card with less to say */
+	.wrap.home .film.lead .crowdfold {
+		flex-basis: auto;
+	}
 }
 /* and where a third of the page is as wide as a phone, the rest go three
    across as well, each card the size it was drawn at */
@@ -2139,12 +2287,14 @@ button.holdchip:hover {
 .iconbtn::-webkit-details-marker {
 	display: none;
 }
-/* outside the ring rather than under it: at this size the rank ring lands
-   exactly where a 2px shadow would have, and painted over it */
-details[open] > .iconbtn {
-	outline: 2px solid var(--accent);
-	outline-offset: 5px;
-	border-radius: 99px;
+/* open, the face gives a little, as pressed; no ring of its own, which would
+   sit round the rank ring as a second one */
+.iconbtn {
+	transition: transform 180ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.iconbtn:active,
+details[open]:not(.closing) > .iconbtn {
+	transform: scale(0.92);
 }
 .menu-backdrop {
 	position: fixed;
@@ -2247,72 +2397,105 @@ details[open] > .iconbtn {
 }
 .menu {
 	position: absolute;
-	top: calc(100% + 8px);
+	top: calc(100% + 10px);
 	right: 0;
 	/* the face sits at the left end of the sticky bar, so its menu drops from
 	   the same corner rather than reaching back off the edge of the screen */
 	--menu-side: auto;
 	left: var(--menu-side);
 	z-index: 46;
-	min-width: 178px;
+	width: 252px;
 	background: var(--card2);
 	border: 0;
-	border-radius: 16px;
+	border-radius: 18px;
 	padding: 6px;
 	box-shadow: var(--lift-hi);
+	/* it grows out of the face that opened it, and folds back into it. On a
+	   layer of its own: the bar it hangs from is one flat layer on iOS (see
+	   header.lean), and without one every frame would repaint the bar, the
+	   menu and its shadow whole, which a phone does not keep up with */
+	transform-origin: top right;
+	will-change: transform, opacity;
+	backface-visibility: hidden;
+	animation: menuin 220ms cubic-bezier(0.2, 0.9, 0.3, 1.12);
 }
-.menu .who {
-	display: flex;
-	align-items: center;
-	gap: 9px;
-	padding: 8px 10px 10px;
-	margin-bottom: 4px;
+.hrow .menu {
+	transform-origin: top left;
 }
-.menu .who b {
-	font-size: 13.5px;
-	font-weight: 650;
-	display: block;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+.menuwrap.closing .menu {
+	animation: menuout 150ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+@keyframes menuin {
+	from {
+		opacity: 0;
+		transform: translateY(-6px) scale(0.9);
+	}
+}
+@keyframes menuout {
+	to {
+		opacity: 0;
+		transform: translateY(-4px) scale(0.94);
+	}
+}
+/* and what is in it follows a beat behind, one row after another: only
+   with a mouse, where there is the headroom. On a phone the menu moves as one
+   piece, so there is a single layer to animate rather than a dozen */
+@media (hover: hover) and (pointer: fine) {
+	.menu > * {
+		animation: menurow 260ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+	}
+	.menu > :nth-child(2) {
+		animation-delay: 25ms;
+	}
+	.menu > :nth-child(3) {
+		animation-delay: 50ms;
+	}
+	.menu > :nth-child(4) {
+		animation-delay: 75ms;
+	}
+	.menu > :nth-child(5) {
+		animation-delay: 100ms;
+	}
+	.menu > :nth-child(n + 6) {
+		animation-delay: 125ms;
+	}
+}
+@keyframes menurow {
+	from {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
 }
 .menu a {
 	display: flex;
 	align-items: center;
-	gap: 10px;
-	padding: 9px 10px;
-	border-radius: 8px;
+	gap: 12px;
+	padding: 10px 12px;
+	border-radius: 12px;
 	color: var(--ink);
 	text-decoration: none;
-	font-size: 13.5px;
+	font-size: 14px;
+	transition: background 120ms;
 }
 .menu a:hover {
-	background: var(--card2);
+	background: var(--raise);
+}
+.menu a:active {
+	background: var(--raise);
+	transform: scale(0.98);
 }
 .menu a.on {
 	color: var(--accent);
 }
-/* the settings live at the foot of the menu, on one line: the same pill switch
-   twice, words on the left and the sky on the right */
-.menufoot {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin: 9px 4px 3px;
-}
-.menu .lang {
-	margin: 0;
-	width: fit-content;
-}
-.menu .lang.themes button {
-	display: grid;
-	place-items: center;
-	padding: 5px 9px;
-	line-height: 0;
+/* whose link this is, quietly, at the end of the You row */
+.menu .mname {
+	margin-left: auto;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	font-size: 12px;
 	color: var(--dim);
-}
-.menu .lang.themes button.on {
-	color: var(--ink);
 }
 .menu a .ic {
 	line-height: 0;
@@ -2320,6 +2503,86 @@ details[open] > .iconbtn {
 }
 .menu a.on .ic {
 	color: var(--accent);
+}
+/* the settings at the foot: three full-width rows, each a groove with the
+   live choice raised out of it, every one a thumb's width to hit */
+.menufoot {
+	display: grid;
+	gap: 6px;
+	margin-top: 6px;
+	padding: 8px 2px 2px;
+	border-top: 1px solid var(--line);
+}
+.menu .lang {
+	width: 100%;
+	margin: 0;
+	padding: 3px;
+	gap: 3px;
+	border-radius: 13px;
+}
+.menu .lang > form {
+	flex: 1;
+	display: flex;
+}
+.menu .lang button {
+	flex: 1;
+	height: 34px;
+	display: grid;
+	place-items: center;
+	padding: 0;
+	border-radius: 10px;
+	font-size: 12px;
+	line-height: 0;
+	color: var(--dim);
+	transition:
+		background 160ms,
+		color 160ms,
+		box-shadow 160ms,
+		transform 120ms;
+}
+.menu .lang button:active {
+	transform: scale(0.94);
+}
+.menu .lang button.on {
+	color: var(--ink);
+	/* raised out of the groove: a lighter sheet on the dark, the page's own
+	   paper on the light */
+	background: color-mix(in srgb, var(--ink) 13%, var(--card2));
+}
+:root[data-theme='light'] .menu .lang button.on {
+	background: var(--card);
+}
+/* the accents: a dot each, the live one ringed rather than raised */
+.menu .lang.accents button.on {
+	background: none;
+	box-shadow: none;
+}
+.lang.accents i {
+	display: block;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: linear-gradient(135deg, var(--d) 50%, var(--l) 50%);
+	transition: box-shadow 180ms, transform 180ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+:root[data-theme='light'] .lang.accents i {
+	background: linear-gradient(135deg, var(--l) 50%, var(--d) 50%);
+}
+.lang.accents button.on i {
+	transform: scale(1.08);
+	box-shadow:
+		0 0 0 2px var(--raise),
+		0 0 0 4px var(--ink);
+}
+.menu .lang.accents .nana button {
+	font-size: 19px;
+}
+@media (prefers-reduced-motion: reduce) {
+	.menu,
+	.menu > *,
+	.menuwrap.closing .menu {
+		animation: none;
+	}
 }
 
 /* ---------- sheets ---------- */
@@ -4477,13 +4740,14 @@ details[open] > .iconbtn {
 .fface + .fface {
 	margin-left: -8px;
 }
-/* the faces sit on one baseline, the small ones low beside the big */
+/* the faces string on one centre line, the +'s own, big and small alike, so
+   the row and the + read as one level line across the card */
 .bfaces:not(.fan) {
-	align-items: flex-end;
+	align-items: center;
 }
 .bfaces {
 	position: relative;
-	align-self: flex-end;
+	align-self: center;
 	cursor: pointer;
 }
 /* a press gives a little, and an open stack stands up a touch */
@@ -4705,7 +4969,7 @@ details[open] > .iconbtn {
 }
 .fvote {
 	flex: none;
-	align-self: flex-end;
+	align-self: center;
 	display: flex;
 	align-items: center;
 	gap: 8px;
@@ -4821,14 +5085,13 @@ details[open] > .iconbtn {
 		0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent),
 		0 8px 18px -6px var(--accent);
 }
-/* nothing left to give, and none of it went here: a quiet dashed ring where
-   the + was, so the card does not end in a dead grey disc */
+/* nothing left to give, and none of it went here: a ghost of the +, the same
+   way a spent point is a ghost of itself in the bar, so the two read as one
+   thing: still there, just used up for the week */
 .pcplus:disabled {
-	background: none;
 	box-shadow: none;
-	outline: 1.5px dashed color-mix(in srgb, var(--dim) 45%, transparent);
-	outline-offset: -1.5px;
-	color: color-mix(in srgb, var(--dim) 60%, transparent);
+	filter: grayscale(1);
+	opacity: 0.28;
 	cursor: default;
 }
 /* the + is the card's one call to action: big, lit, and it gives under a thumb */
@@ -4880,9 +5143,8 @@ details[open] > .iconbtn {
 /* your last point just went here and can still come back: the + stays as it
    was, lit, with its count, only no longer pressable */
 .pcplus.mine:disabled {
-	background: var(--accent);
-	color: var(--accent-ink);
-	outline: none;
+	filter: none;
+	opacity: 1;
 	box-shadow: 0 8px 22px -10px color-mix(in srgb, var(--accent) 85%, transparent);
 }
 /* spent out, with points here: what you gave, lit in the accent */
@@ -4921,4 +5183,57 @@ details[open] > .iconbtn {
 	font-weight: 800;
 	font-variant-numeric: tabular-nums;
 	animation: pipset 420ms cubic-bezier(0.22, 1.4, 0.36, 1);
+}
+
+/* the accent as a colour the browser can blend: picking another one eases
+   every button, ring and star over to it rather than snapping (see pick() in
+   +layout.svelte). Registered, since a plain custom property cannot animate */
+@property --accent {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: transparent;
+}
+@property --accent-ink {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: transparent;
+}
+@property --ticket-mark {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: transparent;
+}
+:root {
+	transition:
+		--accent 320ms ease,
+		--accent-ink 320ms ease,
+		--ticket-mark 320ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		transition: none;
+	}
+}
+
+/* the same on a phone, where the page-wide fade flashes: for the moment of
+   the switch every colour eases over in place, then the page's own
+   transitions come back */
+.look-easing *,
+.look-easing *::before,
+.look-easing *::after {
+	transition:
+		background-color 380ms ease,
+		color 380ms ease,
+		border-color 380ms ease,
+		fill 380ms ease,
+		stroke 380ms ease,
+		box-shadow 380ms ease !important;
+}
+
+/* switching palette or bananas: the old look fades into the new one in place
+   (see pick() in +layout.svelte) rather than the page going blank and coming back */
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: 0.42s;
+	animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }

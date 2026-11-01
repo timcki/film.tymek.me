@@ -23,10 +23,10 @@
 		tap: boolean;
 	};
 
-	/** width of .bkpop; the clamp needs it before the popup has been laid out */
-	export const PEEK_W = 156;
+	/** width of .fpeek; the clamp needs it before the popup has been laid out */
+	export const PEEK_W = 216;
 	/** roughly its height, only ever used to decide whether it still fits above */
-	export const PEEK_H = 190;
+	export const PEEK_H = 104;
 	/** what each row under the sub line costs it */
 	export const PEEK_ROW = 17;
 
@@ -65,40 +65,80 @@
 	import { dictFor } from '$lib/i18n';
 	import type { Lang } from '$lib/i18n';
 	import { levelOf } from '$lib/levels';
+	import { cubicIn } from 'svelte/easing';
+	import { untrack } from 'svelte';
 
 	let { peek, lang, onclose }: { peek: Peek; lang: Lang; onclose: () => void } = $props();
 
 	const T = $derived(dictFor(lang));
-	const level = $derived(levelOf(peek.face.xp));
+	// what it shows, held: on the way out the page has already let go of the
+	// peek, and the card still has to draw itself while it folds away
+	let shown = $state(untrack(() => peek));
+	$effect.pre(() => {
+		if (peek) shown = peek;
+	});
+	const level = $derived(levelOf(shown.face.xp));
+
+	// the card grows out of the face it was opened from, with a little give at
+	// the end, and folds back into it on the way out. A transition rather than
+	// a keyframe so the way out can play before it is gone
+	const still = () =>
+		typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+	function grow(_: Element, { out = false }: { out?: boolean } = {}) {
+		if (still()) return { duration: 0 };
+		return out
+			? {
+					duration: 130,
+					easing: cubicIn,
+					css: (t: number) =>
+						`opacity:${t};transform:translateY(${(1 - t) * (shown.below ? -4 : 4)}px) scale(${0.92 + 0.08 * t})`
+				}
+			: {
+					duration: 240,
+					// overshoots a touch, then settles
+					easing: (t: number) => 1 + 2.2 * (t - 1) ** 3 + 1.2 * (t - 1) ** 2,
+					css: (t: number) =>
+						`opacity:${Math.min(1, t * 1.6)};transform:translateY(${(1 - t) * (shown.below ? -8 : 8)}px) scale(${0.82 + 0.18 * t})`
+				};
+	}
 </script>
 
-{#if peek.tap}
+{#if shown.tap}
 	<!-- only a tap needs one; on a hover pointer it would swallow the pointerleave -->
 	<button class="menu-backdrop" aria-label={T.close} onclick={onclose}></button>
 {/if}
 
-<div class="bkpop" class:below={peek.below} style="left:{peek.x}px;top:{peek.y}px" role="tooltip">
-	<Avatar
-		name={peek.face.name}
-		colour={peek.face.colour}
-		avatar={peek.face.avatar}
-		size={116}
-		font={40}
-		titled={false}
-		xp={peek.face.xp}
-	/>
-	<b>{peek.face.name}</b>
-	<span class="bktitle lv{level}">{T.levels[level]}</span>
-	{#if peek.sub}<span>{peek.sub}</span>{/if}
-	<!-- the total above, and under it whatever it was actually made of -->
-	{#if peek.rows.length}
-		<div class="bkweeks">
-			{#each peek.rows as row (row.label)}
-				<div class="srow">
-					<span>{row.label}</span>
-					<b>{row.value}</b>
-				</div>
-			{/each}
+<!-- the outer box only stands at the face; the card inside it is what moves -->
+<div class="fpeek" class:below={shown.below} style="left:{shown.x}px;top:{shown.y}px" role="tooltip">
+	<div class="bkpop fpcard" in:grow out:grow={{ out: true }}>
+		<div class="fphead">
+			<span class="fpface">
+				<Avatar
+					name={shown.face.name}
+					colour={shown.face.colour}
+					avatar={shown.face.avatar}
+					size={56}
+					font={20}
+					titled={false}
+					xp={shown.face.xp}
+				/>
+			</span>
+			<div class="fpwho">
+				<b>{shown.face.name}</b>
+				<span class="bktitle lv{level}">{T.levels[level]}</span>
+			</div>
 		</div>
-	{/if}
+		{#if shown.sub}<span class="fpsub">{shown.sub}</span>{/if}
+		<!-- the total above, and under it whatever it was actually made of -->
+		{#if shown.rows.length}
+			<div class="bkweeks">
+				{#each shown.rows as row (row.label)}
+					<div class="srow">
+						<span>{row.label}</span>
+						<b>{row.value}</b>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
 </div>

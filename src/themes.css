@@ -27,7 +27,12 @@
 	--dim: #857470;
 	--dimmer: #a08e87;
 	--onbright: #2a2220;
-	--accent: #4a7fa5;
+	--accent: #9c5869;
+	/* on paper the ticket takes a dark edge and the accent's own star */
+	--ticket-paper: #fbeccd;
+	--ticket-shade: #efdcb4;
+	--ticket-edge: #5a4046;
+	--ticket-mark: var(--accent);
 	--accent-ink: #fffaf3;
 	--warn: #b5762f;
 	--cut: #bd6076;
@@ -162,12 +167,11 @@
 	height: auto;
 }
 /* the switch shows what it would turn on: a grey banana until it is lit */
-.menu .lang.nana button {
-	font-size: 15px;
+.menu .lang .nana button {
 	filter: grayscale(1);
 	opacity: 0.55;
 }
-.menu .lang.nana button.on {
+.menu .lang .nana button.on {
 	filter: none;
 	opacity: 1;
 }
@@ -191,6 +195,8 @@
 	--leafline: rgba(10, 20, 10, 0.35);
 	--pot: #a85a38;
 	--wood: #5a4030;
+	--basket: #9a7b4f;
+	--basket-weave: #6e5432;
 	--shade: #e8b468;
 	--rug: rgba(150, 110, 70, 0.25);
 	--lamplight: rgba(255, 176, 90, 0.26);
@@ -209,8 +215,9 @@
 	--film-sun: #ffd98a;
 	--film-hill: #7a3e4a;
 	--film-hill2: #3b2236;
-	--projector: #2e3036;
-	--projector-dark: #16171a;
+	/* a white projector, in the half-dark of the room */
+	--projector: #d9d6d0;
+	--projector-dark: #6f6a65;
 	--beam-near: rgba(255, 236, 190, 0.32);
 	--beam-far: rgba(255, 236, 190, 0.06);
 }
@@ -229,6 +236,8 @@
 	--leaf3: #3d7244;
 	--pot: #c06a44;
 	--wood: #7a5a42;
+	--basket: #d2ad72;
+	--basket-weave: #a07a42;
 	--shade: #d9b98c;
 	--rug: rgba(170, 120, 80, 0.22);
 	--sunlight: rgba(255, 214, 140, 0.22);
@@ -242,8 +251,8 @@
 	--window-frame: #c9b394;
 	--window-light: rgba(255, 214, 140, 0.4);
 	--spill: rgba(240, 150, 100, 0.12);
-	--projector: #e4e1dc;
-	--projector-dark: #8a8480;
+	--projector: #fdfcf9;
+	--projector-dark: #9d968f;
 	--beam-near: rgba(255, 230, 170, 0.45);
 	--beam-far: rgba(255, 230, 170, 0.08);
 }
@@ -474,4 +483,57 @@
 		animation: none;
 		height: 40px;
 	}
+}
+
+/* ---------------------------------------------------------- accents -----
+   The accent someone picked, over either palette (rose, the app's own, is the
+   one in app.css and the light block above, and has no attribute). Each gives
+   the dark its pastel, ink to sit on it and a deeper shade for the ticket's
+   star, and the paper its deeper shade. Never over bananas or a special
+   round, which bring accents of their own; ACCENT_SWATCH in themes.ts holds
+   the same two shades for the switch's dots, so change them together */
+:root[data-accent='lavender']:not([data-banana], [data-special]) {
+	--accent: #b5abd4;
+	--accent-ink: #1d1833;
+	--ticket-mark: #6f63a3;
+}
+:root[data-theme='light'][data-accent='lavender']:not([data-banana], [data-special]) {
+	--accent: #706793;
+	--ticket-mark: var(--accent);
+}
+:root[data-accent='periwinkle']:not([data-banana], [data-special]) {
+	--accent: #a9b0dc;
+	--accent-ink: #141a3a;
+	--ticket-mark: #5a62b0;
+}
+:root[data-theme='light'][data-accent='periwinkle']:not([data-banana], [data-special]) {
+	--accent: #5d64a3;
+	--ticket-mark: var(--accent);
+}
+:root[data-accent='sky']:not([data-banana], [data-special]) {
+	--accent: #a7c2d8;
+	--accent-ink: #0d2030;
+	--ticket-mark: #4a7598;
+}
+:root[data-theme='light'][data-accent='sky']:not([data-banana], [data-special]) {
+	--accent: #4f7593;
+	--ticket-mark: var(--accent);
+}
+:root[data-accent='seafoam']:not([data-banana], [data-special]) {
+	--accent: #9ccbc2;
+	--accent-ink: #0c2622;
+	--ticket-mark: #3b8076;
+}
+:root[data-theme='light'][data-accent='seafoam']:not([data-banana], [data-special]) {
+	--accent: #3e7c73;
+	--ticket-mark: var(--accent);
+}
+:root[data-accent='sage']:not([data-banana], [data-special]) {
+	--accent: #b0c79f;
+	--accent-ink: #16220f;
+	--ticket-mark: #5c7d4b;
+}
+:root[data-theme='light'][data-accent='sage']:not([data-banana], [data-special]) {
+	--accent: #5b7a4c;
+	--ticket-mark: var(--accent);
 }

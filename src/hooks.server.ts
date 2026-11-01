@@ -5,7 +5,7 @@ import { isDemo } from '$lib/server/config';
 import { personByToken } from '$lib/server/people';
 import { limiter } from '$lib/server/ratelimit';
 import { startScheduler } from '$lib/server/scheduler';
-import { BANANA_BG, SPECIAL_BG, THEME_BG, bananaOf, themeOf } from '$lib/themes';
+import { BANANA_BG, DEFAULT_ACCENT, SPECIAL_BG, THEME_BG, accentOf, bananaOf, themeOf } from '$lib/themes';
 import { lookAt } from '$lib/server/specials';
 
 export const PERSON_COOKIE = 'fn_person';
@@ -13,6 +13,7 @@ export const DEVICE_COOKIE = 'fn_device';
 export const LANG_COOKIE = 'fn_lang';
 export const THEME_COOKIE = 'fn_theme';
 export const BANANA_COOKIE = 'fn_banana';
+export const ACCENT_COOKIE = 'fn_accent';
 /** the browser cap; re-set on every request so regular visitors never expire */
 export const COOKIE_MAX_AGE = 400 * 24 * 60 * 60;
 
@@ -131,6 +132,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// status bar tint iOS reads off the meta tag. On auto the tint is left to
 	// the phone, which is what the media-scoped pair is for
 	const banana = bananaOf(event.cookies.get(BANANA_COOKIE));
+	const accent = accentOf(event.cookies.get(ACCENT_COOKIE));
 	// §3.6: a special round dresses everybody, over bananas too, for as long as it lasts.
 	// Its look is drawn for the dark only, so it is dark for everybody too; the
 	// cookie is left alone and the chosen palette comes back when the look ends
@@ -149,6 +151,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 				html
 					.replaceAll('%fn.theme%', theme)
 					.replace('%fn.banana%', banana ? ' data-banana' : '')
+					.replace('%fn.accent%', accent === DEFAULT_ACCENT ? '' : ` data-accent="${accent}"`)
 					.replace('%fn.special%', look ? ` data-special="${look.id}"` : '')
 					.replace('%fn.scheme%', theme === 'auto' ? 'light dark' : theme)
 					.replace('%fn.tint%', tint)

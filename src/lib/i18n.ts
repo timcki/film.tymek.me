@@ -109,6 +109,8 @@ export type Dict = {
 	themeDark: string;
 	themeLight: string;
 	themeBanana: string;
+	/** the accent switch's dots, said by name to a screen reader and on hover */
+	accentNames: Record<'rose' | 'lavender' | 'periwinkle' | 'sky' | 'seafoam' | 'sage', string>;
 
 	week: (n: number) => string;
 	/** the whole phrase, verb included, because the bar has no room for a sentence around it */
@@ -131,6 +133,8 @@ export type Dict = {
 	btnUndo: (s: number) => string;
 	btnRenominate: string;
 	warnDrops: string;
+	/** beside the + of a film about to go: what happens unless somebody uses it */
+	rescue: string;
 	warnFades: (n: number) => string;
 	campaign: (n: number) => string;
 
@@ -514,6 +518,14 @@ const pl: Dict = {
 	themeDark: 'Ciemny',
 	themeLight: 'Jasny',
 	themeBanana: 'Bananowo',
+	accentNames: {
+		rose: 'Róż',
+		lavender: 'Lawenda',
+		periwinkle: 'Barwinek',
+		sky: 'Błękit',
+		seafoam: 'Morska piana',
+		sage: 'Szałwia'
+	},
 
 	week: (n) => `Tydzień ${n}`,
 	// tiered: only the unit that matters now, down to seconds in the last minute
@@ -547,6 +559,7 @@ const pl: Dict = {
 	btnUndo: (s) => `Cofnij · ${s} s`,
 	btnRenominate: 'Zgłoś ponownie',
 	warnDrops: 'odpada w tym tyg, jeśli nie dostanie głosów',
+	rescue: 'odpada bez głosów',
 	warnFades: (n) => `znika za ${n} ${plWeeks(n)}`,
 	campaign: (n) => `${n}. tydzień kampanii`,
 
@@ -1046,6 +1059,14 @@ const en: Dict = {
 	themeDark: 'Dark',
 	themeLight: 'Light',
 	themeBanana: 'Bananas',
+	accentNames: {
+		rose: 'Rose',
+		lavender: 'Lavender',
+		periwinkle: 'Periwinkle',
+		sky: 'Sky',
+		seafoam: 'Seafoam',
+		sage: 'Sage'
+	},
 
 	week: (n) => `Week ${n}`,
 	// tiered: only the unit that matters now, down to seconds in the last minute
@@ -1081,6 +1102,7 @@ const en: Dict = {
 	btnUndo: (s) => `Undo · ${s} s`,
 	btnRenominate: 'Re-nominate',
 	warnDrops: 'drops this week unless it gets votes',
+	rescue: 'drops without votes',
 	warnFades: (n) => `fades in ${n} ${en2(n, 'week', 'weeks')}`,
 	campaign: (n) => `week ${n} of this campaign`,
 

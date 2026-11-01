@@ -30,12 +30,15 @@
 	import { votePulse } from '$lib/vote-pulse';
 	import { haptic } from '$lib/haptics';
 	import { inFlight } from '$lib/points-in-flight.svelte';
+	import { picked } from '$lib/look-picked.svelte';
 	import { barPip, burst, fly, thump } from '$lib/vote-fx';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const T = $derived(dictFor(data.lang));
+	// a banana switch flipped a moment ago, before the server has said so
+	const banana = $derived(picked.banana ?? data.banana);
 	const rules = $derived(data.rules);
 	const votes = $derived(isVotes(rules));
 	const left = $derived(data.person?.left ?? 0);
@@ -122,12 +125,25 @@
 	// faces in the stack until the row's width is spent; a fold of one is
 	// never worth its "+1", so the last face shows instead
 	const FACE_ROOM = 210;
-	function stackFit(points: number[]): number {
+	// what is happening to a film about to go, said in full: the hover on the
+	// words beside the card's +, and the sleeper's line
+	function riskSays(film: Film) {
+		if (!data.week) return '';
+		return rules.attrition.kind === 'archive'
+			? T.warnFades(
+					Math.max(1, rules.attrition.afterWeeksAtZero - (data.week.number - film.added_week))
+				)
+			: T.warnDrops;
+	}
+	// at risk, and you could still put a point on it: the + says so
+	const rescuable = (film: Film) => film.atRisk && !!data.week && canCast(film);
+
+	function stackFit(points: number[], room = FACE_ROOM): number {
 		let width = 0;
 		let fit = 0;
 		for (const p of points) {
 			const next = width + faceSize(p) - (fit ? 8 : 0);
-			if (next > FACE_ROOM - (fit < points.length - 1 ? 30 : 0)) break;
+			if (next > room - (fit < points.length - 1 ? 30 : 0)) break;
 			width = next;
 			fit++;
 		}
@@ -682,7 +698,7 @@
 					</button>
 				</form>
 			{:else}
-				<span class="pip set"><i>{#if data.banana}<Banana />{:else}<Ticket />{/if}</i></span>
+				<span class="pip set"><i>{#if banana}<Banana />{:else}<Ticket />{/if}</i></span>
 			{/if}
 		{/each}
 		{#each Array(Math.max(0, left)) as _, i (i)}
@@ -752,7 +768,12 @@
 	     so the row reads at a glance as one person carrying a film or many
 	     chipping in; the fan gives the exact count -->
 	{@const mineFirst = [...film.backers].sort((x, y) => y.points - x.points)}
-	{@const fit = stackFit(mineFirst.map((b) => b.points))}
+	<!-- a film about to go says so beside its +, which takes some of the
+	     faces' room -->
+	{@const fit = stackFit(
+		mineFirst.map((b) => b.points),
+		rescuable(film) ? FACE_ROOM - 120 : FACE_ROOM
+	)}
 	<div class="fbase">
 		{#if !film.held}
 		<button
@@ -825,15 +846,22 @@
 					aria-label={T.dYours(film.myPoints, votes)}
 					in:scale={{ duration: 380, start: 0.5, easing: backOut }}
 				>
-					<i>{#if data.banana}<Banana />{:else}<Ticket />{/if}</i>
+					<i>{#if banana}<Banana />{:else}<Ticket />{/if}</i>
 					{#key film.myPoints}<b>{film.myPoints}</b>{/key}
 				</span>
 			{:else}
+				{#if rescuable(film)}
+					<!-- about to go: no line of warning on the card (which would grow
+					     and shrink with every vote that saves it and every undo), but
+					     its poster fading and the + saying so, right where the answer is -->
+					<span class="rescue" title={riskSays(film)}>{T.rescue}</span>
+				{/if}
 				<form method="POST" action="?/setPoints" use:enhance={submit()}>
 					<input type="hidden" name="filmId" value={film.id} />
 					<button
 						class="pcplus"
 						class:mine={film.myPoints > 0}
+						class:rescuing={rescuable(film)}
 						name="points"
 						value={film.myPoints + 1}
 						disabled={!canCast(film)}
@@ -864,16 +892,7 @@
      let it sleep a round -->
 {#snippet status(film: Film, lead: boolean)}
 	{#if film.atRisk && data.week}
-		<span class="warnchip">
-			{rules.attrition.kind === 'archive'
-				? T.warnFades(
-						Math.max(
-							1,
-							rules.attrition.afterWeeksAtZero - (data.week.number - film.added_week)
-						)
-					)
-				: T.warnDrops}
-		</span>
+		<span class="warnchip">{riskSays(film)}</span>
 	{/if}
 	<!-- §3.5. A film stepping aside is public the instant it happens, which
 	     is half the point: there is still time to put votes elsewhere. On
@@ -1126,11 +1145,11 @@
 			</div>
 		</div>
 		<!-- the card's fine print along its base: all of it on a card without
-		     the faces and the +, and on one with them only what is happening to
-		     the film, when anything is -->
+		     the faces and the +, and on a sleeper's one-line card what is
+		     happening to it; on a card with the faces it is in the counts' row -->
 		{#if !based(film, shelf)}
 			<div class="cardfoot">{@render fineprint(film, lead)}</div>
-		{:else if (film.atRisk && data.week) || (lead && canHold(film))}
+		{:else if film.held && ((film.atRisk && data.week) || (lead && canHold(film)))}
 			<div class="cardfoot">{@render status(film, lead)}</div>
 		{/if}
 		{#if (based(film, shelf) && !film.held) || film.backers.length > 7}
@@ -1157,10 +1176,10 @@
 						     a bunch of bananas, or a die showing five -->
 						<span class="crowdpts" aria-label={T.unit(backer.points, votes)}>
 							{#each Array(Math.floor(backer.points / 5)) as _, k (k)}
-								<i class="five">{#if data.banana}<BananaBunch />{:else}<TicketStack />{/if}</i>
+								<i class="five">{#if banana}<BananaBunch />{:else}<TicketStack />{/if}</i>
 							{/each}
 							{#each Array(backer.points % 5) as _, k (k)}
-								<i>{#if data.banana}<Banana />{:else}<Ticket />{/if}</i>
+								<i>{#if banana}<Banana />{:else}<Ticket />{/if}</i>
 							{/each}
 						</span>
 					</div>

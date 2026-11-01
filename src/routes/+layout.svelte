@@ -7,7 +7,19 @@
 	import Avatar from '$lib/components/Avatar.svelte';
 	import { formatNight } from '$lib/datetime';
 	import { dictFor, isVotes, LANGS } from '$lib/i18n';
-	import { THEMES } from '$lib/themes';
+	import {
+		ACCENTS,
+		ACCENT_SWATCH,
+		BANANA_BG,
+		SPECIAL_BG,
+		THEME_BG,
+		THEMES,
+		type Accent,
+		type Theme
+	} from '$lib/themes';
+	import { enhance } from '$app/forms';
+	import { flushSync } from 'svelte';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import Banana from '$lib/components/Banana.svelte';
 	import Ticket from '$lib/components/Ticket.svelte';
 	import Halloween from '$lib/components/Halloween.svelte';
@@ -17,6 +29,7 @@
 	import { specialOf } from '$lib/specials';
 	import { nomSheet } from '$lib/special-sheet.svelte';
 	import { inFlight } from '$lib/points-in-flight.svelte';
+	import { picked } from '$lib/look-picked.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import type { LayoutServerData } from './$types';
 
@@ -162,6 +175,21 @@
 	};
 	let weekTip = $state(false);
 	let menuOpen = $state(false);
+	// the menu folds back up before it goes: shut a beat after asking, so the
+	// way out can play. Opening is the details element's own, animated in CSS
+	let menuClosing = $state(false);
+	function closeMenu() {
+		if (!menuOpen || menuClosing) return;
+		if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+			menuOpen = false;
+			return;
+		}
+		menuClosing = true;
+		setTimeout(() => {
+			menuOpen = false;
+			menuClosing = false;
+		}, 150);
+	}
 
 	// a menu that survived navigation would hang over the page you just opened
 	$effect(() => {
@@ -180,17 +208,92 @@
 		else delete root.dataset.special;
 	});
 
-	// on auto the phone can change its mind while the page is open, and the
-	// inline boot script has already run by then
+	// the palette, the bananas and the accent, as picked on this page or as the
+	// server said when it loaded. A pick shows at once and is only then sent to
+	// be kept, so the page never reloads to change colour
+	const theme = $derived(picked.theme ?? data.theme);
+	const banana = $derived(picked.banana ?? data.banana);
+	const accent = $derived(picked.accent ?? data.accent);
+
+	// what hooks.server.ts dresses <html> in on a full load, kept true after
+	// it: the palette (auto resolved, and followed, since the phone can change
+	// its mind while the page is open), the bananas, and the two meta tags the
+	// browser reads its own chrome off
 	$effect(() => {
-		if (data.theme !== 'auto') return;
+		const root = document.documentElement;
 		const query = matchMedia('(prefers-color-scheme: light)');
 		const apply = () =>
-			(document.documentElement.dataset.theme = query.matches ? 'light' : 'dark');
+			(root.dataset.theme = theme === 'auto' ? (query.matches ? 'light' : 'dark') : theme);
 		apply();
+		root.toggleAttribute('data-banana', banana);
+		if (accent === 'rose') delete root.dataset.accent;
+		else root.dataset.accent = accent;
+		document
+			.querySelector('meta[name="color-scheme"]')
+			?.setAttribute('content', theme === 'auto' ? 'light dark' : theme);
+		const bg = data.look ? SPECIAL_BG[data.look] : banana ? BANANA_BG : THEME_BG;
+		const old = document.querySelectorAll('meta[name="theme-color"]');
+		const tint = (content: string, media?: 'dark' | 'light') => {
+			const meta = document.createElement('meta');
+			meta.name = 'theme-color';
+			meta.content = content;
+			if (media) meta.media = `(prefers-color-scheme: ${media})`;
+			return meta;
+		};
+		const tints =
+			theme === 'auto' ? [tint(bg.dark, 'dark'), tint(bg.light, 'light')] : [tint(bg[theme])];
+		if (old[0]) old[0].before(...tints);
+		else document.head.append(...tints);
+		old.forEach((m) => m.remove());
+		if (theme !== 'auto') return;
 		query.addEventListener('change', apply);
 		return () => query.removeEventListener('change', apply);
 	});
+
+	// the switch itself: the new look fades in over the old one (a view
+	// transition, where there is one, and a plain swap where there is not or
+	// motion is unwanted), and the cookie is set behind it. The forms still
+	// post and redirect without scripting, as they always did
+	const pick =
+		(next: { theme?: Theme; banana?: boolean; accent?: Accent }): SubmitFunction =>
+		() => {
+			const before = { ...picked };
+			const swap = () => {
+				Object.assign(picked, next);
+				flushSync();
+			};
+			// a palette or bananas repaint the whole page, so the old page fades
+			// into the new one. An accent alone is a few buttons and rings: it
+			// blends there in place (the registered --accent in app.css), and is
+			// kept out of the page-wide fade, which iOS plays as a flash and a
+			// jump down a long, scrolled list
+			// On a phone there is no page-wide fade at all (it flashes there too):
+			// for a moment every colour on the page eases over in place instead
+			const whole = next.theme !== undefined || (next.banana ?? banana) !== banana;
+			const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+			const mouse = matchMedia('(hover: hover) and (pointer: fine)').matches;
+			if (whole && !still && mouse && document.startViewTransition)
+				document.startViewTransition(swap);
+			else if (whole && !still) {
+				const root = document.documentElement;
+				root.classList.add('look-easing');
+				swap();
+				setTimeout(() => root.classList.remove('look-easing'), 420);
+			} else swap();
+			// the pick is already on screen and the cookie only keeps it for the
+			// next load, so nothing is fetched back: reloading the page's data
+			// would redraw the list under it, which a phone shows as a flash and a
+			// jump. The pick stands in for the data until then. Only if it was
+			// not kept does the page go back to how it was
+			return async ({ result }) => {
+				if (result.type === 'error' || result.type === 'failure') {
+					delete picked.theme;
+					delete picked.banana;
+					delete picked.accent;
+					Object.assign(picked, before);
+				}
+			};
+		};
 
 	// toasts fade themselves out; keyed on seq so the same text twice still shows
 	let visible = $state(false);
@@ -233,8 +336,16 @@
 {#snippet identity()}
 	{#if data.person}
 		<!-- details, not a button, so the only navigation still works without JS -->
-		<details class="menuwrap" bind:open={menuOpen}>
-			<summary class="iconbtn" aria-label={T.menu}>
+		<details class="menuwrap" class:closing={menuClosing} bind:open={menuOpen}>
+			<summary
+				class="iconbtn"
+				aria-label={T.menu}
+				onclick={(event) => {
+					if (!menuOpen) return;
+					event.preventDefault();
+					closeMenu();
+				}}
+			>
 				<Avatar
 					name={data.person.name}
 					colour={data.person.colour}
@@ -246,17 +357,6 @@
 			</summary>
 
 			<div class="menu">
-				<div class="who">
-					<Avatar
-						name={data.person.name}
-						colour={data.person.colour}
-						avatar={data.person.avatar}
-						size={26}
-						font={11}
-						xp={data.person.xp}
-					/>
-					<b>{data.person.name}</b>
-				</div>
 				<a href={listPath} class:on={home}>
 					<span class="ic">
 						<svg
@@ -317,6 +417,9 @@
 						>
 					</span>
 					{T.tabYou}
+					<!-- who this link is: the face is the button that opened the menu,
+					     so the name rides here rather than a second picture of it -->
+					<span class="mname">{data.person.name}</span>
 				</a>
 				{#if data.person.isAdmin}
 					<a href="/admin" class:on={path.startsWith('/admin')}>
@@ -341,8 +444,12 @@
 				<!-- the settings nobody touches twice a year, kept out of the bar -->
 				<div class="menufoot">
 					{@render langswitch()}
-					<!-- §3.6: a special look is dark only, so there is nothing to switch -->
-					{#if !data.look}{@render themeswitch()}{/if}
+					<!-- §3.6: a special look is dark only and brings its own accent, so
+					     there is nothing to switch -->
+					{#if !data.look}
+						{@render themeswitch()}
+						{@render accentswitch()}
+					{/if}
 				</div>
 			</div>
 		</details>
@@ -361,15 +468,57 @@
 	</div>
 {/snippet}
 
+<!-- the accent: a dot of each, half its dark shade and half its light, so it
+     says what it will be on either palette. Bananas are the last dot: they bring
+     an accent of their own, so they are one more way to be coloured, and
+     picking a colour puts them away -->
+{#snippet accentswitch()}
+	<div class="lang accents">
+		{#each ACCENTS as name (name)}
+			<form
+				method="POST"
+				action="/theme?/accent"
+				use:enhance={pick({ accent: name, banana: false })}
+			>
+				<input type="hidden" name="accent" value={name} />
+				<input type="hidden" name="to" value={path} />
+				<button
+					class:on={!banana && accent === name}
+					style:--d={ACCENT_SWATCH[name].dark}
+					style:--l={ACCENT_SWATCH[name].light}
+					title={T.accentNames[name]}
+					aria-label={T.accentNames[name]}
+					aria-pressed={!banana && accent === name}
+				><i></i></button>
+			</form>
+		{/each}
+		<form
+			method="POST"
+			action="/theme?/banana"
+			class="nana"
+			use:enhance={pick({ banana: !banana })}
+		>
+			<input type="hidden" name="banana" value={banana ? '0' : '1'} />
+			<input type="hidden" name="to" value={path} />
+			<button
+				class:on={banana}
+				title={T.themeBanana}
+				aria-label={T.themeBanana}
+				aria-pressed={banana}><Banana /></button
+			>
+		</form>
+	</div>
+{/snippet}
+
 {#snippet themeswitch()}
 	<div class="lang themes">
 		{#each THEMES as name (name)}
 			{@const label =
 				name === 'auto' ? T.themeAuto : name === 'dark' ? T.themeDark : T.themeLight}
-			<form method="POST" action="/theme?/set">
+			<form method="POST" action="/theme?/set" use:enhance={pick({ theme: name })}>
 				<input type="hidden" name="theme" value={name} />
 				<input type="hidden" name="to" value={path} />
-				<button class:on={data.theme === name} title={label} aria-label={label}>
+				<button class:on={theme === name} title={label} aria-label={label}>
 					<svg
 						width="15"
 						height="15"
@@ -397,18 +546,6 @@
 			</form>
 		{/each}
 	</div>
-	<!-- bananas lie over whichever palette is showing, so they are a toggle of
-	     their own rather than a fourth way to be lit -->
-	<form method="POST" action="/theme?/banana" class="lang themes nana">
-		<input type="hidden" name="banana" value={data.banana ? '0' : '1'} />
-		<input type="hidden" name="to" value={path} />
-		<button
-			class:on={data.banana}
-			title={T.themeBanana}
-			aria-label={T.themeBanana}
-			aria-pressed={data.banana}><Banana /></button
-		>
-	</form>
 {/snippet}
 
 {#snippet budget()}
@@ -428,12 +565,12 @@
 				     point has been spent, so the week starts full and ends on ghosts -->
 				{#each Array(Math.max(0, spentNow)) as _, i (i)}
 					<span class="hpip spent ghost" in:scale={pipPop}
-						>{#if data.banana}<Banana />{:else}<Ticket />{/if}</span
+						>{#if banana}<Banana />{:else}<Ticket />{/if}</span
 					>
 				{/each}
 				{#each Array(Math.max(0, leftNow)) as _, i (i)}
 					<span class="hpip free held" in:scale={pipPop}
-						>{#if data.banana}<Banana />{:else}<Ticket />{/if}</span
+						>{#if banana}<Banana />{:else}<Ticket />{/if}</span
 					>
 				{/each}
 			</button>
@@ -645,7 +782,7 @@
 			<!-- a tap anywhere else dismisses the menu. It lives in the page's column,
 			     under the bar and its menu: §3.6's look lifts the column into a layer
 			     of its own, and a backdrop outside it would cover the menu too -->
-			<button class="menu-backdrop" aria-label={T.close} onclick={() => (menuOpen = false)}></button>
+			<button class="menu-backdrop" aria-label={T.close} onclick={closeMenu}></button>
 		{/if}
 
 		{@render children()}
@@ -686,6 +823,6 @@
 	</div>
 {/if}
 
-<svelte:window onkeydown={(event) => event.key === 'Escape' && (menuOpen = false)} />
+<svelte:window onkeydown={(event) => event.key === 'Escape' && closeMenu()} />
 
 <div class="toast" class:on={visible} class:bad={toast.bad}>{toast.text}</div>
