@@ -222,6 +222,29 @@ describe('a special round', () => {
 		);
 	});
 
+	it('wakes the list with its holds still standing', () => {
+		const { db, rules } = freshDb('weekly');
+		const other = addFilm(db, 'Heat', 'ala', 1);
+		forceAdvanceTo(db, 2);
+		const film = addFilm(db, 'Paddington', 'ala', 2);
+		const third = addFilm(db, 'Alien', 'bartek', 2);
+		setPoints(db, rules, 'bartek', film, 2);
+		setPoints(db, rules, 'celina', third, 1);
+		holdFilm(db, 'ala', film, 'away');
+		startSpecial(db, rules, 'approval');
+		setApproval(db, rules, 'darek', nominateSpecial(db, rules, 'darek', { title: 'The Thing' }), true);
+		closeWeek(db, rules);
+		closeRunoff(db, rules, openRunoff(db)!.id);
+
+		expect(standings(db, rules, 3, null).find((f) => f.id === film)!.held?.reason).toBe('away');
+		expect(() => holdFilm(db, 'ala', other)).toThrow(expect.objectContaining({ code: 'hold_taken' }));
+		// tapping it again only rewrites the reason, in the row already there
+		holdFilm(db, 'ala', film, 'still away');
+		expect(db.prepare('SELECT COUNT(*) AS n FROM film_hold').get()).toEqual({ n: 1 });
+		closeWeek(db, rules);
+		expect(runoffFilms(db, openRunoff(db)!.id).map((f) => f.title)).toEqual(['Alien']);
+	});
+
 	it('banks once for the list round it slept through, counting what was spent before', () => {
 		const { db, rules } = freshDb('banked');
 		const film = addFilm(db, 'Paddington', 'ala', 1);

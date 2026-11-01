@@ -72,7 +72,8 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 					xp: person.xp,
 					budget,
 					spent,
-					left: budget - spent
+					// a round put to sleep and woken can carry more than a fresh budget
+					left: Math.max(0, budget - spent)
 				}
 			: null,
 		rules: {
