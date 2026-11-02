@@ -5,8 +5,7 @@ import {
 	deleteNight,
 	markNightUsed,
 	moveNight,
-	nextNight,
-	setNightStatus
+	nextNight
 } from '../src/lib/server/schedule.js';
 import { closeWeek, currentWeek, openWeek, syncOpenWeek } from '../src/lib/server/weeks.js';
 import { closeRunoff, openRunoff } from '../src/lib/server/runoffs.js';
@@ -40,13 +39,13 @@ describe('the calendar', () => {
 		expect(nextNight(db, MONDAY).toISOString()).toBe('2026-08-05T18:00:00.000Z');
 	});
 
-	it('runs the round on to the date after when a night is skipped', () => {
+	it('runs the round on to the date after when a night is deleted', () => {
 		const { db } = freshDb('banked', MONDAY);
 		const wednesday = addNight(db, at('2026-08-05T18:00:00.000Z'), null);
 		addNight(db, at('2026-08-12T18:00:00.000Z'), null);
 		expect(syncOpenWeek(db)!.closes_at).toBe('2026-08-05T18:00:00.000Z');
 
-		setNightStatus(db, wednesday, 'skipped');
+		deleteNight(db, wednesday);
 
 		expect(syncOpenWeek(db)!.closes_at).toBe('2026-08-12T18:00:00.000Z');
 	});
@@ -84,7 +83,6 @@ describe('the calendar', () => {
 
 		expect(() => deleteNight(db, night)).toThrow(RuleError);
 		expect(() => moveNight(db, night, at('2026-09-01T18:00:00.000Z'), null)).toThrow(RuleError);
-		expect(() => setNightStatus(db, night, 'skipped')).toThrow(RuleError);
 	});
 
 	it('refuses a night that is already behind us, however it gets there', () => {
@@ -101,14 +99,6 @@ describe('the calendar', () => {
 
 		const wednesday = addNight(db, at('2026-08-05T18:00:00.000Z'), null, MONDAY);
 		expect(code(() => moveNight(db, wednesday, past, null, MONDAY))).toBe('night_past');
-
-		// skipped on Monday, then somebody presses restore once Wednesday is over
-		setNightStatus(db, wednesday, 'skipped', MONDAY);
-		const friday = at('2026-08-07T10:00:00.000Z');
-		expect(code(() => setNightStatus(db, wednesday, 'planned', friday))).toBe('night_past');
-		// skipping a night that has passed is still fine; it changes no deadline
-		setNightStatus(db, wednesday, 'planned', MONDAY);
-		expect(() => setNightStatus(db, wednesday, 'skipped', friday)).not.toThrow();
 	});
 
 	it('is stable: recomputing does not walk the deadline forward', () => {

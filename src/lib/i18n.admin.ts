@@ -36,11 +36,7 @@ export type AdminDict = {
 	calPastEmpty: string;
 	calClosesRound: string;
 	calOverdue: string;
-	calSkipped: string;
 	calUsed: (evening: number) => string;
-	calRunsTo: (date: string) => string;
-	calSkip: string;
-	calUnskip: string;
 	calDelete: string;
 	calEdit: string;
 	calSave: string;
@@ -208,7 +204,7 @@ const pl: AdminDict = {
 
 	calH: 'Terminy wieczorków',
 	calIntro:
-		'Runda kończy się w najbliższym zaplanowanym terminie. Pominięcie terminu przedłuża rundę do następnego, a punkty dostajecie po każdym obejrzanym filmie, nie co tydzień.',
+		'Runda kończy się w najbliższym zaplanowanym terminie. Usunięcie terminu przedłuża rundę do następnego, a punkty dostajecie po każdym obejrzanym filmie, nie co tydzień.',
 	calNextH: 'Bieżąca runda kończy się',
 	calFromCalendar: 'z kalendarza',
 	calFromDefault: 'termin domyślny',
@@ -227,11 +223,7 @@ const pl: AdminDict = {
 	calPastEmpty: 'Jeszcze żadnego wieczorku z kalendarza.',
 	calClosesRound: 'zamyka bieżącą rundę',
 	calOverdue: 'termin minął',
-	calSkipped: 'pominięty',
 	calUsed: (evening) => `wieczorek ${evening}`,
-	calRunsTo: (date) => `runda potrwa do ${date}`,
-	calSkip: 'Pomiń',
-	calUnskip: 'Przywróć',
 	calDelete: 'Usuń',
 	calEdit: 'Zmień',
 	calSave: 'Zapisz',
@@ -278,9 +270,9 @@ const pl: AdminDict = {
 	cwDirectorsPh: 'np. Kieślowski, Holland',
 	cwCoded: 'Inne',
 	cwStart: 'Zacznij',
-	cwExtra: 'Dodatkowy wieczór',
+	cwExtra: 'Własna data',
 	cwExtraHint: (night) =>
-		`Zostaw puste, a wieczorem specjalnym będzie ${night}. Podaj wcześniejszy termin, a to będzie wieczór dodatkowy: lista poczeka i potem pobiegnie dalej do ${night}, jakby nic się nie stało.`,
+		`Zostaw puste, a wieczorem specjalnym będzie ${night}, termin, który już jest w kalendarzu. Podaj wcześniejszy termin, a powstanie nowy wieczór dodatkowy: lista poczeka i potem pobiegnie dalej do ${night}, jakby nic się nie stało. Usunięcie tego terminu odwoła wieczór specjalny.`,
 	cwCancel: 'Anuluj',
 	cwNoRules: 'Bez zasad: pasuje każdy film.',
 	lookLabel: 'Wygląd strony',
@@ -443,7 +435,7 @@ const pl: AdminDict = {
 			case 'extra_not_before':
 				return 'Dodatkowy wieczór musi wypaść przed końcem bieżącej rundy.';
 			case 'extra_too_early':
-				return 'Poprzednia runda skończyła się przed swoim terminem, więc dodatkowy wieczór musi wypaść po nim.';
+				return 'Wcześniej w kalendarzu jest już inny wieczór, więc dodatkowy musi wypaść przed nim.';
 			case 'no_special':
 				return 'Ta runda nie jest specjalna.';
 			case 'no_look':
@@ -507,7 +499,7 @@ const en: AdminDict = {
 
 	calH: 'Film night dates',
 	calIntro:
-		'A round ends on the next planned date. Skipping one runs the round on to the date after, and points are handed out after each film we watch rather than every week.',
+		'A round ends on the next planned date. Deleting one runs the round on to the date after, and points are handed out after each film we watch rather than every week.',
 	calNextH: 'This round closes',
 	calFromCalendar: 'from the calendar',
 	calFromDefault: 'default date',
@@ -526,11 +518,7 @@ const en: AdminDict = {
 	calPastEmpty: 'No film night has run off the calendar yet.',
 	calClosesRound: 'closes the current round',
 	calOverdue: 'overdue',
-	calSkipped: 'skipped',
 	calUsed: (evening) => `night ${evening}`,
-	calRunsTo: (date) => `the round runs to ${date}`,
-	calSkip: 'Skip',
-	calUnskip: 'Restore',
 	calDelete: 'Delete',
 	calEdit: 'Change',
 	calSave: 'Save',
@@ -577,9 +565,9 @@ const en: AdminDict = {
 	cwDirectorsPh: 'e.g. Kieślowski, Holland',
 	cwCoded: 'Other',
 	cwStart: 'Start',
-	cwExtra: 'Extra night',
+	cwExtra: 'Own date',
 	cwExtraHint: (night) =>
-		`Leave it empty and the special night is ${night}. Give it an earlier date for an extra night instead: the list waits, then carries on to ${night} as if nothing had happened.`,
+		`Leave it empty and the special night is ${night}, the date already in the calendar. Give an earlier date and a new extra night is created: the list waits, then carries on to ${night} as if nothing had happened. Deleting the date calls the special night off.`,
 	cwCancel: 'Cancel',
 	cwNoRules: 'No rules: any film fits.',
 	lookLabel: 'Site look',

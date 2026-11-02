@@ -6,16 +6,23 @@ import {
 	allNights,
 	deleteNight,
 	moveNight,
-	nextNight,
-	setNightStatus
+	nightById,
+	nextNight
 } from '$lib/server/schedule';
-import { currentWeek, deadlineAnchor, syncOpenWeek } from '$lib/server/weeks';
+import { currentWeek, fallbackDeadline, syncOpenWeek } from '$lib/server/weeks';
 import { ruleFail } from '$lib/server/respond';
 import { RuleError } from '$lib/server/types';
-import { fromLocalInput, iso, nextDeadline } from '$lib/server/time';
+import { fromLocalInput, iso } from '$lib/server/time';
 import { toLocalInput } from '$lib/datetime';
 import { activeRules } from '$lib/server/config';
-import { editSpecial, startExtraNight, startExtraNow, startSpecial, stopSpecial } from '$lib/server/specials';
+import {
+	editSpecial,
+	startExtraNight,
+	startExtraNow,
+	startSpecial,
+	stopSpecial,
+	stopSpecialOn
+} from '$lib/server/specials';
 import { cleanCustom } from '$lib/server/custom-weeks';
 import type { CustomWeek } from '$lib/custom-weeks';
 import { customOf } from '$lib/custom-weeks';
@@ -64,7 +71,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		nights,
 		// what the round would fall back to with nothing planned
 		fallback: week
-			? iso(nextDeadline(deadlineAnchor(db, week.number, new Date(week.opens_at))))
+			? iso(fallbackDeadline(db, week.number, new Date(week.opens_at)))
 			: null,
 		// the picker opens on the next Thursday at 20:00, the old default
 		suggested: toLocalInput(nextNight(db, new Date()))
@@ -137,22 +144,6 @@ export const actions: Actions = {
 				logAdmin(db, person.id, 'night.move', iso(at), note || null);
 			});
 			return { moved: true };
-		} catch (error) {
-			return ruleFail(error);
-		}
-	},
-
-	skip: async ({ request, locals }) => {
-		const person = requireAdmin(locals.person);
-		const form = await request.formData();
-		const id = Number(form.get('id'));
-		const restore = form.get('restore') === '1';
-		try {
-			edit((db) => {
-				setNightStatus(db, id, restore ? 'planned' : 'skipped');
-				logAdmin(db, person.id, restore ? 'night.restore' : 'night.skip', String(id));
-			});
-			return { skipped: !restore };
 		} catch (error) {
 			return ruleFail(error);
 		}
@@ -248,6 +239,12 @@ export const actions: Actions = {
 		const id = Number(form.get('id'));
 		try {
 			edit((db) => {
+				// a special round belongs to its date: deleting the date calls the round off
+				if (stopSpecialOn(db, activeRules(), id) !== null) {
+					logAdmin(db, person.id, 'round.unspecial', String(currentWeek(db)?.number ?? ''), 'date deleted');
+					// an extra night's date went with the round
+					if (!nightById(db, id)) return;
+				}
 				deleteNight(db, id);
 				logAdmin(db, person.id, 'night.delete', String(id));
 			});

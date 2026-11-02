@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS tmdb_cache (
 );
 
 -- the film nights themselves. A week's closes_at is taken from the next planned
--- night, so moving or skipping one moves the whole round; with no rows at all the
+-- night, so moving or deleting one moves the whole round; with no rows at all the
 -- app falls back to next Thursday 20:00 and behaves exactly as it did before
 CREATE TABLE IF NOT EXISTS night (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,

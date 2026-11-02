@@ -14,7 +14,7 @@ import {
 	startSpecial,
 	stopSpecial
 } from '../src/lib/server/specials.js';
-import { addNight, allNights, deleteNight, moveNight, setNightStatus } from '../src/lib/server/schedule.js';
+import { addNight, allNights, deleteNight, moveNight } from '../src/lib/server/schedule.js';
 import { filmEvenings, roundEvenings } from '../src/lib/server/evenings.js';
 import { addComment } from '../src/lib/server/comments.js';
 import { toggleSeen } from '../src/lib/server/seen.js';
@@ -225,7 +225,7 @@ describe('calling an extra night off', () => {
 		expect(currentWeek(db)!.closes_at).toBe(WEDNESDAY.toISOString());
 	});
 
-	it('follows the date if an admin moved it, and does nothing to one they skipped or deleted', () => {
+	it('follows the date if an admin moved it, and does nothing to one they deleted', () => {
 		const { db, rules } = freshDb('weekly');
 		const thursday = currentWeek(db)!.closes_at;
 		startExtraNight(db, rules, 'approval', null, SUNDAY);
@@ -238,16 +238,7 @@ describe('calling an extra night off', () => {
 		expect(allNights(db)).toEqual([]);
 		expect(currentWeek(db)!.closes_at).toBe(thursday);
 
-		// skipped: the special round is on to the Thursday, and calling it off leaves the note of it
-		startExtraNight(db, rules, 'approval', null, SUNDAY);
-		setNightStatus(db, allNights(db)[0].id, 'skipped');
-		syncOpenWeek(db);
-		expect(currentWeek(db)!.closes_at).toBe(thursday);
-		expect(currentWeek(db)!.special).toBe('approval');
-		stopSpecial(db, rules);
-		expect(allNights(db).map((n) => n.status)).toEqual(['skipped']);
-
-		// deleted: the same, with nothing left to find
+		// deleted behind the round's back: still special, with nothing left to find
 		const { db: db2, rules: rules2 } = freshDb('weekly');
 		startExtraNight(db2, rules2, 'approval', null, SUNDAY);
 		deleteNight(db2, allNights(db2)[0].id);

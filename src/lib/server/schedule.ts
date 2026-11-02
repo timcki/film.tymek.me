@@ -5,7 +5,7 @@ import { iso, nextDeadline } from './time.js';
 
 /**
  * The calendar of film nights. A week's closes_at is the next planned night, so
- * moving one moves the round with it and skipping one lets the round run on to
+ * moving one moves the round with it and deleting one lets the round run on to
  * the date after. An empty calendar is not an error: with nothing planned the
  * app falls back to next Thursday 20:00, which is what it did before any of
  * this existed, so it keeps working whether or not anybody curates it.
@@ -92,22 +92,6 @@ export function moveNight(
 		note?.trim() || null,
 		id
 	);
-}
-
-/** skipping leaves the row in place, so the calendar still shows the week we sat out */
-export function setNightStatus(
-	db: DB,
-	id: number,
-	status: 'planned' | 'skipped',
-	now: Date = new Date()
-): void {
-	const night = nightById(db, id);
-	if (!night) throw new RuleError('no_night', 'no such night');
-	if (night.status === 'used') {
-		throw new RuleError('night_used', 'that night has already happened');
-	}
-	if (status === 'planned') assertAhead(new Date(night.at), now);
-	db.prepare('UPDATE night SET status = ? WHERE id = ?').run(status, id);
 }
 
 export function deleteNight(db: DB, id: number): void {

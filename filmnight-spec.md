@@ -500,6 +500,13 @@ will be logged out and need to re-scan — that's correct behaviour.
 Timezone is **Europe/Warsaw**. The deadline is **Thursday 20:00 local**, which is when
 you all sit down; voting closes as the film starts.
 
+Thursday is only the default. A round closes on the nearest date in the calendar after it
+opened, and only with none planned does it fall back to Thursday 20:00. That default is
+counted from the night the round before it was due, and when that round was the list's and
+its night fell in the same Monday to Sunday week, the Thursday is the next week's, so a count
+is never held on the Thursday after a Wednesday night. A date planned by hand is never moved,
+and a special round leaves the list's Thursday alone.
+
 Store `closes_at` in UTC, computed from local wall-clock time so that it survives DST —
 do not hardcode an offset. Use `Intl.DateTimeFormat` with `timeZone: 'Europe/Warsaw'` or a
 tz-aware library; there is a DST change in late March and late October and the deadline

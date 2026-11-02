@@ -4,9 +4,9 @@ import type { Film, Week } from './types.js';
 import { RuleError } from './types.js';
 import type { RuleSet } from './rules.js';
 import { accrue, orderFilms } from './rules.js';
-import { iso } from './time.js';
+import { iso, nextDeadline, sameWeek } from './time.js';
 import { heldIn, ignoreHolds } from './holds.js';
-import { markNightUsed, nextNight } from './schedule.js';
+import { markNightUsed, plannedAfter } from './schedule.js';
 import { listClock, pointsInWindow, rescoreAll, totalPoints } from './scoring.js';
 import { specialOf } from '../specials.js';
 import { rexpAll } from './xp.js';
@@ -58,13 +58,29 @@ export function requireSpecialWeek(db: DB, now: Date = new Date()): Week & { spe
 }
 
 /**
- * What a round's deadline is counted from: its opening, or the night the round
- * before it was due, whichever is later. A round decided early, at 19:50 on the
- * night itself, would otherwise take that same 20:00 and be over in ten minutes.
+ * The Thursday 20:00 a round closes on when the calendar has nothing for it.
+ * When the round before it was the list's and ended in the same Monday to
+ * Sunday week as that Thursday, it is the next week's: a night on Wednesday is
+ * not followed by a count on the Thursday after it, and a round decided at
+ * 19:50 on the night itself is not followed by one at 20:00. A special round
+ * left the list asleep, so the list keeps the night it had.
  */
-export function deadlineAnchor(db: DB, number: number, opensAt: Date): Date {
-	const due = weekByNumber(db, number - 1)?.closes_at;
-	return due && new Date(due) > opensAt ? new Date(due) : opensAt;
+export function fallbackDeadline(db: DB, number: number, opensAt: Date): Date {
+	const thursday = nextDeadline(opensAt);
+	const before = weekByNumber(db, number - 1);
+	return before && !before.special && sameWeek(new Date(before.closes_at), thursday)
+		? nextDeadline(thursday)
+		: thursday;
+}
+
+/**
+ * When a round that opened at `opensAt` closes: the nearest date in the calendar
+ * after it opened, whichever date that is, and only with none planned the
+ * Thursday fallback.
+ */
+export function roundDeadline(db: DB, number: number, opensAt: Date): Date {
+	const planned = plannedAfter(db, opensAt)[0];
+	return planned ? new Date(planned.at) : fallbackDeadline(db, number, opensAt);
 }
 
 export function openWeek(db: DB, number: number, now: Date = new Date()): Week {
@@ -72,7 +88,7 @@ export function openWeek(db: DB, number: number, now: Date = new Date()): Week {
 	if (existing) return existing;
 	db.prepare(
 		`INSERT INTO week (number, opens_at, closes_at, status) VALUES (?, ?, ?, 'open')`
-	).run(number, iso(now), iso(nextNight(db, deadlineAnchor(db, number, now))));
+	).run(number, iso(now), iso(roundDeadline(db, number, now)));
 	return weekByNumber(db, number) as Week;
 }
 
@@ -84,7 +100,7 @@ export function openWeek(db: DB, number: number, now: Date = new Date()): Week {
 export function syncOpenWeek(db: DB): Week | undefined {
 	const week = currentWeek(db);
 	if (!week || week.status !== 'open') return week;
-	const closesAt = iso(nextNight(db, deadlineAnchor(db, week.number, new Date(week.opens_at))));
+	const closesAt = iso(roundDeadline(db, week.number, new Date(week.opens_at)));
 	if (closesAt === week.closes_at) return week;
 	db.prepare('UPDATE week SET closes_at = ? WHERE number = ?').run(closesAt, week.number);
 	return weekByNumber(db, week.number);
@@ -205,9 +221,22 @@ export function finish(
 	);
 	settle(db, rules, week);
 	markNightUsed(db, week.number, week.closes_at);
+	endNight(db, week, now);
 	const next = openWeek(db, week.number + 1, now);
 	rescoreAll(db, rules, next.number);
 	rexpAll(db);
+}
+
+/**
+ * A round decided before its date had its night when it was decided, and that is
+ * the date the film wears in the record: the one it was due on never came.
+ */
+function endNight(db: DB, week: Week, now: Date): void {
+	db.prepare('UPDATE week SET closes_at = ? WHERE number = ? AND closes_at > ?').run(
+		iso(now),
+		week.number,
+		iso(now)
+	);
 }
 
 function closeWithoutWinner(db: DB, rules: RuleSet, week: Week, now: Date): void {
@@ -217,6 +246,7 @@ function closeWithoutWinner(db: DB, rules: RuleSet, week: Week, now: Date): void
 	);
 	settle(db, rules, week);
 	markNightUsed(db, week.number, week.closes_at);
+	endNight(db, week, now);
 	const next = openWeek(db, week.number + 1, now);
 	rescoreAll(db, rules, next.number);
 }

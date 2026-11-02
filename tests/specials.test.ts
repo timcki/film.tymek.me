@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { filmById, holdFilm, nominate, setPoints, standings } from '../src/lib/server/films.js';
-import { closeWeek, currentWeek, weekByNumber } from '../src/lib/server/weeks.js';
+import { closeWeek, currentWeek, syncOpenWeek, weekByNumber } from '../src/lib/server/weeks.js';
 import { closeRunoff, flashVote, openRunoff, runoffFilms } from '../src/lib/server/runoffs.js';
 import { pointsInWindow } from '../src/lib/server/scoring.js';
 import {
@@ -11,6 +11,7 @@ import {
 	specialTurnout,
 	startExtraNight,
 	startSpecial,
+	stopSpecialOn,
 	stopSpecial
 } from '../src/lib/server/specials.js';
 import { lookAt, setLook } from '../src/lib/server/looks.js';
@@ -18,6 +19,7 @@ import { screenStats } from '../src/lib/server/stats.js';
 import { xpBreakdown } from '../src/lib/server/xp.js';
 import { bankBalance, spentInRound } from '../src/lib/server/people.js';
 import { setFilmStatus } from '../src/lib/server/manage.js';
+import { addNight } from '../src/lib/server/schedule.js';
 import { addFilm, castBallot, forceAdvanceTo, freshDb } from './helpers.js';
 
 /**
@@ -320,7 +322,54 @@ describe('a special round', () => {
 		expect(spentInRound(db, 'bartek', next.number)).toBe(2);
 	});
 
-	it('turns down an extra night before the night a round decided early was due', () => {
+	it('dates a round decided early by the night it was decided, and leaves the list its Thursday after a special one', () => {
+		const { db, rules } = freshDb('weekly');
+		const thursday = currentWeek(db)!.closes_at;
+		startSpecial(db, rules, 'approval');
+		setApproval(db, rules, 'darek', nominateSpecial(db, rules, 'darek', { title: 'The Thing' }), true);
+		const tuesday = new Date('2026-08-04T18:00:00Z');
+		closeWeek(db, rules, tuesday);
+		closeRunoff(db, rules, openRunoff(db)!.id, tuesday);
+
+		expect(weekByNumber(db, 1)!.closes_at).toBe(tuesday.toISOString());
+		expect(currentWeek(db)!.closes_at).toBe(thursday);
+	});
+
+	it('closes a round on the nearest date, even one before the night the round before was due', () => {
+		const { db, rules } = freshDb('weekly');
+		const thursday = currentWeek(db)!.closes_at;
+		const film = addFilm(db, 'Paddington', 'ala', 1);
+		setPoints(db, rules, 'bartek', film, 2);
+		closeWeek(db, rules);
+		closeRunoff(db, rules, openRunoff(db)!.id);
+		// with nothing planned it is the Thursday after the one just decided for
+		expect(Date.parse(currentWeek(db)!.closes_at)).toBeGreaterThan(Date.parse(thursday));
+
+		const wednesday = new Date(Date.parse(thursday) - 86_400_000);
+		addNight(db, wednesday, null);
+		expect(syncOpenWeek(db)!.closes_at).toBe(wednesday.toISOString());
+	});
+
+	it('does not put the default Thursday in the week of a night the list was decided on', () => {
+		const { db, rules } = freshDb('weekly');
+		const thursday = currentWeek(db)!.closes_at;
+		const wednesday = new Date(Date.parse(thursday) - 86_400_000);
+		addNight(db, wednesday, null);
+		syncOpenWeek(db);
+		const film = addFilm(db, 'Paddington', 'ala', 1);
+		setPoints(db, rules, 'bartek', film, 2);
+		closeWeek(db, rules, new Date(wednesday.getTime() + 1000));
+		closeRunoff(db, rules, openRunoff(db)!.id);
+
+		// Wednesday's list round is over, so the next count is not Thursday's of the same week
+		expect(Date.parse(currentWeek(db)!.closes_at)).toBe(Date.parse(thursday) + 7 * 86_400_000);
+
+		// a date added by hand for that same week is fine
+		addNight(db, new Date(Date.parse(thursday) + 86_400_000), null);
+		expect(syncOpenWeek(db)!.closes_at).toBe(new Date(Date.parse(thursday) + 86_400_000).toISOString());
+	});
+
+	it('allows an extra night before the night a round decided early was due', () => {
 		const { db, rules } = freshDb('weekly');
 		const thursday = currentWeek(db)!.closes_at;
 		const film = addFilm(db, 'Paddington', 'ala', 1);
@@ -328,15 +377,49 @@ describe('a special round', () => {
 		closeWeek(db, rules);
 		closeRunoff(db, rules, openRunoff(db)!.id);
 
+		const due = currentWeek(db)!.closes_at;
+		const wednesday = new Date(Date.parse(thursday) - 86_400_000);
+		expect(startExtraNight(db, rules, 'approval', null, wednesday).closes_at).toBe(wednesday.toISOString());
+
+		// called off, the list round counts from the night it was due again
+		stopSpecial(db, rules);
+		expect(currentWeek(db)!.closes_at).toBe(due);
+	});
+
+	it('turns down an extra night when another night falls before it', () => {
+		const { db, rules } = freshDb('weekly');
+		const thursday = currentWeek(db)!.closes_at;
+		addNight(db, new Date(Date.parse(thursday) - 2 * 86_400_000), null);
 		const wednesday = new Date(Date.parse(thursday) - 86_400_000);
 		expect(() => startExtraNight(db, rules, 'approval', null, wednesday)).toThrow(
 			expect.objectContaining({ code: 'extra_too_early' })
 		);
 		expect(currentWeek(db)!.special).toBeNull();
-		expect(db.prepare(`SELECT COUNT(*) AS n FROM night WHERE status = 'planned'`).get()).toEqual({ n: 0 });
+	});
 
-		const saturday = new Date(Date.parse(thursday) + 2 * 86_400_000);
-		expect(startExtraNight(db, rules, 'approval', null, saturday).closes_at).toBe(saturday.toISOString());
+	it('is called off when its date is taken out of the calendar', () => {
+		const { db, rules } = freshDb('weekly');
+		const thursday = currentWeek(db)!.closes_at;
+		const sunday = new Date('2026-08-04T18:00:00Z');
+		startExtraNight(db, rules, 'approval', null, sunday);
+		const extra = db.prepare('SELECT id FROM night WHERE extra = 1').get() as { id: number };
+
+		expect(stopSpecialOn(db, rules, extra.id)).toBe(0);
+		expect(currentWeek(db)!.special).toBeNull();
+		expect(currentWeek(db)!.closes_at).toBe(thursday);
+		expect(db.prepare('SELECT COUNT(*) AS n FROM night WHERE extra = 1').get()).toEqual({ n: 0 });
+
+		// an ordinary night, with no special round on it, is none of its business
+		const plain = addNight(db, new Date('2026-08-05T18:00:00Z'), null);
+		expect(stopSpecialOn(db, rules, plain)).toBeNull();
+
+		// a special round on an ordinary date is called off too, and the date stays for the caller
+		syncOpenWeek(db);
+		startSpecial(db, rules, 'approval');
+		expect(currentWeek(db)!.closes_at).toBe('2026-08-05T18:00:00.000Z');
+		expect(stopSpecialOn(db, rules, plain)).toBe(0);
+		expect(currentWeek(db)!.special).toBeNull();
+		expect(db.prepare('SELECT COUNT(*) AS n FROM night WHERE id = ?').get(plain)).toEqual({ n: 1 });
 	});
 
 	it('can be called off, with or without picks, while the round is open', () => {

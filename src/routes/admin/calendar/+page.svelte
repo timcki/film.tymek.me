@@ -82,17 +82,9 @@
 	const languages = $derived(named(LANGUAGES, 'language'));
 	const running = $derived(data.week?.custom ?? null);
 
-	// a skipped night that has gone by is history, not something still to come
-	const gone = (night: Night) =>
-		night.status === 'used' || (night.status === 'skipped' && Date.parse(night.at) < Date.now());
+	const gone = (night: Night) => night.status === 'used';
 	const upcoming = $derived(data.nights.filter((n) => !gone(n)));
 	const past = $derived([...data.nights].reverse().filter(gone));
-
-	// the next date the round would run to if this one were skipped
-	function nextAfter(night: Night): string | null {
-		const later = data.nights.find((n) => n.status === 'planned' && n.at > night.at);
-		return later ? when(later.at) : null;
-	}
 
 	$effect(() => {
 		if (form && 'added' in form && form.added) editing = null;
@@ -219,8 +211,7 @@
 
 <div class="sec">{A.calUpcomingH}</div>
 {#each upcoming as night (night.id)}
-	{@const skipped = night.status === 'skipped'}
-	<div class="nrow" class:driving={night.id === data.drivingId} class:off={skipped}>
+	<div class="nrow" class:driving={night.id === data.drivingId}>
 		{#if editing === night.id}
 			<form class="edit" method="POST" action="?/move" use:enhance={submit()}>
 				<input type="hidden" name="id" value={night.id} />
@@ -242,21 +233,12 @@
 				<b>{when(night.at)}</b>
 				<span class="nmeta">
 					{#if night.id === data.drivingId}<span class="badge">{A.calClosesRound}</span>{/if}
-					{#if skipped}<span class="badge off">{A.calSkipped}</span>{/if}
-					{#if !skipped && daysUntil(night.at) < 0}<span class="badge warn">{A.calOverdue}</span>{/if}
+					{#if daysUntil(night.at) < 0}<span class="badge warn">{A.calOverdue}</span>{/if}
 					{#if night.note}<span class="nnote">{night.note}</span>{/if}
 				</span>
-				{#if skipped && nextAfter(night)}
-					<span class="nconseq">{A.calRunsTo(nextAfter(night) ?? '')}</span>
-				{/if}
 			</div>
 			<div class="acts">
 				<button class="tap" onclick={() => (editing = night.id)}>{A.calEdit}</button>
-				<form method="POST" action="?/skip" use:enhance={submit()}>
-					<input type="hidden" name="id" value={night.id} />
-					<input type="hidden" name="restore" value={skipped ? '1' : '0'} />
-					<button class="tap">{skipped ? A.calUnskip : A.calSkip}</button>
-				</form>
 				<form method="POST" action="?/remove" use:enhance={submit()}>
 					<input type="hidden" name="id" value={night.id} />
 					<ConfirmButton label={A.calDelete} sure={A.sure} />
@@ -274,11 +256,7 @@
 		<div class="nmain">
 			<b>{when(night.at)}</b>
 			<span class="nmeta">
-				{#if night.status === 'skipped'}
-					<span class="badge off">{A.calSkipped}</span>
-				{:else}
-					<span class="badge">{A.calUsed(data.evenings[night.week_number ?? 0])}</span>
-				{/if}
+				<span class="badge">{A.calUsed(data.evenings[night.week_number ?? 0])}</span>
 				{#if night.note}<span class="nnote">{night.note}</span>{/if}
 			</span>
 		</div>

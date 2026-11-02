@@ -4484,15 +4484,9 @@ button.wcard:focus-visible img {
 	font-size: 11.5px;
 	color: var(--dim);
 }
-.nnote,
-.nconseq {
+.nnote {
 	font-size: 11.5px;
 	color: var(--dim);
-}
-.nconseq {
-	display: block;
-	margin-top: 5px;
-	color: var(--dimmer);
 }
 .pickcol {
 	display: flex;

@@ -135,3 +135,13 @@ export function formatLocal(instant: Date | string, tz: string = TIMEZONE): stri
 		hour12: false
 	}).format(date);
 }
+
+/** true when both instants fall in the same Monday to Sunday week of `tz` */
+export function sameWeek(a: Date, b: Date, tz: string = TIMEZONE): boolean {
+	const monday = (instant: Date) => {
+		const { year, month, day } = localParts(instant, tz);
+		const civil = Date.UTC(year, month - 1, day);
+		return civil - ((new Date(civil).getUTCDay() + 6) % 7) * 86_400_000;
+	};
+	return monday(a) === monday(b);
+}

@@ -62,13 +62,10 @@ export function startExtraNight(
 			throw new RuleError('extra_not_before', 'an extra night has to come before the round closes');
 		}
 		addNight(db, at, custom?.name ?? null, now, true);
-		// a round decided before its night counts from that night (deadlineAnchor),
-		// so a date between the two would sit in the calendar closing nothing
+		// the nearest date closes the round, so an earlier night already in the
+		// calendar would close it there rather than on this one
 		if (syncOpenWeek(db)?.closes_at !== iso(at)) {
-			throw new RuleError(
-				'extra_too_early',
-				'the round before ended ahead of its date, so an extra night has to come after that date'
-			);
+			throw new RuleError('extra_too_early', 'another night falls before the extra night');
 		}
 		return startSpecial(db, rules, id, custom, now);
 	});
@@ -124,6 +121,32 @@ export function stopSpecial(db: DB, rules: RuleSet, now: Date = new Date()): num
 		rescoreAll(db, rules, week.number);
 		rexpAll(db);
 		return picks.length;
+	});
+}
+
+/**
+ * §3.6: a special round belongs to the date it closes on, so taking that date
+ * out of the calendar is calling the round off.
+ * Anything else would leave a special round running on to some other night,
+ * which is a night nobody chose it for. An extra night's own date goes with
+ * the round; an ordinary date stays for the caller to delete. Returns
+ * how many picks went, or null when the night is not the one an open special
+ * round is running to.
+ */
+export function stopSpecialOn(
+	db: DB,
+	rules: RuleSet,
+	nightId: number,
+	now: Date = new Date()
+): number | null {
+	return immediate(db, () => {
+		const week = currentWeek(db);
+		if (!week || week.status !== 'open' || !week.special) return null;
+		const night = db.prepare('SELECT at, status FROM night WHERE id = ?').get(nightId) as
+			| { at: string; status: string }
+			| undefined;
+		if (!night || night.status !== 'planned' || night.at !== week.closes_at) return null;
+		return stopSpecial(db, rules, now);
 	});
 }
 
