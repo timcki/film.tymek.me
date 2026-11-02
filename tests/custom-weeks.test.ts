@@ -94,7 +94,7 @@ describe('a custom week', () => {
 			[{ name: 'x'.repeat(41) }, 'custom_name_long'],
 			[{ about: 'x'.repeat(201) }, 'custom_about_long'],
 			[{ picks: '0' }, 'custom_picks'],
-			[{ picks: '4' }, 'custom_picks'],
+			[{ picks: '11' }, 'custom_picks'],
 			[{ yearFrom: '1500' }, 'custom_years'],
 			[{ yearFrom: '2000', yearTo: '1990' }, 'custom_years'],
 			[{ runtimeMax: '1.5' }, 'custom_runtime'],

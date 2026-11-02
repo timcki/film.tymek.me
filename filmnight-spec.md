@@ -275,7 +275,7 @@ throughout.
 ### 3.7 Custom weeks
 
 **Added after Halloween 2026.** A special round (§3.6) can be set up before it starts: a name,
-a line about it, how many picks each person gets (up to three), and rules a pick has to
+a line about it, how many picks each person gets (up to ten, `PICKS_MAX`), and rules a pick has to
 meet. It is set up fresh each time; there are no templates. The setup is stored on the
 round as `week.custom` and goes when the round is called off. The menus and the rule
 shapes live in `src/lib/custom-weeks.ts`, so the special page, the rules screen and the

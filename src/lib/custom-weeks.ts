@@ -38,7 +38,7 @@ export type CodedId = (typeof CODED)[number];
 
 export const NAME_MAX = 40;
 export const ABOUT_MAX = 200;
-export const PICKS_MAX = 3;
+export const PICKS_MAX = 10;
 
 /** every field optional; a film has to meet all that are set, and any one value of each */
 export type WeekRules = {
