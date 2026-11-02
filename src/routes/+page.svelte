@@ -128,10 +128,12 @@
 	// which cards wear the faces and the + as their base: a member's, on the
 	// live list, under points
 	const based = (film: Film, shelf: boolean) => Boolean(data.person) && !votes && !shelf;
-	// faces shown before the rest fold into a count
 	// faces in the stack until the row's width is spent; a fold of one is
-	// never worth its "+1", so the last face shows instead
+	// never worth its "+1", so the last face shows instead. The width is each
+	// stack's own, measured, since a phone's row is narrower than the cap and
+	// faces that do not fit would run under the +
 	const FACE_ROOM = 210;
+	let faceRoom = $state<Record<number, number>>({});
 	// what is happening to a film about to go, said in full: the hover on the
 	// words beside the card's +, and the sleeper's line
 	function riskSays(film: Film) {
@@ -154,7 +156,7 @@
 			width = next;
 			fit++;
 		}
-		return fit >= points.length - 1 ? points.length : Math.max(1, fit);
+		return fit >= points.length - 1 ? points.length : fit;
 	}
 	// a face in the stack grows with what its owner gave the film: its area in
 	// proportion to the points, so eleven against two looks it, and five
@@ -888,11 +890,11 @@
 	     so the row reads at a glance as one person carrying a film or many
 	     chipping in; the fan gives the exact count -->
 	{@const mineFirst = [...film.backers].sort((x, y) => y.points - x.points)}
-	<!-- a film about to go says so beside its +, which takes some of the
-	     faces' room -->
+	<!-- the room is what the + and anything beside it leave, less the ring's
+	     reach past the last face -->
 	{@const fit = stackFit(
 		mineFirst.map((b) => b.points),
-		rescuable(film) ? FACE_ROOM - 120 : FACE_ROOM
+		Math.min(FACE_ROOM, (faceRoom[film.id] ?? FACE_ROOM) - 4)
 	)}
 	<div class="fbase">
 		{#if !film.held}
@@ -903,6 +905,7 @@
 			aria-expanded={crowdOpen === film.id}
 			aria-label={film.backers.map((b) => `${b.name} ${b.points}`).join(', ') || T.noBackers}
 			onclick={(event) => film.backers.length && toggleCrowd(film.id, event.currentTarget)}
+			bind:clientWidth={faceRoom[film.id]}
 		>
 			{#each mineFirst.slice(0, fit) as backer, i (backer.person_id)}
 				<!-- the row leads with whoever matters most here, so each face lies
@@ -929,9 +932,10 @@
 						<b class="ftop">{backer.points}</b>
 					{/if}
 				</span>
-			{:else}
-				<span class="nobk">{T.noBackers}</span>
 			{/each}
+			{#if !film.backers.length}
+				<span class="nobk">{T.noBackers}</span>
+			{/if}
 			{#if film.backers.length > fit}
 				<span class="fmore">+{film.backers.length - fit}</span>
 			{/if}

@@ -5308,6 +5308,16 @@ button.wcard:focus-visible img {
 	font-weight: 700;
 	color: var(--dim);
 }
+/* the admin row's .fmore shares the name; none of its rule line belongs here */
+.bfaces .fmore {
+	margin-top: 0;
+	padding-top: 0;
+	border-top: 0;
+}
+/* a row too narrow for even one face is the count alone */
+.bfaces .fmore:first-child {
+	margin-left: 0;
+}
 .fvote {
 	flex: none;
 	align-self: center;
