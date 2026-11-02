@@ -20,6 +20,10 @@
 
 	let picked = $state<Picked | null>(null);
 	let editing = $state<number | null>(null);
+	// an outing is written down by its day; a film night by its round's date and time
+	let addWhere = $state('');
+	let moveWhere = $state('');
+	const today = $derived(data.now.slice(0, 10));
 	/**
 	 * The same film coming up twice is a warning, not a refusal. The warning
 	 * belongs to the pick it was raised for: a different film is asked afresh.
@@ -90,11 +94,15 @@
 					<div class="acts">
 						<label class="bankin">
 							{A.watWhen}
-							<input type="datetime-local" name="at" value={data.now} max={data.now} required />
+							{#if addWhere}
+								<input type="date" name="day" value={today} max={today} required />
+							{:else}
+								<input type="datetime-local" name="at" value={data.now} max={data.now} required />
+							{/if}
 						</label>
 						<label class="bankin">
 							{A.watWhere}
-							<select name="outing">
+							<select name="outing" bind:value={addWhere}>
 								<option value="">{A.watFilmNight}</option>
 								{#each OUTINGS as where (where)}
 									<option value={where}>{T.outing(where)}</option>
@@ -147,14 +155,18 @@
 						<input type="hidden" name="id" value={film.id} />
 						<label class="bankin">
 							{A.watWhen}
-							<input type="datetime-local" name="at" value={toLocalInput(film.at)} max={data.now} required />
+							{#if moveWhere}
+								<input type="date" name="day" value={toLocalInput(film.at).slice(0, 10)} max={today} required />
+							{:else}
+								<input type="datetime-local" name="at" value={toLocalInput(film.at)} max={data.now} required />
+							{/if}
 						</label>
 						<label class="bankin">
 							{A.watWhere}
-							<select name="outing">
-								<option value="" selected={!film.outing}>{A.watFilmNight}</option>
+							<select name="outing" bind:value={moveWhere}>
+								<option value="">{A.watFilmNight}</option>
 								{#each OUTINGS as where (where)}
-									<option value={where} selected={film.outing === where}>{T.outing(where)}</option>
+									<option value={where}>{T.outing(where)}</option>
 								{/each}
 							</select>
 						</label>
@@ -165,7 +177,13 @@
 
 			<div class="acts">
 				{#if editing !== film.id}
-					<button class="tap" onclick={() => (editing = film.id)}>{A.filEdit}</button>
+					<button
+						class="tap"
+						onclick={() => {
+							editing = film.id;
+							moveWhere = film.outing ?? '';
+						}}>{A.filEdit}</button
+					>
 				{/if}
 				<form method="POST" action="?/credit" use:enhance={submit()} class="awho">
 					<input type="hidden" name="id" value={film.id} />

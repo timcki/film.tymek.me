@@ -41,8 +41,14 @@ const num = (form: FormData, key: string): number | null => {
 	return raw ? Number(raw) : null;
 };
 
-function whenFrom(form: FormData): Date {
+function whenFrom(form: FormData, now = new Date()): Date {
+	const day = String(form.get('day') ?? '').trim();
 	try {
+		// an outing is a day, which is all that places it among the evenings
+		if (day) {
+			const noon = fromLocalInput(`${day}T12:00`);
+			return noon > now ? now : noon;
+		}
 		return fromLocalInput(String(form.get('at') ?? ''));
 	} catch {
 		throw new RuleError('bad_date', 'give a date and a time');
