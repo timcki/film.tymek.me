@@ -376,6 +376,8 @@ export type Dict = {
 	hostRevealCounting: string;
 	hostHeldH: string;
 	roomCode: string;
+	/** the face in the room's bar, which leads back to the list */
+	roomHome: string;
 	roomWho: string;
 	roomFilter: string;
 	roomGuest: string;
@@ -845,6 +847,7 @@ const pl: Dict = {
 	hostRevealCounting: 'Liczymy głosy',
 	hostHeldH: 'Uśpione do następnego razu',
 	roomCode: 'kod sali',
+	roomHome: 'Wróć do strony głównej',
 	roomWho: 'Kto ty jesteś?',
 	roomFilter: 'zacznij pisać imię',
 	roomGuest: 'Jestem gościem',
@@ -1458,6 +1461,7 @@ const en: Dict = {
 	hostRevealCounting: 'Counting the votes',
 	hostHeldH: 'Asleep until another night',
 	roomCode: 'room code',
+	roomHome: 'Back to the main page',
 	roomWho: 'Who are you?',
 	roomFilter: 'type to filter',
 	roomGuest: "I'm a guest",

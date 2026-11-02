@@ -77,14 +77,18 @@
 <header class="lean">
 	<div class="hrow">
 		{#if data.me}
-			<Avatar
-				name={data.me.name}
-				colour={data.me.colour}
-				avatar={data.me.avatar}
-				size={30}
-				font={12}
-				xp={data.me.xp}
-			/>
+			<!-- the way home once the night is picked: the list, already on its next round -->
+			<a class="home" href="/" aria-label={T.roomHome} title={T.roomHome}>
+				<Avatar
+					name={data.me.name}
+					colour={data.me.colour}
+					avatar={data.me.avatar}
+					size={30}
+					font={12}
+					xp={data.me.xp}
+					titled={false}
+				/>
+			</a>
 		{/if}
 		<div class="wk">
 			<div class="roomcode"><span>{T.roomCode}</span><b>{data.code}</b></div>
@@ -238,6 +242,7 @@
 <style>
 	.hrow { flex-wrap: wrap; }
 	.wk { min-width: max-content; }
+	.home { display: inline-flex; border-radius: 50%; }
 	.tonight {
 		display: flex;
 		flex-direction: column;
