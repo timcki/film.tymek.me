@@ -5087,10 +5087,6 @@ button.wcard:focus-visible img {
 	line-height: 1;
 	box-shadow: 0 0 0 2px var(--card);
 }
-.fface.me .ftop {
-	background: var(--accent);
-	color: var(--accent-ink);
-}
 /* who gave what, opened in the card itself: no sheet and no backdrop, just
    the people, two to a line where there is room, biggest first */
 /* the list folds by its row's height, 0fr to 1fr, which the browser animates
@@ -5167,7 +5163,8 @@ button.wcard:focus-visible img {
 		opacity 160ms ease,
 		transform 160ms cubic-bezier(0.3, 1.6, 0.5, 1);
 }
-/* yours: the accent ring, as in the stack */
+/* yours, in the opened list: the accent ring. The stack itself wears none,
+   since the + beside it already says what you gave */
 .crowdrow.me .cface {
 	box-shadow:
 		0 0 0 2px var(--card),
@@ -5279,28 +5276,6 @@ button.wcard:focus-visible img {
 	box-shadow:
 		0 0 0 2.5px var(--card),
 		0 0 10px color-mix(in srgb, var(--ink) 18%, transparent);
-}
-/* yours, given a point this week: in the stack like everyone's, first and in
-   front, told apart by the accent ring alone */
-.fface.me {
-	box-shadow:
-		0 0 0 2px var(--card),
-		0 0 0 4px var(--accent);
-	animation: ringin 520ms cubic-bezier(0.3, 1.6, 0.5, 1);
-}
-/* your ring arrives: thrown wide and pulled in tight */
-@keyframes ringin {
-	0% {
-		box-shadow:
-			0 0 0 2px var(--card),
-			0 0 0 12px color-mix(in srgb, var(--accent) 0%, transparent);
-	}
-	60% {
-		box-shadow:
-			0 0 0 2px var(--card),
-			0 0 0 3px var(--accent),
-			0 0 18px var(--accent);
-	}
 }
 .fmore {
 	margin-left: 6px;
@@ -5481,7 +5456,6 @@ button.wcard:focus-visible img {
 @media (prefers-reduced-motion: reduce) {
 	.fface,
 	.fface > .av,
-	.fface.me,
 	.crowdfold,
 	.crowdrow,
 	.cface,

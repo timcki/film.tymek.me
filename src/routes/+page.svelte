@@ -883,8 +883,7 @@
 	<!-- the card's base: who is behind the film, as faces big enough to know,
 	     and the + that adds you. More people is a longer row, which is the
 	     sign of a film the group wants rather than one somebody does. Whoever
-	     put points in this week is lit; the rest rest quietened. Yours, given a
-	     point this week, wears an accent ring -->
+	     put points in this week is lit; the rest rest quietened -->
 	{@const fresh = (b: Film['backers'][number]) => b.weekly.some((w) => w.week === data.week?.number)}
 	<!-- the stack is in order of what each gave, and each face is sized by it,
 	     so the row reads at a glance as one person carrying a film or many
@@ -915,7 +914,6 @@
 					data-pid={backer.person_id}
 					style:z-index={film.backers.length - i}
 					class:lit={fresh(backer)}
-					class:me={backer.person_id === data.person?.id && film.myPoints > 0}
 					animate:flip={{ duration: flipMs ? 380 : 0, easing: cubicOut }}
 					in:scale={{ duration: flipMs ? 360 : 0, start: 0.5, easing: cubicOut }}
 				>
