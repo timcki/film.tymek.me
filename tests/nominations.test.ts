@@ -3,6 +3,7 @@ import { titleKey } from '../src/lib/server/rules.js';
 import {
 	OVERVIEW_MAX,
 	TITLE_MAX,
+	droppedShelf,
 	filmById,
 	nominate,
 	renominate
@@ -73,6 +74,20 @@ describe('nominations', () => {
 		expect(filmById(db, old)!.status).toBe('dropped');
 
 		expect(() => nominateAs(db, rules, 'bartek', 'Solaris')).toThrow(/already nominated/);
+	});
+
+	it('takes a dropped film off the shelf once it is back as another row, watched or not', () => {
+		const { db, rules } = freshDb('banked');
+		const old = addFilm(db, 'Stalker', 'ala', 1);
+		addFilm(db, 'Solaris', 'celina', 1);
+		db.prepare(`UPDATE film SET status = 'dropped' WHERE id IN (?, ?)`).run(old, old + 1);
+		const shelf = () => droppedShelf(db).map((film) => film.title);
+		expect(shelf()).toEqual(['Stalker', 'Solaris']);
+
+		const fresh = renominate(db, rules, 'bartek', old);
+		expect(shelf()).toEqual(['Solaris']);
+		db.prepare(`UPDATE film SET status = 'watched', watched_week = 1 WHERE id = ?`).run(fresh);
+		expect(shelf()).toEqual(['Solaris']);
 	});
 
 	it('a dropped film does not block a fresh nomination of the same title', () => {

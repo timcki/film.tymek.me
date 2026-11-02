@@ -4,7 +4,7 @@ import { getDb } from '$lib/server/db';
 import { activeRules } from '$lib/server/config';
 import { currentWeek } from '$lib/server/weeks';
 import {
-	filmsByStatus,
+	droppedShelf,
 	holdFilm,
 	nominate,
 	releaseFilm,
@@ -85,7 +85,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		live,
 		films: withComments(films),
 		archived: withComments(standings(db, rules, week.number, person.id, 'archived')),
-		dropped: filmsByStatus(db, 'dropped'),
+		dropped: droppedShelf(db),
 		// one leading card needs no divider to explain itself
 		shortlistIds: shortlistIds.length > 1 ? shortlistIds : [],
 		nominatedThisWeek: nominatedThisWeek ?? null,

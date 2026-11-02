@@ -31,6 +31,27 @@ export function filmsByStatus(db: DB, status: Film['status']): Film[] {
 		.all(status) as Film[];
 }
 
+/**
+ * §4.1: the dropped shelf, less any film that has since come back as another row:
+ * re-nominated, written down as watched, or a special night's pick (§3.6). The old
+ * row stays as history; it is just not on offer, the way assertNotDuplicate would
+ * refuse to bring it back.
+ */
+export function droppedShelf(db: DB): Film[] {
+	return db
+		.prepare(
+			`SELECT * FROM film d
+			 WHERE d.status = 'dropped' AND d.archival = 0 AND d.special IS NULL
+			   AND NOT EXISTS (
+			     SELECT 1 FROM film o
+			     WHERE o.id != d.id AND o.status IN ('active','archived','watched')
+			       AND (o.archival = 0 OR o.status = 'watched')
+			       AND (o.title_key = d.title_key OR (o.tmdb_id IS NOT NULL AND o.tmdb_id = d.tmdb_id))
+			   )`
+		)
+		.all() as Film[];
+}
+
 /** the weeks whose ballots contribute to the current score under these rules */
 function scoringWeeks(db: DB, rules: RuleSet, currentWeek: number): number[] | null {
 	// under 'total' and 'fade' every week counts (fade just discounts them);
