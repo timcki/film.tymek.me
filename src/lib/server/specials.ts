@@ -61,7 +61,7 @@ export function startExtraNight(
 		if (at.getTime() >= new Date(week.closes_at).getTime()) {
 			throw new RuleError('extra_not_before', 'an extra night has to come before the round closes');
 		}
-		addNight(db, at, custom?.name ?? null, now);
+		addNight(db, at, custom?.name ?? null, now, true);
 		// a round decided before its night counts from that night (deadlineAnchor),
 		// so a date between the two would sit in the calendar closing nothing
 		if (syncOpenWeek(db)?.closes_at !== iso(at)) {
@@ -75,19 +75,55 @@ export function startExtraNight(
 }
 
 /**
- * §3.6: changing your mind, while nothing rides on it. Once a pick is up there is
- * somebody's choice to undo, and nothing is ever deleted (§1.5), so by then the
- * round runs its course.
+ * How long an extra night started on the spot may run before it closes by
+ * itself. It is a guard against one being forgotten, not a schedule: the group
+ * closes it from /host as soon as it has chosen.
  */
-export function stopSpecial(db: DB, rules: RuleSet, now: Date = new Date()): void {
-	immediate(db, () => {
+export const EXTRA_NOW_MS = 2 * 60 * 60 * 1000;
+
+/**
+ * §3.6: an extra night with no date to fill in, for when the group has got
+ * together and wants to choose a film there and then. It is the dated one
+ * (`startExtraNight`) with its date set to a couple of hours from now, so it
+ * leaves the list exactly where it was and can be called off the same way.
+ */
+export function startExtraNow(db: DB, rules: RuleSet, now: Date = new Date()): Week {
+	// to the minute, like every date typed into the calendar
+	const at = new Date(Math.floor((now.getTime() + EXTRA_NOW_MS) / 60_000) * 60_000);
+	return startExtraNight(db, rules, 'approval', null, at, now);
+}
+
+/**
+ * §3.6: changing your mind. A round can be called off for as long as it is open,
+ * picks and all: nothing has been decided, the counts were never seen, and every
+ * pick can be put up again, so what goes is erased rather than kept as history
+ * (§1.5 is about what was decided). The list was only asleep, so it wakes as it
+ * was. An extra night's own date goes out of the calendar with it, which is what
+ * hands the list round back the night it had. Returns how many picks went.
+ */
+export function stopSpecial(db: DB, rules: RuleSet, now: Date = new Date()): number {
+	return immediate(db, () => {
 		const week = requireSpecialWeek(db, now);
-		const { n } = db
-			.prepare('SELECT COUNT(*) AS n FROM film WHERE special = ? AND added_week = ?')
-			.get(week.special, week.number) as { n: number };
-		if (n > 0) throw new RuleError('special_has_picks', 'somebody has already put a pick up');
+		const picks = db
+			.prepare('SELECT id FROM film WHERE special = ? AND added_week = ?')
+			.all(week.special, week.number) as { id: number }[];
+		for (const { id } of picks) {
+			db.prepare('DELETE FROM approval WHERE film_id = ?').run(id);
+			db.prepare(
+				'DELETE FROM comment_react WHERE comment_id IN (SELECT id FROM film_comment WHERE film_id = ?)'
+			).run(id);
+			db.prepare('DELETE FROM film_comment WHERE film_id = ?').run(id);
+			db.prepare('DELETE FROM film_seen WHERE film_id = ?').run(id);
+			db.prepare('DELETE FROM film WHERE id = ?').run(id);
+		}
 		db.prepare('UPDATE week SET special = NULL, custom = NULL WHERE number = ?').run(week.number);
+		db.prepare(`DELETE FROM night WHERE extra = 1 AND status = 'planned' AND at = ?`).run(
+			week.closes_at
+		);
+		syncOpenWeek(db);
 		rescoreAll(db, rules, week.number);
+		rexpAll(db);
+		return picks.length;
 	});
 }
 

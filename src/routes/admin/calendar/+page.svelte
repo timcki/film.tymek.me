@@ -54,10 +54,17 @@
 	let vote = $derived(data.week?.special ?? '');
 	let setup = $state(false);
 	let tuning = $state(false);
+	// calling a round off with picks up erases them, so it asks first
+	let stopAsk = $state(false);
 	function pickVote(event: Event) {
 		if (vote) setup = true;
+		else if (data.week?.special && data.specialPicks > 0) stopAsk = true;
 		else if (data.week?.special) saveOnChange(event);
 		else setup = false;
+	}
+	function keepRound() {
+		vote = data.week?.special ?? '';
+		stopAsk = false;
 	}
 	function cancelSetup() {
 		vote = '';
@@ -110,7 +117,7 @@
 
 	<!-- §3.6: the round, not a date, is what goes special; the date is the row below.
 	     How it votes and what the site wears are two separate choices -->
-	{@const locked = data.week.status !== 'open' || data.specialPicks > 0}
+	{@const locked = data.week.status !== 'open'}
 	<div class="sec">{A.spcH}</div>
 	<div class="acts">
 		<form method="POST" action="?/special" use:enhance={submit()}>
@@ -136,6 +143,26 @@
 			</label>
 		</form>
 	</div>
+	<!-- §3.6: an extra night in one click; it is a special round that closes in a
+	     couple of hours, so it is called off with the same picker -->
+	{#if !data.week.special && !locked}
+		<form class="acts" method="POST" action="?/extraNow" use:enhance={submit()}>
+			<button class="tap go">{A.xnBtn}</button>
+		</form>
+		<p class="ahint">{A.xnIntro}</p>
+	{:else if data.week.special}
+		<p class="ahint">{A.xnBusy}</p>
+	{/if}
+	{#if stopAsk && data.week.special}
+		<form class="nextcard" method="POST" action="?/special" use:enhance={submit(() => (stopAsk = false))}>
+			<input type="hidden" name="special" value="" />
+			<p>{A.spcStopAsk(data.extraNight)}</p>
+			<div class="acts">
+				<button type="button" class="tap" onclick={keepRound}>{A.spcStopKeep}</button>
+				<button class="tap go">{A.spcStopGo}</button>
+			</div>
+		</form>
+	{/if}
 	{#if setup && !data.week.special}
 		{@render setupForm('special', null, false, cancelSetup)}
 	{/if}
@@ -156,10 +183,9 @@
 			</div>
 		{/if}
 	{/if}
+	<p class="ahint">{A.spcIntro}</p>
 	{#if data.week.special && data.specialPicks > 0}
 		<p class="ahint">{A.spcLocked} <a href="/admin/films#picks">{A.spcSeePicks}</a></p>
-	{:else}
-		<p class="ahint">{A.spcIntro}</p>
 	{/if}
 	<p class="ahint">{A.lookIntro}</p>
 

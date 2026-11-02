@@ -4,17 +4,19 @@ import type { DB } from '../src/lib/server/db.js';
 import { shortNames } from '../src/lib/names.js';
 import { countriesOf } from '../src/lib/server/tmdb.js';
 import {
+	bridesmaids,
 	byCountry,
 	byDecade,
 	byDirector,
 	byGenre,
-	commenters,
+	comebacks,
 	counts,
 	engagement,
 	filmFacts,
 	eraOf,
 	lensOf,
 	openness,
+	timelines,
 	rewatches,
 	whoseNights,
 	roundRows,
@@ -41,6 +43,7 @@ function film(extra: Partial<WatchedFilm>): WatchedFilm {
 		countries: [],
 		posterUrl: null,
 		evening: 1,
+		at: '2026-01-01T19:00:00.000Z',
 		addedBy: 'ala',
 		addedByName: 'ala',
 		...extra
@@ -350,29 +353,6 @@ describe('who had seen it already', () => {
 	});
 });
 
-describe('who talks about the films', () => {
-	it('counts comments from the window opening until the round after it does', () => {
-		const { db } = freshDb();
-		const id = addFilm(db, 'Talked about', 'ala', 1);
-		const say = (person: string, at: string) =>
-			db
-				.prepare('INSERT INTO film_comment (film_id, person_id, body, created_at) VALUES (?, ?, ?, ?)')
-				.run(id, person, 'x', at);
-		const { opens_at } = db.prepare('SELECT opens_at FROM week WHERE number = 1').get() as {
-			opens_at: string;
-		};
-		say('bartek', opens_at);
-		say('bartek', '2026-08-03T11:00:00.000Z');
-		say('celina', '2026-08-03T11:00:00.000Z');
-		say('darek', '2020-01-01T00:00:00.000Z');
-
-		expect(commenters(db, ALL).map((row) => [row.person.id, row.comments])).toEqual([
-			['bartek', 2],
-			['celina', 1]
-		]);
-	});
-});
-
 describe('when in the round the votes land', () => {
 	it('places each ballot between the round opening and its deadline', () => {
 		const { db } = freshDb();
@@ -614,5 +594,110 @@ describe('the canon\'s extremes', () => {
 
 	it('says nothing at all about an empty canon', () => {
 		expect(filmFacts([])).toEqual({ longest: null, shortest: null, oldest: null });
+	});
+});
+
+/** a closed room over `week`, shortlisting `films`, won by `winner` */
+function room(db: DB, week: number, films: number[], winner: number): void {
+	ensureWeek(db, week);
+	const { lastInsertRowid } = db
+		.prepare(
+			`INSERT INTO runoff (week_number, code, created_at, expires_at, closed_at, winner_film_id)
+			 VALUES (?, ?, 'x', 'x', 'x', ?)`
+		)
+		.run(week, `room${week}`, winner);
+	for (const id of films) {
+		db.prepare('INSERT INTO runoff_film (runoff_id, film_id) VALUES (?, ?)').run(lastInsertRowid, id);
+	}
+}
+
+describe('always the bridesmaid', () => {
+	it('is a film the room turned down twice, never one that has won or been watched', () => {
+		const { db } = freshDb();
+		const loser = addFilm(db, 'Loser', 'ala', 1);
+		const once = addFilm(db, 'Once', 'bartek', 1);
+		const winner = addFilm(db, 'Winner', 'celina', 1);
+		const watchedLater = addFilm(db, 'Later', 'darek', 1);
+		room(db, 1, [loser, once, winner, watchedLater], winner);
+		room(db, 2, [loser, winner, watchedLater], watchedLater);
+		room(db, 3, [loser, watchedLater, winner], winner);
+		watch(db, watchedLater, 4);
+
+		// Winner won, Later was watched, Once only lost the once
+		expect(bridesmaids(db).map((row) => [row.title, row.value, row.status])).toEqual([
+			['Loser', 3, 'active']
+		]);
+	});
+
+	it('leaves out a special night\'s pick, which is put up for one room', () => {
+		const { db } = freshDb();
+		const pick = addFilm(db, 'Pick', 'ala', 1);
+		const other = addFilm(db, 'Other', 'bartek', 1);
+		db.prepare(`UPDATE film SET special = 'approval' WHERE id = ?`).run(pick);
+		room(db, 1, [pick, other], other);
+		room(db, 2, [pick, other], other);
+		expect(bridesmaids(db)).toEqual([]);
+	});
+});
+
+describe('comebacks', () => {
+	it('is a dropped film nominated again, by title or by TMDB id', () => {
+		const { db } = freshDb();
+		for (const week of [2, 5, 9]) ensureWeek(db, week);
+		const first = addFilm(db, 'Stalker', 'ala', 1);
+		db.prepare(`UPDATE film SET status = 'dropped' WHERE id = ?`).run(first);
+		const back = addFilm(db, 'Stalker', 'bartek', 5);
+		const renamed = addFilm(db, 'Solaris', 'ala', 2, { tmdbId: 593 });
+		db.prepare(`UPDATE film SET status = 'dropped' WHERE id = ?`).run(renamed);
+		const again = addFilm(db, 'Solaris (1972)', 'celina', 9, { tmdbId: 593 });
+		watch(db, again, 10);
+
+		expect(comebacks(db).map((row) => [row.id, row.drops, row.weeks, row.evening])).toEqual([
+			[again, 1, 7, 1],
+			[back, 1, 4, null]
+		]);
+	});
+
+	it('does not count the list film a winning special pick took off the list', () => {
+		const { db } = freshDb();
+		ensureWeek(db, 3);
+		const listed = addFilm(db, 'Stalker', 'ala', 1);
+		const pick = addFilm(db, 'Stalker', 'ala', 3);
+		db.prepare(`UPDATE film SET special = 'approval', from_list = ? WHERE id = ?`).run(listed, pick);
+		db.prepare(`UPDATE film SET status = 'dropped' WHERE id = ?`).run(listed);
+		watch(db, pick, 3);
+		expect(comebacks(db)).toEqual([]);
+	});
+});
+
+describe('are we watching newer films', () => {
+	const night = (i: number) => `2026-01-${String(i + 1).padStart(2, '0')}T19:00:00.000Z`;
+	const rows = (n: number) =>
+		Array.from({ length: n }, (_, i) =>
+			film({ id: i + 1, title: `F${i + 1}`, year: 1980 + i, runtime: 90 + i, evening: i + 1, at: night(i) })
+		);
+
+	it('puts each film at the day it was watched, in the order it was watched', () => {
+		const list = rows(8).reverse();
+		const { year, runtime } = timelines(list);
+		expect(year.map((p) => p.title)).toEqual(['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']);
+		expect(year[1].day - year[0].day).toBe(1);
+		expect(year[0].value).toBe(1980);
+		expect(runtime[7].value).toBe(97);
+	});
+
+	it('leaves a film with no year or no runtime out of that series only', () => {
+		const list = rows(9);
+		list[0].year = null;
+		list[1].runtime = null;
+		const { year, runtime } = timelines(list);
+		expect(year).toHaveLength(8);
+		expect(runtime).toHaveLength(8);
+		expect(year.some((p) => p.title === 'F1')).toBe(false);
+		expect(runtime.some((p) => p.title === 'F2')).toBe(false);
+	});
+
+	it('draws nothing from too few films', () => {
+		expect(timelines(rows(7))).toEqual({ year: [], runtime: [] });
 	});
 });

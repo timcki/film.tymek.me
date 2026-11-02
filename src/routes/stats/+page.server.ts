@@ -1,11 +1,13 @@
 import type { PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import {
+	backing,
+	bridesmaids,
 	byCountry,
 	byDecade,
 	byDirector,
 	byGenre,
-	commenters,
+	comebacks,
 	counts,
 	engagement,
 	eraOf,
@@ -17,6 +19,7 @@ import {
 	filmFacts,
 	runtimes,
 	screenStats,
+	timelines,
 	timing,
 	watchedFilms,
 	windowFor
@@ -39,11 +42,11 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		counts: counts(db, window),
 		rounds: roundRows(db, window),
 		openness: openness(db, window),
+		backing: backing(db, window),
 		nights: whoseNights(db, window),
 		engagement: engagement(db, window),
 		timing: timing(db, window),
 		rewatches: rewatches(db, window),
-		commenters: commenters(db, window),
 		// the canon is deliberately outside the window; see watchedFilms. The rows
 		// travel whole so a tapped bar can name the films inside it without a trip
 		films,
@@ -53,6 +56,9 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		directors: byDirector(films),
 		runtimes: runtimes(films),
 		facts: filmFacts(films),
-		screen: screenStats(db)
+		screen: screenStats(db),
+		bridesmaids: bridesmaids(db),
+		comebacks: comebacks(db),
+		timelines: timelines(films)
 	};
 };

@@ -262,7 +262,17 @@ was stored as `'halloween'`; it runs by the same rules as `'approval'`.
   (`listRound`), and the bank settles once for the two. An extra night is set up this
   way and leaves the list exactly where it was, only paused while it runs. Picks nobody watched are dropped afterwards rather
   than joining the list.
-An admin can call a special round off only while nobody has put a pick up.
+An extra night can also be started on the spot with one button (`startExtraNow`): the same
+thing with its date set `EXTRA_NOW_MS` (two hours) ahead, a guard against forgetting it
+rather than a schedule. The room screen closes it as soon as the group has chosen. Only one
+round runs at a time, so it cannot be started while a special night is on.
+
+An admin can call a special round off at any time while it is open, picks and all
+(`stopSpecial`). Nothing has been decided and every pick can be put up again, so the picks,
+their ticks, comments and seen marks are erased rather than kept (§1.5 is about what was
+decided), and the list wakes as it was. An extra night's date goes out of the calendar with
+it (`night.extra`), so the list round runs on to the night it had; a night anybody
+planned stays. Once the room has the night, or the round is over, it cannot be called off.
 
 **The look is a separate choice.** By default everyone picks their own palette (dark,
 light, bananas). An admin can instead put a look on the whole site (Halloween and

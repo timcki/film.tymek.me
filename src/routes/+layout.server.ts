@@ -21,8 +21,11 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	const person = locals.person;
 
 	const balance = person ? bankBalance(db, person.id) : 0;
-	const spent = person && week ? spentInRound(db, person.id, week.number) : 0;
 	const budget = rules.banking ? balance : rules.pointsPerWeek;
+	// the bar draws a ticket for each point there is, so it never draws more than
+	// the budget: a round that carries what an earlier special night had spent,
+	// on top of votes cast before that carrying existed, can come to more
+	const spent = person && week ? Math.min(budget, spentInRound(db, person.id, week.number)) : 0;
 
 	const lang = langOf(cookies.get(LANG_COOKIE), isDemo() ? 'en' : 'pl');
 

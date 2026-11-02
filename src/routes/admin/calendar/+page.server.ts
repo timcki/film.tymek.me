@@ -15,7 +15,7 @@ import { RuleError } from '$lib/server/types';
 import { fromLocalInput, iso, nextDeadline } from '$lib/server/time';
 import { toLocalInput } from '$lib/datetime';
 import { activeRules } from '$lib/server/config';
-import { editSpecial, startExtraNight, startSpecial, stopSpecial } from '$lib/server/specials';
+import { editSpecial, startExtraNight, startExtraNow, startSpecial, stopSpecial } from '$lib/server/specials';
 import { cleanCustom } from '$lib/server/custom-weeks';
 import type { CustomWeek } from '$lib/custom-weeks';
 import { customOf } from '$lib/custom-weeks';
@@ -59,6 +59,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 				).n
 			: 0,
 		drivingId,
+		// the round runs to a date put in for it, which calling it off takes out again
+		extraNight: nights.some((n) => n.id === drivingId && n.extra === 1),
 		nights,
 		// what the round would fall back to with nothing planned
 		fallback: week
@@ -164,8 +166,8 @@ export const actions: Actions = {
 		try {
 			if (!id) {
 				const week = currentWeek(getDb());
-				stopSpecial(getDb(), activeRules());
-				logAdmin(getDb(), person.id, 'round.unspecial', String(week?.number ?? ''));
+				const erased = stopSpecial(getDb(), activeRules());
+				logAdmin(getDb(), person.id, 'round.unspecial', String(week?.number ?? ''), `${erased} picks`);
 				return { unspecial: true };
 			}
 			if (!isSpecialId(id)) throw new RuleError('no_special', 'no such special round');
@@ -177,6 +179,19 @@ export const actions: Actions = {
 			if (extra) logAdmin(getDb(), person.id, 'night.add', iso(extra), custom.name ?? null);
 			logAdmin(getDb(), person.id, 'round.special', String(week.number), custom.name ?? id);
 			return { special: id };
+		} catch (error) {
+			return ruleFail(error);
+		}
+	},
+
+	// §3.6: the group is together and wants a film now: one click, no date
+	extraNow: async ({ locals }) => {
+		const person = requireAdmin(locals.person);
+		try {
+			const week = startExtraNow(getDb(), activeRules());
+			logAdmin(getDb(), person.id, 'night.add', week.closes_at, 'extra now');
+			logAdmin(getDb(), person.id, 'round.special', String(week.number), 'approval');
+			return { special: 'approval' };
 		} catch (error) {
 			return ruleFail(error);
 		}

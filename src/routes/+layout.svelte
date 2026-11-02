@@ -134,6 +134,31 @@
 	const nominatedTitle = $derived(
 		(page.data.nominatedThisWeek as { title: string } | null | undefined)?.title ?? null
 	);
+	// the + greys once there is nothing left to add, and a tap on it says what
+	// was: the title of a button means nothing on a phone
+	const addedSays = $derived(
+		special
+			? picksLeft === 0
+				? T.spAddDone((page.data.mine as string[] | undefined) ?? [])
+				: null
+			: nominatedTitle
+				? T.nomDone(nominatedTitle)
+				: null
+	);
+	let addedOpen = $state(false);
+	function addClick(event: MouseEvent & { currentTarget: HTMLElement }) {
+		if (addedSays && !nomSheet.open) {
+			addedOpen = !addedOpen;
+			return;
+		}
+		if (special) {
+			const rect = event.currentTarget.getBoundingClientRect();
+			nomSheet.from = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+		} else {
+			nomSheet.from = null;
+		}
+		nomSheet.open = !nomSheet.open;
+	}
 
 	// every page gets the compact bar, so the app has one header rather than two.
 	// The list has no name worth printing, so the night takes that slot, because
@@ -622,26 +647,36 @@
 	{/if}
 {/snippet}
 
+{#snippet addButton()}
+	{@const label = nomSheet.open
+		? T.close
+		: (addedSays ?? (special ? T.spAddAria(picksLeft) : T.nomH))}
+	<div class="addwrap">
+		<button
+			class="pill spadd"
+			class:on={nomSheet.open}
+			class:done={Boolean(addedSays) && !nomSheet.open}
+			aria-disabled={Boolean(addedSays) && !nomSheet.open}
+			aria-label={label}
+			aria-expanded={nomSheet.open}
+			onclick={addClick}
+			onblur={() => (addedOpen = false)}
+		>
+			{@render addGlyph()}
+		</button>
+		{#if addedSays && !nomSheet.open}
+			<div class="tip" style:display={addedOpen ? 'block' : 'none'}>{addedSays}</div>
+		{/if}
+	</div>
+{/snippet}
+
 {#snippet addFilm()}
 	{#if addable}
 		<!-- the list's own +, the one call to action in the bar, the way a special
 		     round's is: it opens the sheet films are put up in, and turns into its
 		     close while that is open. Once this week's film is in it stays, greyed,
-		     with the film's name in its title, so the bar does not jump about -->
-		<button
-			class="pill spadd"
-			class:on={nomSheet.open}
-			disabled={Boolean(nominatedTitle) && !nomSheet.open}
-			aria-label={nomSheet.open ? T.close : nominatedTitle ? T.nomDone(nominatedTitle) : T.nomH}
-			aria-expanded={nomSheet.open}
-			title={nomSheet.open ? T.close : nominatedTitle ? T.nomDone(nominatedTitle) : T.nomH}
-			onclick={() => {
-				nomSheet.from = null;
-				nomSheet.open = !nomSheet.open;
-			}}
-		>
-			{@render addGlyph()}
-		</button>
+		     so the bar does not jump about, and a tap on it says what was added -->
+		{@render addButton()}
 	{/if}
 {/snippet}
 
@@ -678,21 +713,7 @@
 			     page, and the modal grows out of it and shrinks back into it. With
 			     every pick put up it stays where it was, greyed, so the bar does
 			     not jump about and its absence does not read as a fault -->
-			<button
-				class="pill spadd"
-				class:on={nomSheet.open}
-				disabled={picksLeft === 0 && !nomSheet.open}
-				aria-label={nomSheet.open ? T.close : picksLeft ? T.spAddAria(picksLeft) : T.spAddDone}
-				aria-expanded={nomSheet.open}
-				title={nomSheet.open ? T.close : picksLeft ? T.spAddAria(picksLeft) : T.spAddDone}
-				onclick={(event) => {
-					const rect = event.currentTarget.getBoundingClientRect();
-					nomSheet.from = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-					nomSheet.open = !nomSheet.open;
-				}}
-			>
-				{@render addGlyph()}
-			</button>
+			{@render addButton()}
 		{/if}
 	{/if}
 {/snippet}

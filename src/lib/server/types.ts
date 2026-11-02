@@ -27,6 +27,8 @@ export type Night = {
 	/** the round that actually closed on this night, set when it does */
 	week_number: number | null;
 	note: string | null;
+	/** put in for an extra night (§3.6), so calling it off takes it out again */
+	extra: number;
 	created_at: string;
 };
 

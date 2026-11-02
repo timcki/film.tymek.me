@@ -267,6 +267,10 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	// film is left alone while the night is on; if the pick wins it is watched
 	// and the list film goes, and if it loses nothing on the list has changed
 	['film', 'from_list', 'INTEGER'],
+	// §3.6: a date put into the calendar for an extra night, not one of the
+	// round's own. Calling the night off takes it out again, so the list's round
+	// runs on to the night it had; a night anybody planned stays where it is
+	['night', 'extra', 'INTEGER NOT NULL DEFAULT 0'],
 	// a film watched together somewhere other than a film night: 'cinema' or
 	// 'trip'. An evening like any other in what we have watched, and nowhere in
 	// what measures the game: no XP, no fairness table, no round's winner

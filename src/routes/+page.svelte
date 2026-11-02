@@ -540,6 +540,9 @@
 
 	let detailId = $state<number | null>(null);
 	let noteEdit = $state(false);
+	// a film from the dropped shelf, read in a modal of its own: it has no
+	// score, backers or thread to show, only what it is and the way back
+	let droppedId = $state<number | null>(null);
 	// the modal films are put up in opens from the + in the bar, which the
 	// layout draws, so whether it is open lives with the bar's. Leaving the list
 	// shuts it, so it is not found open on the way back
@@ -554,6 +557,9 @@
 			? null
 			: ([...data.films, ...data.archived].find((f) => f.id === detailId) ?? null)
 	);
+	const droppedFilm = $derived(
+		droppedId === null ? null : (data.dropped.find((f) => f.id === droppedId) ?? null)
+	);
 	const commentsFilm = $derived(
 		commentsOpenId === null
 			? null
@@ -564,6 +570,7 @@
 	function closeSheets() {
 		unpeek();
 		detailId = null;
+		droppedId = null;
 		noteEdit = false;
 		nomSheet.open = false;
 	}
@@ -628,6 +635,7 @@
 			busy: () =>
 				sending > 0 ||
 				detailId !== null ||
+				droppedId !== null ||
 				searchOpen ||
 				crowdOpen !== null ||
 				commentsOpenId !== null ||
@@ -642,7 +650,10 @@
 	$effect(() => {
 		if (!form) return;
 		if ('nominated' in form && form.nominated) say(T.tNominated(form.nominated));
-		if ('renominated' in form && form.renominated) say(T.tRenominated(form.renominated));
+		if ('renominated' in form && form.renominated) {
+			say(T.tRenominated(form.renominated));
+			droppedId = null;
+		}
 		if ('noteSaved' in form && form.noteSaved) say(T.tNoteSaved);
 		if ('commented' in form && form.commented) say(T.tCommented);
 		if ('held' in form && form.held) say(T.tHeld(form.held));
@@ -1392,7 +1403,17 @@
 				{@render row(film, false, true)}
 			{/each}
 			{#each data.dropped as film (film.id)}
-				<div class="film shelf">
+				<!-- the card opens the film's page; the button inside keeps its own job -->
+				<div
+					class="film shelf"
+					role="button"
+					tabindex="0"
+					onclick={(event) => !(event.target as Element).closest('form') && (droppedId = film.id)}
+					onkeydown={(event) =>
+						event.target === event.currentTarget &&
+						(event.key === 'Enter' || event.key === ' ') &&
+						(event.preventDefault(), (droppedId = film.id))}
+				>
 					<div class="p"><Poster title={film.title} url={film.poster_url} /></div>
 					<div class="b">
 						<div class="hd">
@@ -1658,6 +1679,80 @@
 </div>
 {/if}
 
+{#if droppedFilm}
+<button
+	class="dveil"
+	aria-label={T.close}
+	onclick={closeSheets}
+	in:fade={{ duration: flipMs ? 180 : 0 }}
+	out:fade={{ duration: flipMs ? 140 : 0 }}
+></button>
+<div class="phost">
+<div
+	class="dsheet dmodal"
+	role="dialog"
+	aria-modal="true"
+	aria-label={droppedFilm.title}
+	use:portal
+	use:fitViewport
+	in:grow
+	out:grow={{ out: true }}
+>
+	<div class="dxrow">
+		<button class="dx" type="button" aria-label={T.close} onclick={closeSheets}>
+			<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" /></svg>
+		</button>
+	</div>
+	<div class="inner">
+		<div class="dblock dtop">
+			<div class="dhero">
+				<div class="p"><Poster title={droppedFilm.title} url={droppedFilm.poster_url} /></div>
+				<div class="dh">
+					<h2>{droppedFilm.title}</h2>
+					<div class="yr">
+						{[droppedFilm.year, droppedFilm.director].filter(Boolean).join(' · ')}
+					</div>
+				</div>
+			</div>
+			<div class="dmeta">
+				{#if droppedFilm.genre}<span class="mchip">{droppedFilm.genre}</span>{/if}
+				{#if droppedFilm.runtime}<span class="mchip">{T.minutes(droppedFilm.runtime)}</span>{/if}
+				{#if droppedFilm.nominator}{@render facePill(droppedFilm.nominator)}{/if}
+				<span class="dwhen">{nominatedFor(droppedFilm.added_week)}</span>
+			</div>
+		</div>
+
+		{#if droppedFilm.note}
+			<div class="dblock pitch"><div class="dnote">“{droppedFilm.note}”</div></div>
+		{/if}
+		{#if droppedFilm.overview}
+			<div class="dblock"><p class="over">{droppedFilm.overview}</p></div>
+		{/if}
+		{#if droppedFilm.tmdb_id}
+			<p class="dlink">
+				<a
+					href="https://www.themoviedb.org/movie/{droppedFilm.tmdb_id}"
+					target="_blank"
+					rel="noopener noreferrer">{T.tmdbLink} ↗</a
+				>
+			</p>
+		{/if}
+
+		<div class="dblock">
+			{#if nominated}<div class="holdhint">{T.nomDone(nominated.title)}</div>{/if}
+			<form method="POST" action="?/renominate" use:enhance={submit()}>
+				<input type="hidden" name="filmId" value={droppedFilm.id} />
+				<input type="hidden" name="title" value={droppedFilm.title} />
+				<div class="cbtns">
+					<button class="go" disabled={Boolean(nominated) || !open}>{T.btnRenominate}</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+</div>
+{/if}
+
 <NominateModal lang={data.lang} heading={T.nomH} hint={T.nomHint} {known} {submit} />
 
 <!-- ----------------------------------------------------------- backers -- -->
@@ -1783,7 +1878,7 @@
 		if (crowdOpen !== null || commentsOpenId !== null) {
 			crowdOpen = null;
 			commentsOpenId = null;
-		} else if (detailId !== null || searchOpen) closeSheets();
+		} else if (detailId !== null || droppedId !== null || searchOpen) closeSheets();
 		unpeek();
 	}}
 />

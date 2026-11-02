@@ -58,12 +58,18 @@ function assertAhead(at: Date, now: Date): void {
 	}
 }
 
-export function addNight(db: DB, at: Date, note: string | null, now: Date = new Date()): number {
+export function addNight(
+	db: DB,
+	at: Date,
+	note: string | null,
+	now: Date = new Date(),
+	extra = false
+): number {
 	assertAhead(at, now);
 	assertFree(db, at, null);
 	const result = db
-		.prepare(`INSERT INTO night (at, status, note, created_at) VALUES (?, 'planned', ?, ?)`)
-		.run(iso(at), note?.trim() || null, iso(now));
+		.prepare(`INSERT INTO night (at, status, note, extra, created_at) VALUES (?, 'planned', ?, ?, ?)`)
+		.run(iso(at), note?.trim() || null, extra ? 1 : 0, iso(now));
 	return Number(result.lastInsertRowid);
 }
 

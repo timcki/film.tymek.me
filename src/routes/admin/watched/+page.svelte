@@ -139,6 +139,7 @@
 			<div class="ahead">
 				<b>{film.title}{film.year ? ` (${film.year})` : ''}</b>
 				{#if film.outing}<span class="badge">{T.outing(film.outing)}</span>{/if}
+				{#if film.night}<span class="badge">{T.nightKind(film.night.kind)}</span>{/if}
 			</div>
 			<span class="adate">{T.evening(film.evening)} · {formatDay(film.at, data.lang)}</span>
 

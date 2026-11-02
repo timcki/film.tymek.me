@@ -339,7 +339,7 @@ describe('a special round', () => {
 		expect(startExtraNight(db, rules, 'approval', null, saturday).closes_at).toBe(saturday.toISOString());
 	});
 
-	it('changes its mind only while nobody has put a pick up', () => {
+	it('can be called off, with or without picks, while the round is open', () => {
 		const { db, rules } = freshDb('weekly');
 		startSpecial(db, rules, 'approval');
 		expect(() => startSpecial(db, rules, 'approval')).toThrow(
@@ -349,9 +349,9 @@ describe('a special round', () => {
 		expect(currentWeek(db)!.special).toBeNull();
 		startSpecial(db, rules, 'approval');
 		nominateSpecial(db, rules, 'ala', { title: 'A' });
-		expect(() => stopSpecial(db, rules)).toThrow(
-			expect.objectContaining({ code: 'special_has_picks' })
-		);
+		expect(stopSpecial(db, rules)).toBe(1);
+		expect(currentWeek(db)!.special).toBeNull();
+		expect(specialPicks(db, currentWeek(db)!, 'ala')).toEqual([]);
 	});
 
 	it('still runs a round written down before the vote and the look were apart', () => {

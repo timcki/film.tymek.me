@@ -24,7 +24,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	requireAdmin(locals.person);
 	const db = getDb();
 	const week = currentWeek(db);
-	// §3.6: a special round's picks are its own, and they are what keeps it from being called off
+	// §3.6: a special round's picks are its own, and they are what keeps its rules from being changed
 	const isPick = (film: { special: string | null; added_week: number }) =>
 		!!week?.special && film.special === week.special && film.added_week === week.number;
 	const films = roundFilms(db);

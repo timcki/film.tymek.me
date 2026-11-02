@@ -62,6 +62,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 			};
 		}),
 		used: picksUsed(db, week, person.id),
+		// which ones, for the bar's + once they are all in
+		mine: picks.filter((pick) => pick.added_by === person.id).map((pick) => pick.title),
 		turnout: specialTurnout(db, week),
 		// the viewer's own films waiting on the list, which a pick can be put up from
 		ownList: (

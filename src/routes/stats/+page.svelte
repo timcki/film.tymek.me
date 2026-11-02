@@ -3,10 +3,12 @@
 	import FacePeek, { peekFor, type Peek } from '$lib/components/FacePeek.svelte';
 	import Bars, { type Bar } from '$lib/components/chart/Bars.svelte';
 	import Columns from '$lib/components/chart/Columns.svelte';
+	import Ring, { type Seat } from '$lib/components/chart/Ring.svelte';
 	import Scatter, { type Dot } from '$lib/components/chart/Scatter.svelte';
 	import Split, { type Slice } from '$lib/components/chart/Split.svelte';
 	import StatCards, { type StatCard } from '$lib/components/chart/StatCards.svelte';
 	import Strip from '$lib/components/chart/Strip.svelte';
+	import Trend from '$lib/components/chart/Trend.svelte';
 	import WorldMap from '$lib/components/chart/WorldMap.svelte';
 	import { dictFor, fmtScore, isVotes } from '$lib/i18n';
 	import { shortNames } from '$lib/names';
@@ -51,7 +53,9 @@
 			}
 			return;
 		}
-		const person = data.engagement.find((row) => row.person.id === key)?.person;
+		const person =
+			data.engagement.find((row) => row.person.id === key)?.person ??
+			data.backing.people.find((p) => p.id === key);
 		if (!person) return;
 		peeking = key;
 		peek = peekFor(el, person, '', false);
@@ -147,21 +151,35 @@
 		}))
 	);
 
-	/** drawn against whoever wrote the most, which is a count and not a share */
-	const talkSlices = $derived.by<Slice[]>(() => {
-		const most = data.commenters[0]?.comments ?? 0;
-		return data.commenters.map((row) => ({
-			key: row.person.id,
-			name: row.person.name,
-			label: labelOf(row.person),
-			colour: row.person.colour,
-			avatar: row.person.avatar,
-			xp: row.person.xp,
-			left: row.comments,
-			right: most - row.comments,
-			text: `${row.comments}`
-		}));
+	const seats = $derived<Seat[]>(
+		data.backing.people.map((person) => ({
+			key: person.id,
+			name: person.name,
+			colour: person.colour,
+			avatar: person.avatar,
+			xp: person.xp
+		}))
+	);
+	const tieTip = (from: string, to: string, points: number) =>
+		`${from} → ${to}: ${points} ${T.unit(points, votes)}`;
+
+	/** the lit face's ribbons spelled out, a list each way, biggest first */
+	const backs = $derived.by(() => {
+		if (!lit) return null;
+		const named = (id: string, points: number) => {
+			const person = data.backing.people.find((p) => p.id === id)!;
+			return { id, label: labelOf(person), points };
+		};
+		return {
+			out: data.backing.links.filter((l) => l.from === lit).map((l) => named(l.to, l.points)),
+			in: data.backing.links.filter((l) => l.to === lit).map((l) => named(l.from, l.points))
+		};
 	});
+
+	const sides = $derived([
+		{ mode: 'out' as const, title: T.ringOut, rows: backs?.out },
+		{ mode: 'in' as const, title: T.ringIn, rows: backs?.in }
+	]);
 
 	/** everything the page knows about the person whose row is filled in */
 	const focus = $derived.by(() => {
@@ -173,8 +191,7 @@
 			open: data.openness.find((row) => row.person.id === lit),
 			nights: data.nights.find((row) => row.person.id === lit),
 			when: data.timing.find((row) => row.person.id === lit),
-			seen: data.rewatches.rows.find((row) => row.person.id === lit)?.seen ?? 0,
-			comments: data.commenters.find((row) => row.person.id === lit)?.comments ?? 0
+			seen: data.rewatches.rows.find((row) => row.person.id === lit)?.seen ?? 0
 		};
 	});
 
@@ -392,9 +409,6 @@
 				{#if focus.seen}
 					<span>{focus.seen}<i>{T.rewatchTag}</i></span>
 				{/if}
-				{#if focus.comments}
-					<span>{focus.comments}<i>{T.talkTag}</i></span>
-				{/if}
 			</div>
 
 			<!-- the arithmetic behind the openness figure, so the percentage is
@@ -509,7 +523,7 @@
 				/>
 			</section>
 
-			<section class="spanel engage">
+			<section class="spanel wide engage">
 				<div class="sec">{T.engageH}</div>
 				<Scatter
 					{dots}
@@ -539,17 +553,36 @@
 			</section>
 		{/if}
 
-		{#if talkSlices.length}
-			<section class="spanel talk">
-				<div class="sec">{T.talkH}</div>
-				<Split
-					slices={talkSlices}
-					leftColour="var(--tier1)"
-					average={null}
-					{lit}
-					onpick={pick}
-					onface={hover}
-				/>
+		{#if data.backing.links.length}
+			<section class="spanel wide backs">
+				<div class="sec">{T.ringH}</div>
+				<p class="explain">{T.ringSub(votes)}</p>
+				{#if !lit}<p class="hint">{T.ringHint}</p>{/if}
+				<div class="ringpair">
+					{#each sides as side (side.mode)}
+						<div class="ringside">
+							<div class="ghead">{side.title}</div>
+							<Ring
+								{seats}
+								ties={data.backing.links}
+								mode={side.mode}
+								{lit}
+								onpick={pick}
+								onface={hover}
+								label={tieTip}
+							/>
+							{#if side.rows}
+								<div class="ringlist">
+									{#each side.rows as row (row.id)}
+										<span class="grow"><span>{row.label}</span><b>{row.points}</b></span>
+									{:else}
+										<span class="grow"><span>{T.ringNone}</span></span>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					{/each}
+				</div>
 			</section>
 		{/if}
 	</div>
@@ -593,6 +626,67 @@
 				{#if from(runtimeBuckets)}{@render picked()}{/if}
 			{/if}
 		</section>
+
+		{#if data.bridesmaids.length}
+			<section class="spanel">
+				<div class="sec">{T.bridesH}</div>
+				<p class="explain">{T.bridesSub}</p>
+				<div class="sfilms">
+					{#each data.bridesmaids.slice(0, 8) as film (film.id)}
+						<div class="sfilm">
+							{#if film.posterUrl}<img src={film.posterUrl} alt="" loading="lazy" />{:else}<span class="noposter"></span>{/if}
+							<span class="st"><b>{film.title}</b><i>{T.filmState(film.status)}</i></span>
+							<em>{film.value}×</em>
+						</div>
+					{/each}
+				</div>
+			</section>
+		{/if}
+
+		{#if data.comebacks.length}
+			<section class="spanel">
+				<div class="sec">{T.backH}</div>
+				<p class="explain">{T.backSub}</p>
+				<div class="sfilms">
+					{#each data.comebacks.slice(0, 8) as film (film.id)}
+						<div class="sfilm">
+							{#if film.posterUrl}<img src={film.posterUrl} alt="" loading="lazy" />{:else}<span class="noposter"></span>{/if}
+							<span class="st"><b>{film.title}</b><i>{T.backLine(film.drops, film.weeks)}</i></span>
+							<em>{film.evening ? T.evening(film.evening) : T.filmState('active')}</em>
+						</div>
+					{/each}
+				</div>
+			</section>
+		{/if}
+
+		{#if data.timelines.year.length || data.timelines.runtime.length}
+			<section class="spanel wide">
+				<div class="sec">{T.newerH}</div>
+				<p class="explain">{T.newerSub}</p>
+				{#if data.timelines.year.length}
+					<div class="tlab">{T.newerYear}</div>
+					<Trend
+						points={data.timelines.year}
+						colour="var(--tier5)"
+						step={10}
+						fmt={(value) => String(Math.round(value))}
+						caption={T.newerLine}
+						lang={data.lang}
+					/>
+				{/if}
+				{#if data.timelines.runtime.length}
+					<div class="tlab">{T.newerLen}</div>
+					<Trend
+						points={data.timelines.runtime}
+						colour="var(--warn)"
+						step={10}
+						fmt={(value) => T.minutes(Math.round(value))}
+						caption={T.newerLine}
+						lang={data.lang}
+					/>
+				{/if}
+			</section>
+		{/if}
 
 		<section class="spanel wide">
 			<div class="sec">{T.countryH}</div>

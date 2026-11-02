@@ -145,6 +145,8 @@ export type Dict = {
 	evening: (n: number) => string;
 	/** where we watched a film that was not a film night */
 	outing: (where: Outing) => string;
+	/** what a film night a special round decided is called in the record */
+	nightKind: (kind: 'special' | 'extra') => string;
 	/** the whole phrase, verb included, because the bar has no room for a sentence around it */
 	timeLeft: (d: number, h: number, m: number, s: number) => string;
 	votingClosed: string;
@@ -282,11 +284,27 @@ export type Dict = {
 	rewatchH: string;
 	rewatchSub: (evenings: number) => string;
 	rewatchTag: string;
-	talkH: string;
-	talkTag: string;
+	ringH: string;
+	ringSub: (votes: boolean) => string;
+	ringHint: string;
+	ringOut: string;
+	ringIn: string;
+	ringNone: string;
 
 	/** the compact units the fact cards are written in */
 	weeksShort: (n: number) => string;
+	/** a film's standing on the list, said in a few words */
+	filmState: (status: 'active' | 'dropped' | 'archived') => string;
+	bridesH: string;
+	bridesSub: string;
+	backH: string;
+	backSub: string;
+	backLine: (drops: number, weeks: number) => string;
+	newerH: string;
+	newerSub: string;
+	newerYear: string;
+	newerLen: string;
+	newerLine: (from: string, to: string) => string;
 	factsH: string;
 	factLongest: string;
 	factShortest: string;
@@ -443,8 +461,8 @@ export type Dict = {
 	spMine: (used: number, max: number) => string;
 	/** the bar's + chip, said out loud */
 	spAddAria: (left: number) => string;
-	/** the same +, greyed once every pick is in */
-	spAddDone: string;
+	/** the same +, greyed once every pick is in, and what a tap on it says: which ones */
+	spAddDone: (titles: string[]) => string;
 	/** under a nominator's face on a special round's pick */
 	spNomPop: (name: string) => string;
 	spEmptyH: string;
@@ -558,7 +576,7 @@ const plRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 	});
 
 	out.push({
-		head: 'Nie będzie cię na wieczorku? Liberum veto usypia twój film na jedną rundę.',
+		head: 'Nie będzie cię na wieczorku? Uśpij swój film na jedną rundę.',
 		body:
 			'Jeden film na rundę i tylko taki, który sam zgłosiłeś. Nie idzie wtedy pod głosowanie ' +
 			'w sali, a jego miejsce zajmuje kolejny z listy. Punkty tracą na wartości normalnie, ' +
@@ -593,6 +611,7 @@ const pl: Dict = {
 
 	evening: (n) => `Wieczorek ${n}`,
 	outing: (where) => (where === 'cinema' ? 'Kino' : 'Wyjazd'),
+	nightKind: (kind) => (kind === 'extra' ? 'Wieczór dodatkowy' : 'Wieczór specjalny'),
 	// tiered: only the unit that matters now, down to seconds in the last minute
 	timeLeft: (d, h, m, s) => {
 		if (d) return plLeft(d, 'dzień', 'dni', 'dni');
@@ -629,7 +648,7 @@ const pl: Dict = {
 	warnFades: (n) => `znika za ${n} ${plRoundsAcc(n)}`,
 	campaign: (n) => `${n}. runda kampanii`,
 
-	holdCta: 'Liberum veto',
+	holdCta: 'Uśpij',
 	holdMine: 'twoja decyzja',
 	holdWhat: 'śpi tę rundę',
 	// nie „uśpiony przez Tymka”: imiona się odmieniają, a kropka nie
@@ -639,7 +658,7 @@ const pl: Dict = {
 		`(do sali idzie ${n} ${plFilms(n)}). Punkty tracą na wartości normalnie, więc uśpienie kosztuje. ` +
 		'Wycofać możesz aż do zamknięcia głosowania.',
 	holdWhyPh: 'Czemu? Zobaczą wszyscy…',
-	holdBtn: 'Liberum veto',
+	holdBtn: 'Uśpij',
 	holdSave: 'Zapisz powód',
 	holdRelease: 'Wycofaj',
 	holdSpent: (title) => `W tej rundzie uśpiony jest już ${title}.`,
@@ -746,10 +765,30 @@ const pl: Dict = {
 	rewatchSub: (n) =>
 		`Ile z ${n} ${pl3(n, 'obejrzanego filmu', 'obejrzanych filmów', 'obejrzanych filmów')} każdy znał już wcześniej, czyli zaznaczył „Już widziałem” przed ich wieczorkiem.`,
 	rewatchTag: 'powtórki',
-	talkH: 'Kto najwięcej komentuje',
-	talkTag: 'komentarze',
+	ringH: 'Kto kogo wspiera',
+	ringSub: (votes) =>
+		`Wstążka prowadzi od tego, kto ${votes ? 'głosuje' : 'wydaje punkty'}, do tego, kto zgłosił film, i jest tym grubsza, im więcej poszło. Kropka jest tam, gdzie ${votes ? 'głosy' : 'punkty'} trafiają. Własne filmy nie wchodzą w grę.`,
+	ringHint: 'Naciśnij twarz, żeby zostawić tylko jej wstążki.',
+	ringOut: 'Wspiera',
+	ringIn: 'Wspierany przez',
+	ringNone: 'nikogo',
 
 	weeksShort: (n) => `${n} ${plRounds(n)}`,
+	filmState: (status) =>
+		status === 'active' ? 'wciąż na liście' : status === 'dropped' ? 'wypadł' : 'w archiwum',
+	bridesH: 'Zawsze druga',
+	bridesSub:
+		'Filmy, które co najmniej dwa razy trafiły do sali i za każdym razem przegrały. Żaden jeszcze nie został obejrzany.',
+	backH: 'Powroty',
+	backSub: 'Filmy, które wypadły z listy, a potem ktoś zgłosił je jeszcze raz.',
+	backLine: (drops, weeks) =>
+		`wypadł ${drops === 1 ? 'raz' : `${drops}×`}, wrócił po ${weeks} ${plRounds(weeks)}`,
+	newerH: 'Trendy',
+	newerSub:
+		'Każdy film w dniu, w którym go obejrzeliśmy. Linia przerywana to ogólny kierunek, falista to mediana dziewięciu filmów wokół. Skala obejmuje 90% filmów, skrajne siedzą na brzegu jako kółka.',
+	newerYear: 'Rok premiery',
+	newerLen: 'Długość filmu',
+	newerLine: (from, to) => `Kierunek: od ${from} do ${to}.`,
 	factsH: 'W liczbach',
 	factLongest: 'Najdłuższy',
 	factShortest: 'Najkrótszy',
@@ -958,7 +997,8 @@ const pl: Dict = {
 						: id,
 	spMine: (used, max) => `Twoje propozycje: ${used} z ${max}`,
 	spAddAria: (left) => `Zgłoś film, ${plLeft(left, 'propozycja', 'propozycje', 'propozycji', true)}`,
-	spAddDone: 'Twoja propozycja już jest na liście',
+	spAddDone: (titles) =>
+		`${titles.length > 1 ? 'Twoje propozycje' : 'Twoja propozycja'}: ${titles.join(', ')}`,
 	spNomPop: (name) => `Propozycja na ${name}`,
 	spEmptyH: 'Jeszcze pusto.',
 	spEmpty: 'Zgłoś pierwszy film.',
@@ -1173,7 +1213,7 @@ const enRules = (r: RulesView, closesAt?: string | null): Rule[] => {
 	});
 
 	out.push({
-		head: 'Not coming on the night? Liberum veto puts your film to sleep for a round.',
+		head: 'Not coming on the night? Put your film to sleep for a round.',
 		body:
 			'One film a round, and only one you nominated yourself. It stays out of the room vote and ' +
 			'the next film on the list takes its place. Its points fade as usual, so waiting costs ' +
@@ -1208,6 +1248,7 @@ const en: Dict = {
 
 	evening: (n) => `Night ${n}`,
 	outing: (where) => (where === 'cinema' ? 'Cinema' : 'Trip'),
+	nightKind: (kind) => (kind === 'extra' ? 'Extra night' : 'Special night'),
 	// tiered: only the unit that matters now, down to seconds in the last minute
 	timeLeft: (d, h, m, s) =>
 		d
@@ -1246,7 +1287,7 @@ const en: Dict = {
 	warnFades: (n) => `fades in ${n} ${en2(n, 'round', 'rounds')}`,
 	campaign: (n) => `round ${n} of this campaign`,
 
-	holdCta: 'Liberum veto',
+	holdCta: 'Put to sleep',
 	holdMine: 'your call',
 	holdWhat: 'sitting this round out',
 	holdH: 'Not going to make it this round?',
@@ -1255,7 +1296,7 @@ const en: Dict = {
 		`(${n} ${en2(n, 'film goes', 'films go')} to the room). Its points fade as usual, so waiting costs ` +
 		'something. You can undo it right up to the close.',
 	holdWhyPh: 'Why? Everyone sees this…',
-	holdBtn: 'Liberum veto',
+	holdBtn: 'Put to sleep',
 	holdSave: 'Save the reason',
 	holdRelease: 'Put it back',
 	holdSpent: (title) => `${title} is already asleep this round.`,
@@ -1360,10 +1401,30 @@ const en: Dict = {
 	rewatchSub: (n) =>
 		`How many of the ${n} ${en2(n, 'film', 'films')} we watched each person knew already, going by the “Seen it already” they ticked before its evening.`,
 	rewatchTag: 'rewatches',
-	talkH: 'Who comments the most',
-	talkTag: 'comments',
+	ringH: 'Who backs whom',
+	ringSub: (votes) =>
+		`A ribbon runs from whoever ${votes ? 'votes' : 'spends points'} to whoever nominated the film, and the more went, the thicker it is. The dot is where the ${votes ? 'votes' : 'points'} land. Your own films do not count.`,
+	ringHint: 'Press a face to leave only its ribbons.',
+	ringOut: 'Backs',
+	ringIn: 'Backed by',
+	ringNone: 'nobody',
 
 	weeksShort: (n) => `${n} ${en2(n, 'round', 'rounds')}`,
+	filmState: (status) =>
+		status === 'active' ? 'still on the list' : status === 'dropped' ? 'dropped' : 'archived',
+	bridesH: 'Always the bridesmaid',
+	bridesSub:
+		'Films that reached the room at least twice and lost every time. None has been watched yet.',
+	backH: 'Comebacks',
+	backSub: 'Films that dropped off the list and were nominated again.',
+	backLine: (drops, weeks) =>
+		`dropped ${drops === 1 ? 'once' : `${drops}×`}, back ${weeks} ${en2(weeks, 'round', 'rounds')} later`,
+	newerH: 'Trends',
+	newerSub:
+		'Every film on the day we watched it. The dashed line is the overall direction, the wavy one the median of the nine films around each. The scale covers 90% of the films; the extremes sit on the edge as rings.',
+	newerYear: 'Release year',
+	newerLen: 'Running time',
+	newerLine: (from, to) => `Direction: from ${from} to ${to}.`,
 	factsH: 'In numbers',
 	factLongest: 'Longest',
 	factShortest: 'Shortest',
@@ -1572,7 +1633,8 @@ const en: Dict = {
 						: id,
 	spMine: (used, max) => `Your picks: ${used} of ${max}`,
 	spAddAria: (left) => `Propose a film, ${left} ${en2(left, 'pick', 'picks')} left`,
-	spAddDone: 'Your pick is already in',
+	spAddDone: (titles) =>
+		`You already put up ${titles.join(', ')}`,
 	spNomPop: (name) => `Picked for ${name}`,
 	spEmptyH: 'Nothing here yet.',
 	spEmpty: 'Put the first one up.',

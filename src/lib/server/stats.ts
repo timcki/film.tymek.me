@@ -10,8 +10,10 @@
  * nominator but no ballots at all, and the rounds since, which have everything.
  */
 import type { DB } from './db.js';
+import type { Film } from './types.js';
 import { SUCCESSOR } from './tmdb.js';
 import { avatarUrl } from './people.js';
+import type { TimePoint } from '../trend.js';
 import { filmEvenings } from './evenings.js';
 import { listClock } from './scoring.js';
 import { ROUNDS_VOTED } from './xp.js';
@@ -445,30 +447,46 @@ export function rewatches(db: DB, window: Window): Rewatches {
 	};
 }
 
-export type CommentRow = { person: PersonCard; comments: number };
+/** what one person has spent on another's nominations, over the whole window */
+export type BackLink = { from: string; to: string; points: number };
+
+export type Backing = {
+	/** everybody who backed or was backed, the busiest first */
+	people: PersonCard[];
+	links: BackLink[];
+};
 
 /**
- * Who talks about the films: comments written from the window's first round
- * opening until the round after it does, so a word said in the room after the
- * last deadline still counts.
+ * Who backs whom: every point somebody spent on a film somebody else nominated,
+ * from the one to the other. A person's own films are left out, since that is
+ * what the openness chart is for; here a link is always between two people. A
+ * pair backing each other is two links, one each way, and neither is netted
+ * against the other.
  */
-export function commenters(db: DB, window: Window): CommentRow[] {
+export function backing(db: DB, window: Window): Backing {
 	const cards = people(db);
 	const rows = db
 		.prepare(
-			`SELECT c.person_id, COUNT(*) AS comments FROM film_comment c
-			 WHERE c.created_at >= (SELECT opens_at FROM week WHERE number = ?)
-			   AND c.created_at < COALESCE((SELECT opens_at FROM week WHERE number = ?), '9999')
-			 GROUP BY c.person_id`
+			`SELECT b.person_id AS "from", f.added_by AS "to", SUM(b.points) AS points
+			 FROM ballot b JOIN film f ON f.id = b.film_id
+			 WHERE b.week_number BETWEEN ? AND ? AND f.added_by != b.person_id
+			 GROUP BY b.person_id, f.added_by
+			 HAVING points > 0`
 		)
-		.all(window.from, window.to + 1) as { person_id: string; comments: number }[];
+		.all(window.from, window.to) as BackLink[];
 
-	return rows
-		.flatMap((row) => {
-			const person = cards.get(row.person_id);
-			return person ? [{ person, comments: row.comments }] : [];
-		})
-		.sort((a, b) => b.comments - a.comments || a.person.name.localeCompare(b.person.name));
+	const links = rows.filter((row) => cards.has(row.from) && cards.has(row.to));
+	const total = new Map<string, number>();
+	for (const link of links) {
+		total.set(link.from, (total.get(link.from) ?? 0) + link.points);
+		total.set(link.to, (total.get(link.to) ?? 0) + link.points);
+	}
+	return {
+		people: [...total.keys()]
+			.map((id) => cards.get(id)!)
+			.sort((a, b) => total.get(b.id)! - total.get(a.id)! || a.name.localeCompare(b.name)),
+		links: links.sort((a, b) => b.points - a.points)
+	};
 }
 
 /* ----------------------------------------------------------------- films -- */
@@ -484,6 +502,8 @@ export type WatchedFilm = {
 	countries: string[];
 	posterUrl: string | null;
 	evening: number;
+	/** when it was watched, ISO */
+	at: string;
 	addedBy: string;
 	addedByName: string;
 };
@@ -498,8 +518,9 @@ export function watchedFilms(db: DB): WatchedFilm[] {
 	const rows = db
 		.prepare(
 			`SELECT f.id, f.title, f.year, f.director, f.genre, f.runtime, f.countries, f.poster_url,
-			        f.watched_week, f.added_by, p.name AS added_by_name
-			 FROM film f JOIN person p ON p.id = f.added_by
+			        f.watched_week, f.added_by, p.name AS added_by_name,
+			        COALESCE(f.watched_at, fw.closes_at) AS at
+			 FROM film f JOIN person p ON p.id = f.added_by JOIN week fw ON fw.number = f.watched_week
 			 WHERE f.status = 'watched' AND f.watched_week IS NOT NULL
 			 ORDER BY f.watched_week DESC, f.id DESC`
 		)
@@ -515,6 +536,7 @@ export function watchedFilms(db: DB): WatchedFilm[] {
 		watched_week: number;
 		added_by: string;
 		added_by_name: string;
+		at: string;
 	}[];
 
 	const evenings = filmEvenings(db);
@@ -528,6 +550,7 @@ export function watchedFilms(db: DB): WatchedFilm[] {
 		countries: row.countries ? row.countries.split(',') : [],
 		posterUrl: row.poster_url,
 		evening: evenings.get(row.id) ?? 0,
+		at: row.at,
 		addedBy: row.added_by,
 		addedByName: row.added_by_name
 	}));
@@ -755,6 +778,119 @@ export function screenStats(db: DB): ScreenStats | null {
 		meanScore: mean(scores.map((film) => film.value)),
 		waiting
 	};
+}
+
+export type PassedOver = FilmBar & { status: Exclude<Film['status'], 'watched'> };
+
+/**
+ * Films the room has seen at least twice and turned down every time, which have
+ * not been watched since. `value` is how many rooms. Read off the closed rooms
+ * themselves, so it is retroactive to the first one, and not windowed like the
+ * canon around it: a room is a night of its own, not a round of the era switch.
+ * A special night's pick is out, since it is put up for one room and never again.
+ */
+export function bridesmaids(db: DB): PassedOver[] {
+	return (
+		db
+			.prepare(
+				`SELECT f.id, f.title, f.poster_url, f.status, COUNT(*) AS n
+				 FROM runoff_film rf
+				 JOIN runoff r ON r.id = rf.runoff_id
+				 JOIN film f ON f.id = rf.film_id
+				 WHERE r.closed_at IS NOT NULL AND r.winner_film_id != f.id
+				   AND f.special IS NULL AND f.status != 'watched'
+				 GROUP BY f.id
+				 HAVING n >= 2 AND NOT EXISTS (SELECT 1 FROM runoff w WHERE w.winner_film_id = f.id)
+				 ORDER BY n DESC, f.title`
+			)
+			.all() as {
+			id: number;
+			title: string;
+			poster_url: string | null;
+			status: PassedOver['status'];
+			n: number;
+		}[]
+	).map((row) => ({
+		id: row.id,
+		title: row.title,
+		posterUrl: row.poster_url,
+		value: row.n,
+		status: row.status
+	}));
+}
+
+export type Comeback = {
+	id: number;
+	title: string;
+	posterUrl: string | null;
+	/** how many times it had dropped off before this one */
+	drops: number;
+	/** rounds between the first nomination and the one it came back in */
+	weeks: number;
+	/** the evening it was watched on, or null while it is still on the list */
+	evening: number | null;
+};
+
+/**
+ * Films that dropped off the list and were nominated again (§4.1: a dropped
+ * film comes back as a new row), which are on the list or on the screen now.
+ * The old row is the evidence, matched to the new one the way the duplicate
+ * check matches them. A special night's pick is out: the list film it came from
+ * is dropped when the pick wins, and that is not a film coming back.
+ */
+export function comebacks(db: DB): Comeback[] {
+	const evenings = filmEvenings(db);
+	return (
+		db
+			.prepare(
+				`SELECT o.id, o.title, o.poster_url, o.status, o.added_week,
+				        COUNT(d.id) AS drops, MIN(d.added_week) AS first_week
+				 FROM film o JOIN film d ON d.id < o.id
+				   AND d.status = 'dropped' AND d.archival = 0 AND d.special IS NULL
+				   AND (d.title_key = o.title_key OR (o.tmdb_id IS NOT NULL AND d.tmdb_id = o.tmdb_id))
+				 WHERE o.status IN ('active', 'watched') AND o.archival = 0 AND o.special IS NULL
+				 GROUP BY o.id
+				 ORDER BY o.id DESC`
+			)
+			.all() as {
+			id: number;
+			title: string;
+			poster_url: string | null;
+			status: Film['status'];
+			added_week: number;
+			drops: number;
+			first_week: number;
+		}[]
+	).map((row) => ({
+		id: row.id,
+		title: row.title,
+		posterUrl: row.poster_url,
+		drops: row.drops,
+		weeks: Math.max(0, row.added_week - row.first_week),
+		evening: row.status === 'watched' ? (evenings.get(row.id) ?? null) : null
+	}));
+}
+
+/** fewer films than this make a line out of noise */
+const MIN_TIMELINE = 8;
+
+/**
+ * Whether what we watch is changing over time: each film's release year and
+ * running time against the day it was watched, one dot a film. The days are the
+ * real ones, so the year the app was not around shows as the gap it was. A film
+ * with no year (or no runtime) is missing from that series only. Too few films
+ * is no trend, so a series with fewer than MIN_TIMELINE dots is empty.
+ */
+export function timelines(films: WatchedFilm[]): { year: TimePoint[]; runtime: TimePoint[] } {
+	const ordered = [...films].sort((a, b) => a.evening - b.evening);
+	const series = (value: (film: WatchedFilm) => number | null): TimePoint[] => {
+		const points = ordered.flatMap((film) => {
+			const v = value(film);
+			return v === null ? [] : [{ title: film.title, day: Math.floor(Date.parse(film.at) / 86_400_000), value: v }];
+		});
+		return points.length < MIN_TIMELINE ? [] : points;
+	};
+	return { year: series((film) => film.year), runtime: series((film) => film.runtime) };
 }
 
 /* ------------------------------------------------------------------ lens -- */

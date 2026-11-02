@@ -14,6 +14,7 @@ import {
 	standings
 } from '$lib/server/films';
 import { holdOf } from '$lib/server/holds';
+import { faceOf, personById } from '$lib/server/people';
 import { addComment, commentsOf, deleteComment, reactComment } from '$lib/server/comments';
 import { logAdmin, requireAdmin } from '$lib/server/admin';
 import { seenOf, toggleSeen } from '$lib/server/seen';
@@ -85,7 +86,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 		live,
 		films: withComments(films),
 		archived: withComments(standings(db, rules, week.number, person.id, 'archived')),
-		dropped: droppedShelf(db),
+		// the face of whoever put it up, for the modal the shelf opens
+		dropped: droppedShelf(db).map((film) => {
+			const nominator = personById(db, film.added_by);
+			return { ...film, nominator: nominator ? faceOf(nominator) : null };
+		}),
 		// one leading card needs no divider to explain itself
 		shortlistIds: shortlistIds.length > 1 ? shortlistIds : [],
 		nominatedThisWeek: nominatedThisWeek ?? null,

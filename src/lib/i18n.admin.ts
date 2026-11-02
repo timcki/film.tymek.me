@@ -52,6 +52,12 @@ export type AdminDict = {
 	spcIntro: string;
 	spcLocked: string;
 	spcSeePicks: string;
+	spcStopAsk: (extra: boolean) => string;
+	spcStopGo: string;
+	spcStopKeep: string;
+	xnBtn: string;
+	xnIntro: string;
+	xnBusy: string;
 	/** §3.7: setting a special round up as a custom week */
 	cwIntro: string;
 	cwName: string;
@@ -236,9 +242,18 @@ const pl: AdminDict = {
 	spcIntro:
 		'Wieczór specjalny ma własne propozycje i własne głosowanie. ' +
 		'Lista śpi do jego końca: nikt nie wydaje punktów, nic nie traci na wartości i nic nie wypada. ' +
-		'Potem lista budzi się tam, gdzie była: wydane punkty, zgłoszenia i wstrzymania zostają. Odwołać go można, dopóki nikt nic nie zgłosił.',
-	spcLocked: 'Ktoś już zgłosił propozycję, więc runda dobiegnie końca.',
+		'Potem lista budzi się tam, gdzie była: wydane punkty, zgłoszenia i wstrzymania zostają. Odwołać go można w każdej chwili, razem ze zgłoszonymi propozycjami.',
+	spcLocked: 'Są już propozycje, więc zasady nie mogą się zmienić.',
 	spcSeePicks: 'Zobacz propozycje',
+	spcStopAsk: (extra) =>
+		`Odwołać wieczór specjalny? Wszystkie propozycje i głosy znikną${extra ? ', a jego termin zniknie z kalendarza' : ''}. Lista wróci do swojej rundy bez zmian.`,
+	spcStopGo: 'Odwołaj wieczór',
+	spcStopKeep: 'Zostaw',
+	xnBtn: 'Wieczór dodatkowy teraz',
+	xnIntro:
+		'Dla spontanicznego spotkania: zaczyna wieczór specjalny od razu, bez wybierania daty, z głosowaniem zatwierdzającym jak w wieczorze specjalnym. Lista tylko zasypia i budzi się dokładnie taka, jaka była. Zamyka się sam po dwóch godzinach, a wcześniej zamkniesz go w pokoju (/host). Odwołać go można wyborem „Lista” powyżej.',
+	xnBusy:
+		'Wieczór specjalny już trwa, a naraz trwa tylko jedno głosowanie. Odwołaj go albo poczekaj, aż się skończy, żeby zacząć wieczór dodatkowy.',
 	cwIntro: 'Wszystko jest opcjonalne. Bez nazwy i zasad to zwykły wieczór specjalny.',
 	cwName: 'Nazwa',
 	cwAbout: 'Opis',
@@ -323,13 +338,13 @@ const pl: AdminDict = {
 	filDelete: 'Usuń na zawsze',
 	filDeleteNote: 'Nie da się usunąć: ktoś już na niego głosował.',
 	filReassignH: 'Zgłaszający',
-	filHold: 'Liberum veto',
+	filHold: 'Uśpij',
 	filHoldWhy: 'Powód (opcjonalnie)',
 	filRelease: 'Wycofaj',
-	filHeld: 'veto',
+	filHeld: 'śpi',
 	filPicksH: (round) => `Propozycje: ${round}`,
 	filPicksIntro:
-		'Dopóki tu coś jest, wieczoru specjalnego nie da się odwołać ani zmienić jego zasad. ' +
+		'Dopóki tu coś jest, zasad wieczoru specjalnego nie da się zmienić. Odwołanie wieczoru kasuje wszystkie propozycje. ' +
 		'Usunąć można propozycję, której nikt jeszcze nie zaznaczył.',
 	filTicked: (any) => (any ? 'ktoś już zaznaczył' : 'nikt jeszcze nie zaznaczył'),
 	filTickedNote: 'Nie da się usunąć: ktoś już ją zaznaczył.',
@@ -429,8 +444,6 @@ const pl: AdminDict = {
 				return 'Dodatkowy wieczór musi wypaść przed końcem bieżącej rundy.';
 			case 'extra_too_early':
 				return 'Poprzednia runda skończyła się przed swoim terminem, więc dodatkowy wieczór musi wypaść po nim.';
-			case 'special_has_picks':
-				return 'Ktoś już zgłosił propozycję, więc runda dobiegnie końca.';
 			case 'no_special':
 				return 'Ta runda nie jest specjalna.';
 			case 'no_look':
@@ -528,9 +541,18 @@ const en: AdminDict = {
 	spcIntro:
 		'A special night has its own picks and its own vote. ' +
 		'The list sleeps until it is over: nobody spends points, nothing fades and nothing drops. ' +
-		'Then the list wakes where it was: points spent, nominations and holds all stay. It can be called off until somebody puts a pick up.',
-	spcLocked: 'Somebody has already put a pick up, so the round runs its course.',
+		'Then the list wakes where it was: points spent, nominations and holds all stay. It can be called off at any time, picks and all.',
+	spcLocked: 'There are picks up, so the rules can no longer change.',
 	spcSeePicks: 'See the picks',
+	spcStopAsk: (extra) =>
+		`Call the special night off? Every pick and every tick goes${extra ? ', and its date leaves the calendar' : ''}. The list returns to its round exactly as it was.`,
+	spcStopGo: 'Call it off',
+	spcStopKeep: 'Keep it',
+	xnBtn: 'Extra night now',
+	xnIntro:
+		'For a spur-of-the-moment get-together: starts a special night right away, no date to pick, with the same approval vote. The list only sleeps and wakes exactly as it was. It closes by itself after two hours, and sooner from the room screen (/host). Call it off with the “List” choice above.',
+	xnBusy:
+		'A special night is already on, and only one vote runs at a time. Call it off or let it finish before starting an extra night.',
 	cwIntro: 'Everything is optional. With no name and no rules it is a plain special night.',
 	cwName: 'Name',
 	cwAbout: 'Description',
@@ -615,13 +637,13 @@ const en: AdminDict = {
 	filDelete: 'Delete for good',
 	filDeleteNote: 'Cannot be deleted: somebody has voted for it.',
 	filReassignH: 'Nominated by',
-	filHold: 'Liberum veto',
+	filHold: 'Put to sleep',
 	filHoldWhy: 'Reason (optional)',
 	filRelease: 'Put it back',
 	filHeld: 'held',
 	filPicksH: (round) => `Picks: ${round}`,
 	filPicksIntro:
-		'While anything is here, the special night cannot be called off and its rules cannot change. ' +
+		'While anything is here, the special night’s rules cannot change. Calling the night off erases every pick. ' +
 		'A pick nobody has ticked yet can be deleted.',
 	filTicked: (any) => (any ? 'somebody has ticked it' : 'nobody has ticked it yet'),
 	filTickedNote: 'Cannot be deleted: somebody has ticked it.',

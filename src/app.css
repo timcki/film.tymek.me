@@ -379,7 +379,15 @@ header .sub b {
 	flex-direction: column;
 	align-items: flex-end;
 }
-.budget .tip {
+/* the + that is done says so in the same panel, under itself */
+.addwrap {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+}
+.budget .tip,
+.addwrap .tip {
 	position: absolute;
 	top: calc(100% + 6px);
 	right: 0;
@@ -400,7 +408,8 @@ header .sub b {
 @media (hover: hover) {
 	/* the special round's rules open on a click alone, like a menu: a pointer
 	   crossing the bar should not drop a panel over the picks */
-	.budget:hover .tip:not(.sptip) {
+	.budget:hover .tip:not(.sptip),
+	.addwrap:hover .tip {
 		display: block !important;
 	}
 }
@@ -578,12 +587,12 @@ header .sub b {
 	box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 /* every pick put up, or this week's film nominated: still there and still the
-   accent's, but quietened, so it reads as done rather than as broken */
-.pill.spadd:disabled {
+   accent's, but quietened, so it reads as done rather than as broken. A tap
+   still answers, with what was added */
+.pill.spadd.done {
 	background: none;
 	box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 35%, transparent);
 	color: color-mix(in srgb, var(--accent) 45%, transparent);
-	cursor: default;
 	transform: none;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2129,6 +2138,13 @@ button.holdchip:hover {
 	gap: 12px;
 	padding: 8px 10px;
 }
+.shelfbox .film.shelf {
+	cursor: pointer;
+}
+.shelfbox .film.shelf:hover,
+.shelfbox .film.shelf:focus-visible {
+	opacity: 1;
+}
 .shelfbox .film.shelf .p {
 	width: 34px;
 	flex: 0 0 34px;
@@ -2394,13 +2410,13 @@ button.holdchip:hover {
 	.spanel.fair {
 		order: 3;
 	}
-	.spanel.engage {
+	.spanel.seen {
 		order: 4;
 	}
-	.spanel.seen {
+	.spanel.engage {
 		order: 5;
 	}
-	.spanel.talk {
+	.spanel.backs {
 		order: 6;
 	}
 	/* the stat tiles four across: packed as tightly as they fit, the eighth
@@ -4908,6 +4924,24 @@ button.wcard:focus-visible img {
 	font-weight: 650;
 }
 
+/* the two rings side by side where there is room, one under the other where
+   there is not: who a face backs, and who backs it */
+.ringpair {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+	gap: 12px 24px;
+}
+.ringside .ghead {
+	display: block;
+	text-align: center;
+	margin: 4px 0 0;
+}
+.ringlist {
+	margin-top: 10px;
+	border-top: 1px solid var(--line);
+	padding-top: 6px;
+}
+
 /* what is actually inside the bar somebody just tapped */
 .picked {
 	margin-top: 8px;
@@ -4934,6 +4968,61 @@ button.wcard:focus-visible img {
 }
 .picked.titled {
 	margin-top: 6px;
+}
+
+/* films with a poster, a line about each, and a figure on the right: the
+   stats screen's lists of particular films */
+.tlab {
+	margin-top: 14px;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--ink2);
+}
+.sfilms {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-top: 8px;
+}
+.sfilm {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+.sfilm img,
+.sfilm .noposter {
+	width: 28px;
+	flex: 0 0 28px;
+	aspect-ratio: 2/3;
+	object-fit: cover;
+	border-radius: 4px;
+	background: var(--raise);
+}
+.sfilm .st {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-width: 0;
+}
+.sfilm .st b {
+	font-size: 13px;
+	font-weight: 650;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.sfilm .st i,
+.sfilm em {
+	font-size: 11px;
+	font-style: normal;
+	color: var(--dim);
+}
+.sfilm em {
+	flex: none;
+	font-weight: 700;
+	color: var(--ink2);
+	font-variant-numeric: tabular-nums;
 }
 
 /* ------------------------------------------------------------------ demo -- */
