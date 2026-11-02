@@ -294,6 +294,25 @@ describe('a special round', () => {
 		expect(spentInRound(db, 'bartek', next.number)).toBe(2);
 	});
 
+	it('turns down an extra night before the night a round decided early was due', () => {
+		const { db, rules } = freshDb('weekly');
+		const thursday = currentWeek(db)!.closes_at;
+		const film = addFilm(db, 'Paddington', 'ala', 1);
+		setPoints(db, rules, 'bartek', film, 2);
+		closeWeek(db, rules);
+		closeRunoff(db, rules, openRunoff(db)!.id);
+
+		const wednesday = new Date(Date.parse(thursday) - 86_400_000);
+		expect(() => startExtraNight(db, rules, 'approval', null, wednesday)).toThrow(
+			expect.objectContaining({ code: 'extra_too_early' })
+		);
+		expect(currentWeek(db)!.special).toBeNull();
+		expect(db.prepare(`SELECT COUNT(*) AS n FROM night WHERE status = 'planned'`).get()).toEqual({ n: 0 });
+
+		const saturday = new Date(Date.parse(thursday) + 2 * 86_400_000);
+		expect(startExtraNight(db, rules, 'approval', null, saturday).closes_at).toBe(saturday.toISOString());
+	});
+
 	it('changes its mind only while nobody has put a pick up', () => {
 		const { db, rules } = freshDb('weekly');
 		startSpecial(db, rules, 'approval');

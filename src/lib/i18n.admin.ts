@@ -427,6 +427,8 @@ const pl: AdminDict = {
 				return 'Ta runda już jest specjalna.';
 			case 'extra_not_before':
 				return 'Dodatkowy wieczór musi wypaść przed końcem bieżącej rundy.';
+			case 'extra_too_early':
+				return 'Poprzednia runda skończyła się przed swoim terminem, więc dodatkowy wieczór musi wypaść po nim.';
 			case 'special_has_picks':
 				return 'Ktoś już zgłosił propozycję, więc runda dobiegnie końca.';
 			case 'no_special':

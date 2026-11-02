@@ -61,7 +61,14 @@ export function startExtraNight(
 			throw new RuleError('extra_not_before', 'an extra night has to come before the round closes');
 		}
 		addNight(db, at, custom?.name ?? null, now);
-		syncOpenWeek(db);
+		// a round decided before its night counts from that night (deadlineAnchor),
+		// so a date between the two would sit in the calendar closing nothing
+		if (syncOpenWeek(db)?.closes_at !== iso(at)) {
+			throw new RuleError(
+				'extra_too_early',
+				'the round before ended ahead of its date, so an extra night has to come after that date'
+			);
+		}
 		return startSpecial(db, rules, id, custom, now);
 	});
 }

@@ -28,16 +28,18 @@
 
 <form class="fedit" method="POST" action="?/edit" use:enhance={submit}>
 	<input type="hidden" name="id" value={film.id} />
-	<FilmSearch
-		placeholder={A.filReplace}
-		noResultsLabel={A.watNoResults}
-		onpick={(picked) => (replaced = picked)}
-	/>
-	{#if replaced}
-		<input type="hidden" name="tmdbId" value={replaced.tmdbId ?? ''} />
-		<input type="hidden" name="overview" value={replaced.overview} />
-		<p class="ahint">{A.filReplaced(replaced.title)}</p>
-	{/if}
+	<div class="swap">
+		<FilmSearch
+			placeholder={A.filReplace}
+			noResultsLabel={A.watNoResults}
+			onpick={(picked) => (replaced = picked)}
+		/>
+		{#if replaced}
+			<input type="hidden" name="tmdbId" value={replaced.tmdbId ?? ''} />
+			<input type="hidden" name="overview" value={replaced.overview} />
+			<p class="ahint">{A.filReplaced(replaced.title)}</p>
+		{/if}
+	</div>
 	{#key replaced}
 		<label>{A.filTitle}<input type="text" name="title" value={replaced?.title ?? film.title} required /></label>
 		<label>{A.filYear}<input type="number" name="year" value={(replaced ? replaced.year : film.year) ?? ''} /></label>
@@ -56,3 +58,9 @@
 		<button class="tap go">{A.filSave}</button>
 	</div>
 </form>
+
+<style>
+	.swap {
+		flex: 1 1 100%;
+	}
+</style>
