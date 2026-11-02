@@ -38,7 +38,7 @@
 				<b>{film.title}</b>
 				{T.evening(film.evening)}
 				{#if film.outing}· {T.outing(film.outing)}{/if}
-				{#if film.night}· {T.nightKind(film.night.kind)}{/if}
+				{#if film.specialNight}· {T.nightSpecial}{/if}
 			</div>
 		</button>
 	{:else}
@@ -81,17 +81,12 @@
 					<div class="dmeta">
 						<span class="mchip">{T.evening(detail.evening)} · {formatDay(detail.at, data.lang)}</span>
 						{#if detail.outing}<span class="mchip">{T.outing(detail.outing)}</span>{/if}
-						{#if detail.night}
-							<span class="mchip">{T.nightKind(detail.night.kind)}</span>
-							{#if detail.night.name ?? (detail.night.special === 'halloween' ? T.spName('halloween') : null)}
-								<span class="mchip">{detail.night.name ?? T.spName('halloween')}</span>
-							{/if}
-						{/if}
+						{#if detail.specialNight}<span class="mchip">{T.nightSpecial}</span>{/if}
 						{#if detail.genre}<span class="mchip">{detail.genre}</span>{/if}
 						{#if detail.runtime}<span class="mchip">{T.minutes(detail.runtime)}</span>{/if}
 						<!-- a special night's score is how many ticked it, and a film nobody spent on
 						     has none to show: points are only worth a chip where there were some -->
-						{#if detail.final_score !== null && detail.final_score > 0 && !detail.night}
+						{#if detail.final_score !== null && detail.final_score > 0 && !detail.specialNight}
 							<span class="mchip">{fmtScore(detail.final_score)} {T.unit(detail.final_score, votes)}</span>
 						{/if}
 					</div>

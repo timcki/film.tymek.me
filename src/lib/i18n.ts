@@ -145,8 +145,8 @@ export type Dict = {
 	evening: (n: number) => string;
 	/** where we watched a film that was not a film night */
 	outing: (where: Outing) => string;
-	/** what a film night a special round decided is called in the record */
-	nightKind: (kind: 'special' | 'extra') => string;
+	/** the mark on a film night a special round decided, an extra night's included */
+	nightSpecial: string;
 	/** the whole phrase, verb included, because the bar has no room for a sentence around it */
 	timeLeft: (d: number, h: number, m: number, s: number) => string;
 	votingClosed: string;
@@ -611,7 +611,7 @@ const pl: Dict = {
 
 	evening: (n) => `Wieczorek ${n}`,
 	outing: (where) => (where === 'cinema' ? 'Kino' : 'Wyjazd'),
-	nightKind: (kind) => (kind === 'extra' ? 'Wieczór dodatkowy' : 'Wieczór specjalny'),
+	nightSpecial: 'Wieczór specjalny',
 	// tiered: only the unit that matters now, down to seconds in the last minute
 	timeLeft: (d, h, m, s) => {
 		if (d) return plLeft(d, 'dzień', 'dni', 'dni');
@@ -1248,7 +1248,7 @@ const en: Dict = {
 
 	evening: (n) => `Night ${n}`,
 	outing: (where) => (where === 'cinema' ? 'Cinema' : 'Trip'),
-	nightKind: (kind) => (kind === 'extra' ? 'Extra night' : 'Special night'),
+	nightSpecial: 'Special night',
 	// tiered: only the unit that matters now, down to seconds in the last minute
 	timeLeft: (d, h, m, s) =>
 		d

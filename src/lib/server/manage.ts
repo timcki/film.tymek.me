@@ -13,7 +13,6 @@ import { cleanNote, cleanOverview, cleanPoster, cleanTitle } from './films.js';
 import { filmEvenings } from './evenings.js';
 import type { Outing } from '../outings.js';
 import { detailsOf } from './tmdb.js';
-import { customOf } from '../custom-weeks.js';
 
 /**
  * Everything the admin screens can change. Kept apart from films.ts and
@@ -243,18 +242,15 @@ function backersFor(db: DB, filmIds: number[]): Map<number, Face[]> {
 	return faces;
 }
 
-/**
- * A film night that a special round decided, which is told apart from an
- * ordinary one because its score is not points: a special film's score is how
- * many ticked it. An extra night is a special one that had a date of its own.
- */
-export type NightKind = { kind: 'special' | 'extra'; special: string; name: string | null };
-
 export type WatchedEvening = RoundFilm & {
 	evening: number;
 	/** when the evening was: an outing's own date, or its round's night */
 	at: string;
-	night: NightKind | null;
+	/**
+	 * Decided by a special round, an extra night included, which is told apart
+	 * from an ordinary night because its score is not points: it is how many ticked it.
+	 */
+	specialNight: boolean;
 };
 
 /**
@@ -265,19 +261,14 @@ export function watchedRecord(db: DB): WatchedEvening[] {
 	const evenings = filmEvenings(db);
 	const weeks = new Map(
 		(
-			db.prepare('SELECT number, closes_at, special, custom FROM week').all() as {
+			db.prepare('SELECT number, closes_at, special FROM week').all() as {
 				number: number;
 				closes_at: string;
 				special: string | null;
-				custom: string | null;
 			}[]
 		).map((week) => [week.number, week])
 	);
-	const extra = new Set(
-		(db.prepare('SELECT week_number FROM night WHERE extra = 1').all() as { week_number: number | null }[]).map(
-			(night) => night.week_number
-		)
-	);
+
 	const rows = db.prepare(`${FILM_SELECT} WHERE f.status = 'watched'`).all() as FilmRow[];
 	const backers = backersFor(
 		db,
@@ -293,14 +284,7 @@ export function watchedRecord(db: DB): WatchedEvening[] {
 				evening: evenings.get(film.id) ?? 0,
 				at: film.watched_at ?? week?.closes_at ?? film.created_at,
 				// an outing was no round's night, whatever week it was written into
-				night:
-					week?.special && !film.outing
-						? {
-								kind: extra.has(week.number) ? ('extra' as const) : ('special' as const),
-								special: week.special,
-								name: customOf(week.custom)?.name ?? null
-							}
-						: null
+				specialNight: Boolean(week?.special) && !film.outing
 			};
 		})
 		.sort((a, b) => b.evening - a.evening);

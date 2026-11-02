@@ -440,7 +440,7 @@ describe('an extra night started on the spot', () => {
 });
 
 describe('how the record tells the nights apart', () => {
-	it('marks a special night’s film, and an extra night’s as extra, and leaves the Thursday film unmarked', () => {
+	it('marks the film of a special night or an extra night, and leaves the Thursday film unmarked', () => {
 		const { db, rules, paddington } = lively();
 		const thursday = currentWeek(db)!.closes_at;
 		startExtraNight(db, rules, 'approval', { name: 'Garden', about: '', picks: 1, rules: {} }, SUNDAY);
@@ -458,9 +458,9 @@ describe('how the record tells the nights apart', () => {
 		setApproval(db, rules, 'celina', third, true);
 		decide(db, rules);
 
-		const record = new Map(watchedRecord(db).map((film) => [film.title, film.night]));
-		expect(record.get('The Thing')).toEqual({ kind: 'extra', special: 'approval', name: 'Garden' });
-		expect(record.get('Paddington')).toBeNull();
-		expect(record.get('Suspiria')).toEqual({ kind: 'special', special: 'approval', name: null });
+		const record = new Map(watchedRecord(db).map((film) => [film.title, film.specialNight]));
+		expect(record.get('The Thing')).toBe(true);
+		expect(record.get('Paddington')).toBe(false);
+		expect(record.get('Suspiria')).toBe(true);
 	});
 });
