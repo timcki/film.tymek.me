@@ -347,7 +347,7 @@ const pl: AdminDict = {
 
 	watH: 'Obejrzane',
 	watIntro:
-		'Wszystko, co obejrzeliśmy, wieczorek po wieczorku. Tu dopisujesz filmy obejrzane poza głosowaniem: kino, wyjazd albo wieczorek, którego nikt nie zapisał. Nic stąd nie trafia na listę do głosowania.',
+		'Wszystko, co obejrzeliśmy, wieczorek po wieczorku. Tu dopisujesz filmy obejrzane poza głosowaniem: kino, wyjazd, wieczór specjalny bez głosowania albo wieczorek, którego nikt nie zapisał. Nic stąd nie trafia na listę do głosowania.',
 	watAddH: 'Dopisz obejrzany film',
 	watSearchPh: 'Szukaj w TMDB…',
 	watNoResults: 'Nic nie znaleziono.',
@@ -642,7 +642,7 @@ const en: AdminDict = {
 
 	watH: 'Watched',
 	watIntro:
-		'Everything we have watched, a night at a time. This is where a film watched outside the voting gets written down: the cinema, a trip, or a film night nobody recorded. Nothing here reaches the voting list.',
+		'Everything we have watched, a night at a time. This is where a film watched outside the voting gets written down: the cinema, a trip, a special night with no vote, or a film night nobody recorded. Nothing here reaches the voting list.',
 	watAddH: 'Add a film we watched',
 	watSearchPh: 'Search TMDB…',
 	watNoResults: 'Nothing found.',
