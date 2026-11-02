@@ -4,6 +4,7 @@ import type { Face, Film, Week } from './types.js';
 import { RuleError } from './types.js';
 import type { RuleSet } from './rules.js';
 import { iso } from './time.js';
+import { titleKey } from './rules.js';
 import { avatarUrl } from './people.js';
 import { rescoreAll } from './scoring.js';
 import { rexpAll } from './xp.js';
@@ -135,9 +136,26 @@ export function picksAllowed(week: Week): number {
 }
 
 /**
+ * §3.6: the viewer's own film waiting on the list that this would be, the same
+ * question `sameFilm` in titles.ts asks on the page
+ */
+export function ownListFilm(db: DB, personId: string, input: NominationInput): Film | undefined {
+	return db
+		.prepare(
+			`SELECT * FROM film
+			 WHERE added_by = ? AND status = 'active' AND archival = 0 AND special IS NULL
+			   AND CASE WHEN tmdb_id IS NOT NULL AND ? IS NOT NULL THEN tmdb_id = ? ELSE title_key = ? END
+			 LIMIT 1`
+		)
+		.get(personId, input.tmdbId, input.tmdbId, titleKey(input.title)) as Film | undefined;
+}
+
+/**
  * §3.6: a pick for the night. A few each rather than one, and the usual
  * duplicate rules (§4.1) against everything, the list included: a film already
- * waiting on the list is one the list will get to. §3.7: in a custom week it
+ * waiting on the list is one the list will get to. The one exception is the
+ * nominator's own list film, which they may put up for the night as well, having been
+ * told (`fromList`) that a win takes it off the list. §3.7: in a custom week it
  * also has to meet the week's rules, checked against what TMDB says about it.
  */
 export function nominateSpecial(
@@ -146,6 +164,7 @@ export function nominateSpecial(
 	personId: string,
 	input: NominationInput,
 	facts: Facts | null = null,
+	fromList = false,
 	now: Date = new Date()
 ): number {
 	return immediate(db, () => {
@@ -155,8 +174,17 @@ export function nominateSpecial(
 			throw new RuleError('picks_spent', `you have put up all ${max} of yours`, { max });
 		}
 		assertFits(customOf(week.custom), facts);
-		assertNotDuplicate(db, input);
+		const own = ownListFilm(db, personId, input);
+		if (own && !fromList) {
+			throw new RuleError(
+				'from_list_unconfirmed',
+				`${own.title} is your film on the list, and winning the night takes it off; pick it again to confirm`,
+				{ title: own.title }
+			);
+		}
+		assertNotDuplicate(db, input, own?.id ?? null);
 		const id = insertFilm(db, input, personId, week.number, week.special);
+		if (own) db.prepare('UPDATE film SET from_list = ? WHERE id = ?').run(own.id, id);
 		rescoreAll(db, rules, week.number);
 		rexpAll(db);
 		return id;

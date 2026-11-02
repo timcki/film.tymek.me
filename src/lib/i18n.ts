@@ -452,6 +452,8 @@ export type Dict = {
 	spPicking: string;
 	spNomH: (name: string) => string;
 	spNomHint: (max: number) => string;
+	/** §3.6: said before a pick goes up that is the viewer's own film on the list */
+	spFromList: string;
 	/** §3.7: one of a custom week's rules, as the page lists it and a refusal names it */
 	weekRule: (rule: WeekRule) => string;
 	/** TMDB's genres, by id */
@@ -963,6 +965,8 @@ const pl: Dict = {
 	spNomH: (name) => `Zgłoś film na ${name}`,
 	spNomHint: (max) =>
 		`${max} ${pl3(max, 'propozycja', 'propozycje', 'propozycji')} na osobę, bez powtórek.`,
+	spFromList:
+		'To twój film z listy. Jeśli wygra ten wieczór, oglądamy go i znika z listy. Jeśli przegra, zostaje na liście, jakby nic się nie stało.',
 	weekRule: (rule) => {
 		const minutes = (n: number) => `${n} ${pl3(n, 'minuta', 'minuty', 'minut')}`;
 		switch (rule.kind) {
@@ -1073,6 +1077,8 @@ const pl: Dict = {
 				return 'Ta runda nie jest specjalna.';
 			case 'picks_spent':
 				return `Masz już ${p.max} ${pl3(Number(p.max), 'propozycję', 'propozycje', 'propozycji')}, więcej się nie da.`;
+			case 'from_list_unconfirmed':
+				return `${p.title} to twój film z listy. Jeśli wygra ten wieczór, zniknie z listy. Wybierz go jeszcze raz, żeby to potwierdzić.`;
 			case 'not_a_pick':
 				return 'To nie jest żadna z propozycji tej rundy.';
 			case 'special_pick':
@@ -1571,6 +1577,8 @@ const en: Dict = {
 	spPicking: 'Voting is closed. The room is choosing between the most ticked.',
 	spNomH: (name) => `Put up a film for ${name}`,
 	spNomHint: (max) => `${max} ${en2(max, 'pick', 'picks')} each, no repeats.`,
+	spFromList:
+		'This is your film from the list. If it wins the night, we watch it and it leaves the list. If it loses, it stays on the list as if nothing had happened.',
 	weekRule: (rule) => {
 		const minutes = (n: number) => `${n} ${en2(n, 'minute', 'minutes')}`;
 		switch (rule.kind) {

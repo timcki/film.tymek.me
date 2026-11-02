@@ -263,6 +263,10 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	// never appears on the list, never takes points, and once its round is over
 	// it is either the night's film or dropped with the rest
 	['film', 'special', 'TEXT'],
+	// §3.6: the nominator's own list film this pick was put up from. The list
+	// film is left alone while the night is on; if the pick wins it is watched
+	// and the list film goes, and if it loses nothing on the list has changed
+	['film', 'from_list', 'INTEGER'],
 	// a film watched together somewhere other than a film night: 'cinema' or
 	// 'trip'. An evening like any other in what we have watched, and nowhere in
 	// what measures the game: no XP, no fairness table, no round's winner

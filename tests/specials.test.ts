@@ -64,6 +64,32 @@ describe('a special round', () => {
 		expect(() => pick('bartek', 'The Thing')).toThrow(expect.objectContaining({ code: 'dup_active' }));
 	});
 
+	it('takes a nominator’s own list film, told first, and off the list only if it wins', () => {
+		for (const wins of [false, true]) {
+			const { db, rules } = freshDb('weekly');
+			const alien = addFilm(db, 'Alien', 'ala', 1);
+			setPoints(db, rules, 'bartek', alien, 2);
+			startSpecial(db, rules, 'approval');
+
+			expect(() => nominateSpecial(db, rules, 'ala', { title: 'Alien' })).toThrow(
+				expect.objectContaining({ code: 'from_list_unconfirmed', params: { title: 'Alien' } })
+			);
+			// somebody else's list film is still one the list will get to
+			expect(() => nominateSpecial(db, rules, 'bartek', { title: 'Alien' }, null, true)).toThrow(
+				expect.objectContaining({ code: 'dup_active' })
+			);
+			const copy = nominateSpecial(db, rules, 'ala', { title: 'Alien' }, null, true);
+			const other = nominateSpecial(db, rules, 'celina', { title: 'Suspiria' });
+			setApproval(db, rules, 'darek', wins ? copy : other, true);
+			closeWeek(db, rules);
+			closeRunoff(db, rules, openRunoff(db)!.id);
+
+			expect(filmById(db, copy)!.status).toBe(wins ? 'watched' : 'dropped');
+			expect(filmById(db, alien)!.status).toBe(wins ? 'dropped' : 'active');
+			expect(spentInRound(db, 'bartek', currentWeek(db)!.number)).toBe(2);
+		}
+	});
+
 	it('puts the list to sleep: no points, no nominations, no holds', () => {
 		const { db, rules } = freshDb('weekly');
 		const film = addFilm(db, 'Paddington', 'ala', 1);

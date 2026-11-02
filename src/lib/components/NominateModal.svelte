@@ -25,6 +25,7 @@
 		submit,
 		rules = [],
 		breaks,
+		warn,
 		typed = true
 	}: {
 		lang: Lang;
@@ -38,6 +39,8 @@
 		rules?: string[];
 		/** whether a result is already known to break this week's rules */
 		breaks?: (result: Result) => boolean;
+		/** what the viewer is to hear before a result goes up, which putting it up then accepts */
+		warn?: (result: Result) => string | null;
 		/** a title typed by hand has no TMDB facts to be checked against, so a week with rules refuses it */
 		typed?: boolean;
 	} = $props();
@@ -169,6 +172,7 @@
 			<h2 in:rise={0}>{heading}</h2>
 
 			{#if picked}
+				{@const warning = warn?.(picked) ?? null}
 				<form
 					method="POST"
 					action="?/nominate"
@@ -187,6 +191,10 @@
 							<span>{picked.year ?? T.dEmpty}</span>
 						</div>
 					</div>
+					{#if warning}
+						<input type="hidden" name="fromList" value="1" />
+						<p class="nwarn">{warning}</p>
+					{/if}
 					<div class="nlabel">{T.noteQ}</div>
 					<textarea class="nin" name="note" rows="3" maxlength="160" placeholder={T.notePh}
 					></textarea>
@@ -254,6 +262,14 @@
 {/if}
 
 <style>
+	.nwarn {
+		margin: 10px 0 0;
+		padding: 8px 10px;
+		border-left: 3px solid var(--accent);
+		background: var(--card2);
+		font-size: 12px;
+		line-height: 1.45;
+	}
 	.spweek-rules {
 		margin: 6px 0 0;
 		padding-left: 18px;

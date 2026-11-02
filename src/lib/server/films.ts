@@ -276,8 +276,9 @@ function duplicate(db: DB, clash: Film): RuleError {
  * an archival proposition: somebody having suggested it at a night two years ago
  * and the room never watching it is no reason it cannot go up now. An archival
  * film we did watch still blocks, which is the whole point of writing it down.
+ * `exceptId` is the one film a §3.6 pick may share: its nominator's own on the list.
  */
-export function assertNotDuplicate(db: DB, input: NominationInput): void {
+export function assertNotDuplicate(db: DB, input: NominationInput, exceptId: number | null = null): void {
 	const key = titleKey(input.title);
 	if (!key) throw new RuleError('no_title', 'give the film a title');
 
@@ -285,18 +286,18 @@ export function assertNotDuplicate(db: DB, input: NominationInput): void {
 		const clash = db
 			.prepare(
 				`SELECT * FROM film WHERE tmdb_id = ? AND status IN ('active','archived','watched')
-			   AND (archival = 0 OR status = 'watched') LIMIT 1`
+			   AND (archival = 0 OR status = 'watched') AND id IS NOT ? LIMIT 1`
 			)
-			.get(input.tmdbId) as Film | undefined;
+			.get(input.tmdbId, exceptId) as Film | undefined;
 		if (clash) throw duplicate(db, clash);
 	}
 
 	const byTitle = db
 		.prepare(
 			`SELECT * FROM film WHERE title_key = ? AND status IN ('active','archived','watched')
-			   AND (archival = 0 OR status = 'watched') LIMIT 1`
+			   AND (archival = 0 OR status = 'watched') AND id IS NOT ? LIMIT 1`
 		)
-		.get(key) as Film | undefined;
+		.get(key, exceptId) as Film | undefined;
 	if (byTitle) throw duplicate(db, byTitle);
 }
 

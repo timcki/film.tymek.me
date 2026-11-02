@@ -62,7 +62,16 @@ export const load: PageServerLoad = async ({ locals }) => {
 			};
 		}),
 		used: picksUsed(db, week, person.id),
-		turnout: specialTurnout(db, week)
+		turnout: specialTurnout(db, week),
+		// the viewer's own films waiting on the list, which a pick can be put up from
+		ownList: (
+			db
+				.prepare(
+					`SELECT title, tmdb_id FROM film
+					 WHERE added_by = ? AND status = 'active' AND archival = 0 AND special IS NULL`
+				)
+				.all(person.id) as { title: string; tmdb_id: number | null }[]
+		).map((film) => ({ title: film.title, tmdbId: film.tmdb_id }))
 	};
 };
 
@@ -89,7 +98,7 @@ export const actions: Actions = {
 				posterUrl: (form.get('poster') as string) || null,
 				overview: (form.get('overview') as string) || null,
 				note: (form.get('note') as string) || null
-			}, facts);
+			}, facts, form.get('fromList') === '1');
 			return { nominated: title };
 		} catch (error) {
 			return ruleFail(error);

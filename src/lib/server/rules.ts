@@ -165,22 +165,4 @@ export function orderFilms<T extends Orderable>(films: T[]): T[] {
 	return [...films].sort(compareFilms);
 }
 
-const LEADING_ARTICLE = /^(the|a|an|le|la|el)\s+/;
-
-/**
- * §4.1: lowercased, NFKD-normalised, diacritics stripped, leading article removed,
- * all non-alphanumerics removed. `Sátántangó` -> `satantango`, `The Thing` -> `thing`.
- */
-export function titleKey(title: string): string {
-	const stripped = title
-		.normalize('NFKD')
-		.replace(/[̀-ͯ]/g, '')
-		// NFKD leaves stroked letters (ł, ø, đ) intact; map the common ones by hand
-		.replace(/ł/g, 'l')
-		.replace(/Ł/g, 'L')
-		.replace(/ø/gi, 'o')
-		.replace(/đ/gi, 'd')
-		.toLowerCase()
-		.trim();
-	return stripped.replace(LEADING_ARTICLE, '').replace(/[^a-z0-9]/g, '');
-}
+export { titleKey } from '../titles.js';

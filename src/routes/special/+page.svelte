@@ -20,6 +20,7 @@
 	import { portal } from '$lib/portal';
 	import { fitViewport } from '$lib/fit-viewport';
 	import { knownBreach, rulesOf } from '$lib/custom-weeks';
+	import { sameFilm } from '$lib/titles';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -419,6 +420,7 @@
 	{submit}
 	rules={weekRules.map((rule) => T.weekRule(rule))}
 	breaks={(result) => !!knownBreach(data.special.custom, result)}
+	warn={(result) => (data.ownList.some((film) => sameFilm(film, result)) ? T.spFromList : null)}
 	typed={!weekRules.length}
 />
 

@@ -239,7 +239,13 @@ was stored as `'halloween'`; it runs by the same rules as `'approval'`.
 
 - **Its own picks.** Each person puts up `picksPerPerson` films (one for Halloween),
   marked `film.special`, outside the list's one-nomination-a-round slot. The usual
-  duplicate rules (§4.1) apply against everything, the list included.
+  duplicate rules (§4.1) apply against everything, the list included, with one
+  exception: a person may put up their own film from the list. The pick is a copy that
+  remembers it (`film.from_list`); the list film is left alone while the night is on. If
+  the pick wins, it is the night's film and the list film is dropped, what was spent on
+  it staying spent. If it loses, it goes with the other picks and the list is as it was.
+  The pick modal says so before it goes up, and the server refuses it unless that was
+  said (`from_list_unconfirmed`).
 - **Hidden approval voting.** Each pick can be ticked ("I want to see it") by anyone, as
   many as they like, their own included, and unticked until the round closes. Ticks live
   in `approval`, never in `ballot`. Nobody sees the counts, only who has voted, so there is

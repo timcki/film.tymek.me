@@ -84,6 +84,8 @@ export type Film = {
 	archival: number;
 	/** §3.6: the special round this film is a pick for; null for the list's own films */
 	special: string | null;
+	/** §3.6: the nominator's list film a pick was put up from, which goes if the pick wins */
+	from_list: number | null;
 	/** where we watched it when it was not a film night; null for every film night */
 	outing: Outing | null;
 	/** when that outing was; null for a film night, whose evening is its round's night */

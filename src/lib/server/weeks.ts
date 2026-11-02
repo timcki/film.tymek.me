@@ -193,6 +193,11 @@ export function finish(
 	db.prepare(
 		`UPDATE film SET status = 'watched', watched_week = ?, final_score = ? WHERE id = ?`
 	).run(week.number, winner.score, winner.id);
+	// §3.6: a pick brought over from its nominator's list film has now been
+	// watched, so the list film goes; what was spent on it stays spent
+	if (winner.from_list) {
+		db.prepare(`UPDATE film SET status = 'dropped' WHERE id = ? AND status = 'active'`).run(winner.from_list);
+	}
 	db.prepare(`UPDATE week SET status = 'closed', winner_film_id = ?, resolved_at = ? WHERE number = ?`).run(
 		winner.id,
 		iso(now),
