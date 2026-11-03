@@ -87,8 +87,12 @@ describe('what every other figure is counted out of', () => {
 		castBallot(db, 1, 'ala', a, 2);
 		castBallot(db, 1, 'bartek', b, 1);
 		watch(db, a, 1);
+		// a second night that round, written down afterwards: a night, but no room
+		const c = addFilm(db, 'C', 'ala', 1);
+		watch(db, c, 1);
+		db.prepare('UPDATE film SET watched_at = ? WHERE id = ?').run('2026-08-02T18:00:00.000Z', c);
 
-		expect(counts(db, ALL)).toEqual({ nights: 1, rounds: 1, roster: 6, ballots: 2 });
+		expect(counts(db, ALL)).toEqual({ nights: 2, rooms: 1, rounds: 1, roster: 6, ballots: 2 });
 	});
 });
 
@@ -110,6 +114,14 @@ describe('the rounds, one column each', () => {
 	it('leaves a round nobody watched anything in without a film', () => {
 		const { db } = freshDb();
 		db.prepare(`UPDATE week SET status = 'closed' WHERE number = 1`).run();
+		expect(roundRows(db, ALL)[0].winnerTitle).toBeNull();
+	});
+
+	it('does not name a night written down afterwards as the round’s film', () => {
+		const { db } = freshDb();
+		const a = addFilm(db, 'A', 'ala', 1);
+		watch(db, a, 1);
+		db.prepare('UPDATE film SET watched_at = ? WHERE id = ?').run('2026-08-02T18:00:00.000Z', a);
 		expect(roundRows(db, ALL)[0].winnerTitle).toBeNull();
 	});
 

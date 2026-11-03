@@ -6,13 +6,12 @@ import {
 	allNights,
 	deleteNight,
 	moveNight,
-	nightById,
-	nextNight
+	nightById
 } from '$lib/server/schedule';
 import { currentWeek, fallbackDeadline, syncOpenWeek } from '$lib/server/weeks';
 import { ruleFail } from '$lib/server/respond';
 import { RuleError } from '$lib/server/types';
-import { fromLocalInput, iso } from '$lib/server/time';
+import { fromLocalInput, iso, nextDeadline } from '$lib/server/time';
 import { toLocalInput } from '$lib/datetime';
 import { activeRules } from '$lib/server/config';
 import {
@@ -74,7 +73,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			? iso(fallbackDeadline(db, week.number, new Date(week.opens_at)))
 			: null,
 		// the picker opens on the next Thursday at 20:00, the old default
-		suggested: toLocalInput(nextNight(db, new Date()))
+		suggested: toLocalInput(nextDeadline(new Date()))
 	};
 };
 

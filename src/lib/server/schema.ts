@@ -271,8 +271,8 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	// round's own. Calling the night off takes it out again, so the list's round
 	// runs on to the night it had; a night anybody planned stays where it is
 	['night', 'extra', 'INTEGER NOT NULL DEFAULT 0'],
-	// a film watched together somewhere other than a film night: 'cinema',
-	// 'trip' or 'extra' (a get-together with no vote). An evening like any other in what we have watched, and nowhere in
+	// a film watched together somewhere other than a film night: 'cinema' or
+	// 'trip'. An evening like any other in what we have watched, and nowhere in
 	// what measures the game: no XP, no fairness table, no round's winner
 	['film', 'outing', 'TEXT'],
 	// when an evening written down afterwards was, an outing or a film night, which

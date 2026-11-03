@@ -105,10 +105,15 @@ export function windowFor(db: DB, era: Era): Window {
 
 export type Counts = {
 	/**
-	 * film nights inside the window: what turning up is counted out of. An outing
-	 * has no room code to scan, so counting it would mark everybody absent from it
+	 * film nights inside the window, written-down ones included: what whose films
+	 * we watch is counted out of. An outing was no film night, so it is not here
 	 */
 	nights: number;
+	/**
+	 * the rounds' own nights inside the window: what turning up is counted out of.
+	 * A night written down afterwards had no room code to scan, nor an outing
+	 */
+	rooms: number;
 	/** rounds in the window: what voting is counted out of */
 	rounds: number;
 	roster: number;
@@ -124,6 +129,13 @@ export function counts(db: DB, window: Window): Counts {
 			db,
 			`SELECT COUNT(*) AS n FROM film
 			 WHERE status = 'watched' AND outing IS NULL AND watched_week BETWEEN ? AND ?`,
+			from,
+			to
+		),
+		rooms: scalar(
+			db,
+			`SELECT COUNT(*) AS n FROM film
+			 WHERE status = 'watched' AND outing IS NULL AND watched_at IS NULL AND watched_week BETWEEN ? AND ?`,
 			from,
 			to
 		),
@@ -150,7 +162,8 @@ export function roundRows(db: DB, window: Window): RoundRow[] {
 			           WHERE v.week_number = w.number) AS voters,
 			        (SELECT COUNT(*) FROM attendance a WHERE a.week_number = w.number) AS attended,
 			        (SELECT f.title FROM film f
-			           WHERE f.status = 'watched' AND f.outing IS NULL AND f.watched_week = w.number
+			           WHERE f.status = 'watched' AND f.outing IS NULL AND f.watched_at IS NULL
+			             AND f.watched_week = w.number
 			           ORDER BY f.archival, f.id LIMIT 1) AS winnerTitle
 			 FROM week w
 			 WHERE w.number BETWEEN ? AND ?

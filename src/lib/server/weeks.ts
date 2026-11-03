@@ -59,18 +59,18 @@ export function requireSpecialWeek(db: DB, now: Date = new Date()): Week & { spe
 
 /**
  * The Thursday 20:00 a round closes on when the calendar has nothing for it.
- * When the round before it was the list's and ended in the same Monday to
- * Sunday week as that Thursday, it is the next week's: a night on Wednesday is
- * not followed by a count on the Thursday after it, and a round decided at
- * 19:50 on the night itself is not followed by one at 20:00. A special round
- * left the list asleep, so the list keeps the night it had.
+ * When the list's last round ended in the same Monday to Sunday week as that
+ * Thursday, it is the next week's: a night on Wednesday is not followed by a
+ * count on the Thursday after it, and a round decided at 19:50 on the night
+ * itself is not followed by one at 20:00. A special round in between left the
+ * list asleep, so it is looked past rather than at.
  */
 export function fallbackDeadline(db: DB, number: number, opensAt: Date): Date {
 	const thursday = nextDeadline(opensAt);
-	const before = weekByNumber(db, number - 1);
-	return before && !before.special && sameWeek(new Date(before.closes_at), thursday)
-		? nextDeadline(thursday)
-		: thursday;
+	const list = db
+		.prepare('SELECT closes_at FROM week WHERE number < ? AND special IS NULL ORDER BY number DESC LIMIT 1')
+		.get(number) as { closes_at: string } | undefined;
+	return list && sameWeek(new Date(list.closes_at), thursday) ? nextDeadline(thursday) : thursday;
 }
 
 /**

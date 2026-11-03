@@ -4,8 +4,7 @@ import {
 	allNights,
 	deleteNight,
 	markNightUsed,
-	moveNight,
-	nextNight
+	moveNight
 } from '../src/lib/server/schedule.js';
 import { closeWeek, currentWeek, openWeek, syncOpenWeek } from '../src/lib/server/weeks.js';
 import { closeRunoff, openRunoff } from '../src/lib/server/runoffs.js';
@@ -36,7 +35,7 @@ describe('the calendar', () => {
 		addNight(db, at('2026-08-20T18:00:00.000Z'), null);
 		addNight(db, at('2026-08-05T18:00:00.000Z'), null);
 
-		expect(nextNight(db, MONDAY).toISOString()).toBe('2026-08-05T18:00:00.000Z');
+		expect(syncOpenWeek(db)!.closes_at).toBe('2026-08-05T18:00:00.000Z');
 	});
 
 	it('runs the round on to the date after when a night is deleted', () => {

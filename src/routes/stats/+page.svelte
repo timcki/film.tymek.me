@@ -528,7 +528,7 @@
 				<Scatter
 					{dots}
 					xMax={counts.rounds}
-					yMax={counts.nights}
+					yMax={counts.rooms}
 					xTitle={T.engageX}
 					yTitle={T.engageY}
 					{lit}

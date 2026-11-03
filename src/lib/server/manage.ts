@@ -244,7 +244,7 @@ function backersFor(db: DB, filmIds: number[]): Map<number, Face[]> {
 
 export type WatchedEvening = RoundFilm & {
 	evening: number;
-	/** when the evening was: an outing's own date, or its round's night */
+	/** when the evening was: its own date if it was written down, else its round's night */
 	at: string;
 	/**
 	 * Decided by a special round, an extra night included, which is told apart
@@ -458,7 +458,7 @@ export type RecordedFilm = {
 	overview: string | null;
 	/** who suggested it */
 	personId: string;
-	/** when we watched it; for a film night, any moment of the round it closed is enough */
+	/** when we watched it, which is the date the evening keeps */
 	at: Date;
 	/** where we went instead, or null for a film night nobody wrote down at the time */
 	outing: Outing | null;

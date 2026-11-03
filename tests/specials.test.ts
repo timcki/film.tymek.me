@@ -335,6 +335,24 @@ describe('a special round', () => {
 		expect(currentWeek(db)!.closes_at).toBe(thursday);
 	});
 
+	it('looks past a special round to the list round before it for the default Thursday', () => {
+		const { db, rules } = freshDb('weekly');
+		const thursday = currentWeek(db)!.closes_at;
+		// the list round is decided on Monday, then an extra night on Tuesday
+		const film = addFilm(db, 'Paddington', 'ala', 1);
+		setPoints(db, rules, 'bartek', film, 2);
+		closeWeek(db, rules, new Date('2026-08-03T12:00:00Z'));
+		closeRunoff(db, rules, openRunoff(db)!.id, new Date('2026-08-03T12:00:00Z'));
+		const tuesday = new Date('2026-08-04T18:00:00Z');
+		startExtraNight(db, rules, 'approval', null, tuesday);
+		setApproval(db, rules, 'darek', nominateSpecial(db, rules, 'darek', { title: 'The Thing' }), true);
+		closeWeek(db, rules, new Date(tuesday.getTime() + 1000));
+		closeRunoff(db, rules, openRunoff(db)!.id, new Date(tuesday.getTime() + 1000));
+
+		expect(currentWeek(db)!.special).toBeNull();
+		expect(Date.parse(currentWeek(db)!.closes_at)).toBe(Date.parse(thursday) + 7 * 86_400_000);
+	});
+
 	it('closes a round on the nearest date, even one before the night the round before was due', () => {
 		const { db, rules } = freshDb('weekly');
 		const thursday = currentWeek(db)!.closes_at;

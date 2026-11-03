@@ -17,7 +17,7 @@ export type Person = {
 	changelog_seen: number;
 };
 
-export type NightStatus = 'planned' | 'skipped' | 'used';
+export type NightStatus = 'planned' | 'used';
 
 /** one film night: the instant voting closes and the room picks */
 export type Night = {
@@ -90,7 +90,7 @@ export type Film = {
 	from_list: number | null;
 	/** where we watched it when it was not a film night; null for every film night */
 	outing: Outing | null;
-	/** when that outing was; null for a film night, whose evening is its round's night */
+	/** when an evening written down afterwards was; null for a film a round decided, whose evening is its round's night */
 	watched_at: string | null;
 };
 

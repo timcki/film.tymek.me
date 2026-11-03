@@ -88,20 +88,6 @@ describe('writing down a film we watched', () => {
 		expect(roundEvenings(db)).toEqual({ 1: 1, 2: 3, 3: 4, 4: 4 });
 	});
 
-	it('writes down a get-together with no vote as an evening of its own', () => {
-		const { db } = fourRounds();
-		const first = recordWatched(db, film({ title: 'Solaris', tmdbId: 593, at: new Date(NIGHTS[0]) }));
-		const second = recordWatched(db, film({ at: new Date(NIGHTS[1]) }));
-		const extra = recordWatched(
-			db,
-			film({ title: 'Nostalghia', tmdbId: 1399, at: new Date('2026-07-19T20:00:00Z'), outing: 'extra' })
-		);
-
-		const evenings = filmEvenings(db);
-		expect([evenings.get(first), evenings.get(extra), evenings.get(second)]).toEqual([1, 2, 3]);
-		expect(filmById(db, extra)).toMatchObject({ outing: 'extra', archival: 1, final_score: null });
-	});
-
 	it('takes a film night from before the first round, on its own date', () => {
 		const { db } = fourRounds();
 		const before = new Date('2026-06-25T18:00:00Z');

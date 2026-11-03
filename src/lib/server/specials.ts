@@ -114,9 +114,8 @@ export function stopSpecial(db: DB, rules: RuleSet, now: Date = new Date()): num
 			db.prepare('DELETE FROM film WHERE id = ?').run(id);
 		}
 		db.prepare('UPDATE week SET special = NULL, custom = NULL WHERE number = ?').run(week.number);
-		db.prepare(`DELETE FROM night WHERE extra = 1 AND status = 'planned' AND at = ?`).run(
-			week.closes_at
-		);
+		// only one round is special at a time, so every extra date still to come is its own
+		db.prepare(`DELETE FROM night WHERE extra = 1 AND status = 'planned'`).run();
 		syncOpenWeek(db);
 		rescoreAll(db, rules, week.number);
 		rexpAll(db);

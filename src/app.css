@@ -4350,11 +4350,6 @@ button.wcard:focus-visible img {
 	background: color-mix(in srgb, var(--warn) 12%, transparent);
 	border-color: color-mix(in srgb, var(--warn) 30%, transparent);
 }
-.badge.off {
-	color: var(--dimmer);
-	background: none;
-	border-color: var(--line2);
-}
 .nextcard {
 	display: flex;
 	align-items: baseline;
@@ -4465,7 +4460,6 @@ button.wcard:focus-visible img {
 	border-color: var(--accent);
 	box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
 }
-.nrow.off,
 .prow.off,
 .frow.off,
 .nrow.done {
