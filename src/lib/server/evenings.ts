@@ -7,9 +7,10 @@ import type { DB } from './db.js';
  * gaps all through it. An evening is a night we watched something, counted from
  * the first, and a round is called after the evening it ends in.
  *
- * A film night happened on its round's night. An outing (src/lib/outings.ts)
- * happened when it was written down as happening, which puts a Saturday at the
- * cinema between the Thursdays either side of it. Read off film.watched_week
+ * A film a round decided happened on its round's night. Anything written down
+ * afterwards, a film night or an outing (src/lib/outings.ts), happened when it
+ * was written down as happening, which puts a Saturday at the cinema, or a
+ * second night in one week, between the nights either side of it. Read off film.watched_week
  * like the stats are, never off week.winner_film_id.
  */
 const EVENING_AT = `COALESCE(f.watched_at, fw.closes_at)`;

@@ -610,7 +610,7 @@ const pl: Dict = {
 	},
 
 	evening: (n) => `Wieczorek ${n}`,
-	outing: (where) => ({ cinema: 'Kino', trip: 'Wyjazd', extra: 'Wieczór specjalny' })[where],
+	outing: (where) => ({ cinema: 'Kino', trip: 'Wyjazd', extra: 'Wieczór dodatkowy' })[where],
 	nightSpecial: 'Wieczór specjalny',
 	// tiered: only the unit that matters now, down to seconds in the last minute
 	timeLeft: (d, h, m, s) => {
@@ -1247,7 +1247,7 @@ const en: Dict = {
 	},
 
 	evening: (n) => `Night ${n}`,
-	outing: (where) => ({ cinema: 'Cinema', trip: 'Trip', extra: 'Special night' })[where],
+	outing: (where) => ({ cinema: 'Cinema', trip: 'Trip', extra: 'Extra night' })[where],
 	nightSpecial: 'Special night',
 	// tiered: only the unit that matters now, down to seconds in the last minute
 	timeLeft: (d, h, m, s) =>

@@ -151,7 +151,7 @@ export function roundRows(db: DB, window: Window): RoundRow[] {
 			        (SELECT COUNT(*) FROM attendance a WHERE a.week_number = w.number) AS attended,
 			        (SELECT f.title FROM film f
 			           WHERE f.status = 'watched' AND f.outing IS NULL AND f.watched_week = w.number
-			           ORDER BY f.id LIMIT 1) AS winnerTitle
+			           ORDER BY f.archival, f.id LIMIT 1) AS winnerTitle
 			 FROM week w
 			 WHERE w.number BETWEEN ? AND ?
 			 ORDER BY w.number`

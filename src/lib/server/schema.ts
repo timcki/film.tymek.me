@@ -275,8 +275,9 @@ export const ADDED_COLUMNS: [table: string, column: string, decl: string][] = [
 	// 'trip' or 'extra' (a get-together with no vote). An evening like any other in what we have watched, and nowhere in
 	// what measures the game: no XP, no fairness table, no round's winner
 	['film', 'outing', 'TEXT'],
-	// when such an outing was, which is what puts it among the evenings. NULL for
-	// a film night, whose evening is its round's night
+	// when an evening written down afterwards was, an outing or a film night, which
+	// is what puts it among the evenings. NULL for a film a round decided, whose
+	// evening is its round's night
 	['film', 'watched_at', 'TEXT']
 ];
 

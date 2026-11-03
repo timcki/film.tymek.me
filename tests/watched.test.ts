@@ -63,7 +63,7 @@ describe('writing down a film we watched', () => {
 			added_week: 2,
 			watched_week: 2,
 			outing: null,
-			watched_at: null,
+			watched_at: '2026-07-22T17:00:00.000Z',
 			final_score: null
 		});
 		expect(db.prepare('SELECT winner_film_id FROM week WHERE number = 2').get()).toEqual({
@@ -102,6 +102,16 @@ describe('writing down a film we watched', () => {
 		expect(filmById(db, extra)).toMatchObject({ outing: 'extra', archival: 1, final_score: null });
 	});
 
+	it('takes a film night from before the first round, on its own date', () => {
+		const { db } = fourRounds();
+		const before = new Date('2026-06-25T18:00:00Z');
+		const id = recordWatched(db, film({ at: before }));
+		expect(filmById(db, id)).toMatchObject({ outing: null, watched_week: 1, watched_at: before.toISOString() });
+		const first = recordWatched(db, film({ title: 'Solaris', tmdbId: 593, at: new Date(NIGHTS[0]) }));
+		const evenings = filmEvenings(db);
+		expect([evenings.get(id), evenings.get(first)]).toEqual([1, 2]);
+	});
+
 	it('takes an outing in the round still running, which moves its night along', () => {
 		const { db } = fourRounds();
 		expect(roundEvenings(db)[4]).toBe(1);
@@ -109,28 +119,30 @@ describe('writing down a film we watched', () => {
 		expect(roundEvenings(db)[4]).toBe(2);
 	});
 
-	it('refuses what has not happened yet', () => {
+	it('refuses what has not happened yet, and takes a night in the round still running', () => {
 		const { db } = fourRounds();
 		expect(() => recordWatched(db, film({ at: new Date('2026-08-04T19:00:00Z'), outing: 'cinema' }))).toThrowError(
 			expect.objectContaining({ code: 'watched_future' })
 		);
-		// a film night in a round whose night is still to come
-		expect(() => recordWatched(db, film({ at: new Date('2026-08-01T19:00:00Z') }))).toThrowError(
-			expect.objectContaining({ code: 'night_not_yet' })
-		);
+		const id = recordWatched(db, film({ at: new Date('2026-08-01T19:00:00Z') }));
+		expect(filmById(db, id)).toMatchObject({ outing: null, watched_week: 4 });
 	});
 
-	it('refuses a second film night in one round, but not an outing', () => {
+	it('takes a second film night in one round, each on its own date', () => {
 		const { db } = fourRounds();
 		recordWatched(db, film());
 
-		expect(() =>
-			recordWatched(db, film({ title: 'Mirror', tmdbId: 1396, at: new Date('2026-07-21T18:00:00Z') }))
-		).toThrowError(expect.objectContaining({ code: 'night_taken', params: { title: 'Stalker' } }));
+		const second = recordWatched(
+			db,
+			film({ title: 'Mirror', tmdbId: 1396, at: new Date('2026-07-21T18:00:00Z') })
+		);
+		expect(filmById(db, second)).toMatchObject({ outing: null, watched_week: 2 });
+		// the 21st came before the 23rd, so it is the earlier of the two
+		expect(filmEvenings(db).get(second)).toBe(1);
 		expect(
 			recordWatched(
 				db,
-				film({ title: 'Mirror', tmdbId: 1396, at: new Date('2026-07-21T18:00:00Z'), outing: 'cinema' })
+				film({ title: 'Ivan', tmdbId: 1400, at: new Date('2026-07-21T18:00:00Z'), outing: 'cinema' })
 			)
 		).toBeGreaterThan(0);
 	});
@@ -201,20 +213,19 @@ describe('putting a written-down evening right', () => {
 		// its own night is no clash with itself
 		moveWatched(db, id, new Date(NIGHTS[2]), null);
 		moveWatched(db, id, new Date(NIGHTS[2]), null);
-		expect(filmById(db, id)).toMatchObject({ watched_week: 3, outing: null, watched_at: null });
+		expect(filmById(db, id)).toMatchObject({ watched_week: 3, outing: null, watched_at: NIGHTS[2] });
 		expect(personById(db, 'ala')!.xp).toBe(16);
 	});
 
-	it('will not put it on a night another film already has', () => {
+	it('moves it onto a round that already has a night, as a second one', () => {
 		const { db } = fourRounds();
 		recordWatched(db, film());
 		const mirror = recordWatched(
 			db,
 			film({ title: 'Mirror', tmdbId: 1396, at: new Date('2026-07-19T15:00:00Z'), outing: 'cinema' })
 		);
-		expect(() => moveWatched(db, mirror, new Date(NIGHTS[1]), null)).toThrowError(
-			expect.objectContaining({ code: 'night_taken', params: { title: 'Stalker' } })
-		);
+		moveWatched(db, mirror, new Date(NIGHTS[1]), null);
+		expect(filmById(db, mirror)).toMatchObject({ outing: null, watched_week: 2, watched_at: NIGHTS[1] });
 	});
 
 	it('leaves a film a round decided on that round’s night', () => {
