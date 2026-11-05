@@ -240,6 +240,37 @@ export type Dict = {
 	tmdbLink: string;
 	lensPeople: string;
 	lensFilms: string;
+	lensVoting: string;
+	histIntro: string;
+	histOpen: string;
+	histNoFilm: string;
+	histVoted: (n: number, of: number) => string;
+	histFull: (n: number) => string;
+	histPoints: (points: number, films: number) => string;
+	histOnWinner: (points: number, share: number) => string;
+	histRoom: (n: number) => string;
+	histSharesH: string;
+	histVotedShare: string;
+	histFullShare: string;
+	histWinnerShare: string;
+	habH: string;
+	habIntro: string;
+	habChartH: string;
+	habOneLine: string;
+	habAgainLine: string;
+	habOwnLine: string;
+	habRun: (title: string, rounds: number) => string;
+	habHint: string;
+	habCardOne: string;
+	habCardAgain: string;
+	habCardOwn: string;
+	habCardLeader: string;
+	habCardHalf: string;
+	habCardRun: string;
+	habPeopleH: string;
+	habX: string;
+	habY: string;
+	habPerson: (rounds: number, of: number, films: string, again: number, own: number) => string;
 	eraApp: string;
 	eraAll: string;
 	eraNoteApp: (from: number, to: number) => string;
@@ -697,6 +728,39 @@ const pl: Dict = {
 	tmdbLink: 'Zobacz na TMDB',
 	lensPeople: 'Ludzie',
 	lensFilms: 'Filmy',
+	lensVoting: 'Głosowanie',
+	histIntro:
+		'Każda runda listy od pierwszego głosu. Wieczór specjalny nie ma tu osobnego wiersza: punkty wydane przed nim liczą się do rundy, która przyszła po nim.',
+	histOpen: 'trwa',
+	histNoFilm: 'bez filmu',
+	histVoted: (n, of) => `głosowało ${n} z ${of}`,
+	histFull: (n) => `wszystko wydało: ${n}`,
+	histPoints: (points, films) => `${points} pkt na ${films} ${pl3(films, 'film', 'filmy', 'filmów')}`,
+	histOnWinner: (points, share) => `na zwycięzcę ${points} (${share}%)`,
+	histRoom: (n) => `w sali: ${n}`,
+	histSharesH: 'Jak wydawano punkty',
+	histVotedShare: 'głosowali (z wszystkich)',
+	histFullShare: 'wydali wszystko (z głosujących)',
+	histWinnerShare: 'punkty na zwycięzcę (ze wszystkich)',
+	habH: 'Jak ludzie głosują',
+	habIntro: 'Od pierwszego głosu do dziś.',
+	habChartH: 'Jak dzielono punkty',
+	habOneLine: 'wszystko na jeden film (z głosujących)',
+	habAgainLine: 'na film popierany już wcześniej (z punktów)',
+	habOwnLine: 'na własne zgłoszenie (z punktów)',
+	habRun: (title, rounds) => `najdłużej: ${title}, ${rounds} ${pl3(rounds, 'runda', 'rundy', 'rund')} z rzędu`,
+	habHint: 'Najedź albo naciśnij rundę lub twarz, żeby zobaczyć szczegóły.',
+	habCardOne: 'wszystko na jeden film',
+	habCardAgain: 'na film popierany wcześniej',
+	habCardOwn: 'na własne zgłoszenie',
+	habCardLeader: 'wygrał lider punktów',
+	habCardHalf: 'daje połowę punktów',
+	habCardRun: 'z rzędu na jeden film',
+	habPeopleH: 'Każdy z osobna',
+	habX: 'filmów na rundę',
+	habY: '% na popierane wcześniej',
+	habPerson: (rounds, of, films, again, own) =>
+		`głosy w ${rounds} z ${of} rund · średnio ${films} filmu na rundę · ${again}% na popierane wcześniej · ${own}% na własne`,
 	eraApp: 'Od startu apki',
 	eraAll: 'Cała historia',
 	eraNoteApp: (from, to) =>
@@ -1311,6 +1375,39 @@ const en: Dict = {
 	tmdbLink: 'See it on TMDB',
 	lensPeople: 'People',
 	lensFilms: 'Films',
+	lensVoting: 'Voting',
+	histIntro:
+		'Every list round since the first vote. A special night has no row of its own: points spent before it count towards the round that came after it.',
+	histOpen: 'still open',
+	histNoFilm: 'no film',
+	histVoted: (n, of) => `${n} of ${of} voted`,
+	histFull: (n) => `${n} spent it all`,
+	histPoints: (points, films) => `${points} pts on ${films} ${films === 1 ? 'film' : 'films'}`,
+	histOnWinner: (points, share) => `${points} on the winner (${share}%)`,
+	histRoom: (n) => `${n} in the room`,
+	histSharesH: 'How the points went',
+	histVotedShare: 'voted (of everyone)',
+	histFullShare: 'spent it all (of those who voted)',
+	histWinnerShare: 'points on the winner (of all points)',
+	habH: 'How people vote',
+	habIntro: 'From the first vote to today.',
+	habChartH: 'How the points were split',
+	habOneLine: 'all on one film (of voters)',
+	habAgainLine: 'to a film backed before (of points)',
+	habOwnLine: 'to their own nomination (of points)',
+	habRun: (title, rounds) => `longest: ${title}, ${rounds} rounds in a row`,
+	habHint: 'Point at or press a round or a face for the details.',
+	habCardOne: 'all on one film',
+	habCardAgain: 'to a film backed before',
+	habCardOwn: 'to their own nomination',
+	habCardLeader: 'points leader won',
+	habCardHalf: 'give half the points',
+	habCardRun: 'rounds in a row, one film',
+	habPeopleH: 'Each person',
+	habX: 'films a round',
+	habY: '% to films backed before',
+	habPerson: (rounds, of, films, again, own) =>
+		`voted in ${rounds} of ${of} rounds · ${films} films a round · ${again}% to films backed before · ${own}% own`,
 	eraApp: 'Since the app',
 	eraAll: 'All time',
 	eraNoteApp: (from, to) =>

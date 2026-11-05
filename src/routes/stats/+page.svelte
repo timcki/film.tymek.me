@@ -10,6 +10,8 @@
 	import Strip from '$lib/components/chart/Strip.svelte';
 	import Trend from '$lib/components/chart/Trend.svelte';
 	import WorldMap from '$lib/components/chart/WorldMap.svelte';
+	import Lines from '$lib/components/chart/Lines.svelte';
+	import { TIMEZONE, formatDay } from '$lib/datetime';
 	import { dictFor, fmtScore, isVotes } from '$lib/i18n';
 	import { shortNames } from '$lib/names';
 	import type { PageData } from './$types';
@@ -354,11 +356,134 @@
 	const runtimeBars = $derived<Bar[]>(
 		runtimeBuckets.map((bucket) => ({ key: bucket.key, label: bucket.label, value: bucket.films.length }))
 	);
+
+	/* ---------------------------------------------------------- the voting -- */
+
+	type Voting = NonNullable<PageData['voting']>;
+	const NO_VOTING: Voting = {
+		rounds: [],
+		habits: { rounds: [], people: [], leaderWon: 0, decided: 0, halfFrom: 0, voters: 0 }
+	};
+	const voting = $derived(data.voting ?? NO_VOTING);
+	const share = (part: number, whole: number) => (whole ? Math.round((part / whole) * 100) : 0);
+	const percent = (part: number, whole: number) => (whole ? (part / whole) * 100 : null);
+	const dayOf = $derived(
+		new Intl.DateTimeFormat(data.lang, { day: 'numeric', month: 'numeric', timeZone: TIMEZONE })
+	);
+	const decimal = $derived(new Intl.NumberFormat(data.lang, { maximumFractionDigits: 1 }));
+
+	const listRounds = $derived([...voting.rounds].reverse());
+	const roundLabels = $derived(listRounds.map((round) => dayOf.format(new Date(round.closesAt))));
+	const roundFacts = (round: Voting['rounds'][number]) =>
+		[
+			T.histVoted(round.voters, round.roster),
+			round.full !== null && T.histFull(round.full),
+			T.histPoints(round.points, round.films),
+			round.winnerTitle && T.histOnWinner(round.onWinner, share(round.onWinner, round.points)),
+			!round.open && T.histRoom(round.room)
+		]
+			.filter(Boolean)
+			.join(' · ');
+	const shareLines = $derived([
+		{
+			key: 'voted',
+			label: T.histVotedShare,
+			colour: 'var(--accent)',
+			values: listRounds.map((round) => percent(round.voters, round.roster))
+		},
+		{
+			key: 'full',
+			label: T.histFullShare,
+			colour: 'var(--tier5)',
+			values: listRounds.map((round) => (round.full === null ? null : percent(round.full, round.voters)))
+		},
+		{
+			key: 'winner',
+			label: T.histWinnerShare,
+			colour: 'var(--warn)',
+			values: listRounds.map((round) => (round.winnerTitle ? percent(round.onWinner, round.points) : null))
+		}
+	]);
+
+	const habits = $derived(voting.habits);
+	const habitSum = (of: (round: Voting['habits']['rounds'][number]) => number) =>
+		habits.rounds.reduce((all, round) => all + of(round), 0);
+	const habitCards = $derived.by((): StatCard[] => {
+		const voters = habitSum((r) => r.voters);
+		const points = habitSum((r) => r.points);
+		if (!voters) return [];
+		const longest = habits.people
+			.filter((p) => p.streak)
+			.sort((a, b) => b.streak!.rounds - a.streak!.rounds)[0];
+		return [
+			{ key: 'one', value: `${share(habitSum((r) => r.oneFilm), voters)}%`, label: T.habCardOne },
+			{ key: 'again', value: `${share(habitSum((r) => r.again), points)}%`, label: T.habCardAgain },
+			{ key: 'own', value: `${share(habitSum((r) => r.own), points)}%`, label: T.habCardOwn },
+			...(habits.decided
+				? [{ key: 'leader', value: `${habits.leaderWon}/${habits.decided}`, label: T.habCardLeader }]
+				: []),
+			{ key: 'half', value: `${habits.halfFrom}/${habits.voters}`, label: T.habCardHalf },
+			...(longest
+				? [
+						{
+							key: 'run',
+							value: String(longest.streak!.rounds),
+							label: T.habCardRun,
+							film: {
+								title: `${longest.streak!.title} · ${longest.person.name}`,
+								posterUrl: longest.streak!.posterUrl
+							}
+						}
+					]
+				: [])
+		];
+	});
+	const habitLines = $derived([
+		{
+			key: 'one',
+			label: T.habOneLine,
+			colour: 'var(--accent)',
+			values: habits.rounds.map((r) => percent(r.oneFilm, r.voters))
+		},
+		{
+			key: 'again',
+			label: T.habAgainLine,
+			colour: 'var(--tier5)',
+			values: habits.rounds.map((r) => percent(r.again, r.points))
+		},
+		{
+			key: 'own',
+			label: T.habOwnLine,
+			colour: 'var(--burn0)',
+			values: habits.rounds.map((r) => percent(r.own, r.points))
+		}
+	]);
+
+	/**
+	 * Splitting along, coming back up: where each person sits, a face apiece.
+	 * Coming back takes rounds to come back from, so a newcomer would only sit at zero
+	 */
+	const habitDots = $derived(
+		habits.people
+			.filter((row) => row.rounds >= 3)
+			.map((row) => ({
+				key: row.person.id,
+				name: row.person.name,
+				colour: row.person.colour,
+				avatar: row.person.avatar,
+				xp: row.person.xp,
+				x: Math.round(row.films * 10) / 10,
+				y: share(row.again, row.points)
+			}))
+	);
+	const habitXMax = $derived(Math.max(1, Math.ceil(Math.max(0, ...habitDots.map((dot) => dot.x)))));
+	const habitOf = (key: string) => habits.people.find((row) => row.person.id === key)!;
 </script>
 
 <nav class="seg lenses">
 	<a href={href({ lens: 'people' })} class:on={data.lens === 'people'}>{T.lensPeople}</a>
 	<a href={href({ lens: 'films' })} class:on={data.lens === 'films'}>{T.lensFilms}</a>
+	<a href={href({ lens: 'voting' })} class:on={data.lens === 'voting'}>{T.lensVoting}</a>
 </nav>
 
 {#if data.lens === 'people'}
@@ -586,6 +711,61 @@
 			</section>
 		{/if}
 	</div>
+{:else if data.lens === 'voting'}
+	<p class="explain">{T.histIntro} {T.habHint}</p>
+	{#if listRounds.length > 1}
+		<div class="sboard">
+			<section class="spanel wide">
+				<div class="sec">{T.habH}</div>
+				<p class="explain">{T.habIntro}</p>
+				<StatCards cards={habitCards} />
+			</section>
+
+			<section class="spanel wide">
+				<div class="sec">{T.histSharesH}</div>
+				<Lines lines={shareLines} labels={roundLabels}>
+					{#snippet detail(i: number)}
+						<b>{formatDay(listRounds[i].closesAt, data.lang)} · {listRounds[i].open ? T.histOpen : (listRounds[i].winnerTitle ?? T.histNoFilm)}</b><br />
+						{roundFacts(listRounds[i])}
+					{/snippet}
+				</Lines>
+			</section>
+
+			<section class="spanel wide">
+				<div class="sec">{T.habChartH}</div>
+				<Lines lines={habitLines} labels={habits.rounds.map((r) => dayOf.format(new Date(r.closesAt)))}>
+					{#snippet detail(i: number)}
+						<b>{formatDay(habits.rounds[i].closesAt, data.lang)}</b><br />
+						{habitLines.map((line) => `${line.label} ${Math.round(line.values[i] ?? 0)}%`).join(' · ')}
+					{/snippet}
+				</Lines>
+			</section>
+
+			{#if habitDots.length}
+				<section class="spanel wide">
+					<div class="sec">{T.habPeopleH}</div>
+					<Scatter
+						dots={habitDots}
+						xMax={habitXMax}
+						yMax={100}
+						xTitle={T.habX}
+						yTitle={T.habY}
+						{lit}
+						onpick={pick}
+						onface={hover}
+					>
+						{#snippet detail(dot: Dot)}
+							{@const row = habitOf(dot.key)}
+							<b>{row.person.name}</b> ·
+							{T.habPerson(row.rounds, habits.rounds.length, decimal.format(row.films), share(row.again, row.points), share(row.own, row.points))}{#if row.streak}{' · '}{T.habRun(row.streak.title, row.streak.rounds)}{/if}
+						{/snippet}
+					</Scatter>
+				</section>
+			{/if}
+		</div>
+	{:else}
+		<p class="explain big">{T.statsEmpty}</p>
+	{/if}
 {:else}
 	<div class="sboard">
 		<section class="spanel wide">

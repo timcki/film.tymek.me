@@ -13,7 +13,9 @@ import {
 	eraOf,
 	lensOf,
 	openness,
+	participation,
 	rewatches,
+	votingHabits,
 	whoseNights,
 	roundRows,
 	filmFacts,
@@ -59,6 +61,11 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		screen: screenStats(db),
 		bridesmaids: bridesmaids(db),
 		comebacks: comebacks(db),
-		timelines: timelines(films)
+		timelines: timelines(films),
+		// ballots only exist since the app, so the voting view counts from there whatever the era says
+		voting:
+			lens === 'voting'
+				? { rounds: participation(db, windowFor(db, 'app')), habits: votingHabits(db, windowFor(db, 'app')) }
+				: null
 	};
 };

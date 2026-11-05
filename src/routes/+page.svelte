@@ -149,8 +149,10 @@
 				)
 			: T.warnDrops;
 	}
-	// at risk, and you could still put a point on it: the + says so
-	const rescuable = (film: Film) => film.atRisk && !film.held && !!data.week && canCast(film);
+	// goes when this round closes, said to everyone; and if you could still put
+	// a point on it, the + says so too
+	const endangered = (film: Film) => film.atRisk && !film.held && open;
+	const rescuable = (film: Film) => endangered(film) && canCast(film);
 
 	function stackFit(points: number[], room = FACE_ROOM): number {
 		let width = 0;
@@ -994,7 +996,7 @@
 					{#key film.myPoints}<b>{film.myPoints}</b>{/key}
 				</span>
 			{:else}
-				{#if rescuable(film)}
+				{#if endangered(film)}
 					<!-- about to go: no line of warning on the card (which would grow
 					     and shrink with every vote that saves it and every undo), but
 					     its poster fading and the + saying so, right where the answer is -->

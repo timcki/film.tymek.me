@@ -1190,12 +1190,12 @@ export function timelines(films: WatchedFilm[]): { year: TimePoint[]; runtime: T
 /* ------------------------------------------------------------------ lens -- */
 
 /**
- * Which of the two views is open. It lives in the query string rather than in
+ * Which of the three views is open. It lives in the query string rather than in
  * component state so the tabs work with no JavaScript and a view can be sent to
  * somebody exactly as it was read.
  */
-export type Lens = 'people' | 'films';
+export type Lens = 'people' | 'films' | 'voting';
 
 export function lensOf(value: string | undefined | null): Lens {
-	return value === 'films' ? 'films' : 'people';
+	return value === 'films' || value === 'voting' ? value : 'people';
 }
