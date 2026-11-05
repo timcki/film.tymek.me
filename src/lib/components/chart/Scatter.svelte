@@ -17,6 +17,7 @@
 </script>
 
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 
 	let {
@@ -27,7 +28,8 @@
 		yTitle,
 		lit = null,
 		onpick = null,
-		onface = null
+		onface = null,
+		detail = null
 	}: {
 		dots: Dot[];
 		xMax: number;
@@ -38,6 +40,8 @@
 		onpick?: ((key: string, el: EventTarget | null) => void) | null;
 		/** a mouse pointing at a face, which is worth a bigger picture */
 		onface?: ((key: string, el: EventTarget | null, on: boolean) => void) | null;
+		/** what the line under the plot says about a face, in place of its two counts */
+		detail?: Snippet<[Dot]> | null;
 	} = $props();
 
 	const SIZE = 22;
@@ -130,7 +134,9 @@
 	</div>
 	<div class="xtitle">{xTitle}</div>
 	<p class="readout" aria-live="polite">
-		{#if shown}
+		{#if shown && detail}
+			{@render detail(shown)}
+		{:else if shown}
 			<b>{shown.name}</b> · {xTitle}: {shown.x} / {xMax} · {yTitle}: {shown.y} / {yMax}
 		{:else}
 			&nbsp;

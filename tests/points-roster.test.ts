@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pointsRoster } from '../src/lib/server/manage.js';
-import { participation } from '../src/lib/server/stats.js';
+import { participation, votingHabits } from '../src/lib/server/stats.js';
 import { addFilm, castBallot, ensureWeek, freshDb } from './helpers.js';
 
 describe('who has spent their points', () => {
@@ -84,5 +84,31 @@ describe('how the rounds went', () => {
 		const { db } = history();
 		db.prepare(`UPDATE person SET created_at = '2027-01-01T00:00:00.000Z' WHERE id = 'filip'`).run();
 		expect(participation(db, { from: 1, to: 3 }).at(-1)?.roster).toBe(5);
+	});
+});
+
+describe('how people vote', () => {
+	it('counts going all in, coming back to a film, own films, runs and the points leader', () => {
+		const { db } = freshDb('weekly');
+		const a = addFilm(db, 'A', 'ala', 1);
+		const b = addFilm(db, 'B', 'bartek', 1);
+		castBallot(db, 1, 'ala', a, 3);
+		castBallot(db, 1, 'bartek', a, 1);
+		castBallot(db, 1, 'bartek', b, 2);
+		db.prepare(`UPDATE film SET status = 'watched', watched_week = 1 WHERE id = ?`).run(b);
+		db.prepare(`UPDATE week SET status = 'closed' WHERE number = 1`).run();
+		castBallot(db, 2, 'ala', a, 3);
+		castBallot(db, 2, 'celina', a, 1);
+
+		const habits = votingHabits(db, { from: 1, to: 2 });
+		expect(habits.rounds.map((r) => [r.week, r.voters, r.oneFilm, r.points, r.again, r.own])).toEqual([
+			[1, 2, 1, 6, 0, 5],
+			[2, 2, 2, 4, 3, 3]
+		]);
+		const ala = habits.people.find((row) => row.person.id === 'ala')!;
+		expect(ala).toMatchObject({ rounds: 2, films: 1, points: 6, again: 3, own: 6, streak: { title: 'A', rounds: 2 } });
+		// A led round 1 on points, but the room picked B
+		expect([habits.leaderWon, habits.decided]).toEqual([0, 1]);
+		expect([habits.halfFrom, habits.voters]).toEqual([1, 3]);
 	});
 });

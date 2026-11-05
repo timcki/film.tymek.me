@@ -14,7 +14,22 @@
 </script>
 
 <script lang="ts">
-	let { lines, labels }: { lines: Line[]; labels: string[] } = $props();
+	import type { Snippet } from 'svelte';
+
+	let {
+		lines,
+		labels,
+		detail = null
+	}: {
+		lines: Line[];
+		labels: string[];
+		/** what the line under the plot says about the round being pointed at or pressed */
+		detail?: Snippet<[number]> | null;
+	} = $props();
+
+	let hovered = $state<number | null>(null);
+	let pressed = $state<number | null>(null);
+	const shown = $derived(hovered ?? pressed);
 
 	// drawn at the pixel size it is shown at, like the stats screen's trends
 	let W = $state(340);
@@ -64,11 +79,38 @@
 					{/if}
 				{/each}
 			{/each}
+			{#if shown !== null}
+				<line class="cursor" x1={sx(shown)} x2={sx(shown)} y1={TOP} y2={H - BOTTOM} />
+			{/if}
+			{#if detail}
+				{#each labels as label, i (i)}
+					<!-- a strip as wide as the gap between rounds, so a thumb finds one -->
+					<rect
+						class="hit"
+						role="button"
+						tabindex="0"
+						aria-label={label}
+						x={sx(i) - (W - LEFT - RIGHT) / Math.max(1, labels.length - 1) / 2}
+						y={TOP}
+						width={(W - LEFT - RIGHT) / Math.max(1, labels.length - 1)}
+						height={H - TOP - BOTTOM}
+						onclick={() => (pressed = pressed === i ? null : i)}
+						onkeydown={(event) => event.key === 'Enter' && (pressed = pressed === i ? null : i)}
+						onpointerenter={(event) => event.pointerType === 'mouse' && (hovered = i)}
+						onpointerleave={() => hovered === i && (hovered = null)}
+					/>
+				{/each}
+			{/if}
 			{#each ticks as i (i)}
 				<text class="xl" x={sx(i)} y={H - 4} text-anchor={i ? 'end' : 'start'}>{labels[i]}</text>
 			{/each}
 		</svg>
 	</div>
+	{#if detail}
+		<p class="readout" aria-live="polite">
+			{#if shown !== null}{@render detail(shown)}{:else}&nbsp;{/if}
+		</p>
+	{/if}
 </div>
 
 <style>
@@ -117,5 +159,20 @@
 	.xl {
 		font-size: 9.5px;
 		fill: var(--dimmer);
+	}
+	.cursor {
+		stroke: var(--line3);
+	}
+	.hit {
+		fill: transparent;
+		cursor: pointer;
+		outline: none;
+	}
+	.readout {
+		margin: 6px 0 0;
+		min-height: 2.8em;
+		font-size: 12px;
+		line-height: 1.4;
+		color: var(--ink2);
 	}
 </style>

@@ -266,6 +266,190 @@ export function participation(db: DB, window: Window): ParticipationRow[] {
 		});
 }
 
+export type HabitRound = {
+	week: number;
+	closesAt: string;
+	voters: number;
+	/** voters who put every point they spent on a single film */
+	oneFilm: number;
+	points: number;
+	/** points on a film the same voter had backed in an earlier round */
+	again: number;
+	/** points on the voter's own nomination */
+	own: number;
+};
+
+export type HabitPerson = {
+	person: PersonCard;
+	rounds: number;
+	/** films a round, on average, over the rounds they voted in */
+	films: number;
+	points: number;
+	again: number;
+	own: number;
+	/** the most rounds in a row they backed one film, and which */
+	streak: { title: string; posterUrl: string | null; rounds: number } | null;
+};
+
+export type Habits = {
+	rounds: HabitRound[];
+	people: HabitPerson[];
+	/** list rounds with a film whose points leader was the film the room picked */
+	leaderWon: number;
+	decided: number;
+	/** the fewest voters whose points add up to half of everything spent */
+	halfFrom: number;
+	voters: number;
+};
+
+/**
+ * How people vote, rather than how many: whether they put everything on one
+ * film or split it, whether they come back to a film they backed before, and
+ * whether the points leader is the film the room then picks. Counted per list
+ * round like `participation`, with a special night's early points folded into
+ * the round after it (§3.6). Only active people get a row of their own; what
+ * the rest spent still counts in the totals.
+ */
+export function votingHabits(db: DB, window: Window): Habits {
+	const clock = listClock(db);
+	const weeks = db
+		.prepare('SELECT number, closes_at, special FROM week WHERE number <= ? ORDER BY number')
+		.all(window.to) as { number: number; closes_at: string; special: string | null }[];
+	const lists = weeks.filter((week) => !week.special && week.number >= window.from);
+	const roundOf = new Map<number, number>();
+	for (const week of weeks) {
+		const list = lists.find((w) => clock(w.number) === clock(week.number));
+		if (list) roundOf.set(week.number, list.number);
+	}
+	const order = new Map(lists.map((week, i) => [week.number, i]));
+
+	const ballots = db
+		.prepare(
+			`SELECT b.week_number AS week, b.person_id AS person, b.film_id AS film, b.points, f.added_by, f.title,
+			        f.poster_url
+			 FROM ballot b JOIN film f ON f.id = b.film_id WHERE b.points > 0`
+		)
+		.all() as {
+			week: number;
+			person: string;
+			film: number;
+			points: number;
+			added_by: string;
+			title: string;
+			poster_url: string | null;
+		}[];
+
+	// round -> person -> film -> points
+	const spend = new Map<number, Map<string, Map<number, number>>>();
+	const titles = new Map<number, { title: string; posterUrl: string | null }>();
+	const nominator = new Map<number, string>();
+	for (const row of ballots) {
+		const round = roundOf.get(row.week);
+		if (round === undefined) continue;
+		titles.set(row.film, { title: row.title, posterUrl: row.poster_url });
+		nominator.set(row.film, row.added_by);
+		const byPerson = spend.get(round) ?? new Map<string, Map<number, number>>();
+		spend.set(round, byPerson);
+		const byFilm = byPerson.get(row.person) ?? new Map<number, number>();
+		byPerson.set(row.person, byFilm);
+		byFilm.set(row.film, (byFilm.get(row.film) ?? 0) + row.points);
+	}
+
+	const backed = new Map<string, Set<number>>();
+	/** person -> film -> the last round index it was backed in, and the run so far */
+	const runs = new Map<string, Map<number, { at: number; run: number }>>();
+	const totals = new Map<string, { rounds: number; films: number; points: number; again: number; own: number }>();
+	const best = new Map<string, { film: number; rounds: number }>();
+	const pointsBy = new Map<string, number>();
+
+	const rounds: HabitRound[] = lists.map((week) => {
+		const index = order.get(week.number)!;
+		const row: HabitRound = { week: week.number, closesAt: week.closes_at, voters: 0, oneFilm: 0, points: 0, again: 0, own: 0 };
+		for (const [person, films] of spend.get(week.number) ?? []) {
+			const before = backed.get(person) ?? new Set<number>();
+			const mine = runs.get(person) ?? new Map<number, { at: number; run: number }>();
+			const total = totals.get(person) ?? { rounds: 0, films: 0, points: 0, again: 0, own: 0 };
+			row.voters++;
+			if (films.size === 1) row.oneFilm++;
+			total.rounds++;
+			total.films += films.size;
+			for (const [film, points] of films) {
+				row.points += points;
+				total.points += points;
+				pointsBy.set(person, (pointsBy.get(person) ?? 0) + points);
+				if (before.has(film)) {
+					row.again += points;
+					total.again += points;
+				}
+				if (nominator.get(film) === person) {
+					row.own += points;
+					total.own += points;
+				}
+				const last = mine.get(film);
+				const run = last && last.at === index - 1 ? last.run + 1 : 1;
+				mine.set(film, { at: index, run });
+				if (run > (best.get(person)?.rounds ?? 0)) best.set(person, { film, rounds: run });
+			}
+			for (const film of films.keys()) before.add(film);
+			backed.set(person, before);
+			runs.set(person, mine);
+			totals.set(person, total);
+		}
+		return row;
+	});
+
+	let leaderWon = 0;
+	let decided = 0;
+	for (const week of lists) {
+		const winner = db
+			.prepare(
+				`SELECT id FROM film WHERE status = 'watched' AND outing IS NULL AND watched_at IS NULL
+				   AND watched_week = ? ORDER BY archival, id LIMIT 1`
+			)
+			.get(week.number) as { id: number } | undefined;
+		const byFilm = new Map<number, number>();
+		for (const films of (spend.get(week.number) ?? new Map()).values()) {
+			for (const [film, points] of films as Map<number, number>) byFilm.set(film, (byFilm.get(film) ?? 0) + points);
+		}
+		if (!winner || !byFilm.size) continue;
+		decided++;
+		const top = Math.max(...byFilm.values());
+		if (byFilm.get(winner.id) === top) leaderWon++;
+	}
+
+	const spent = [...pointsBy.values()].sort((a, b) => b - a);
+	const all = spent.reduce((sum, n) => sum + n, 0);
+	let halfFrom = 0;
+	for (let acc = 0; acc < all / 2; halfFrom++) acc += spent[halfFrom];
+
+	const cards = people(db);
+	return {
+		rounds,
+		people: [...totals]
+			.filter(([id]) => cards.has(id))
+			.map(([id, total]) => {
+				const streak = best.get(id);
+				return {
+					person: cards.get(id)!,
+					rounds: total.rounds,
+					films: total.films / total.rounds,
+					points: total.points,
+					again: total.again,
+					own: total.own,
+					streak:
+						streak && streak.rounds > 1
+							? { ...(titles.get(streak.film) ?? { title: '', posterUrl: null }), rounds: streak.rounds }
+							: null
+				};
+			})
+			.sort((a, b) => b.rounds - a.rounds || b.points - a.points),
+		leaderWon,
+		decided,
+		halfFrom,
+		voters: spent.length
+	};
+}
+
 /* ---------------------------------------------------------------- people -- */
 
 /** one film somebody spent on, and whether spending on it was open or not */

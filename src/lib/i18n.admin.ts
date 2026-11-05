@@ -178,6 +178,24 @@ export type AdminDict = {
 	histVotedShare: string;
 	histFullShare: string;
 	histWinnerShare: string;
+	habH: string;
+	habIntro: string;
+	habChartH: string;
+	habOneLine: string;
+	habAgainLine: string;
+	habOwnLine: string;
+	habRun: (title: string, rounds: number) => string;
+	habHint: string;
+	habCardOne: string;
+	habCardAgain: string;
+	habCardOwn: string;
+	habCardLeader: string;
+	habCardHalf: string;
+	habCardRun: string;
+	habPeopleH: string;
+	habX: string;
+	habY: string;
+	habPerson: (rounds: number, of: number, films: string, again: number, own: number) => string;
 
 	/* the round in play */
 	rndH: string;
@@ -386,7 +404,7 @@ const pl: AdminDict = {
 	ptsNeverVoted: 'bez głosów',
 	histH: 'Jak szły rundy',
 	histIntro:
-		'Każda runda listy, od najnowszej. Wieczór specjalny nie ma tu osobnego wiersza: punkty wydane przed nim liczą się do rundy, która przyszła po nim.',
+		'Każda runda listy od pierwszego głosu. Wieczór specjalny nie ma tu osobnego wiersza: punkty wydane przed nim liczą się do rundy, która przyszła po nim.',
 	histOpen: 'trwa',
 	histNoFilm: 'bez filmu',
 	histVoted: (n, of) => `głosowało ${n} z ${of}`,
@@ -402,6 +420,25 @@ const pl: AdminDict = {
 	histVotedShare: 'głosowali (z wszystkich)',
 	histFullShare: 'wydali wszystko (z głosujących)',
 	histWinnerShare: 'punkty na zwycięzcę (ze wszystkich)',
+	habH: 'Jak ludzie głosują',
+	habIntro: 'Od pierwszego głosu do dziś.',
+	habChartH: 'Jak dzielono punkty',
+	habOneLine: 'wszystko na jeden film (z głosujących)',
+	habAgainLine: 'na film popierany już wcześniej (z punktów)',
+	habOwnLine: 'na własne zgłoszenie (z punktów)',
+	habRun: (title, rounds) => `najdłużej: ${title}, ${rounds} ${pl3(rounds, 'runda', 'rundy', 'rund')} z rzędu`,
+	habHint: 'Najedź albo naciśnij rundę lub twarz, żeby zobaczyć szczegóły.',
+	habCardOne: 'wszystko na jeden film',
+	habCardAgain: 'na film popierany wcześniej',
+	habCardOwn: 'na własne zgłoszenie',
+	habCardLeader: 'wygrał lider punktów',
+	habCardHalf: 'daje połowę punktów',
+	habCardRun: 'z rzędu na jeden film',
+	habPeopleH: 'Każdy z osobna',
+	habX: 'filmów na rundę',
+	habY: '% na popierane wcześniej',
+	habPerson: (rounds, of, films, again, own) =>
+		`głosy w ${rounds} z ${of} rund · średnio ${films} filmu na rundę · ${again}% na popierane wcześniej · ${own}% na własne`,
 	rndH: 'Bieżąca runda',
 	rndIntro: 'Filmy, na które teraz się głosuje. Obejrzane są w zakładce Obejrzane.',
 
@@ -707,7 +744,7 @@ const en: AdminDict = {
 	ptsNeverVoted: 'no votes',
 	histH: 'How the rounds went',
 	histIntro:
-		'Every list round, newest first. A special night has no row of its own: points spent before it count towards the round that came after it.',
+		'Every list round since the first vote. A special night has no row of its own: points spent before it count towards the round that came after it.',
 	histOpen: 'still open',
 	histNoFilm: 'no film',
 	histVoted: (n, of) => `${n} of ${of} voted`,
@@ -723,6 +760,25 @@ const en: AdminDict = {
 	histVotedShare: 'voted (of everyone)',
 	histFullShare: 'spent it all (of those who voted)',
 	histWinnerShare: 'points on the winner (of all points)',
+	habH: 'How people vote',
+	habIntro: 'From the first vote to today.',
+	habChartH: 'How the points were split',
+	habOneLine: 'all on one film (of voters)',
+	habAgainLine: 'to a film backed before (of points)',
+	habOwnLine: 'to their own nomination (of points)',
+	habRun: (title, rounds) => `longest: ${title}, ${rounds} rounds in a row`,
+	habHint: 'Point at or press a round or a face for the details.',
+	habCardOne: 'all on one film',
+	habCardAgain: 'to a film backed before',
+	habCardOwn: 'to their own nomination',
+	habCardLeader: 'points leader won',
+	habCardHalf: 'give half the points',
+	habCardRun: 'rounds in a row, one film',
+	habPeopleH: 'Each person',
+	habX: 'films a round',
+	habY: '% to films backed before',
+	habPerson: (rounds, of, films, again, own) =>
+		`voted in ${rounds} of ${of} rounds · ${films} films a round · ${again}% to films backed before · ${own}% own`,
 	rndH: 'Current round',
 	rndIntro: 'What the room is voting on now. Watched films are under Watched.',
 

@@ -2,6 +2,8 @@
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Columns from '$lib/components/chart/Columns.svelte';
 	import Lines from '$lib/components/chart/Lines.svelte';
+	import Scatter, { type Dot } from '$lib/components/chart/Scatter.svelte';
+	import StatCards, { type StatCard } from '$lib/components/chart/StatCards.svelte';
 	import { TIMEZONE, formatDay, formatNight } from '$lib/datetime';
 	import { adminDict } from '$lib/i18n.admin';
 	import type { PageData } from './$types';
@@ -11,7 +13,19 @@
 	const A = $derived(adminDict(data.lang));
 	const when = (at: string) => formatNight(at, data.lang);
 	const share = (part: number, whole: number) => (whole ? Math.round((part / whole) * 100) : 0);
+	const percent = (part: number, whole: number) => (whole ? (part / whole) * 100 : null);
+	const short = $derived(
+		new Intl.DateTimeFormat(data.lang, { day: 'numeric', month: 'numeric', timeZone: TIMEZONE })
+	);
+	const decimal = $derived(new Intl.NumberFormat(data.lang, { maximumFractionDigits: 1 }));
 
+	const left = $derived(data.people.reduce((sum, p) => sum + Math.max(0, p.budget - p.spent), 0));
+	const total = $derived(data.people.reduce((sum, p) => sum + p.budget, 0));
+
+	/* ------------------------------------------------------------ the rounds -- */
+
+	const rounds = $derived([...data.history].reverse());
+	const labels = $derived(rounds.map((round) => short.format(new Date(round.closesAt))));
 	const facts = (round: PageData['history'][number]) =>
 		[
 			A.histVoted(round.voters, round.roster),
@@ -22,16 +36,10 @@
 		]
 			.filter(Boolean)
 			.join(' · ');
-
-	const rounds = $derived([...data.history].reverse());
-	const short = $derived(
-		new Intl.DateTimeFormat(data.lang, { day: 'numeric', month: 'numeric', timeZone: TIMEZONE })
-	);
-	const percent = (part: number, whole: number) => (whole ? (part / whole) * 100 : null);
 	const columns = $derived(
-		rounds.map((round) => ({
+		rounds.map((round, i) => ({
 			key: String(round.week),
-			label: short.format(new Date(round.closesAt)),
+			label: labels[i],
 			voted: round.voters,
 			attended: round.room,
 			open: round.open
@@ -58,8 +66,80 @@
 		}
 	]);
 
-	const left = $derived(data.people.reduce((sum, p) => sum + Math.max(0, p.budget - p.spent), 0));
-	const total = $derived(data.people.reduce((sum, p) => sum + p.budget, 0));
+	/* ---------------------------------------------------------- the habits -- */
+
+	const habits = $derived(data.habits);
+	const sum = (pick: (round: PageData['habits']['rounds'][number]) => number) =>
+		habits.rounds.reduce((all, round) => all + pick(round), 0);
+	const cards = $derived.by((): StatCard[] => {
+		const voters = sum((r) => r.voters);
+		const points = sum((r) => r.points);
+		if (!voters) return [];
+		const longest = habits.people
+			.filter((p) => p.streak)
+			.sort((a, b) => b.streak!.rounds - a.streak!.rounds)[0];
+		return [
+			{ key: 'one', value: `${share(sum((r) => r.oneFilm), voters)}%`, label: A.habCardOne },
+			{ key: 'again', value: `${share(sum((r) => r.again), points)}%`, label: A.habCardAgain },
+			{ key: 'own', value: `${share(sum((r) => r.own), points)}%`, label: A.habCardOwn },
+			...(habits.decided
+				? [{ key: 'leader', value: `${habits.leaderWon}/${habits.decided}`, label: A.habCardLeader }]
+				: []),
+			{ key: 'half', value: `${habits.halfFrom}/${habits.voters}`, label: A.habCardHalf },
+			...(longest
+				? [
+						{
+							key: 'run',
+							value: String(longest.streak!.rounds),
+							label: A.habCardRun,
+							film: {
+								title: `${longest.streak!.title} · ${longest.person.name}`,
+								posterUrl: longest.streak!.posterUrl
+							}
+						}
+					]
+				: [])
+		];
+	});
+	const habitLines = $derived([
+		{
+			key: 'one',
+			label: A.habOneLine,
+			colour: 'var(--accent)',
+			values: habits.rounds.map((r) => percent(r.oneFilm, r.voters))
+		},
+		{
+			key: 'again',
+			label: A.habAgainLine,
+			colour: 'var(--tier5)',
+			values: habits.rounds.map((r) => percent(r.again, r.points))
+		},
+		{
+			key: 'own',
+			label: A.habOwnLine,
+			colour: 'var(--burn0)',
+			values: habits.rounds.map((r) => percent(r.own, r.points))
+		}
+	]);
+
+	/**
+	 * Splitting along, coming back up: where each person sits, a face apiece.
+	 * Coming back takes rounds to come back from, so a newcomer would only sit at zero
+	 */
+	const dots = $derived(
+		habits.people.filter((row) => row.rounds >= 3).map((row) => ({
+			key: row.person.id,
+			name: row.person.name,
+			colour: row.person.colour,
+			avatar: row.person.avatar,
+			xp: row.person.xp,
+			x: Math.round(row.films * 10) / 10,
+			y: share(row.again, row.points)
+		}))
+	);
+	const xMax = $derived(Math.max(1, Math.ceil(Math.max(0, ...dots.map((dot) => dot.x)))));
+	let lit = $state<string | null>(null);
+	const habitOf = (key: string) => habits.people.find((row) => row.person.id === key)!;
 </script>
 
 <h2 class="ah">{A.ptsH}</h2>
@@ -92,10 +172,10 @@
 	</div>
 {/each}
 
-<h2 class="ah">{A.histH}</h2>
-<p class="ahint">{A.histIntro}</p>
-
 {#if rounds.length > 1}
+	<h2 class="ah">{A.histH}</h2>
+	<p class="ahint">{A.histIntro} {A.habHint}</p>
+
 	<div class="sec">{A.histTurnoutH}</div>
 	<Columns
 		{columns}
@@ -104,19 +184,45 @@
 		attendedLabel={A.histRoomKey}
 		rosterLabel={A.histRosterKey}
 	/>
-	<div class="sec">{A.histSharesH}</div>
-	<Lines {lines} labels={columns.map((column) => column.label)} />
-{/if}
 
-{#each data.history as round (round.week)}
-	<div class="prow">
-		<div class="pwho">
-			<div class="pnames">
-				<b>{formatDay(round.closesAt, data.lang)} · {round.open ? A.histOpen : (round.winnerTitle ?? A.histNoFilm)}</b>
-				<span class="pmeta">{facts(round)}</span>
-			</div>
-			<span class="pspend">{share(round.voters, round.roster)}%</span>
-		</div>
-		<div class="spmeter"><i style:width="{share(round.voters, round.roster)}%"></i></div>
-	</div>
-{/each}
+	<div class="sec">{A.histSharesH}</div>
+	<Lines {lines} {labels}>
+		{#snippet detail(i: number)}
+			<b>{formatDay(rounds[i].closesAt, data.lang)} · {rounds[i].open ? A.histOpen : (rounds[i].winnerTitle ?? A.histNoFilm)}</b><br />
+			{facts(rounds[i])}
+		{/snippet}
+	</Lines>
+
+	<h2 class="ah">{A.habH}</h2>
+	<p class="ahint">{A.habIntro}</p>
+	<StatCards {cards} />
+
+	<div class="sec">{A.habChartH}</div>
+	<Lines lines={habitLines} labels={habits.rounds.map((r) => short.format(new Date(r.closesAt)))}>
+		{#snippet detail(i: number)}
+			<b>{formatDay(habits.rounds[i].closesAt, data.lang)}</b><br />
+			{habitLines
+				.map((line) => `${line.label} ${Math.round(line.values[i] ?? 0)}%`)
+				.join(' · ')}
+		{/snippet}
+	</Lines>
+
+	{#if dots.length}
+		<div class="sec">{A.habPeopleH}</div>
+		<Scatter
+			{dots}
+			{xMax}
+			yMax={100}
+			xTitle={A.habX}
+			yTitle={A.habY}
+			{lit}
+			onpick={(key) => (lit = lit === key ? null : key)}
+		>
+			{#snippet detail(dot: Dot)}
+				{@const row = habitOf(dot.key)}
+				<b>{row.person.name}</b> ·
+				{A.habPerson(row.rounds, habits.rounds.length, decimal.format(row.films), share(row.again, row.points), share(row.own, row.points))}{#if row.streak}{' · '}{A.habRun(row.streak.title, row.streak.rounds)}{/if}
+			{/snippet}
+		</Scatter>
+	{/if}
+{/if}
