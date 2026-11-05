@@ -3,12 +3,13 @@
  * two people ever see these strings and nobody editing the members' copy should
  * have to scroll past them.
  */
-import type { Lang } from './i18n.js';
+import { pl3, type Lang } from './i18n.js';
 
 export type AdminDict = {
 	adminH: string;
 	navCalendar: string;
 	navPeople: string;
+	navPoints: string;
 	navFilms: string;
 	navWatched: string;
 	navHost: string;
@@ -149,6 +150,35 @@ export type AdminDict = {
 	filTicked: (any: boolean) => string;
 	filTickedNote: string;
 
+	/* who has spent their points this round */
+	ptsH: string;
+	ptsIntro: string;
+	ptsClosing: (when: string) => string;
+	ptsLeft: (left: number, total: number) => string;
+	ptsSleeps: string;
+	ptsUnit: string;
+	ptsNominated: (title: string) => string;
+	ptsNoNomination: string;
+	ptsLast: (when: string) => string;
+	ptsNeverVoted: string;
+	histH: string;
+	histIntro: string;
+	histOpen: string;
+	histNoFilm: string;
+	histVoted: (n: number, of: number) => string;
+	histFull: (n: number) => string;
+	histPoints: (points: number, films: number) => string;
+	histOnWinner: (points: number, share: number) => string;
+	histRoom: (n: number) => string;
+	histTurnoutH: string;
+	histVotedKey: string;
+	histRoomKey: string;
+	histRosterKey: string;
+	histSharesH: string;
+	histVotedShare: string;
+	histFullShare: string;
+	histWinnerShare: string;
+
 	/* the round in play */
 	rndH: string;
 	rndIntro: string;
@@ -196,6 +226,7 @@ const pl: AdminDict = {
 	adminH: 'Panel',
 	navCalendar: 'Kalendarz',
 	navPeople: 'Ludzie',
+	navPoints: 'Punkty',
 	navFilms: 'Filmy',
 	navWatched: 'Obejrzane',
 	navHost: 'Prowadzący',
@@ -342,6 +373,35 @@ const pl: AdminDict = {
 	filTickedNote: 'Nie da się usunąć: ktoś już ją zaznaczył.',
 	filEmpty: 'Brak filmów.',
 
+	ptsH: 'Punkty w tej rundzie',
+	ptsIntro:
+		'Kto wydał punkty w bieżącej rundzie i na co, a kto jeszcze nie. Tylko aktywne osoby; punkty wydane, zanim lista zasnęła na wieczór specjalny, wliczają się.',
+	ptsClosing: (when) => `Runda zamyka się ${when}.`,
+	ptsLeft: (left, total) => `Do wydania zostało ${left} z ${total} pkt.`,
+	ptsSleeps: 'Trwa wieczór specjalny, więc lista śpi: widać punkty wydane, zanim zasnęła.',
+	ptsUnit: 'pkt',
+	ptsNominated: (title) => `zgłoszenie: ${title}`,
+	ptsNoNomination: 'bez zgłoszenia',
+	ptsLast: (when) => `ostatni głos ${when}`,
+	ptsNeverVoted: 'bez głosów',
+	histH: 'Jak szły rundy',
+	histIntro:
+		'Każda runda listy, od najnowszej. Wieczór specjalny nie ma tu osobnego wiersza: punkty wydane przed nim liczą się do rundy, która przyszła po nim.',
+	histOpen: 'trwa',
+	histNoFilm: 'bez filmu',
+	histVoted: (n, of) => `głosowało ${n} z ${of}`,
+	histFull: (n) => `wszystko wydało: ${n}`,
+	histPoints: (points, films) => `${points} pkt na ${films} ${pl3(films, 'film', 'filmy', 'filmów')}`,
+	histOnWinner: (points, share) => `na zwycięzcę ${points} (${share}%)`,
+	histRoom: (n) => `w sali: ${n}`,
+	histTurnoutH: 'Frekwencja',
+	histVotedKey: 'głosowali',
+	histRoomKey: 'w sali',
+	histRosterKey: 'wszyscy',
+	histSharesH: 'Jak wydawano punkty',
+	histVotedShare: 'głosowali (z wszystkich)',
+	histFullShare: 'wydali wszystko (z głosujących)',
+	histWinnerShare: 'punkty na zwycięzcę (ze wszystkich)',
 	rndH: 'Bieżąca runda',
 	rndIntro: 'Filmy, na które teraz się głosuje. Obejrzane są w zakładce Obejrzane.',
 
@@ -487,6 +547,7 @@ const en: AdminDict = {
 	adminH: 'Admin',
 	navCalendar: 'Calendar',
 	navPeople: 'People',
+	navPoints: 'Points',
 	navFilms: 'Films',
 	navWatched: 'Watched',
 	navHost: 'Host',
@@ -633,6 +694,35 @@ const en: AdminDict = {
 	filTickedNote: 'Cannot be deleted: somebody has ticked it.',
 	filEmpty: 'No films.',
 
+	ptsH: 'Points this round',
+	ptsIntro:
+		'Who has spent their points in the current round, on what, and who has not. Active people only; points spent before the list went to sleep for a special night still count.',
+	ptsClosing: (when) => `The round closes ${when}.`,
+	ptsLeft: (left, total) => `${left} of ${total} pts still to spend.`,
+	ptsSleeps: 'A special night is on, so the list is asleep: what shows is what was spent before it went to sleep.',
+	ptsUnit: 'pts',
+	ptsNominated: (title) => `nominated: ${title}`,
+	ptsNoNomination: 'no nomination',
+	ptsLast: (when) => `last vote ${when}`,
+	ptsNeverVoted: 'no votes',
+	histH: 'How the rounds went',
+	histIntro:
+		'Every list round, newest first. A special night has no row of its own: points spent before it count towards the round that came after it.',
+	histOpen: 'still open',
+	histNoFilm: 'no film',
+	histVoted: (n, of) => `${n} of ${of} voted`,
+	histFull: (n) => `${n} spent it all`,
+	histPoints: (points, films) => `${points} pts on ${films} ${films === 1 ? 'film' : 'films'}`,
+	histOnWinner: (points, share) => `${points} on the winner (${share}%)`,
+	histRoom: (n) => `${n} in the room`,
+	histTurnoutH: 'Turnout',
+	histVotedKey: 'voted',
+	histRoomKey: 'in the room',
+	histRosterKey: 'everyone',
+	histSharesH: 'How the points went',
+	histVotedShare: 'voted (of everyone)',
+	histFullShare: 'spent it all (of those who voted)',
+	histWinnerShare: 'points on the winner (of all points)',
 	rndH: 'Current round',
 	rndIntro: 'What the room is voting on now. Watched films are under Watched.',
 

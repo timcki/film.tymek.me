@@ -8,7 +8,7 @@ import { iso } from './time.js';
 import { newToken, slugify } from './tokens.js';
 import { listRound, rescoreAll } from './scoring.js';
 import { rexpAll } from './xp.js';
-import { avatarUrl } from './people.js';
+import { avatarUrl, budgetOf } from './people.js';
 import { cleanNote, cleanOverview, cleanPoster, cleanTitle } from './films.js';
 import { filmEvenings } from './evenings.js';
 import type { Outing } from '../outings.js';
@@ -53,6 +53,73 @@ export function managedPeople(db: DB): ManagedPerson[] {
 		...person,
 		avatar: avatarUrl(person.id, avatar_updated_at)
 	}));
+}
+
+export type PointsRow = {
+	id: string;
+	name: string;
+	colour: string;
+	avatar: string | null;
+	/** what they have to spend this round */
+	budget: number;
+	/** what they have spent in the list's round, a special night's carry included */
+	spent: number;
+	/** where it went, most first */
+	films: { title: string; points: number }[];
+	/** their one nomination this round, if they have made it */
+	nominated: string | null;
+	/** when they last touched a ballot, null if they never have */
+	last: string | null;
+};
+
+/**
+ * Who has spent their points in the list's round `week` belongs to, on what,
+ * and who has not: the question the admin asks before nudging the group. Read
+ * off the ballots like everything else, so it cannot drift; only active people
+ * are asked about.
+ */
+export function pointsRoster(db: DB, rules: RuleSet, week: number): PointsRow[] {
+	const round = listRound(db, week);
+	const marks = round.map(() => '?').join(',');
+	const people = db
+		.prepare('SELECT id, name, colour, avatar_updated_at FROM person WHERE active = 1')
+		.all() as { id: string; name: string; colour: string; avatar_updated_at: string | null }[];
+	const ballots = db
+		.prepare(
+			`SELECT b.person_id, f.title, SUM(b.points) AS points, MAX(b.updated_at) AS last
+			 FROM ballot b JOIN film f ON f.id = b.film_id
+			 WHERE b.week_number IN (${marks})
+			 GROUP BY b.person_id, b.film_id
+			 ORDER BY points DESC, f.title`
+		)
+		.all(...round) as { person_id: string; title: string; points: number; last: string }[];
+	const nominated = new Map(
+		(
+			db
+				.prepare(
+					`SELECT added_by, title FROM film WHERE special IS NULL AND archival = 0
+					   AND added_week IN (${marks})`
+				)
+				.all(...round) as { added_by: string; title: string }[]
+		).map((row) => [row.added_by, row.title])
+	);
+
+	return people
+		.map((person) => {
+			const own = ballots.filter((row) => row.person_id === person.id);
+			return {
+				id: person.id,
+				name: person.name,
+				colour: person.colour,
+				avatar: avatarUrl(person.id, person.avatar_updated_at),
+				budget: budgetOf(db, rules, person.id),
+				spent: own.reduce((sum, row) => sum + row.points, 0),
+				films: own.map((row) => ({ title: row.title, points: row.points })),
+				nominated: nominated.get(person.id) ?? null,
+				last: own.reduce<string | null>((max, row) => (max && max > row.last ? max : row.last), null)
+			};
+		})
+		.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 const HEX = /^#[0-9a-f]{6}$/i;

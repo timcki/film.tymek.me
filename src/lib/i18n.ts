@@ -96,7 +96,7 @@ function orList(lang: Lang, items: string[]): string {
 /* ---------------------------------------------------------------- plurals -- */
 
 /** Polish has three forms: 1 / 2-4 / 5+, with 12-14 falling back to the last */
-function pl3(n: number, one: string, few: string, many: string): string {
+export function pl3(n: number, one: string, few: string, many: string): string {
 	if (n === 1) return one;
 	const unit = n % 10;
 	const hundred = n % 100;

@@ -17,6 +17,7 @@ import type { TimePoint } from '../trend.js';
 import { filmEvenings } from './evenings.js';
 import { listClock } from './scoring.js';
 import { ROUNDS_VOTED } from './xp.js';
+import { RULE_SETS, isRuleSetId } from './rules.js';
 
 /** 'app' starts at the first round anybody voted in; 'all' starts at week 1 */
 export type Era = 'app' | 'all';
@@ -170,6 +171,99 @@ export function roundRows(db: DB, window: Window): RoundRow[] {
 			 ORDER BY w.number`
 		)
 		.all(window.from, window.to) as RoundRow[];
+}
+
+export type ParticipationRow = {
+	week: number;
+	/** the round's night, or when it is due while it is still open */
+	closesAt: string;
+	open: boolean;
+	winnerTitle: string | null;
+	/** who could have voted: on the roster by the night, and still on it or voting */
+	roster: number;
+	voters: number;
+	/** voters who spent the whole round's points; null under banking, where budgets differ */
+	full: number | null;
+	points: number;
+	/** how many films got any of them */
+	films: number;
+	/** what went on the film the round picked */
+	onWinner: number;
+	room: number;
+};
+
+/** the rule set a round was played under, read off the record of switches (§10) */
+function rulesAt(db: DB, week: number) {
+	const row = db
+		.prepare('SELECT rules_id FROM rules_change WHERE week_number <= ? ORDER BY week_number DESC, id DESC LIMIT 1')
+		.get(week) as { rules_id: string } | undefined;
+	return isRuleSetId(row?.rules_id) ? RULE_SETS[row.rules_id] : null;
+}
+
+/**
+ * How each list round went, newest first: who voted, whether they spent it all,
+ * how spread the points were and how many of them backed the film we watched.
+ * §3.6: a special round is not a row of its own; points cast in its week before
+ * it began belong to the list round that woke after it, as they do everywhere.
+ */
+export function participation(db: DB, window: Window): ParticipationRow[] {
+	const clock = listClock(db);
+	const weeks = db
+		.prepare('SELECT number, closes_at, status, special FROM week WHERE number <= ? ORDER BY number')
+		.all(window.to) as { number: number; closes_at: string; status: string; special: string | null }[];
+	return weeks
+		.filter((week) => !week.special && week.number >= window.from)
+		.reverse()
+		.map((week) => {
+			const round = weeks.filter((w) => clock(w.number) === clock(week.number)).map((w) => w.number);
+			const marks = round.map(() => '?').join(',');
+			const spent = db
+				.prepare(
+					`SELECT person_id, SUM(points) AS points FROM ballot
+					 WHERE week_number IN (${marks}) GROUP BY person_id`
+				)
+				.all(...round) as { person_id: string; points: number }[];
+			const winner = db
+				.prepare(
+					`SELECT id, title FROM film
+					 WHERE status = 'watched' AND outing IS NULL AND watched_at IS NULL AND watched_week = ?
+					 ORDER BY archival, id LIMIT 1`
+				)
+				.get(week.number) as { id: number; title: string } | undefined;
+			const rules = rulesAt(db, week.number);
+			return {
+				week: week.number,
+				closesAt: week.closes_at,
+				open: week.status !== 'closed',
+				winnerTitle: winner?.title ?? null,
+				roster: scalar(
+					db,
+					`SELECT COUNT(*) AS n FROM person p WHERE p.created_at <= ?
+					   AND (p.active = 1 OR EXISTS (SELECT 1 FROM ballot b
+					         WHERE b.person_id = p.id AND b.week_number IN (${marks})))`,
+					week.closes_at,
+					...round
+				),
+				voters: spent.length,
+				full: rules && !rules.banking ? spent.filter((row) => row.points >= rules.pointsPerWeek).length : null,
+				points: spent.reduce((sum, row) => sum + row.points, 0),
+				films: scalar(
+					db,
+					`SELECT COUNT(DISTINCT film_id) AS n FROM ballot WHERE week_number IN (${marks})`,
+					...round
+				),
+				onWinner: winner
+					? scalar(
+							db,
+							`SELECT COALESCE(SUM(points), 0) AS n FROM ballot
+							 WHERE film_id = ? AND week_number IN (${marks})`,
+							winner.id,
+							...round
+						)
+					: 0,
+				room: scalar(db, 'SELECT COUNT(*) AS n FROM attendance WHERE week_number = ?', week.number)
+			};
+		});
 }
 
 /* ---------------------------------------------------------------- people -- */
