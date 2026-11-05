@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cachedPoster, posterSource } from '../src/lib/server/poster-cache.js';
-import { lookUpFilm } from '../src/lib/server/tmdb.js';
+import { lookUpFilm, search } from '../src/lib/server/tmdb.js';
 import { posterSrc } from '../src/lib/poster-src.js';
 import { addFilm, freshDb } from './helpers.js';
 
@@ -68,6 +68,36 @@ describe('film details', () => {
 		const later = await lookUpFilm(db, 593);
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 		expect(later.details.director).toBe('Andrei Tarkovsky');
+	});
+});
+
+describe('search titles', () => {
+	const RESULTS = {
+		results: [
+			{ id: 19673, title: 'Sexmission', original_title: 'Seksmisja', original_language: 'pl' },
+			{ id: 1398, title: 'Stalker', original_title: 'Сталкер', original_language: 'ru' }
+		]
+	};
+
+	it('give a Polish film its Polish title and leave the rest in English', async () => {
+		const { db } = freshDb();
+		fetchMock.mockImplementation(async () => Response.json(RESULTS));
+		for (const query of ['Sexmission', 'Seksmisja']) {
+			const { results } = await search(db, query);
+			expect(results.map((r) => r.title)).toEqual(['Seksmisja', 'Stalker']);
+		}
+		expect(String(fetchMock.mock.calls[0][0])).toContain('query=sexmission');
+	});
+
+	it('are not served from a search cached before titles changed', async () => {
+		const { db } = freshDb();
+		db.prepare('INSERT INTO tmdb_cache (query, body, fetched_at) VALUES (?, ?, ?)').run(
+			'sexmission',
+			JSON.stringify({ results: [{ tmdbId: 19673, title: 'Sexmission' }] }),
+			new Date().toISOString()
+		);
+		fetchMock.mockImplementation(async () => Response.json(RESULTS));
+		expect((await search(db, 'Sexmission')).results[0].title).toBe('Seksmisja');
 	});
 });
 

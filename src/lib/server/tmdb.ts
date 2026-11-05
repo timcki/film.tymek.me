@@ -24,6 +24,12 @@ export type SearchResult = {
 
 export type SearchResponse = { results: SearchResult[]; degraded?: boolean };
 
+/**
+ * Changed whenever what a result says changes, so a week of cached searches
+ * from before stops being read rather than being served as it was
+ */
+const CACHE_KEY = 'v2:';
+
 function normaliseQuery(q: string): string {
 	return q.trim().toLowerCase().replace(/\s+/g, ' ');
 }
@@ -42,6 +48,7 @@ async function tmdbFetch(path: string): Promise<unknown> {
 type RawMovie = {
 	id: number;
 	title: string;
+	original_title?: string;
 	release_date?: string;
 	poster_path?: string | null;
 	overview?: string;
@@ -53,7 +60,9 @@ function mapMovie(movie: RawMovie): SearchResult {
 	const year = movie.release_date ? Number(movie.release_date.slice(0, 4)) : null;
 	return {
 		tmdbId: movie.id,
-		title: movie.title,
+		// a Polish film goes by its own title here rather than TMDB's English one;
+		// TMDB matches a query against both, so either still finds it
+		title: (movie.original_language === 'pl' && movie.original_title) || movie.title,
 		year: Number.isFinite(year) ? year : null,
 		poster: movie.poster_path ? `${IMAGE}/w342${movie.poster_path}` : null,
 		thumb: movie.poster_path ? `${IMAGE}/w92${movie.poster_path}` : null,
@@ -68,8 +77,9 @@ function mapMovie(movie: RawMovie): SearchResult {
  * an empty list rather than blocking a nomination; you can always type a title.
  */
 export async function search(db: DB, query: string): Promise<SearchResponse> {
-	const key = normaliseQuery(query);
-	if (!key) return { results: [] };
+	const normalised = normaliseQuery(query);
+	if (!normalised) return { results: [] };
+	const key = CACHE_KEY + normalised;
 
 	const cached = db.prepare('SELECT body, fetched_at FROM tmdb_cache WHERE query = ?').get(key) as
 		| { body: string; fetched_at: string }
@@ -81,7 +91,7 @@ export async function search(db: DB, query: string): Promise<SearchResponse> {
 
 	try {
 		const raw = (await tmdbFetch(
-			`/search/movie?include_adult=false&language=en-US&query=${encodeURIComponent(key)}`
+			`/search/movie?include_adult=false&language=en-US&query=${encodeURIComponent(normalised)}`
 		)) as { results?: RawMovie[] };
 		const payload: SearchResponse = {
 			results: (raw.results ?? []).slice(0, MAX_RESULTS).map(mapMovie)
