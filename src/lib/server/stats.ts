@@ -1025,13 +1025,16 @@ export function screenStats(db: DB): ScreenStats | null {
 
 	const mean = (values: number[]) => values.reduce((sum, n) => sum + n, 0) / values.length;
 	const longest = (a: FilmBar, b: FilmBar) => b.value - a.value || a.title.localeCompare(b.title);
+	// §3.6: a special round the list slept through is no round of waiting
+	const clock = listClock(db);
+	const rounds = (from: number, to: number) => Math.max(0, clock(to) - clock(from));
 
 	const waits = won
 		.map((film) => ({
 			id: film.id,
 			title: film.title,
 			posterUrl: film.poster_url,
-			value: Math.max(0, film.watched_week - film.added_week)
+			value: rounds(film.added_week, film.watched_week)
 		}))
 		.sort(longest);
 	const scores = won
@@ -1057,7 +1060,7 @@ export function screenStats(db: DB): ScreenStats | null {
 			id: film.id,
 			title: film.title,
 			posterUrl: film.poster_url,
-			value: Math.max(0, now - film.added_week)
+			value: rounds(film.added_week, now)
 		}))
 		.sort(longest);
 
@@ -1187,7 +1190,7 @@ export function timelines(films: WatchedFilm[]): { year: TimePoint[]; runtime: T
 /* ------------------------------------------------------------------ lens -- */
 
 /**
- * Which of the three views is open. It lives in the query string rather than in
+ * Which of the two views is open. It lives in the query string rather than in
  * component state so the tabs work with no JavaScript and a view can be sent to
  * somebody exactly as it was read.
  */

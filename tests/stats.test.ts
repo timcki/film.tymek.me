@@ -574,6 +574,18 @@ describe('what it takes for a film to reach the screen', () => {
 		]);
 	});
 
+	it('does not count a special round the list slept through as waiting', () => {
+		const { db } = freshDb();
+		won(db, 'Patient', 1, 4, 5);
+		ensureWeek(db, 2);
+		db.prepare(`UPDATE week SET special = 'horror' WHERE number = 2`).run();
+		addFilm(db, 'Still waiting', 'bartek', 1);
+
+		const stats = screenStats(db)!;
+		expect(stats.waits.map((film) => film.value)).toEqual([2]);
+		expect(stats.waiting.map((film) => film.value)).toEqual([2]);
+	});
+
 	it('says nothing at all before the app has resolved a night', () => {
 		const { db } = freshDb();
 		addFilm(db, 'Up for it', 'ala', 1);

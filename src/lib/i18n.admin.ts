@@ -102,7 +102,6 @@ export type AdminDict = {
 	peoYou: string;
 	peoStats: (nominated: number, watched: number) => string;
 	peoBank: string;
-	peoLinkH: string;
 	peoRotate: string;
 	peoRotateNote: string;
 	peoMakeAdmin: string;
@@ -344,7 +343,6 @@ const pl: AdminDict = {
 	peoYou: 'to ty',
 	peoStats: (nominated, watched) => `${nominated} zgłoszeń · ${watched} obejrzanych`,
 	peoBank: 'Bank',
-	peoLinkH: 'Prywatny link',
 	peoRotate: 'Nowy link',
 	peoRotateNote: 'Stary link przestaje działać od razu.',
 	peoMakeAdmin: 'Zrób adminem',
@@ -684,7 +682,6 @@ const en: AdminDict = {
 	peoYou: "that's you",
 	peoStats: (nominated, watched) => `${nominated} nominated · ${watched} watched`,
 	peoBank: 'Bank',
-	peoLinkH: 'Personal link',
 	peoRotate: 'New link',
 	peoRotateNote: 'The old one stops working immediately.',
 	peoMakeAdmin: 'Make admin',

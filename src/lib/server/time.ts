@@ -1,6 +1,5 @@
 import { TIMEZONE } from '../datetime.js';
 
-export { TIMEZONE };
 export const DEADLINE_HOUR = 20;
 const THURSDAY = 4;
 

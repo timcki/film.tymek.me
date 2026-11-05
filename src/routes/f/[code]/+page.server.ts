@@ -19,7 +19,8 @@ export const load: PageServerLoad = async ({ params, locals, cookies, depends, u
 
 	// §7.4: scanning the code with your own phone is the whole check-in ceremony.
 	// Late arrivals count too: the film may be picked, but the night is still on
-	if (locals.person && !isExpired(runoff)) {
+	// read first: the page polls, and only the first load needs the write lock
+	if (locals.person && !isExpired(runoff) && !attended(db, runoff.week_number, locals.person.id)) {
 		checkIn(db, runoff.week_number, locals.person.id);
 	}
 

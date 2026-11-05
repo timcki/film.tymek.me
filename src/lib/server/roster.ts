@@ -38,7 +38,3 @@ export const COLOURS = [
 	'#8e9bef',
 	'#d46a9c'
 ];
-
-export function colourFor(index: number): string {
-	return COLOURS[index % COLOURS.length];
-}

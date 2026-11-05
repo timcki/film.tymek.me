@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS audit (
 );
 CREATE INDEX IF NOT EXISTS audit_created ON audit(created_at);
 
--- records a rule-set change so the list page can announce it for one week
+-- records a rule-set change, so the stats know which rules each round was played by
 CREATE TABLE IF NOT EXISTS rules_change (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   rules_id    TEXT NOT NULL,

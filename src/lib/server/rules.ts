@@ -134,10 +134,6 @@ export function budget(rules: RuleSet, bankBalance: number): number {
 	return rules.banking ? bankBalance : rules.pointsPerWeek;
 }
 
-export function remaining(rules: RuleSet, bankBalance: number, spentThisWeek: number): number {
-	return budget(rules, bankBalance) - spentThisWeek;
-}
-
 /** start-of-week balance for the next week, per §3.3 */
 export function accrue(rules: RuleSet, balance: number, spentThisWeek: number): number {
 	return Math.min(rules.bankCap, balance - spentThisWeek + rules.pointsPerWeek);

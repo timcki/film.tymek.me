@@ -13,9 +13,9 @@
 	import SeenCount from '$lib/components/SeenCount.svelte';
 	import { dictFor } from '$lib/i18n';
 	import { say } from '$lib/toast.svelte';
-	import type { ActionData, PageData } from './$types';
+	import type { PageData } from './$types';
 
-	let { data, form }: { data: PageData; form: ActionData } = $props();
+	let { data }: { data: PageData } = $props();
 
 	const T = $derived(dictFor(data.lang));
 	const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;

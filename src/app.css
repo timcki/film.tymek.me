@@ -38,9 +38,6 @@
 	--ticket-edge: #fff6e2;
 	--ticket-mark: #b05a70;
 	--warn: #e0a15f;
-	/* split-complement of --accent, a third of the wheel from --warn: a passed-over
-	   film and an about-to-drop film are different states and never read alike */
-	--cut: #ec939a;
 	--bad: #e0715f;
 	--r: 18px;
 	--shadow: rgba(0, 0, 0, 0.5);
@@ -49,7 +46,6 @@
 	--lead-tint: rgba(255, 255, 255, 0.035);
 	--lead-glow: rgba(255, 255, 255, 0.055);
 	--lead-ring: rgba(255, 255, 255, 0.05);
-	--lead-edge: rgba(255, 255, 255, 0.32);
 	/* the one pressable chip in a card row, and the highlight along its top */
 	--chip: color-mix(in srgb, var(--card2) 92%, white);
 	--sheen: rgba(255, 255, 255, 0.045);
@@ -1225,13 +1221,6 @@ header .sub b {
 	font-size: 10.5px;
 	color: var(--dimmer);
 }
-/* the fade arithmetic: one row per week that still counts */
-.scpop {
-	width: 232px;
-	align-items: stretch;
-	gap: 5px;
-}
-.scpop .srow,
 .bkweeks .srow {
 	display: flex;
 	justify-content: space-between;
@@ -1239,23 +1228,12 @@ header .sub b {
 	font-size: 11.5px;
 	color: var(--dim);
 }
-.scpop .srow b,
 .bkweeks .srow b {
 	font-size: 11.5px;
 	font-weight: 650;
 	color: var(--ink);
 	font-variant-numeric: tabular-nums;
 	overflow-wrap: normal;
-}
-/* the answer the whole popup is building towards, ruled off from the weeks
-   that add up to it */
-.scpop .srow.next {
-	margin-top: 3px;
-	padding-top: 6px;
-	border-top: 1px solid var(--line2);
-}
-.scpop .srow.next span {
-	color: var(--ink2);
 }
 /* a backer's total, opened out into the weeks it was spent across */
 .bkweeks {
@@ -1267,13 +1245,6 @@ header .sub b {
 	padding-top: 8px;
 	border-top: 1px solid var(--line2);
 }
-.scpop .sig {
-	font-size: 10.5px;
-	color: var(--dimmer);
-	margin-top: 2px;
-}
-/* the rewatch confession button sits alone under the facts */
-
 /* who felt what: emoji chips wearing the faces of everyone who reacted */
 .cmt .cbody {
 	flex: 1;
@@ -2214,11 +2185,9 @@ button.holdchip:hover {
 	border-radius: var(--r);
 }
 
-/* the top of the list is what the room chooses from, so it is set apart. Said
-   as a word on a tinted chip rather than as a rule across the page: a hairline
-   through a heading is how a table announces a section, and this is a list of
-   films somebody's friends want to watch */
-.shortlist-head,
+/* the rest of the list, said as a word on a tinted chip rather than as a rule
+   across the page: a hairline through a heading is how a table announces a
+   section, and this is a list of films somebody's friends want to watch */
 .rest-head {
 	display: inline-flex;
 	/* a chip the width of its word: as a flex child of the list it would
@@ -2235,16 +2204,6 @@ button.holdchip:hover {
 	letter-spacing: 0;
 	font-weight: 650;
 	color: var(--dim);
-}
-.shortlist-head {
-	color: var(--accent);
-	background: color-mix(in srgb, var(--accent) 14%, transparent);
-	margin-top: 10px;
-}
-.shortlist-note {
-	font-size: 12px;
-	color: var(--dim);
-	margin: 5px 2px 0;
 }
 
 /* ---------- the board: the list on a desktop ----------
@@ -2549,11 +2508,6 @@ details[open]:not(.closing) > .iconbtn {
 }
 .cmodal .sec {
 	margin-top: 0;
-}
-.bkmgrid {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 7px;
 }
 .chlog-backdrop {
 	position: fixed;
@@ -2947,18 +2901,6 @@ details[open]:not(.closing) > .iconbtn {
 	padding: 14px;
 	border-radius: 16px;
 	background: color-mix(in srgb, var(--sunk) 70%, transparent);
-}
-/* the block's own heading; it carries a control on the right where the block
-   has one to carry, which is why it is a row and not a line of text */
-.dbh {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	margin-bottom: 10px;
-	font-size: 13px;
-	font-weight: 650;
-	color: var(--dim);
 }
 /* the thread arrives with the heading it wears in its other home, the modal */
 .dblock .sec {
@@ -3741,18 +3683,6 @@ button.wcard:focus-visible img {
 .roomvote {
 	margin-top: 12px;
 }
-/* the one rule this screen runs on, in a colour rather than in the footnote
-   grey it used to wear: it is read once, at arm's length, in a dark room */
-.roomnote {
-	margin: 12px 0 0;
-	padding: 10px 14px;
-	border-radius: 99px;
-	background: color-mix(in srgb, var(--accent) 16%, transparent);
-	color: var(--accent);
-	font-size: 13.5px;
-	font-weight: 650;
-	text-align: center;
-}
 .roomvote .pickbtn {
 	padding: 14px;
 	gap: 16px;
@@ -3773,76 +3703,14 @@ button.wcard:focus-visible img {
 	flex: 1;
 	min-width: 0;
 }
-/* the tally wears the coin the list uses for a score, so a row reads the same
-   way in the room as it does on the phone at home */
-.votecoin {
-	flex: none;
-	width: 46px;
-	height: 46px;
-	border-radius: 50%;
-	background: var(--raise);
-	display: grid;
-	place-content: center;
-	row-gap: 2px;
-	text-align: center;
-	line-height: 1;
-}
-/* specific enough to beat .pickbtn b, which sets the row's title */
-.pickbtn .votecoin b {
-	display: block;
-	font-size: 15px;
-	font-weight: 800;
-	font-variant-numeric: tabular-nums;
-}
-.votecoin i {
-	display: block;
-	font-style: normal;
-	font-size: 8px;
-	color: var(--dim);
-	font-weight: 600;
-}
-.pickbtn.on .votecoin {
-	background: color-mix(in srgb, var(--accent) 20%, transparent);
-	color: var(--accent);
-}
-.pickbtn.on .votecoin i {
-	color: inherit;
-}
 @media (prefers-reduced-motion: reduce) {
-	.roomvote .pickbtn,
-	.roomvote .pickbtn .mychip {
+	.roomvote .pickbtn {
 		transition: none;
 	}
 }
 .roomvote .pickbtn span {
 	font-size: 12.5px;
 	margin-top: 6px;
-}
-/* your pick said in a word under the title, because a 2px ring is not what a
-   phone held at arm's length in a dark room actually reads */
-.roomvote .pickbtn .mychip {
-	display: inline-block;
-	margin-top: 7px;
-	padding: 3px 10px;
-	border-radius: 99px;
-	background: color-mix(in srgb, var(--accent) 18%, transparent);
-	color: var(--accent);
-	font-size: 11.5px;
-	font-weight: 700;
-}
-.roomvote .pickbtn:not(.on) .mychip {
-	visibility: hidden;
-}
-/* the film the room landed on, said in a word rather than in a trailing clause */
-.winchip {
-	display: inline-block;
-	margin-top: 7px;
-	padding: 3px 10px;
-	border-radius: 99px;
-	background: color-mix(in srgb, var(--accent) 18%, transparent);
-	color: var(--accent);
-	font-size: 11px;
-	font-weight: 700;
 }
 
 /* ---------- room takeover ---------- */
@@ -3941,26 +3809,6 @@ button.wcard:focus-visible img {
 	display: block;
 	max-width: 440px;
 	margin: 22px auto 0;
-}
-.hostidle {
-	max-width: 520px;
-	margin: 8px auto 0;
-	background: var(--card);
-	border-radius: var(--r);
-	box-shadow: var(--lift);
-	padding: 22px 24px 20px;
-	text-align: center;
-}
-.hostidle .idlelead {
-	margin: 0;
-	font-size: 15px;
-	color: var(--ink2);
-}
-.hostidle .bigbtn {
-	margin-top: 16px;
-}
-.hostidle .hintline {
-	padding-bottom: 0;
 }
 /* §3.5: what stepped aside, quiet under the tally, so the room can see why the
    film everyone expected is not among the candidates */
@@ -4094,43 +3942,6 @@ button.wcard:focus-visible img {
 }
 .tkfilm.win .n {
 	color: var(--accent);
-}
-.brow {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 9px 10px;
-	border-radius: 12px;
-	flex-wrap: wrap;
-}
-.brow:nth-of-type(odd) {
-	background: color-mix(in srgb, var(--sunk) 55%, transparent);
-}
-.brow .nm {
-	flex: 1;
-	min-width: 80px;
-	font-size: 13.5px;
-	display: flex;
-	align-items: center;
-	gap: 7px;
-}
-.fb {
-	border: 0;
-	background: var(--raise);
-	color: var(--dim);
-	border-radius: 99px;
-	padding: 7px 12px;
-	font-size: 11.5px;
-	font-weight: 650;
-	cursor: pointer;
-	max-width: 145px;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-.fb.on {
-	background: var(--accent);
-	color: var(--accent-ink);
 }
 .bigbtn {
 	width: 100%;

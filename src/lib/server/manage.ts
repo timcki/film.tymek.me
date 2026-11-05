@@ -9,10 +9,10 @@ import { newToken, slugify } from './tokens.js';
 import { listRound, rescoreAll } from './scoring.js';
 import { rexpAll } from './xp.js';
 import { avatarUrl, budgetOf } from './people.js';
-import { cleanNote, cleanOverview, cleanPoster, cleanTitle } from './films.js';
+import { cleanNote, cleanOverview, cleanPoster, cleanTitle, duplicate, sameFilm } from './films.js';
 import { filmEvenings } from './evenings.js';
 import type { Outing } from '../outings.js';
-import { detailsOf } from './tmdb.js';
+import { lookUpFilm } from './tmdb.js';
 
 /**
  * Everything the admin screens can change. Kept apart from films.ts and
@@ -369,13 +369,11 @@ export function setFilmStatus(db: DB, rules: RuleSet, id: number, status: FilmSt
 		if (status === 'watched') {
 			throw new RuleError('use_mark_watched', 'a round decides what we watch, or it is written down as watched');
 		}
-		if (film.status === 'watched') {
-			db.prepare('UPDATE week SET winner_film_id = NULL WHERE winner_film_id = ?').run(id);
+		// an evening's film is moved or deleted on /admin/watched, never sent back to the list
+		if (film.status === 'watched' || film.archival) {
+			throw new RuleError('no_film', 'not a film on the list');
 		}
-		db.prepare('UPDATE film SET status = ?, watched_week = NULL, final_score = NULL WHERE id = ?').run(
-			status,
-			id
-		);
+		db.prepare('UPDATE film SET status = ? WHERE id = ?').run(status, id);
 		rescoreAll(db, rules, week);
 		rexpAll(db);
 	});
@@ -423,13 +421,16 @@ export async function filmEditLookedUp(form: FormData): Promise<FilmEdit> {
 	const edit = filmEditFrom(form);
 	const tmdbId = Number(form.get('tmdbId')) || null;
 	if (!tmdbId) return edit;
-	const details = await detailsOf(tmdbId);
+	const { details, facts } = await lookUpFilm(tmdbId);
+	const replacement = { tmdbId, overview: String(form.get('overview') ?? ''), countries: details.countries };
+	// TMDB unreachable: what was typed beats blanks
+	if (!facts) return { ...edit, replacement };
 	return {
 		...edit,
 		director: details.director,
 		genre: details.genre,
 		runtime: details.runtime,
-		replacement: { tmdbId, overview: String(form.get('overview') ?? ''), countries: details.countries }
+		replacement
 	};
 }
 
@@ -437,21 +438,15 @@ export function editFilm(db: DB, id: number, edit: FilmEdit): void {
 	immediate(db, () => {
 		const film = filmOr404(db, id);
 		const title = cleanTitle(edit.title);
-		// only a rename can collide: a rewatch written down on purpose shares its
-		// title with the first watching and still needs its poster fixed
-		const clash =
-			titleKey(title) !== film.title_key &&
-			(db
-				.prepare(`SELECT id FROM film WHERE title_key = ? AND id != ? AND status != 'dropped'`)
-				.get(titleKey(title), id) as { id: number } | undefined);
-		if (clash) throw new RuleError('dup_active', `${title} is already on the list`, { title });
+		// only a rename or another TMDB film can collide: a rewatch written down on
+		// purpose shares its title with the first watching and still needs its poster fixed
+		const renamed = titleKey(title) !== film.title_key;
 		const next = edit.replacement;
-		if (next && next.tmdbId !== film.tmdb_id) {
-			const same = db
-				.prepare(`SELECT title FROM film WHERE tmdb_id = ? AND id != ? AND status != 'dropped'`)
-				.get(next.tmdbId, id) as { title: string } | undefined;
-			if (same) throw new RuleError('dup_active', `${same.title} is already on the list`, { title: same.title });
-		}
+		const replaced = next && next.tmdbId !== film.tmdb_id;
+		const clash =
+			(renamed || replaced) &&
+			sameFilm(db, { key: renamed ? titleKey(title) : null, tmdbId: replaced ? next.tmdbId : null }, id);
+		if (clash) throw duplicate(db, clash);
 		if (next) {
 			db.prepare('UPDATE film SET tmdb_id = ?, overview = ?, countries = ? WHERE id = ?').run(
 				next.tmdbId,
@@ -546,14 +541,7 @@ export function recordWatched(db: DB, film: RecordedFilm, now = new Date()): num
 		const round = eveningRound(db, film.at, now);
 
 		if (!film.allowDuplicate) {
-			const clash = db
-				.prepare(
-					`SELECT id, title, status FROM film
-					 WHERE (title_key = ? OR (tmdb_id IS NOT NULL AND tmdb_id = ?))
-					   AND status IN ('active', 'archived', 'watched') AND special IS NULL
-					 ORDER BY status = 'watched' DESC LIMIT 1`
-				)
-				.get(titleKey(title), film.tmdbId) as Pick<Film, 'id' | 'title' | 'status'> | undefined;
+			const clash = sameFilm(db, { key: titleKey(title), tmdbId: film.tmdbId });
 			if (clash) {
 				// not fatal: the same film genuinely comes up at more than one evening
 				const evening = clash.status === 'watched' ? (filmEvenings(db).get(clash.id) ?? 0) : 0;

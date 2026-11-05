@@ -157,7 +157,6 @@ export type Dict = {
 	budgetPill: (left: number, budget: number, votes: boolean) => string;
 	budgetHelp: (rules: RulesView) => string;
 
-	shortlistHead: (n: number) => string;
 	restHead: string;
 	unit: (n: number, votes: boolean) => string;
 	/** when, counted back from the open week: "this week", "last week", "3 weeks ago" */
@@ -172,7 +171,6 @@ export type Dict = {
 	/** beside the + of a film about to go: what happens unless somebody uses it */
 	rescue: string;
 	warnFades: (n: number) => string;
-	campaign: (n: number) => string;
 
 	/* §3.5: a film sitting one round out at its nominator's request */
 	holdCta: string;
@@ -195,8 +193,6 @@ export type Dict = {
 	shelfArchive: (n: number) => string;
 	shelfDropped: (n: number) => string;
 
-	dGenre: string;
-	dRuntime: string;
 	dAdded: string;
 	dBacked: string;
 	dNobody: string;
@@ -205,7 +201,6 @@ export type Dict = {
 	dYours: (n: number, votes: boolean) => string;
 	dBankLeft: (n: number) => string;
 	dWeekLeft: (n: number, budget: number) => string;
-	sortLabel: (rules: RulesView) => string;
 	minutes: (n: number) => string;
 	fadeNote: (rules: RulesView) => string;
 	/** what the score fades to next week if nobody spends anything more on it */
@@ -237,8 +232,6 @@ export type Dict = {
 	watchedH: string;
 	fairH: string;
 	seenEmpty: string;
-	thPerson: string;
-	thNominated: string;
 	thWatched: string;
 
 	/* --------------------------------------------------- the statistics screen -- */
@@ -268,7 +261,6 @@ export type Dict = {
 	openMine: string;
 	openTheirs: string;
 	avgOf: (value: string) => string;
-	openRaw: (theirs: number, mine: number) => string;
 
 
 	timingH: string;
@@ -366,22 +358,15 @@ export type Dict = {
 	hostH: string;
 	hostIdle: string;
 	hostClose: string;
-	hostQrH: string;
 	/** said to the room off a projector, so it is an instruction, not a label */
 	hostJoinH: string;
 	hostCastH: string;
 	hostCastPick: string;
 	hostLock: string;
 	hostWinnerH: string;
-	hostWhy: string;
 	hostNoVotes: string;
 	hostOnlyFilm: string;
 	hostRankingGuest: (n: number) => string;
-	hostComparison: (winner: string, other: string) => string;
-	hostPairSource: string;
-	hostPreferred: (n: number) => string;
-	hostPairWin: string;
-	hostPairLoss: string;
 	hostReplay: string;
 	/** §7.3, the unit after a ballot slot's points */
 	racePts: (n: number) => string;
@@ -432,12 +417,9 @@ export type Dict = {
 	commentDeleteSure: string;
 
 	tNominated: (title: string) => string;
-	tVoted: (title: string) => string;
-	tUnvoted: string;
 	tNoteSaved: string;
 	tCommented: string;
 	tRenominated: (title: string) => string;
-	tRevived: (title: string) => string;
 	tHeld: (title: string) => string;
 	tReleased: (title: string) => string;
 	tAvatarSaved: string;
@@ -633,7 +615,6 @@ const pl: Dict = {
 		return `Dostajesz ${r.pointsPerWeek} ${plPoints(r.pointsPerWeek)} na rundę. Niewykorzystane przepadają po wieczorku.`;
 	},
 
-	shortlistHead: (n) => (n === 3 ? 'Trójka na dziś' : `Czołowe ${n} na dziś`),
 	restHead: 'Reszta listy',
 	unit: (n, votes) => (votes ? plVotes(n) : 'pkt'),
 	weeksAgo: (n) => (n <= 0 ? 'w tej rundzie' : n === 1 ? 'rundę temu' : `${n} ${plRoundsAcc(n)} temu`),
@@ -646,7 +627,6 @@ const pl: Dict = {
 	warnDrops: 'odpada w tej rundzie, jeśli nie dostanie głosów',
 	rescue: 'odpada bez głosów',
 	warnFades: (n) => `znika za ${n} ${plRoundsAcc(n)}`,
-	campaign: (n) => `${n}. runda kampanii`,
 
 	holdCta: 'Uśpij',
 	holdMine: 'twoja decyzja',
@@ -671,8 +651,6 @@ const pl: Dict = {
 	shelfArchive: (n) => `Archiwum · ${n} ${plFilms(n)} bez głosów`,
 	shelfDropped: (n) => `Wypadły · ${n} ${plFilms(n)} bez wsparcia`,
 
-	dGenre: 'Gatunek',
-	dRuntime: 'Czas',
 	dAdded: 'Zgłosił',
 	dBacked: 'Wsparcie',
 	dNobody: 'nikt',
@@ -685,11 +663,6 @@ const pl: Dict = {
 		votes ? `${n} ${plVotes(n)} od ciebie` : `${n} ${plPoints(n)} od ciebie`,
 	dBankLeft: (n) => `${n} ${plPoints(n)} w banku`,
 	dWeekLeft: (n, budget) => `${n} z ${budget} w tej rundzie`,
-	sortLabel: (r) => {
-		if (r.scoring === 'fade') return `punkty tracą ${fadePercent(r)}% co rundę`;
-		if (r.scoring === 'decay') return `ta runda + ${r.decayFactor} poprzedniej`;
-		return isVotes(r) ? 'wszystkie głosy od początku' : 'suma wszystkich wydanych punktów';
-	},
 	minutes: (n) => `${n} min`,
 	fadeNote: (r) => `Punkty tracą ${fadePercent(r)}% wartości co rundę`,
 	scoreNext: 'Za rundę',
@@ -718,8 +691,6 @@ const pl: Dict = {
 	watchedH: 'Obejrzane',
 	fairH: 'Czyje filmy oglądamy',
 	seenEmpty: 'Jeszcze żadnego wieczoru.',
-	thPerson: 'Osoba',
-	thNominated: 'Zgłoszone',
 	thWatched: 'Obejrzane',
 	tabStats: 'Statystyki',
 	statsH: 'Statystyki',
@@ -748,7 +719,6 @@ const pl: Dict = {
 	openTheirs: 'Na cudze',
 	openMine: 'Na swoje',
 	avgOf: (value) => `Średnia: ${value}`,
-	openRaw: (theirs, mine) => `${theirs} na cudze, ${mine} na swoje`,
 
 
 	timingH: 'Kiedy padają głosy',
@@ -861,21 +831,14 @@ const pl: Dict = {
 	hostH: 'Prowadzący',
 	hostIdle: 'Sala jeszcze nie głosuje',
 	hostClose: 'Zamknij rundę teraz',
-	hostQrH: 'Kod dla sali (można wyświetlić)',
 	hostJoinH: 'Zeskanuj, żeby głosować',
 	hostCastH: 'Zagłosuj za kogoś, komu padł telefon',
 	hostCastPick: 'Ułóż filmy w jego kolejności. Nie rób tego na projektorze, jeśli ranking ma pozostać prywatny.',
 	hostLock: 'Zatwierdź i puszczaj film',
 	hostWinnerH: 'Dzisiaj oglądamy',
-	hostWhy: 'Dlaczego ten film?',
 	hostNoVotes: 'Nikt nie zagłosował. Wybraliśmy film według wyniku z tej rundy, a przy remisie według starszeństwa zgłoszenia.',
 	hostOnlyFilm: 'W finale był tylko jeden film, więc sala go potwierdziła.',
 	hostRankingGuest: (n) => `Gość ${n}`,
-	hostComparison: (winner, other) => `${winner} czy ${other}?`,
-	hostPairSource: 'Każda para wynika z zapisanych rankingów. To nie są osobne głosowania.',
-	hostPreferred: (n) => `${n} ${pl3(n, 'osoba wybrała', 'osoby wybrały', 'osób wybrało')} ten film`,
-	hostPairWin: '✓ Wygrywa tę parę',
-	hostPairLoss: 'Przegrywa',
 	hostReplay: 'Policz jeszcze raz',
 	racePts: () => 'pkt',
 	raceTie: 'Remis w punktach rozstrzyga wynik z rundy, a potem starsze zgłoszenie.',
@@ -925,12 +888,9 @@ const pl: Dict = {
 	commentDeleteSure: 'Na pewno?',
 
 	tNominated: (title) => `Zgłoszono: ${title}`,
-	tVoted: (title) => `Głos na: ${title}`,
-	tUnvoted: 'Głos wycofany',
 	tNoteSaved: 'Notka zapisana',
 	tCommented: 'Komentarz dodany',
 	tRenominated: (title) => `Zgłoszono ponownie: ${title}, start od zera`,
-	tRevived: (title) => `${title} wraca na listę`,
 	tHeld: (title) => `${title} uśpiony do następnego razu`,
 	tReleased: (title) => `${title} znowu gra o dziś`,
 	tAvatarSaved: 'Zdjęcie zapisane',
@@ -1045,7 +1005,7 @@ const pl: Dict = {
 			case 'week_closed':
 				return 'Głosowanie w tej rundzie jest zamknięte.';
 			case 'deadline_passed':
-				return 'Głosowanie zamknęło się o 20:00, film się zaczyna.';
+				return 'Głosowanie już się zamknęło, film się zaczyna.';
 			case 'already_nominated':
 				return 'Masz już zgłoszenie w tej rundzie.';
 			case 'no_title':
@@ -1272,7 +1232,6 @@ const en: Dict = {
 		return `You get ${r.pointsPerWeek} points a round. Anything unspent is gone after the night.`;
 	},
 
-	shortlistHead: (n) => (n === 3 ? "Tonight's three" : `Tonight's top ${n}`),
 	restHead: 'The rest',
 	unit: (n, votes) => (votes ? en2(n, 'vote', 'votes') : en2(n, 'pt', 'pts')),
 	weeksAgo: (n) => (n <= 0 ? 'this round' : n === 1 ? 'last round' : `${n} rounds ago`),
@@ -1285,7 +1244,6 @@ const en: Dict = {
 	warnDrops: 'drops this round unless it gets votes',
 	rescue: 'drops without votes',
 	warnFades: (n) => `fades in ${n} ${en2(n, 'round', 'rounds')}`,
-	campaign: (n) => `round ${n} of this campaign`,
 
 	holdCta: 'Put to sleep',
 	holdMine: 'your call',
@@ -1309,8 +1267,6 @@ const en: Dict = {
 	shelfArchive: (n) => `Archive · ${n} ${en2(n, 'film', 'films')} nobody has voted for`,
 	shelfDropped: (n) => `Dropped · ${n} ${en2(n, 'film', 'films')} that ran out of support`,
 
-	dGenre: 'Genre',
-	dRuntime: 'Runtime',
 	dAdded: 'Nominated by',
 	dBacked: 'Backed by',
 	dNobody: 'nobody yet',
@@ -1321,11 +1277,6 @@ const en: Dict = {
 		`${n} ${votes ? en2(n, 'vote', 'votes') : en2(n, 'point', 'points')} from you`,
 	dBankLeft: (n) => `${n} left in your bank`,
 	dWeekLeft: (n, budget) => `${n} of ${budget} left this round`,
-	sortLabel: (r) => {
-		if (r.scoring === 'fade') return `points fade ${fadePercent(r)}% a round`;
-		if (r.scoring === 'decay') return `this round plus ${r.decayFactor} of the last`;
-		return isVotes(r) ? 'all-time votes' : 'total points ever spent';
-	},
 	minutes: (n) => `${n} min`,
 	fadeNote: (r) => `Points lose ${fadePercent(r)}% of their value each round`,
 	scoreNext: 'Next round',
@@ -1354,8 +1305,6 @@ const en: Dict = {
 	watchedH: 'Watched',
 	fairH: 'Who gets their films watched',
 	seenEmpty: 'No film nights yet.',
-	thPerson: 'Person',
-	thNominated: 'Nominated',
 	thWatched: 'Watched',
 	tabStats: 'Stats',
 	statsH: 'Statistics',
@@ -1384,7 +1333,6 @@ const en: Dict = {
 	openTheirs: "Other people's",
 	openMine: 'Own films',
 	avgOf: (value) => `Average: ${value}`,
-	openRaw: (theirs, mine) => `${theirs} on other people's, ${mine} on their own`,
 
 
 	timingH: 'When the votes land',
@@ -1497,21 +1445,14 @@ const en: Dict = {
 	hostH: 'Host',
 	hostIdle: 'The room is not voting yet',
 	hostClose: 'Close the round now',
-	hostQrH: 'Room QR (safe to project)',
 	hostJoinH: 'Scan to vote',
 	hostCastH: 'Cast for someone whose phone is dead',
 	hostCastPick: 'Enter their ranking. Use a screen that is not projected if they want it kept private.',
 	hostLock: 'Lock it in and start the film',
 	hostWinnerH: 'Tonight we are watching',
-	hostWhy: 'Why this film won',
 	hostNoVotes: 'Nobody voted. The score this round decided, with older nominations breaking a tie.',
 	hostOnlyFilm: 'There was only one shortlisted film, so the room confirmed it.',
 	hostRankingGuest: (n) => `Guest ${n}`,
-	hostComparison: (winner, other) => `${winner} or ${other}?`,
-	hostPairSource: 'Each pair comes from the saved rankings. These are not separate votes.',
-	hostPreferred: (n) => `${n} preferred this film`,
-	hostPairWin: '✓ Wins this pair',
-	hostPairLoss: 'Loses',
 	hostReplay: 'Count again',
 	racePts: (n) => (n === 1 ? 'pt' : 'pts'),
 	raceTie: 'A tie on points goes to the higher score this round, then the older nomination.',
@@ -1561,12 +1502,9 @@ const en: Dict = {
 	commentDeleteSure: 'Sure?',
 
 	tNominated: (title) => `Nominated ${title}`,
-	tVoted: (title) => `Voted for ${title}`,
-	tUnvoted: 'Vote pulled back',
 	tNoteSaved: 'Note saved',
 	tCommented: 'Comment added',
 	tRenominated: (title) => `Re-nominated ${title}, starting from zero`,
-	tRevived: (title) => `${title} is back on the list`,
 	tHeld: (title) => `${title} is asleep until another night`,
 	tReleased: (title) => `${title} is in the running again`,
 	tAvatarSaved: 'Picture saved',

@@ -41,8 +41,11 @@
 	// budget, and in the room's case possibly no account
 	const bare = $derived(path.startsWith('/f/') || path.startsWith('/admin'));
 
+	// the header's countdown; a bare page has no header to count down in
 	let now = $state(Date.now());
 	$effect(() => {
+		if (bare) return;
+		now = Date.now();
 		const timer = setInterval(() => (now = Date.now()), 1000);
 		return () => clearInterval(timer);
 	});

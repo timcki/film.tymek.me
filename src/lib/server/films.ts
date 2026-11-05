@@ -7,7 +7,6 @@ import { orderFilms, titleKey } from './rules.js';
 import { iso } from './time.js';
 import { avatarUrl, bankBalance, spentInRound } from './people.js';
 import {
-	campaignWeeks,
 	listClock,
 	listRound,
 	pointsInWindow,
@@ -22,13 +21,6 @@ import { filmEvenings } from './evenings.js';
 
 export function filmById(db: DB, id: number): Film | undefined {
 	return db.prepare('SELECT * FROM film WHERE id = ?').get(id) as Film | undefined;
-}
-
-/** the list's films in one state; a special round's picks (§3.6) are never on the list */
-export function filmsByStatus(db: DB, status: Film['status']): Film[] {
-	return db
-		.prepare('SELECT * FROM film WHERE status = ? AND archival = 0 AND special IS NULL')
-		.all(status) as Film[];
 }
 
 /**
@@ -190,7 +182,6 @@ export function standings(
 				avatar: nom ? avatarUrl(film.added_by, nom.avatar_updated_at) : null,
 				xp: nom?.xp ?? 0
 			},
-			campaignWeeks: campaignWeeks(db, film.id, currentWeek),
 			atRisk: isAtRisk(db, rules, film, currentWeek),
 			held: hold
 				? {
@@ -274,7 +265,7 @@ export function cleanPoster(url: string | null | undefined): string | null {
 	return trimmed;
 }
 
-function duplicate(db: DB, clash: Film): RuleError {
+export function duplicate(db: DB, clash: Film): RuleError {
 	if (clash.status === 'watched') {
 		const evening = filmEvenings(db).get(clash.id) ?? 0;
 		return new RuleError('dup_watched', `we watched ${clash.title} on night ${evening}`, {
@@ -293,33 +284,34 @@ function duplicate(db: DB, clash: Film): RuleError {
 }
 
 /**
- * §4.1: a dropped film does not block, that is what Re-nominate is for. Nor does
- * an archival proposition: somebody having suggested it at a night two years ago
+ * §4.1: the one answer to "is this film already here", by title or by TMDB id.
+ * A dropped film does not count, that is what Re-nominate is for. Nor does an
+ * archival proposition: somebody having suggested it at a night two years ago
  * and the room never watching it is no reason it cannot go up now. An archival
- * film we did watch still blocks, which is the whole point of writing it down.
- * `exceptId` is the one film a §3.6 pick may share: its nominator's own on the list.
+ * film we did watch still counts, which is the whole point of writing it down.
+ * A watched row is found first, because "we saw it" is the answer that matters.
  */
+export function sameFilm(
+	db: DB,
+	match: { key: string | null; tmdbId: number | null },
+	exceptId: number | null = null
+): Film | undefined {
+	return db
+		.prepare(
+			`SELECT * FROM film
+			 WHERE status IN ('active','archived','watched') AND (archival = 0 OR status = 'watched')
+			   AND (title_key = ? OR (tmdb_id IS NOT NULL AND tmdb_id = ?)) AND id IS NOT ?
+			 ORDER BY status = 'watched' DESC, id LIMIT 1`
+		)
+		.get(match.key, match.tmdbId, exceptId) as Film | undefined;
+}
+
+/** `exceptId` is the one film a §3.6 pick may share: its nominator's own on the list */
 export function assertNotDuplicate(db: DB, input: NominationInput, exceptId: number | null = null): void {
 	const key = titleKey(input.title);
 	if (!key) throw new RuleError('no_title', 'give the film a title');
-
-	if (input.tmdbId) {
-		const clash = db
-			.prepare(
-				`SELECT * FROM film WHERE tmdb_id = ? AND status IN ('active','archived','watched')
-			   AND (archival = 0 OR status = 'watched') AND id IS NOT ? LIMIT 1`
-			)
-			.get(input.tmdbId, exceptId) as Film | undefined;
-		if (clash) throw duplicate(db, clash);
-	}
-
-	const byTitle = db
-		.prepare(
-			`SELECT * FROM film WHERE title_key = ? AND status IN ('active','archived','watched')
-			   AND (archival = 0 OR status = 'watched') AND id IS NOT ? LIMIT 1`
-		)
-		.get(key, exceptId) as Film | undefined;
-	if (byTitle) throw duplicate(db, byTitle);
+	const clash = sameFilm(db, { key, tmdbId: input.tmdbId ?? null }, exceptId);
+	if (clash) throw duplicate(db, clash);
 }
 
 function assertNominationSlot(db: DB, rules: RuleSet, personId: string, week: number): void {

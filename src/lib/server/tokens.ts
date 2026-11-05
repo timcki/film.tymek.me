@@ -5,7 +5,7 @@ export function newToken(): string {
 	return randomBytes(16).toString('base64url');
 }
 
-/** no vowels (no accidental words), no ambiguous glyphs (0/O, 1/I/L, S/5, B/8, Z/2) */
+/** no ambiguous glyphs: neither half of 0/O, 1/I, S/5, B/8 or Z/2 */
 const CODE_ALPHABET = 'ACDEFGHJKLMNPQRTUVWXY3479';
 
 export function newCode(length = 6): string {

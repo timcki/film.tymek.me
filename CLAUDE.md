@@ -22,7 +22,7 @@ Four documents carry the intent, and they are worth reading before changing beha
 
 ```sh
 npm run dev        # vite dev server
-npm test           # vitest, the acceptance suite (25 files)
+npm test           # vitest, the acceptance suite
 npm run test:watch
 npm run check      # svelte-kit sync && svelte-check; must be 0 errors
 npm run build      # adapter-node output into build/

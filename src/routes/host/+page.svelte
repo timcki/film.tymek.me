@@ -18,9 +18,9 @@
 	import { lights } from '$lib/lights';
 	import { dictFor } from '$lib/i18n';
 	import { say } from '$lib/toast.svelte';
-	import type { ActionData, PageData } from './$types';
+	import type { PageData } from './$types';
 
-	let { data, form }: { data: PageData; form: ActionData } = $props();
+	let { data }: { data: PageData } = $props();
 
 	const T = $derived(dictFor(data.lang));
 	const roomOpen = $derived(Boolean(data.runoff));
@@ -348,7 +348,6 @@
 		{/if}
 	</div>
 {:else}
-	<!-- nothing is happening yet, so the screen is one card and one button -->
 	<!-- nothing is happening yet: the same stage the count stands on, waiting,
 	     with the one button that starts it all -->
 	<section class="countpanel idle">

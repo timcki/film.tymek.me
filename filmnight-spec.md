@@ -32,7 +32,7 @@ must be implemented exactly; everything else has room for judgement.
 | Term | Meaning |
 |---|---|
 | **Person** | One of the six. Has a permanent secret token. |
-| **Week** | A voting cycle. Opens the moment the previous one closes, closes Thursday 20:00 Europe/Warsaw. |
+| **Week** | A voting cycle. Opens the moment the previous one closes, closes on the next night in the calendar, by default Thursday 20:00 Europe/Warsaw (§6.1). |
 | **Evening** | A night we watched something, numbered from the first. What a round is called on screen: the week number counts Thursdays, met or not, so it never appears there. A round that ends without a film shares its number with the next. |
 | **Outing** | A film watched together outside the vote (the cinema, a trip), written down afterwards with its date. It is an evening of its own and counts in history and the film statistics, but never as a round's winner or a nominator's win. |
 | **Nomination** | Adding a film to the list. One per person per week, free, doesn't bank. |
@@ -332,7 +332,7 @@ CREATE TABLE person (
 CREATE TABLE week (
   number         INTEGER PRIMARY KEY,    -- 1, 2, 3, …
   opens_at       TEXT NOT NULL,
-  closes_at      TEXT NOT NULL,          -- Thursday 20:00 Europe/Warsaw, stored as UTC
+  closes_at      TEXT NOT NULL,          -- the round's night (§6.1), stored as UTC
   status         TEXT NOT NULL,          -- 'open' | 'runoff' | 'closed'
   winner_film_id INTEGER REFERENCES film(id),
   resolved_at    TEXT
@@ -771,7 +771,7 @@ endorsed or certified by TMDB") belongs in the footer.
 The prototype (`filmnight.html`) is the visual reference: dark, one column, max width
 660px, mobile-first. Reuse its palette and layout. Screens:
 
-**`/` — the list.** Countdown to Thursday 20:00. A status card showing what you've spent,
+**`/` — the list.** Countdown to the round's night. A status card showing what you've spent,
 your budget or bank, and whether your nomination is used. Then the ranked films: the
 poster with the nominator's face resting on its top-left corner (wearing a slim, quiet
 version of its rank ring; tapping it opens the same popup as a backer pill, with

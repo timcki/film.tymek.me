@@ -102,11 +102,6 @@ export function rescoreAll(db: DB, rules: RuleSet, currentWeek: number): Map<num
 	return scores;
 }
 
-export function scoreFor(db: DB, rules: RuleSet, filmId: number, currentWeek: number): number {
-	const clock = listClock(db);
-	return scoreOf(rules, onClock(clock, pointsByFilm(db).get(filmId) ?? new Map()), clock(currentWeek));
-}
-
 /**
  * The rounds a window of `weeks` rounds ending at `week` covers, inclusive, on
  * the list's clock (§3.6): a special round inside it widens it by one, because
@@ -142,30 +137,4 @@ export function totalPoints(db: DB, filmId: number): number {
 		.prepare('SELECT COALESCE(SUM(points), 0) AS total FROM ballot WHERE film_id = ?')
 		.get(filmId) as { total: number };
 	return row.total;
-}
-
-/**
- * The longest run of consecutive weeks, ending at `week`, over which a single
- * person has kept points on this film. Drives the "N-week campaign" badge.
- */
-export function campaignWeeks(db: DB, filmId: number, week: number): number {
-	const rows = db
-		.prepare('SELECT person_id, week_number FROM ballot WHERE film_id = ?')
-		.all(filmId) as { person_id: string; week_number: number }[];
-	// counted on the list's clock, so sleeping through a special round is no break
-	const clock = listClock(db);
-	const end = clock(week);
-	const byPerson = new Map<string, Set<number>>();
-	for (const row of rows) {
-		let weeks = byPerson.get(row.person_id);
-		if (!weeks) byPerson.set(row.person_id, (weeks = new Set()));
-		weeks.add(clock(row.week_number));
-	}
-	let best = 0;
-	for (const weeks of byPerson.values()) {
-		let run = 0;
-		while (weeks.has(end - run)) run++;
-		if (run > best) best = run;
-	}
-	return best;
 }

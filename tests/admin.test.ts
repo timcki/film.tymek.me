@@ -9,6 +9,7 @@ import {
 	reassignFilm,
 	renamePerson,
 	setBank,
+	setFilmStatus,
 	setPersonActive,
 	setPersonAdmin
 } from '../src/lib/server/manage.js';
@@ -186,6 +187,18 @@ describe('curating the films', () => {
 		expect(fixed.title).toBe('Solaris');
 		expect(fixed.title_key).toBe('solaris');
 		expect(fixed.year).toBe(1972);
+	});
+
+	it('says a rename clashes with a film we watched the way a nomination would', () => {
+		const { db, rules } = freshDb('banked');
+		const film = addFilm(db, 'Wrong Title', 'ala', 1);
+		const seen = addFilm(db, 'Stalker', 'bartek', 1);
+		db.prepare(`UPDATE film SET status = 'watched', watched_week = 1 WHERE id = ?`).run(seen);
+
+		const edit = { title: 'Stalker', year: null, director: null, genre: null, runtime: null, posterUrl: null, note: null };
+		expect(() => editFilm(db, film, edit)).toThrow(expect.objectContaining({ code: 'dup_watched' }));
+		// and a watched film is not sent back to the list from the round's tab
+		expect(() => setFilmStatus(db, rules, seen, 'active', 1)).toThrow(expect.objectContaining({ code: 'no_film' }));
 	});
 
 	it('swaps a film for another from TMDB, underneath too, and keeps its votes', () => {

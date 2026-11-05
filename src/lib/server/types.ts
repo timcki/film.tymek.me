@@ -142,8 +142,6 @@ export type Standing = Film & {
 	nominator: Omit<Backer, 'points' | 'weekly'>;
 	/** per-week point totals, oldest last, for the score-breakdown popup */
 	weeklyPoints: { week: number; points: number; age: number }[];
-	/** consecutive weeks a single person has backed this film, §9 badge */
-	campaignWeeks: number;
 	/** true when this film is one pointless week away from attrition */
 	atRisk: boolean;
 	/** §3.5: set while the film sits this round out at its nominator's request */

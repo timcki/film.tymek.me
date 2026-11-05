@@ -160,7 +160,6 @@ export function withdrawFlashVote(db: DB, runoffId: number, voterKey: string, no
 	});
 }
 
-/** the most recently decided runoff, for the host's winner screen */
 /** §7.2: the host starts the count once. Pressing again replays it on the
  * screen without moving the clock the phones are waiting on. */
 export function startReveal(db: DB, runoffId: number, now: Date = new Date()): void {
@@ -170,6 +169,7 @@ export function startReveal(db: DB, runoffId: number, now: Date = new Date()): v
 	});
 }
 
+/** the most recently decided runoff, for the host's winner screen */
 export function latestDecidedRunoff(db: DB): Runoff | undefined {
 	return db
 		.prepare(

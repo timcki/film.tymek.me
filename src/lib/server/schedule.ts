@@ -87,9 +87,9 @@ export function deleteNight(db: DB, id: number): void {
 }
 
 /**
- * Stamps the night a round closed on. Matches on the exact instant because that
- * is where closes_at came from; a round that closed on the Thursday fallback, or
- * early by hand, simply matches nothing.
+ * Stamps the night a round was due on. Matches on the exact instant because that
+ * is where closes_at came from, so it runs before an early close rewrites it; a
+ * round that closed on the Thursday fallback simply matches nothing.
  */
 export function markNightUsed(db: DB, week: number, closesAt: string): void {
 	db.prepare(`UPDATE night SET status = 'used', week_number = ? WHERE at = ? AND status = 'planned'`).run(

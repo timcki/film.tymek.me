@@ -31,7 +31,7 @@ export function requireOpenWeek(db: DB, now: Date = new Date()): Week {
 	if (week.status === 'runoff') throw new RuleError('room_picking', 'voting is closed; the room is picking');
 	if (week.status !== 'open') throw new RuleError('week_closed', 'voting for this round is closed');
 	if (now.getTime() >= new Date(week.closes_at).getTime()) {
-		throw new RuleError('deadline_passed', 'voting closed at 20:00, the film is starting');
+		throw new RuleError('deadline_passed', 'voting has closed, the film is starting');
 	}
 	return week;
 }
@@ -125,19 +125,6 @@ export function specialStandings(db: DB, rules: RuleSet, week: Week): (Film & { 
 		.prepare(`SELECT * FROM film WHERE status = 'active' AND special = ? AND added_week = ?`)
 		.all(week.special, week.number) as (Film & { score: number })[];
 	return orderFilms(films);
-}
-
-/** the films the room was shown this week, in the order they were shortlisted */
-export function shortlistOf(db: DB, week: number): Film[] {
-	return db
-		.prepare(
-			`SELECT f.* FROM film f
-			 JOIN runoff_film rf ON rf.film_id = f.id
-			 JOIN runoff r ON r.id = rf.runoff_id
-			 WHERE r.week_number = ?
-			 ORDER BY f.id`
-		)
-		.all(week) as Film[];
 }
 
 /** §3.4, evaluated once during week close, after the winner has been removed */

@@ -26,7 +26,6 @@
 	import BananaBunch from '$lib/components/BananaBunch.svelte';
 	import Ticket from '$lib/components/Ticket.svelte';
 	import TicketStack from '$lib/components/TicketStack.svelte';
-	import Check from '$lib/components/Check.svelte';
 	import { say } from '$lib/toast.svelte';
 	import { watchLive } from '$lib/live-poll';
 	import { nomSheet } from '$lib/special-sheet.svelte';
@@ -101,9 +100,15 @@
 
 	/* -------------------------------------------------------- vote finality -- */
 
-	// drives the undo countdowns; 250 ms keeps the seconds display honest
+	// drives the undo countdowns; 250 ms keeps the seconds display honest, and
+	// it only runs while one of them does
 	let nowMs = $state(Date.now());
+	const undoRunning = $derived(
+		data.films.some((film) => film.myGraceUntil && new Date(film.myGraceUntil).getTime() > nowMs)
+	);
 	$effect(() => {
+		if (!undoRunning) return;
+		nowMs = Date.now();
 		const timer = setInterval(() => (nowMs = Date.now()), 250);
 		return () => clearInterval(timer);
 	});
@@ -565,8 +570,6 @@
 			? null
 			: ([...data.films, ...data.archived].find((f) => f.id === commentsOpenId) ?? null)
 	);
-	const anySheet = $derived(detail !== null || searchOpen);
-
 	function closeSheets() {
 		unpeek();
 		detailId = null;
