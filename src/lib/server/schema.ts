@@ -127,6 +127,15 @@ CREATE TABLE IF NOT EXISTS tmdb_cache (
   fetched_at TEXT NOT NULL
 );
 
+-- §8.2: a film's details as TMDB gave them, so a re-nomination, an edit or a
+-- night written down twice does not spend the key on the same film again.
+-- Only a lookup that worked is kept: a failure is retried next time
+CREATE TABLE IF NOT EXISTS tmdb_movie (
+  tmdb_id    INTEGER PRIMARY KEY,
+  body       TEXT NOT NULL,
+  fetched_at TEXT NOT NULL
+);
+
 -- the film nights themselves. A week's closes_at is taken from the next planned
 -- night, so moving or deleting one moves the whole round; with no rows at all the
 -- app falls back to next Thursday 20:00 and behaves exactly as it did before

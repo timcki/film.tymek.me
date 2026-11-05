@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { posterSrc } from '$lib/poster-src';
 	import { tick } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
@@ -1134,7 +1135,7 @@
 		class:held={Boolean(film.held)}
 	>
 		<!-- a podium card on a desktop stands its poster on a blurred copy of itself -->
-		<div class="pw" style:--art={lead && film.poster_url ? `url("${encodeURI(film.poster_url)}")` : null}>
+		<div class="pw" style:--art={lead && film.poster_url ? `url("${encodeURI(posterSrc(film.poster_url))}")` : null}>
 			<button
 				class="p"
 				onclick={() => {

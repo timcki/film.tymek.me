@@ -64,7 +64,7 @@ export const actions: Actions = {
 		try {
 			const at = whenFrom(form);
 			// §8.2: fetched once, when the film is actually written down
-			const details = tmdbId ? await detailsOf(tmdbId) : NO_DETAILS;
+			const details = tmdbId ? await detailsOf(getDb(), tmdbId) : NO_DETAILS;
 			const id = recordWatched(getDb(), {
 				title: String(form.get('title') ?? ''),
 				year: num(form, 'year'),
@@ -95,7 +95,7 @@ export const actions: Actions = {
 		const form = await request.formData();
 		const id = Number(form.get('id'));
 		try {
-			editFilm(getDb(), id, await filmEditLookedUp(form));
+			editFilm(getDb(), id, await filmEditLookedUp(getDb(), form));
 			logAdmin(getDb(), person.id, 'film.edit', String(id), String(form.get('title') ?? ''));
 			return { saved: true };
 		} catch (error) {

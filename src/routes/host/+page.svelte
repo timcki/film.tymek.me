@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { posterSrc } from '$lib/poster-src';
 	import { enhance } from '$app/forms';
 	import { onDestroy, tick } from 'svelte';
 	import { fly, scale } from 'svelte/transition';
@@ -182,7 +183,7 @@
 				<div class="tkfilm">
 					<div class="tkart" style:--i={i}>
 						{#if row.film.poster_url}
-							<img src={row.film.poster_url} alt="" />
+							<img src={posterSrc(row.film.poster_url)} alt="" />
 						{:else}
 							<div class="noimg"></div>
 						{/if}

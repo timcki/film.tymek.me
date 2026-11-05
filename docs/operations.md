@@ -69,6 +69,7 @@ database; see **The demo**.
 | code | a store path, built from this repository's `main` at rebuild time |
 | service | `modules/services/filmnight.nix` in `~/.config/nix`, `Restart=always` |
 | database | `/var/lib/filmnight/filmnight.db` (WAL) |
+| poster cache | `/var/lib/filmnight/posters`, beside the database; not backed up |
 | environment | `/etc/filmnight.env` (0640 root:filmnight): `ORIGIN`, `RULES`, `TZ`, TMDB token |
 | revision | `FILMNIGHT_REV` in the unit, from the flake input; read back at `/healthz` |
 | backups | `filmnight-backup.timer`, nightly 04:17, 30 days in `/var/backups/filmnight` |
@@ -230,7 +231,9 @@ adapter-node reports the socket peer, which behind Caddy is Caddy: every visitor
 share one bucket and one person's clicking would lock out the next. Caddy's
 `reverse_proxy` sets `X-Forwarded-For` itself, and `XFF_DEPTH` is 1 because chungus-1 is
 the only hop in front. Both ceilings are generous enough that a person clicking around
-never meets them: 20 TMDB searches and 40 writes a minute.
+never meets them: 20 TMDB searches and 40 writes a minute. Searches have a second,
+shared ceiling of 60 a minute across every visitor, so the demo cannot spend the key the
+real app depends on however many addresses it is visited from.
 
 Nothing in the demo needs `BODY_SIZE_LIMIT` raised, because uploads are refused there.
 The in-process scheduler runs as usual, so a demo week really does close and a runoff
@@ -288,7 +291,7 @@ restarts nothing, and the previous demo database keeps serving. A stale demo is 
 leaking one is not.
 
 The one false alarm worth knowing about: the verification looks for every source name in
-every column, and `tmdb_cache` and `film.overview` are left alone because they are public
+every column, and `tmdb_cache`, `tmdb_movie` and `film.overview` are left alone because they are public
 film data. A director or a synopsis that happens to contain somebody's full name will
 therefore stop the run and name the column it found it in. That is the check working; the
 call about what to do with it is yours.
@@ -334,6 +337,13 @@ are two different files on purpose, and only the second one is ever served.
   open, guarded on `PRAGMA table_info`. Adding a column is the only migration shape that
   is supported; anything else needs doing by hand, so back up first.
 - `journalctl -u filmnight -f` for logs.
+- Phones get posters from `/poster/...`, which fetches each film's TMDB poster once into
+  `posters/` beside the database and serves it from disk after that. Only posters a film
+  in the database wears are kept; anything else is redirected to TMDB, and so is a poster
+  the server failed to fetch, so the directory is safe to delete at any time and refills
+  itself. Film details are kept for 30 days in `tmdb_movie` and searches for a week in
+  `tmdb_cache`, so the TMDB key is spent on new films rather than on the same ones again.
+  `[tmdb] ... failed: TMDB responded 429` in the log is the key being rate limited.
 - Restoring a backup: stop the service, copy the dated file over
   `/var/lib/filmnight/filmnight.db`, delete any `-wal`/`-shm` beside it, start again.
 - The statistics map reads `film.countries`, which TMDB fills on the way in for every film

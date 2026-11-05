@@ -57,6 +57,7 @@ const KNOWN_TABLES: Record<string, string> = {
 	runoff_ballot: 'person_id remapped, voter_key remapped or regenerated',
 	attendance: 'kept, with person_id remapped',
 	tmdb_cache: 'kept untouched: public film data, and it keeps demo search instant',
+	tmdb_movie: 'kept untouched: public film data',
 	night: 'kept but for note, which is free text',
 	audit: 'person_id and target remapped, detail replaced',
 	rules_change: 'kept',

@@ -44,6 +44,8 @@ function isOpenRoute(pathname: string): boolean {
 	// business withholding: both are public already, and a check only the people
 	// behind the gate can make is one nobody makes
 	if (pathname === '/healthz') return true;
+	// a room guest sees posters; the route serves only TMDB's own public images
+	if (pathname.startsWith('/poster/')) return true;
 	// the demo's own door, which is the one thing a visitor arrives holding nothing
 	// for; everything behind it is the ordinary app reading an ordinary person
 	return isDemo() && (pathname === '/demo' || pathname.startsWith('/demo/'));

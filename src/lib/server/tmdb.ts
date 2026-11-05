@@ -4,7 +4,10 @@ import { TMDB_TOKEN } from './config.js';
 
 const API = 'https://api.themoviedb.org/3';
 const IMAGE = 'https://image.tmdb.org/t/p';
-const CACHE_HOURS = 24;
+/** a search's results; new releases do turn up, so not forever */
+const CACHE_HOURS = 24 * 7;
+/** a film's details, which TMDB all but never changes once a film is out */
+const MOVIE_CACHE_DAYS = 30;
 const MAX_RESULTS = 7;
 
 export type SearchResult = {
@@ -61,7 +64,7 @@ function mapMovie(movie: RawMovie): SearchResult {
 }
 
 /**
- * §8.2. Cached for 24 hours on the normalised query. Any TMDB failure degrades to
+ * §8.2. Cached for a week on the normalised query. Any TMDB failure degrades to
  * an empty list rather than blocking a nomination; you can always type a title.
  */
 export async function search(db: DB, query: string): Promise<SearchResponse> {
@@ -131,12 +134,34 @@ export type Facts = {
 	directors: { name: string; gender: number | null }[];
 };
 
+type LookedUp = { details: Details; facts: Facts | null };
+
 /**
- * §8.2: fetched once, when a film is actually nominated, not per keystroke.
- * append_to_response folds the credits into the same request. Failure is not
+ * §8.2: fetched when a film is actually nominated, not per keystroke, and kept
+ * for MOVIE_CACHE_DAYS so the same film is not asked for twice. Failure is not
  * fatal: the film goes on the list with a title and nothing else, and no facts.
  */
-export async function lookUpFilm(tmdbId: number): Promise<{ details: Details; facts: Facts | null }> {
+export async function lookUpFilm(db: DB, tmdbId: number, now = new Date()): Promise<LookedUp> {
+	const cached = db.prepare('SELECT body, fetched_at FROM tmdb_movie WHERE tmdb_id = ?').get(tmdbId) as
+		| { body: string; fetched_at: string }
+		| undefined;
+	if (cached && now.getTime() - new Date(cached.fetched_at).getTime() < MOVIE_CACHE_DAYS * 86_400_000) {
+		return JSON.parse(cached.body) as LookedUp;
+	}
+	const fresh = await fetchFilm(tmdbId);
+	if (fresh.facts) {
+		db.prepare(
+			`INSERT INTO tmdb_movie (tmdb_id, body, fetched_at) VALUES (?, ?, ?)
+			 ON CONFLICT(tmdb_id) DO UPDATE SET body = excluded.body, fetched_at = excluded.fetched_at`
+		).run(tmdbId, JSON.stringify(fresh), iso(now));
+		return fresh;
+	}
+	// a stale copy beats nothing, the way it does for search
+	return cached ? (JSON.parse(cached.body) as LookedUp) : fresh;
+}
+
+/** append_to_response folds the credits into the same request */
+async function fetchFilm(tmdbId: number): Promise<LookedUp> {
 	try {
 		const movie = (await tmdbFetch(`/movie/${tmdbId}?append_to_response=credits`)) as {
 			runtime?: number | null;
@@ -178,6 +203,6 @@ export async function lookUpFilm(tmdbId: number): Promise<{ details: Details; fa
 	}
 }
 
-export async function detailsOf(tmdbId: number): Promise<Details> {
-	return (await lookUpFilm(tmdbId)).details;
+export async function detailsOf(db: DB, tmdbId: number): Promise<Details> {
+	return (await lookUpFilm(db, tmdbId)).details;
 }

@@ -14,6 +14,7 @@
 </script>
 
 <script lang="ts">
+	import { posterSrc } from '$lib/poster-src';
 	let { cards }: { cards: StatCard[] } = $props();
 </script>
 
@@ -22,7 +23,7 @@
 		<div class="card">
 			{#if card.film}
 				{#if card.film.posterUrl}
-					<img src={card.film.posterUrl} alt="" loading="lazy" />
+					<img src={posterSrc(card.film.posterUrl)} alt="" loading="lazy" />
 				{:else}
 					<span class="noposter"></span>
 				{/if}

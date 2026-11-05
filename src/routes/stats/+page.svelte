@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { posterSrc } from '$lib/poster-src';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import FacePeek, { peekFor, type Peek } from '$lib/components/FacePeek.svelte';
 	import Bars, { type Bar } from '$lib/components/chart/Bars.svelte';
@@ -814,7 +815,7 @@
 				<div class="sfilms">
 					{#each data.bridesmaids.slice(0, 8) as film (film.id)}
 						<div class="sfilm">
-							{#if film.posterUrl}<img src={film.posterUrl} alt="" loading="lazy" />{:else}<span class="noposter"></span>{/if}
+							{#if film.posterUrl}<img src={posterSrc(film.posterUrl)} alt="" loading="lazy" />{:else}<span class="noposter"></span>{/if}
 							<span class="st"><b>{film.title}</b><i>{T.filmState(film.status)}</i></span>
 							<em>{film.value}×</em>
 						</div>
@@ -830,7 +831,7 @@
 				<div class="sfilms">
 					{#each data.comebacks.slice(0, 8) as film (film.id)}
 						<div class="sfilm">
-							{#if film.posterUrl}<img src={film.posterUrl} alt="" loading="lazy" />{:else}<span class="noposter"></span>{/if}
+							{#if film.posterUrl}<img src={posterSrc(film.posterUrl)} alt="" loading="lazy" />{:else}<span class="noposter"></span>{/if}
 							<span class="st"><b>{film.title}</b><i>{T.backLine(film.drops, film.weeks)}</i></span>
 							<em>{film.evening ? T.evening(film.evening) : T.filmState('active')}</em>
 						</div>

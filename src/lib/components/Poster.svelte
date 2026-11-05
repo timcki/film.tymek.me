@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { posterSrc } from '$lib/poster-src';
+
 	/** a poster, or the film's initials when TMDB had nothing */
 	let { title, url = null }: { title: string; url?: string | null } = $props();
 
@@ -15,7 +17,7 @@
 </script>
 
 {#if url}
-	<img src={url} alt="" loading="lazy" />
+	<img src={posterSrc(url)} alt="" loading="lazy" />
 {:else}
 	<span class="ph">{initials}</span>
 {/if}

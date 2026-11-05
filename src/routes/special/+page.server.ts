@@ -89,7 +89,7 @@ export const actions: Actions = {
 
 		// §8.2: one details request per pick, as for a nomination; §3.7: the same
 		// request is what a custom week's rules are checked against
-		const { details, facts } = tmdbId ? await lookUpFilm(tmdbId) : { details: NO_DETAILS, facts: null };
+		const { details, facts } = tmdbId ? await lookUpFilm(getDb(), tmdbId) : { details: NO_DETAILS, facts: null };
 
 		try {
 			nominateSpecial(getDb(), activeRules(), locals.person!.id, {

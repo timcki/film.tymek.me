@@ -67,7 +67,7 @@ export const actions: Actions = {
 		const form = await request.formData();
 		const id = Number(form.get('id'));
 		try {
-			editFilm(getDb(), id, await filmEditLookedUp(form));
+			editFilm(getDb(), id, await filmEditLookedUp(getDb(), form));
 			logAdmin(getDb(), person.id, 'film.edit', String(id), String(form.get('title') ?? ''));
 			return { saved: true };
 		} catch (error) {

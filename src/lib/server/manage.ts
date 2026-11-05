@@ -417,11 +417,11 @@ export function filmEditFrom(form: FormData): FilmEdit {
  * The same, with a film picked from TMDB in this one's place looked up once,
  * on save (§8.2): what TMDB says about it wins over the fields it replaces.
  */
-export async function filmEditLookedUp(form: FormData): Promise<FilmEdit> {
+export async function filmEditLookedUp(db: DB, form: FormData): Promise<FilmEdit> {
 	const edit = filmEditFrom(form);
 	const tmdbId = Number(form.get('tmdbId')) || null;
 	if (!tmdbId) return edit;
-	const { details, facts } = await lookUpFilm(tmdbId);
+	const { details, facts } = await lookUpFilm(db, tmdbId);
 	const replacement = { tmdbId, overview: String(form.get('overview') ?? ''), countries: details.countries };
 	// TMDB unreachable: what was typed beats blanks
 	if (!facts) return { ...edit, replacement };

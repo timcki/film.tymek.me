@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { posterSrc } from '$lib/poster-src';
 	import { fade, scale } from 'svelte/transition';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Poster from '$lib/components/Poster.svelte';
@@ -30,7 +31,7 @@
 	{#each data.watched as film (film.id)}
 		<button class="wcard" type="button" onclick={() => (openId = film.id)}>
 			{#if film.poster_url}
-				<img src={film.poster_url} alt="" loading="lazy" />
+				<img src={posterSrc(film.poster_url)} alt="" loading="lazy" />
 			{:else}
 				<div class="noimg"></div>
 			{/if}
