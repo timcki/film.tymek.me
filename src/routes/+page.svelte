@@ -638,9 +638,11 @@
 			read: async () => (await (await fetch('/api/live', { cache: 'no-store' })).json()).gen,
 			current: () => data.live,
 			refresh: () => invalidateAll(),
+			// a film's sheet is only read, so what it says keeps up with the vote just
+			// cast elsewhere; it holds the refresh only while somebody is typing in it
 			busy: () =>
 				sending > 0 ||
-				detailId !== null ||
+				(detailId !== null && (noteEdit || document.activeElement instanceof HTMLTextAreaElement)) ||
 				droppedId !== null ||
 				searchOpen ||
 				crowdOpen !== null ||

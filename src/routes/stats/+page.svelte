@@ -586,25 +586,7 @@
 				<!-- the invitation, spent the moment it is taken: once a row has been
 				     pressed the card above says what pressing one does -->
 				{#if !lit}
-					<p class="hint">
-						<svg
-							width="15"
-							height="15"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.9"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							aria-hidden="true"
-							><path d="M9 11V5.5a1.8 1.8 0 0 1 3.6 0V11" /><path
-								d="M12.6 11V9.4a1.7 1.7 0 0 1 3.4 0V11"
-							/><path d="M16 11v-.8a1.7 1.7 0 0 1 3.4 0V15a5.4 5.4 0 0 1-5.4 5.4h-1.7" /><path
-								d="M12.6 20.4a5.4 5.4 0 0 1-4-1.9l-3-3.4a1.8 1.8 0 0 1 2.6-2.4L9 13.6"
-							/></svg
-						>
-						{T.pickHint}
-					</p>
+					{@render invite(T.pickHint)}
 				{/if}
 				{#if opennessAverage !== null}
 					<p class="explain key">
@@ -683,7 +665,7 @@
 			<section class="spanel wide backs">
 				<div class="sec">{T.ringH}</div>
 				<p class="explain">{T.ringSub(votes)}</p>
-				{#if !lit}<p class="hint">{T.ringHint}</p>{/if}
+				{#if !lit}{@render invite(T.ringHint)}{/if}
 				<div class="ringpair">
 					{#each sides as side (side.mode)}
 						<div class="ringside">
@@ -892,6 +874,28 @@
 {/if}
 
 <!-- what is actually in the bar somebody just tapped, listed under that chart -->
+{#snippet invite(text: string)}
+	<p class="hint">
+		<svg
+			width="15"
+			height="15"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="1.9"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			aria-hidden="true"
+			><path d="M9 11V5.5a1.8 1.8 0 0 1 3.6 0V11" /><path
+				d="M12.6 11V9.4a1.7 1.7 0 0 1 3.4 0V11"
+			/><path d="M16 11v-.8a1.7 1.7 0 0 1 3.4 0V15a5.4 5.4 0 0 1-5.4 5.4h-1.7" /><path
+				d="M12.6 20.4a5.4 5.4 0 0 1-4-1.9l-3-3.4a1.8 1.8 0 0 1 2.6-2.4L9 13.6"
+			/></svg
+		>
+		{text}
+	</p>
+{/snippet}
+
 {#snippet picked(title?: string)}
 	{#if title}
 		<div class="ptitle"><span>{title}</span><b>{filmsIn.length}</b></div>
