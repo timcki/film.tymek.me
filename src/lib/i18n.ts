@@ -802,7 +802,7 @@ const pl: Dict = {
 	ringH: 'Kto kogo wspiera',
 	ringSub: (votes) =>
 		`Wstążka prowadzi od tego, kto ${votes ? 'głosuje' : 'wydaje punkty'}, do tego, kto zgłosił film, i jest tym grubsza, im więcej poszło. Kropka jest tam, gdzie ${votes ? 'głosy' : 'punkty'} trafiają. Własne filmy nie wchodzą w grę.`,
-	ringHint: 'Naciśnij czyjąś twarz, żeby zobaczyć, kogo ta osoba wspiera i kto wspiera ją.',
+	ringHint: 'Naciśnij czyjeś zdjęcie, żeby zobaczyć, kogo ta osoba wspiera i kto wspiera ją.',
 	ringOut: 'Wspiera',
 	ringIn: 'Wspierany przez',
 	ringNone: 'nikogo',
@@ -1449,7 +1449,7 @@ const en: Dict = {
 	ringH: 'Who backs whom',
 	ringSub: (votes) =>
 		`A ribbon runs from whoever ${votes ? 'votes' : 'spends points'} to whoever nominated the film, and the more went, the thicker it is. The dot is where the ${votes ? 'votes' : 'points'} land. Your own films do not count.`,
-	ringHint: 'Press anyone\'s face to see who they back and who backs them.',
+	ringHint: 'Press anyone\'s photo to see who they back and who backs them.',
 	ringOut: 'Backs',
 	ringIn: 'Backed by',
 	ringNone: 'nobody',

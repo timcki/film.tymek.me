@@ -65,9 +65,20 @@
 	</div>
 	<div bind:clientWidth={W}>
 		<svg width={W} height={H} role="img" aria-label={lines.map((line) => line.label).join(', ')}>
-			{#each [0, 50, 100] as y (y)}
-				<line class="grid" x1={LEFT} x2={W - RIGHT} y1={sy(y)} y2={sy(y)} />
-				<text class="yl" x={LEFT - 6} y={sy(y) + 3}>{y}%</text>
+			<!-- the ends solid, the middle dashed, the quarters finer still, so a level reads at a glance -->
+			{#each [0, 25, 50, 75, 100] as y (y)}
+				<line
+					class="grid"
+					class:half={y === 50}
+					class:quarter={y % 50 !== 0}
+					x1={LEFT}
+					x2={W - RIGHT}
+					y1={sy(y)}
+					y2={sy(y)}
+				/>
+				{#if y % 50 === 0}
+					<text class="yl" x={LEFT - 6} y={sy(y) + 3}>{y}%</text>
+				{/if}
 			{/each}
 			{#each lines as line (line.key)}
 				<path d={path(line.values)} stroke={line.colour} />
@@ -149,7 +160,14 @@
 	}
 	.grid {
 		stroke: var(--line);
-		stroke-dasharray: 3 3;
+	}
+	.grid.half {
+		stroke-dasharray: 4 3;
+	}
+	.grid.quarter {
+		stroke-width: 0.5;
+		stroke-dasharray: 1 3;
+		opacity: 0.7;
 	}
 	.yl {
 		font-size: 9.5px;
