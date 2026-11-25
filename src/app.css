@@ -1003,7 +1003,7 @@ header .sub b {
 	transform-origin: 50% 100%;
 }
 .fpeek.below .fpcard {
-	transform-origin: 50% 0;
+	transform-origin: 100% 0;
 }
 .fphead {
 	display: flex;
@@ -4830,22 +4830,28 @@ button.wcard:focus-visible img {
    inside it, on every page including the room and the back office, because a
    stranger has to be able to tell which half of what they are reading was
    invented before they read any of it. */
-/* pinned to the foot of the screen, over the page rather than in it, so the
-   header and the list sit exactly where they do on the real app. Under the
-   menu's backdrop (45) and every sheet and modal */
+/* over the page rather than in it, so the header and the list sit exactly
+   where they do on the real app. On a phone it hangs just under the header and
+   never at the foot of the screen: Safari tints its floating address bar from
+   any fixed box it finds along the bottom edge, and the glass goes opaque.
+   Under the header (47), the menu's backdrop (45) and every sheet and modal */
 .demobar {
 	position: fixed;
 	z-index: 44;
-	/* no wider than the widest page, so the icon sits in the card's own corner */
-	left: max(14px, calc(50% - 550px));
-	right: max(14px, calc(50% - 550px));
-	bottom: calc(14px + env(safe-area-inset-bottom));
+	left: 14px;
+	right: 14px;
+	top: calc(80px + env(safe-area-inset-top));
+	/* no box of its own: the card and the badge hang off this line */
+	height: 0;
 	pointer-events: none;
 }
 /* a card like any other on the page, so the demo's notice reads as part of the
    app's own furniture and takes whatever palette the page is wearing */
 .demoin {
-	position: relative;
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
@@ -4860,17 +4866,25 @@ button.wcard:focus-visible img {
 	line-height: 1.45;
 	color: var(--dim);
 	pointer-events: auto;
-	/* it sinks towards the badge's corner rather than vanishing where it stands:
-	   a short drop and a slight shrink, slow enough to be read as leaving */
-	transform-origin: 0 100%;
+	/* it draws back towards the badge rather than vanishing where it stands: a
+	   short lift and a slight shrink, slow enough to be read as leaving */
+	transform-origin: 50% 0;
 	transition:
 		transform 0.42s cubic-bezier(0.4, 0, 0.2, 1),
-		opacity 0.34s ease;
+		opacity 0.34s ease,
+		visibility 0s;
 }
+/* gone for good once it has left, not merely clear: a clear card is still a
+   fixed box across the foot of the screen as far as the browser's bar goes */
 .demobar.tucked .demoin {
-	transform: translateY(18px) scale(0.94);
+	transform: translateY(-18px) scale(0.94);
 	opacity: 0;
+	visibility: hidden;
 	pointer-events: none;
+	transition:
+		transform 0.42s cubic-bezier(0.4, 0, 0.2, 1),
+		opacity 0.34s ease,
+		visibility 0s linear 0.42s;
 }
 .demotuck {
 	position: absolute;
@@ -4894,13 +4908,17 @@ button.wcard:focus-visible img {
    there, rising into the corner while the card is on its way out */
 .demoicon {
 	position: absolute;
-	left: 0;
-	bottom: 0;
+	right: 0;
+	top: 0;
 	display: flex;
 	align-items: center;
+	justify-content: center;
 	gap: 7px;
+	/* on a phone just the mark, at the right edge: a word there would sit on
+	   every card's score */
+	width: 40px;
 	height: 40px;
-	padding: 0 15px 0 11px;
+	padding: 0;
 	border: 0;
 	border-radius: 999px;
 	background: var(--accent);
@@ -4913,7 +4931,7 @@ button.wcard:focus-visible img {
 		0 6px 18px var(--shadow-soft);
 	cursor: pointer;
 	opacity: 0;
-	transform: translateY(10px) scale(0.9);
+	transform: translateY(-10px) scale(0.9);
 	transition:
 		transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
 		opacity 0.2s ease;
@@ -4928,6 +4946,19 @@ button.wcard:focus-visible img {
 		opacity 0.3s ease 0.16s;
 	animation: demoping 0.9s ease-out 0.5s 1;
 }
+.demoicon span {
+	display: none;
+}
+/* down the right edge it shares a column with every card's +, which is a
+   filled accent disc: this one is the card's own surface with an accent ring,
+   so the two are never taken for each other */
+@media (max-width: 959px) {
+	.demoicon {
+		background: var(--card);
+		color: var(--accent);
+		border: 2px solid var(--accent);
+	}
+}
 /* one ring as it lands, so the eye follows the notice to where it went */
 @keyframes demoping {
 	from {
@@ -4937,6 +4968,37 @@ button.wcard:focus-visible img {
 	to {
 		outline: 2px solid transparent;
 		outline-offset: 10px;
+	}
+}
+/* on a desktop there is a corner to spare: the notice sits at the bottom left
+   of the screen, in the page's gutter, and the card opens out of that corner */
+@media (min-width: 960px) {
+	.demobar {
+		top: auto;
+		bottom: 16px;
+		left: 16px;
+		right: auto;
+		width: min(760px, calc(100% - 32px));
+	}
+	.demoin {
+		top: auto;
+		bottom: 0;
+		transform-origin: 0 100%;
+	}
+	.demobar.tucked .demoin {
+		transform: translateY(18px) scale(0.94);
+	}
+	.demoicon {
+		top: auto;
+		bottom: 0;
+		left: 0;
+		right: auto;
+		width: auto;
+		padding: 0 15px 0 11px;
+		transform: translateY(10px) scale(0.9);
+	}
+	.demoicon span {
+		display: inline;
 	}
 }
 @media (prefers-reduced-motion: reduce) {

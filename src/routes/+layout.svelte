@@ -388,7 +388,7 @@
 			tabindex={demoTucked ? 0 : -1}
 			onclick={demoShow}
 		>
-			<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+			<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
 				<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8" />
 				<path d="M12 11v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
 				<circle cx="12" cy="7.6" r="1.2" fill="currentColor" />
