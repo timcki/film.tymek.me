@@ -17,7 +17,6 @@ SNAP_DB=${SNAP_DB:-$HERE/data/prod-snapshot.db}
 DEMO_DB=${DEMO_DB:-$HERE/data/demo-copy.db}
 SNAPSHOT=${SNAPSHOT:-1}
 DEV_PORT=${DEV_PORT:-5174}
-DEMO_HOME=${DEMO_HOME:-https://tymek.me}
 
 # This machine's tailnet address, or nothing when tailscale is not up. The demo
 # renders QR codes on /me and /host exactly as the real app does, and a QR saying
@@ -83,5 +82,5 @@ echo "==> starting the demo at $LOCAL_ORIGIN (ctrl-c to stop)"
 echo "    the root shows the gate a stranger meets; $LOCAL_ORIGIN/demo is the way in"
 echo "    once inside, the bar switches persona"
 # --port explicitly, so the port the QR codes advertise is the port it binds
-DEMO=1 DEMO_HOME="$DEMO_HOME" ORIGIN="$LOCAL_ORIGIN" DATABASE_PATH="$DEMO_DB" \
+DEMO=1 ORIGIN="$LOCAL_ORIGIN" DATABASE_PATH="$DEMO_DB" \
 	npm run dev -- --host --port "$DEV_PORT"

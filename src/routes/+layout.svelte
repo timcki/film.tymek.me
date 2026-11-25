@@ -378,9 +378,6 @@
 						>{personaLabel(persona.kind)}: {persona.name.split(' ')[0]}</a
 					>
 				{/each}
-				{#if data.demo.home}
-					<a class="demohome" href={data.demo.home}>{T.demoHome}</a>
-				{/if}
 			</div>
 		</div>
 	</div>

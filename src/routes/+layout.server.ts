@@ -1,6 +1,6 @@
 import type { LayoutServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
-import { activeRules, demoHome, isDemo } from '$lib/server/config';
+import { activeRules, isDemo } from '$lib/server/config';
 import { PERSONAS, personas, type PersonaKind } from '$lib/server/demo';
 import { currentWeek } from '$lib/server/weeks';
 import { roundEvenings } from '$lib/server/evenings';
@@ -34,7 +34,6 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	const cast = isDemo() ? personas(db) : null;
 	const demo = cast
 		? {
-				home: demoHome(),
 				who: (PERSONAS.find((kind) => cast[kind]?.id === person?.id) ?? null) as PersonaKind | null,
 				offer: PERSONAS.filter((kind) => cast[kind]).map((kind) => ({
 					kind,

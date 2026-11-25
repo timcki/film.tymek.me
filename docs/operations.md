@@ -204,7 +204,6 @@ repository, so they are described here rather than checked in.
 | `DATABASE_PATH` | `/var/lib/filmnight-demo/demo.db` |
 | `ORIGIN` | `https://demo.film.tymek.me` |
 | `DEMO` | `1` |
-| `DEMO_HOME` | `https://tymek.me`, the portfolio the bar links back to |
 | `RULES` | the same value as production, or the rules screen describes a different app |
 | `TMDB_READ_TOKEN` | the same token; `/api/search` is rate limited per address in demo |
 | `ADDRESS_HEADER` | `X-Forwarded-For` |
@@ -213,7 +212,7 @@ repository, so they are described here rather than checked in.
 | `ADMINS` | **unset** |
 
 `PORT`, `HOST`, `DATABASE_PATH`, `DEMO`, `ADDRESS_HEADER`, `XFF_DEPTH` and
-`FILMNIGHT_REV` live in the unit. `ORIGIN`, `DEMO_HOME`, `RULES`, `TZ` and the TMDB
+`FILMNIGHT_REV` live in the unit. `ORIGIN`, `RULES`, `TZ` and the TMDB
 token live in `/etc/filmnight-demo.env` (0600 root:root), the last three copied out of
 `/etc/filmnight.env` so the demo describes the same rule set the real app runs. Nothing
 may appear in both, for the reason it may not for the app: `EnvironmentFile` wins over

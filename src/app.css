@@ -4861,8 +4861,7 @@ button.wcard:focus-visible img {
 	gap: 6px;
 	color: var(--dim);
 }
-.demopill,
-.demohome {
+.demopill {
 	display: inline-block;
 	border: 1px solid var(--line3);
 	border-radius: 999px;
@@ -4877,11 +4876,7 @@ button.wcard:focus-visible img {
 	color: var(--accent-ink);
 	font-weight: 650;
 }
-.demohome {
-	border-style: dashed;
-}
-.demopill:hover,
-.demohome:hover {
+.demopill:hover {
 	border-color: var(--edge);
 }
 

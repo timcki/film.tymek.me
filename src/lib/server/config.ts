@@ -30,9 +30,4 @@ export function revision(): string {
 	return process.env.FILMNIGHT_REV || 'dev';
 }
 
-/** where the demo's bar points back to, so a visitor can find the portfolio again */
-export function demoHome(): string | null {
-	return process.env.DEMO_HOME || null;
-}
-
 export const TMDB_TOKEN = () => process.env.TMDB_READ_TOKEN ?? '';
