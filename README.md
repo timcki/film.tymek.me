@@ -7,7 +7,7 @@ go to whoever actually turned up in person that given week, and the room picks o
 film-buff ranks.
 
 Polish by default, English on a toggle. Live at **[film.tymek.me](https://film.tymek.me)**,
-behind a personal link. There is also a public demo at **[demo.film.tymek.me/demo](https://demo.film.tymek.me/demo)** with an
+behind a personal link. There is also a public demo at **[demo.film.tymek.me](https://demo.film.tymek.me)** with an
 anonymised copy of the live database, rebuilt every hour. The names, pfps and comments are obfuscated.
 
 <p align="center">
