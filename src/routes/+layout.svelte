@@ -370,14 +370,16 @@
 			<p><b>{T.demoWhat}</b> {T.demoResets}</p>
 			<div class="demoas">
 				<span>{T.demoAs}</span>
-				{#each data.demo.offer as persona (persona.kind)}
-					<a
-						class="demopill"
-						class:on={data.demo.who === persona.kind}
-						href="/demo/as?who={persona.kind}&to={encodeURIComponent(path)}"
-						>{personaLabel(persona.kind)}: {persona.name.split(' ')[0]}</a
-					>
-				{/each}
+				<div class="demoseg">
+					{#each data.demo.offer as persona (persona.kind)}
+						<a
+							class="demopill"
+							class:on={data.demo.who === persona.kind}
+							href="/demo/as?who={persona.kind}&to={encodeURIComponent(path)}"
+							>{personaLabel(persona.kind)}: {persona.name.split(' ')[0]}</a
+						>
+					{/each}
+				</div>
 			</div>
 		</div>
 	</div>
