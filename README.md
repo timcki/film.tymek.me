@@ -1,17 +1,14 @@
 # Wieczorki filmowe
 
-A private site that runs a weekly film night for 22 friends. Everyone nominates one film
+A webapp to manage a weekly film night for my friend group. Everyone nominates one film
 a week and gets three voting points that expire unspent. Film scores fade a quarter every
 week, so a film nobody keeps backing quietly falls off the list. On Thursday the top three
-go to whoever actually turned up, and the room picks one. Showing up earns XP and
+go to whoever actually turned up in person that given week, and the room picks one. Showing up earns XP and
 film-buff ranks.
 
 Polish by default, English on a toggle. Live at **[film.tymek.me](https://film.tymek.me)**,
-behind a personal link.
-
-There is a public demo at **[demo.film.tymek.me/demo](https://demo.film.tymek.me/demo)**: an
-anonymised copy of the live database, rebuilt every hour. The names, faces and comments are
-made up; the films, scores and history are real.
+behind a personal link. There is also a public demo at **[demo.film.tymek.me/demo](https://demo.film.tymek.me/demo)** with an
+anonymised copy of the live database, rebuilt every hour. The names, pfps and comments are obfuscated.
 
 <p align="center">
   <img src="docs/screenshots/list.png" alt="The film list" width="30%">
@@ -21,58 +18,7 @@ made up; the films, scores and history are real.
 
 ## Stack
 
-SvelteKit 2, Svelte 5 runes, TypeScript, and better-sqlite3 in one process, served by
-adapter-node behind Caddy. No ORM, no client state library, no auth provider, and no chart
-library either: the statistics screen is CSS and a handful of small components. The whole
-thing is a flake, so a release is a push and a `nixos-rebuild`. 440 tests, no CI, and one
-external call: a TMDB lookup when you nominate.
+SvelteKit 2, Svelte 5 runes, the db is a simple sqlite instance. Auth is done through custom login links that get saved to browser storage.
+It's a flake, so a release is a push and a `nixos-rebuild`. It uses the TMDB api for movie lookups.
 
-## Four decisions it was built around
-
-**Scores are derived, never accumulated.** `film.score` is a cache with exactly one
-writer, `rescoreAll()`, which rebuilds every row wholesale inside the transaction that
-touched its inputs. It cannot half-drift, and changing the rule set and restarting is
-enough to rescore every week on record correctly.
-
-**The rules screen is generated from the rules.** Change `bankCap` in
-`src/lib/server/rules.ts` and the page that explains the rules to people rewrites itself.
-There is no prose to forget to update, which is the only version of documentation that
-stays true.
-
-**Points buy candidacy; presence buys the choice.** The spec sent a week to a room vote
-only on a tie. In practice 22 people nominate and about seven turn up, so the top three
-always go to the room now. Nobody is punished for being away: they still nominate, still
-spend every point, still decide what is a candidate. They just do not pick the film for a
-room they are not in.
-
-**Errors are codes, not sentences.** A rule violation travels to the browser as a code
-plus its parameters and is said in the reader's language at the edge. Every string the app
-knows lives in two typed dictionaries that a test holds to the same key set, so a new
-message cannot ship in one language only.
-
-## Running it
-
-```sh
-npm install
-cp .env.example .env        # add a TMDB v4 read token
-mkdir -p data
-npm run seed                # roster, week 1, prints the personal links once
-npm run dev
-```
-
-`npm test` runs the acceptance suite, `npm run check` typechecks.
-
-## Where things are
-
-| Path | |
-|---|---|
-| `filmnight-spec.md` | the rules, in full, cited by section from the code |
-| `src/lib/server/rules.ts` | the four rule sets: scoring, fade, budgets, ordering |
-| `src/lib/server/weeks.ts` | opening, closing, attrition, bank accrual |
-| `src/lib/server/runoffs.ts` | the Thursday room vote |
-| `src/lib/server/stats.ts` | every figure the statistics screen draws |
-| `src/lib/i18n.ts` | every string the app says about itself |
-| `docs/operations.md` | deploying, backups, handing out links |
-| `CLAUDE.md` | the invariants, for anyone (or anything) editing this |
-
-This product uses the TMDB API but is not endorsed or certified by TMDB.
+All the info about running is in `docs/` and `CLAUDE.md` (there's script to bootup test servers through tailscale etc). Point your agents to it and they should figure things out (:
