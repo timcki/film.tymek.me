@@ -12,8 +12,14 @@ anonymised copy of the live database, rebuilt every hour. The names, pfps and co
 
 <p align="center">
   <img src="docs/screenshots/list.png" alt="The film list" width="30%">
-  <img src="docs/screenshots/host.png" alt="The projector view" width="30%">
+  <img src="docs/screenshots/ballot.png" alt="The ballot on a phone, after scanning the room's QR code and ranking the three films" width="30%">
   <img src="docs/screenshots/me.png" alt="A profile" width="30%">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/room.png" alt="The projector view while the room votes: QR code, room code and the three films" width="32%">
+  <img src="docs/screenshots/count.png" alt="The projector view counting the votes" width="32%">
+  <img src="docs/screenshots/host.png" alt="The projector view once the count is done" width="32%">
 </p>
 
 ## Stack
