@@ -9,6 +9,10 @@ film-buff ranks.
 Polish by default, English on a toggle. Live at **[film.tymek.me](https://film.tymek.me)**,
 behind a personal link.
 
+There is a public demo at **[demo.film.tymek.me/demo](https://demo.film.tymek.me/demo)**: an
+anonymised copy of the live database, rebuilt every hour. The names, faces and comments are
+made up; the films, scores and history are real.
+
 <p align="center">
   <img src="docs/screenshots/list.png" alt="The film list" width="30%">
   <img src="docs/screenshots/host.png" alt="The projector view" width="30%">
@@ -20,7 +24,7 @@ behind a personal link.
 SvelteKit 2, Svelte 5 runes, TypeScript, and better-sqlite3 in one process, served by
 adapter-node behind Caddy. No ORM, no client state library, no auth provider, and no chart
 library either: the statistics screen is CSS and a handful of small components. The whole
-thing is a flake, so a release is a push and a `nixos-rebuild`. 230 tests, no CI, and one
+thing is a flake, so a release is a push and a `nixos-rebuild`. 440 tests, no CI, and one
 external call: a TMDB lookup when you nominate.
 
 ## Four decisions it was built around
