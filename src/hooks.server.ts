@@ -2,6 +2,7 @@ import type { Handle } from '@sveltejs/kit';
 import { getDb } from '$lib/server/db';
 import { isAdmin, seedAdmins } from '$lib/server/admin';
 import { isDemo } from '$lib/server/config';
+import { demoDefault } from '$lib/server/demo';
 import { personByToken } from '$lib/server/people';
 import { limiter } from '$lib/server/ratelimit';
 import { startScheduler } from '$lib/server/scheduler';
@@ -46,8 +47,8 @@ function isOpenRoute(pathname: string): boolean {
 	if (pathname === '/healthz') return true;
 	// a room guest sees posters; the route serves only TMDB's own public images
 	if (pathname.startsWith('/poster/')) return true;
-	// the demo's own door, which is the one thing a visitor arrives holding nothing
-	// for; everything behind it is the ordinary app reading an ordinary person
+	// the demo's persona links set their own cookie, so they stay outside both the
+	// gate and the default persona handle() hands out
 	return isDemo() && (pathname === '/demo' || pathname.startsWith('/demo/'));
 }
 
@@ -65,19 +66,6 @@ const LOCKED_OUT = `<!doctype html>
 <p>Otwórz swój prywatny link, żeby wejść. Jeśli go zgubiłeś, napisz do Tymka.</p>
 <p>Open your personal link to get in.</p>
 </main></body></html>`;
-
-/**
- * The same door, on the demo, where it is worth standing in front of: an invite
- * is how this app actually greets a stranger, and a showcase that skipped it
- * would be hiding the part that explains why the rest looks the way it does.
- * The way in is a link rather than a code, because there is nobody to ask.
- */
-const DEMO_DOOR = LOCKED_OUT.replace(
-	'</main>',
-	`<p style="margin-top:1.4rem"><a href="/demo" style="color:#eef0f3">Open the demo &rarr;</a></p>
-<p style="font-size:.85rem">No link needed, and nobody you meet inside is real.</p>
-</main>`
-);
 
 /**
  * Everything a visitor writes in the demo is written under one of its made-up
@@ -101,7 +89,19 @@ function unindexed(response: Response): Response {
 export const handle: Handle = async ({ event, resolve }) => {
 	const db = getDb();
 	const token = event.cookies.get(PERSON_COOKIE);
-	const person = token ? (personByToken(db, token) ?? null) : null;
+	let person = token ? (personByToken(db, token) ?? null) : null;
+	// the demo has no gate: a visitor holding nothing is handed the default
+	// made-up member on whatever page they asked for, so a link from a portfolio
+	// opens the app rather than a page explaining how to open it. Reads only, so
+	// a script posting at the demo still has to have been somewhere first
+	if (
+		!person &&
+		isDemo() &&
+		(event.request.method === 'GET' || event.request.method === 'HEAD') &&
+		!isOpenRoute(event.url.pathname)
+	) {
+		person = demoDefault(db);
+	}
 	event.locals.person = person;
 	event.locals.deviceId = event.cookies.get(DEVICE_COOKIE) ?? null;
 
@@ -126,7 +126,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	if (!person && !isOpenRoute(event.url.pathname)) {
 		return unindexed(
-			new Response(isDemo() ? DEMO_DOOR : LOCKED_OUT, {
+			new Response(LOCKED_OUT, {
 				status: 401,
 				headers: { 'content-type': 'text/html; charset=utf-8' }
 			})

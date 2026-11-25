@@ -172,14 +172,14 @@ even in the freed pages. What stays real is the part worth showing: titles, post
 directors, every score, every ballot, the whole week history including the archive, XP,
 ranks, the fairness table and the rule set.
 
-The demo keeps the gate. Its root answers a visitor holding nothing with the same
-locked-out page the real app does, because being invite-only is the thing that shapes
-everything behind it, and a showcase that opened straight onto the app would be hiding
-the reason it looks the way it does. `/demo` is the door: it hands over one of the
-made-up people and redirects to the root, and it is the only place that hands anybody
-anything. Link the portfolio at `/demo` rather than at the root, or at
-`/demo/as?who=admin` to open on the back office. Somebody already carrying a persona
-keeps it when they pass the door again; the bar is what swaps who you are.
+The demo has no gate. A visitor holding nothing is handed the default made-up member on
+whichever page they asked for, so the root opens straight onto the film list and any
+deep link works. The real app still answers a stranger with the locked-out page; only
+the demo skips it, since there is nobody to ask for a link. `/demo` still works and
+redirects to the root, for links that already point there, and `/demo/as?who=admin`
+opens on the back office. Somebody already carrying a persona keeps it; the bar is what
+swaps who you are. Only reads hand out a persona, so a write from a visitor holding
+nothing is still refused.
 
 The filler is lorem ipsum rather than plausible film talk on purpose. Invented opinions
 in the right register read as twenty-two real people's, and a visitor has no way to tell

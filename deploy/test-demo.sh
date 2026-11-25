@@ -79,7 +79,7 @@ sqlite3 "$DEMO_DB" "SELECT '    ' || name FROM person WHERE active = 1 ORDER BY 
 echo "    ..."
 
 echo "==> starting the demo at $LOCAL_ORIGIN (ctrl-c to stop)"
-echo "    the root shows the gate a stranger meets; $LOCAL_ORIGIN/demo is the way in"
+echo "    $LOCAL_ORIGIN opens straight onto the list, as the default made-up member"
 echo "    once inside, the bar switches persona"
 # --port explicitly, so the port the QR codes advertise is the port it binds
 DEMO=1 ORIGIN="$LOCAL_ORIGIN" DATABASE_PATH="$DEMO_DB" \
