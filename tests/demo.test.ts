@@ -385,6 +385,34 @@ describe('the anonymiser', () => {
 		db.close();
 	});
 
+	it('lets a short name sit inside a longer public word, like Mich inside Michael', () => {
+		const db = openDatabase(source);
+		db.prepare(
+			`INSERT INTO person (id, name, colour, token, active, created_at)
+			 VALUES ('mich', 'Mich', '#e8c34a', 'tokenMich888888888888', 1, ?)`
+		).run(iso(new Date(Date.UTC(2026, 0, 20))));
+		db.prepare('UPDATE film SET director = ? WHERE title = ?').run('Michael Haneke', 'Stalker');
+		db.close();
+
+		anonymise(source, out);
+
+		const demo = new Database(out, { readonly: true });
+		expect(demo.prepare('SELECT director FROM film WHERE title = ?').get('Stalker')).toEqual({
+			director: 'Michael Haneke'
+		});
+		expect(demo.prepare('SELECT count(*) AS n FROM person WHERE name = ?').get('Mich')).toEqual({ n: 0 });
+		demo.close();
+	});
+
+	it('still refuses a name standing on its own in a column it keeps', () => {
+		const db = openDatabase(source);
+		db.prepare('UPDATE film SET director = ? WHERE title = ?').run(CAST[1].name, 'Stalker');
+		db.close();
+
+		expect(() => anonymise(source, out)).toThrow(/film\.director still says "Marek Osiecki"/);
+		expect(existsSync(out)).toBe(false);
+	});
+
 	it('refuses a table it has no rule for, rather than letting it through', () => {
 		const db = openDatabase(source);
 		db.exec('CREATE TABLE private_notes (id INTEGER PRIMARY KEY, body TEXT NOT NULL)');

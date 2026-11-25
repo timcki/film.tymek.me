@@ -547,9 +547,20 @@ type Secrets = { names: string[]; ids: string[]; tokens: string[]; avatars: Buff
  * Reads the finished file back and refuses to hand over anything that still
  * remembers who these people are: first every column of every table, then the
  * bytes themselves, which is what would catch a VACUUM that never ran.
+ *
+ * Names and ids are words, so one only counts where it stands on its own: a
+ * member called Mich is not leaked by a film directed by Michael Haneke, which
+ * the demo keeps on purpose. The column pass collects every such longer word,
+ * and the byte pass blanks exactly those out before looking, so it stays a
+ * plain substring scan. It has to: a record stores its columns back to back, so
+ * a stale id sits flush against the next value and has no word boundary at all.
+ * Tokens are random, so any occurrence of one is a leak.
  */
 function verify(path: string, secrets: Secrets, abort: (message: string) => never): void {
-	const needles = [...secrets.names, ...secrets.ids, ...secrets.tokens].filter(Boolean);
+	const words = [...secrets.names, ...secrets.ids].filter(Boolean);
+	const needles = [...words, ...secrets.tokens.filter(Boolean)];
+	// longer words that merely contain a name or id, found in the vetted columns
+	const excused = new Set<string>();
 	const db = new Database(path, { readonly: true });
 
 	try {
@@ -565,8 +576,14 @@ function verify(path: string, secrets: Secrets, abort: (message: string) => neve
 						abort(`${table}.${column} still holds a blob; the demo carries no binary`);
 					}
 					if (typeof value !== 'string') continue;
-					const hit = needles.find((needle) => value.includes(needle));
-					if (hit) abort(`${table}.${column} still says ${JSON.stringify(hit)}`);
+					const token = secrets.tokens.find((needle) => needle && value.includes(needle));
+					if (token) abort(`${table}.${column} still says ${JSON.stringify(token)}`);
+					for (const word of words) {
+						for (const found of wordsAround(value, word)) {
+							if (found === word) abort(`${table}.${column} still says ${JSON.stringify(word)}`);
+							excused.add(found);
+						}
+					}
 				}
 			}
 		}
@@ -574,15 +591,35 @@ function verify(path: string, secrets: Secrets, abort: (message: string) => neve
 		db.close();
 	}
 
+	// latin1 maps byte for byte, so this is the file's bytes as a searchable string
+	const asBytes = (text: string) => Buffer.from(text, 'utf8').toString('latin1');
 	const bytes = readFileSync(path);
+	let raw = bytes.toString('latin1');
+	for (const word of [...excused].sort((a, b) => b.length - a.length)) {
+		raw = raw.replaceAll(asBytes(word), '\0');
+	}
 	for (const needle of needles) {
-		if (bytes.includes(Buffer.from(needle, 'utf8'))) {
+		if (raw.includes(asBytes(needle))) {
 			abort(`the file still contains ${JSON.stringify(needle)}; did the VACUUM run?`);
 		}
 	}
 	for (const needle of secrets.avatars) {
 		if (bytes.includes(needle)) abort('the file still contains avatar bytes; did the VACUUM run?');
 	}
+}
+
+/** each occurrence of needle in text, widened over any letters or digits touching it */
+function wordsAround(text: string, needle: string): string[] {
+	const found: string[] = [];
+	const glued = /[\p{L}\p{N}]/u;
+	for (let at = text.indexOf(needle); at !== -1; at = text.indexOf(needle, at + 1)) {
+		let from = at;
+		let to = at + needle.length;
+		while (from > 0 && glued.test(text[from - 1])) from--;
+		while (to < text.length && glued.test(text[to])) to++;
+		found.push(text.slice(from, to));
+	}
+	return found;
 }
 
 /* -------------------------------------------------------------------- cli -- */
