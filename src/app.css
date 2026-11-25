@@ -4856,15 +4856,20 @@ button.wcard:focus-visible img {
 	flex-wrap: wrap;
 	align-items: center;
 	gap: 10px 16px;
-	background: var(--card);
+	/* it floats over cards of its own colour, so it is a card a shade towards
+	   the accent with an accent edge and a deeper shadow: on a dark palette
+	   plain --card over --card had no outline at all */
+	background: color-mix(in srgb, var(--accent) 9%, var(--card));
+	border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
 	border-radius: var(--r);
 	box-shadow:
 		var(--lift),
-		0 10px 30px var(--shadow-soft);
+		0 14px 40px var(--shadow),
+		0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent);
 	padding: 12px 40px 12px 14px;
 	font-size: 12.5px;
 	line-height: 1.45;
-	color: var(--dim);
+	color: var(--ink2);
 	pointer-events: auto;
 	/* it draws back towards the badge rather than vanishing where it stands: a
 	   short lift and a slight shrink, slow enough to be read as leaving */
