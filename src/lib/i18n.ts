@@ -463,6 +463,7 @@ export type Dict = {
 	demoMember: string;
 	demoAdmin: string;
 	demoFresh: string;
+	demoBadge: string;
 	demoShow: string;
 	demoHide: string;
 
@@ -968,6 +969,7 @@ const pl: Dict = {
 	demoMember: 'uczestnik',
 	demoAdmin: 'admin',
 	demoFresh: 'ktoś, kto jeszcze nie głosował',
+	demoBadge: 'Demo',
 	demoShow: 'O tym demo',
 	demoHide: 'Schowaj',
 
@@ -1616,6 +1618,7 @@ const en: Dict = {
 	demoMember: 'a member',
 	demoAdmin: 'the admin',
 	demoFresh: 'someone who has not voted yet',
+	demoBadge: 'Demo',
 	demoShow: 'About this demo',
 	demoHide: 'Hide',
 

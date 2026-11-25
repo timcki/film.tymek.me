@@ -4860,14 +4860,15 @@ button.wcard:focus-visible img {
 	line-height: 1.45;
 	color: var(--dim);
 	pointer-events: auto;
-	/* it folds down into the icon's corner rather than fading where it stands */
-	transform-origin: 22px calc(100% - 22px);
+	/* it sinks towards the badge's corner rather than vanishing where it stands:
+	   a short drop and a slight shrink, slow enough to be read as leaving */
+	transform-origin: 0 100%;
 	transition:
-		transform 0.26s cubic-bezier(0.3, 0.7, 0.2, 1),
-		opacity 0.18s ease;
+		transform 0.42s cubic-bezier(0.4, 0, 0.2, 1),
+		opacity 0.34s ease;
 }
 .demobar.tucked .demoin {
-	transform: scale(0.12);
+	transform: translateY(18px) scale(0.94);
 	opacity: 0;
 	pointer-events: none;
 }
@@ -4889,42 +4890,61 @@ button.wcard:focus-visible img {
 	background: var(--sunk);
 	color: var(--ink);
 }
-/* what the notice hides into: it waits small and clear behind the card, and
-   pops up in its corner as the card folds away */
+/* what the notice hides into: a badge in the accent, so it is plainly still
+   there, rising into the corner while the card is on its way out */
 .demoicon {
 	position: absolute;
 	left: 0;
 	bottom: 0;
-	display: grid;
-	place-items: center;
-	width: 44px;
-	height: 44px;
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	height: 40px;
+	padding: 0 15px 0 11px;
 	border: 0;
-	border-radius: 50%;
-	background: var(--card);
-	color: var(--ink2);
+	border-radius: 999px;
+	background: var(--accent);
+	color: var(--accent-ink);
+	font: inherit;
+	font-size: 13px;
+	font-weight: 650;
 	box-shadow:
 		var(--lift),
 		0 6px 18px var(--shadow-soft);
 	cursor: pointer;
 	opacity: 0;
-	transform: scale(0.6);
+	transform: translateY(10px) scale(0.9);
 	transition:
-		transform 0.3s cubic-bezier(0.3, 1.5, 0.5, 1) 0.08s,
-		opacity 0.16s ease 0.08s;
+		transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+		opacity 0.2s ease;
 }
 .demobar.tucked .demoicon {
 	opacity: 1;
 	transform: none;
 	pointer-events: auto;
+	/* arrives as the card is half gone, and settles with a slight overshoot */
+	transition:
+		transform 0.46s cubic-bezier(0.3, 1.4, 0.5, 1) 0.16s,
+		opacity 0.3s ease 0.16s;
+	animation: demoping 0.9s ease-out 0.5s 1;
 }
-.demoicon:hover {
-	color: var(--ink);
+/* one ring as it lands, so the eye follows the notice to where it went */
+@keyframes demoping {
+	from {
+		outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+		outline-offset: 0;
+	}
+	to {
+		outline: 2px solid transparent;
+		outline-offset: 10px;
+	}
 }
 @media (prefers-reduced-motion: reduce) {
 	.demoin,
-	.demoicon {
+	.demoicon,
+	.demobar.tucked .demoicon {
 		transition: none;
+		animation: none;
 	}
 }
 .demoin p {
