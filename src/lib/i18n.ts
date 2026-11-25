@@ -463,6 +463,8 @@ export type Dict = {
 	demoMember: string;
 	demoAdmin: string;
 	demoFresh: string;
+	demoShow: string;
+	demoHide: string;
 
 	/** §3.6: a special round, said from the numbers the round actually runs on */
 	spName: (id: string) => string;
@@ -966,6 +968,8 @@ const pl: Dict = {
 	demoMember: 'uczestnik',
 	demoAdmin: 'admin',
 	demoFresh: 'ktoś, kto jeszcze nie głosował',
+	demoShow: 'O tym demo',
+	demoHide: 'Schowaj',
 
 	spName: (id) => (id === 'halloween' ? 'Halloween' : 'Wieczór specjalny'),
 	spRules: (s, closesAt, look) => [
@@ -1612,6 +1616,8 @@ const en: Dict = {
 	demoMember: 'a member',
 	demoAdmin: 'the admin',
 	demoFresh: 'someone who has not voted yet',
+	demoShow: 'About this demo',
+	demoHide: 'Hide',
 
 	spName: (id) => (id === 'halloween' ? 'Halloween' : 'Special night'),
 	spRules: (s, closesAt, look) => [

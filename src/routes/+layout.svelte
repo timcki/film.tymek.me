@@ -202,6 +202,20 @@
 	const personaLabel = (kind: 'member' | 'admin' | 'fresh') =>
 		kind === 'admin' ? T.demoAdmin : kind === 'fresh' ? T.demoFresh : T.demoMember;
 
+	// the demo's notice sits at the foot of the screen and tucks into an icon
+	// once the page moves, so it never pushes the header down or sits on the list.
+	// The icon brings it back, and it stays until the page has moved again
+	let demoTucked = $state(false);
+	let demoShownAt = 0;
+	const DEMO_TUCK_AFTER = 32;
+	function demoScroll() {
+		if (!demoTucked && Math.abs(window.scrollY - demoShownAt) > DEMO_TUCK_AFTER) demoTucked = true;
+	}
+	function demoShow() {
+		demoShownAt = window.scrollY;
+		demoTucked = false;
+	}
+
 	let tipOpen = $state(false);
 	// the bar answers a tap on a card's + at once, before the server does
 	const spentNow = $derived(
@@ -365,8 +379,32 @@
 	<!-- the demo says what it is before it says anything else, and it says it on
 	     every page: the room screen and the back office are the two a stranger is
 	     most likely to mistake for somebody's real evening -->
-	<div class="demobar">
-		<div class="demoin">
+	<div class="demobar" class:tucked={demoTucked}>
+		<button
+			class="demoicon"
+			type="button"
+			aria-label={T.demoShow}
+			aria-expanded={!demoTucked}
+			tabindex={demoTucked ? 0 : -1}
+			onclick={demoShow}
+		>
+			<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+				<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8" />
+				<path d="M12 11v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+				<circle cx="12" cy="7.6" r="1.2" fill="currentColor" />
+			</svg>
+		</button>
+		<div class="demoin" inert={demoTucked}>
+			<button
+				class="demotuck"
+				type="button"
+				aria-label={T.demoHide}
+				onclick={() => (demoTucked = true)}
+			>
+				<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+					<path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+				</svg>
+			</button>
 			<p><b>{T.demoWhat}</b> {T.demoResets}</p>
 			<div class="demoas">
 				<span>{T.demoAs}</span>
@@ -885,6 +923,9 @@
 	</div>
 {/if}
 
-<svelte:window onkeydown={(event) => event.key === 'Escape' && closeMenu()} />
+<svelte:window
+	onkeydown={(event) => event.key === 'Escape' && closeMenu()}
+	onscroll={data.demo ? demoScroll : undefined}
+/>
 
 <div class="toast" class:on={visible} class:bad={toast.bad}>{toast.text}</div>

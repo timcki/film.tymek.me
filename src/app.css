@@ -4830,25 +4830,102 @@ button.wcard:focus-visible img {
    inside it, on every page including the room and the back office, because a
    stranger has to be able to tell which half of what they are reading was
    invented before they read any of it. */
+/* pinned to the foot of the screen, over the page rather than in it, so the
+   header and the list sit exactly where they do on the real app. Under the
+   menu's backdrop (45) and every sheet and modal */
 .demobar {
-	padding: 12px 14px 0;
+	position: fixed;
+	z-index: 44;
+	/* no wider than the widest page, so the icon sits in the card's own corner */
+	left: max(14px, calc(50% - 550px));
+	right: max(14px, calc(50% - 550px));
+	bottom: calc(14px + env(safe-area-inset-bottom));
+	pointer-events: none;
 }
 /* a card like any other on the page, so the demo's notice reads as part of the
    app's own furniture and takes whatever palette the page is wearing */
 .demoin {
-	max-width: 1100px;
-	margin: 0 auto;
+	position: relative;
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
 	gap: 10px 16px;
 	background: var(--card);
 	border-radius: var(--r);
-	box-shadow: var(--lift);
-	padding: 12px 14px;
+	box-shadow:
+		var(--lift),
+		0 10px 30px var(--shadow-soft);
+	padding: 12px 40px 12px 14px;
 	font-size: 12.5px;
 	line-height: 1.45;
 	color: var(--dim);
+	pointer-events: auto;
+	/* it folds down into the icon's corner rather than fading where it stands */
+	transform-origin: 22px calc(100% - 22px);
+	transition:
+		transform 0.26s cubic-bezier(0.3, 0.7, 0.2, 1),
+		opacity 0.18s ease;
+}
+.demobar.tucked .demoin {
+	transform: scale(0.12);
+	opacity: 0;
+	pointer-events: none;
+}
+.demotuck {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	display: grid;
+	place-items: center;
+	width: 28px;
+	height: 28px;
+	border: 0;
+	border-radius: 50%;
+	background: none;
+	color: var(--dim);
+	cursor: pointer;
+}
+.demotuck:hover {
+	background: var(--sunk);
+	color: var(--ink);
+}
+/* what the notice hides into: it waits small and clear behind the card, and
+   pops up in its corner as the card folds away */
+.demoicon {
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	border: 0;
+	border-radius: 50%;
+	background: var(--card);
+	color: var(--ink2);
+	box-shadow:
+		var(--lift),
+		0 6px 18px var(--shadow-soft);
+	cursor: pointer;
+	opacity: 0;
+	transform: scale(0.6);
+	transition:
+		transform 0.3s cubic-bezier(0.3, 1.5, 0.5, 1) 0.08s,
+		opacity 0.16s ease 0.08s;
+}
+.demobar.tucked .demoicon {
+	opacity: 1;
+	transform: none;
+	pointer-events: auto;
+}
+.demoicon:hover {
+	color: var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+	.demoin,
+	.demoicon {
+		transition: none;
+	}
 }
 .demoin p {
 	margin: 0;
